@@ -1,0 +1,817 @@
+{
+  "generatedAt": "2026-06-30T08:33:55.897Z",
+  "items": [
+    {
+      "id": "sample-ai-chip",
+      "title": "多国加强先进 AI 芯片出口与供应链监管",
+      "url": "https://example.com/ai-chip-policy",
+      "sourceId": "reuters",
+      "sourceName": "路透社",
+      "language": "en-US",
+      "region": "global",
+      "categories": [
+        "ai",
+        "technology",
+        "policy",
+        "international"
+      ],
+      "summary": "多个主要经济体围绕先进 AI 芯片、云算力和半导体供应链提出新监管安排，可能影响模型训练成本、企业采购和跨境合作。",
+      "publishedAt": "2026-06-30T06:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.047Z",
+      "sourceIds": [
+        "reuters"
+      ],
+      "sourceNames": [
+        "路透社"
+      ],
+      "relatedUrls": [
+        "https://example.com/ai-chip-policy"
+      ],
+      "score_breakdown": {
+        "final_score": 95,
+        "public_importance": 100,
+        "user_preference": 100,
+        "timeliness": 90,
+        "source_confidence": 92,
+        "content_quality": 54,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，发布时间较新，来源可信度高。"
+      }
+    },
+    {
+      "id": "sample-ai-chip-cn",
+      "title": "先进 AI 芯片供应链监管持续升温",
+      "url": "https://example.com/ai-chip-policy-cn",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "ai",
+        "technology",
+        "policy",
+        "china"
+      ],
+      "summary": "围绕人工智能芯片、算力基础设施和产业链安全的政策讨论继续升温，相关企业正在评估供应链和研发节奏。",
+      "publishedAt": "2026-06-30T05:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.047Z",
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://example.com/ai-chip-policy-cn"
+      ],
+      "score_breakdown": {
+        "final_score": 95,
+        "public_importance": 100,
+        "user_preference": 100,
+        "timeliness": 90,
+        "source_confidence": 88,
+        "content_quality": 54,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，发布时间较新，来源可信度高。"
+      }
+    },
+    {
+      "id": "firecrawl-reuters-asian-markets",
+      "title": "韩国芯片计划稳定市场情绪，亚洲股市震荡；伊朗停火仍受关注",
+      "url": "https://www.reuters.com/world/china/asian-markets-mixed-choppy-trade-ai-doubts-iran-tensions-cloud-outlook-2026-06-29/",
+      "sourceId": "reuters",
+      "sourceName": "路透社",
+      "language": "en-US",
+      "region": "global",
+      "categories": [
+        "finance",
+        "international",
+        "ai"
+      ],
+      "summary": "亚洲市场走势分化，投资者在AI驱动的增长前景与成本压力之间权衡，同时继续关注伊朗相关地缘政治进展。",
+      "publishedAt": "2026-06-29T22:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "reuters"
+      ],
+      "sourceNames": [
+        "路透社"
+      ],
+      "relatedUrls": [
+        "https://www.reuters.com/world/china/asian-markets-mixed-choppy-trade-ai-doubts-iran-tensions-cloud-outlook-2026-06-29/"
+      ],
+      "score_breakdown": {
+        "final_score": 93,
+        "public_importance": 99,
+        "user_preference": 100,
+        "timeliness": 78,
+        "source_confidence": 92,
+        "content_quality": 54,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
+      }
+    },
+    {
+      "id": "firecrawl-reuters-korea-ai-chip",
+      "title": "韩国联合三星、SK海力士推进5760亿美元AI芯片计划，巩固全球领先地位",
+      "url": "https://www.reuters.com/world/asia-pacific/south-korean-president-unveil-massive-ai-chip-investment-drive-2026-06-29/",
+      "sourceId": "reuters",
+      "sourceName": "路透社",
+      "language": "en-US",
+      "region": "global",
+      "categories": [
+        "ai",
+        "technology",
+        "finance",
+        "international",
+        "policy"
+      ],
+      "summary": "韩国公布以半导体和人工智能为核心的全面产业战略，三星和SK海力士将在这轮投资推进中扮演关键角色。",
+      "publishedAt": "2026-06-29T18:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "reuters"
+      ],
+      "sourceNames": [
+        "路透社"
+      ],
+      "relatedUrls": [
+        "https://www.reuters.com/world/asia-pacific/south-korean-president-unveil-massive-ai-chip-investment-drive-2026-06-29/"
+      ],
+      "score_breakdown": {
+        "final_score": 92,
+        "public_importance": 100,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 92,
+        "content_quality": 54,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
+      }
+    },
+    {
+      "id": "firecrawl-chinanews-yisuan-ark",
+      "title": "中国发布“异算方舟”全栈平台 打造算法库、大模型、智能体核心能力",
+      "url": "https://www.chinanews.com.cn/gn/2026/06-29/10649512.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "ai",
+        "technology",
+        "science",
+        "china"
+      ],
+      "summary": "中国“异算方舟”国产计算系统软件生态全栈平台在北京发布，围绕算法供给、代码、大模型和智能体能力建设展开。",
+      "publishedAt": "2026-06-30T06:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://www.chinanews.com.cn/gn/2026/06-29/10649512.shtml"
+      ],
+      "score_breakdown": {
+        "final_score": 90,
+        "public_importance": 92,
+        "user_preference": 100,
+        "timeliness": 90,
+        "source_confidence": 80,
+        "content_quality": 54,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，发布时间较新。"
+      }
+    },
+    {
+      "id": "firecrawl-reuters-ai-debt",
+      "title": "AI相关债务激增，银行寻找更灵活、更广泛的融资方案",
+      "url": "https://www.reuters.com/business/finance/banks-get-creative-look-further-afield-ai-fueled-debt-soars-2026-06-29/",
+      "sourceId": "reuters",
+      "sourceName": "路透社",
+      "language": "en-US",
+      "region": "global",
+      "categories": [
+        "finance",
+        "ai",
+        "technology"
+      ],
+      "summary": "与人工智能相关的企业借款持续增加，促使银行家寻找新方式来承销和分销规模更大的AI相关债务交易。",
+      "publishedAt": "2026-06-30T04:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "reuters"
+      ],
+      "sourceNames": [
+        "路透社"
+      ],
+      "relatedUrls": [
+        "https://www.reuters.com/business/finance/banks-get-creative-look-further-afield-ai-fueled-debt-soars-2026-06-29/"
+      ],
+      "score_breakdown": {
+        "final_score": 87,
+        "public_importance": 83,
+        "user_preference": 100,
+        "timeliness": 90,
+        "source_confidence": 92,
+        "content_quality": 53,
+        "ranking_reason": "匹配你的关注偏好，发布时间较新，来源可信度高。"
+      }
+    },
+    {
+      "id": "firecrawl-reuters-cheaper-ai",
+      "title": "更便宜的AI更受青睐：高额账单正在重塑企业模型选择",
+      "url": "https://www.reuters.com/business/retail-consumer/cheaper-ai-is-better-soaring-bills-are-reshaping-how-businesses-choose-models-2026-06-29/",
+      "sourceId": "reuters",
+      "sourceName": "路透社",
+      "language": "en-US",
+      "region": "global",
+      "categories": [
+        "ai",
+        "technology",
+        "finance"
+      ],
+      "summary": "按用量计费的AI定价让企业支出更难预测，即便token价格下降，也正在影响公司选择模型的方式。",
+      "publishedAt": "2026-06-30T03:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "reuters"
+      ],
+      "sourceNames": [
+        "路透社"
+      ],
+      "relatedUrls": [
+        "https://www.reuters.com/business/retail-consumer/cheaper-ai-is-better-soaring-bills-are-reshaping-how-businesses-choose-models-2026-06-29/"
+      ],
+      "score_breakdown": {
+        "final_score": 87,
+        "public_importance": 83,
+        "user_preference": 100,
+        "timeliness": 90,
+        "source_confidence": 92,
+        "content_quality": 53,
+        "ranking_reason": "匹配你的关注偏好，发布时间较新，来源可信度高。"
+      }
+    },
+    {
+      "id": "firecrawl-chinanews-qmul-president",
+      "title": "伦敦玛丽女王大学校长科林·贝利：永远不要停止提问",
+      "url": "https://www.chinanews.com.cn/sh/2026/06-29/10649433.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "science",
+        "society",
+        "international",
+        "ai"
+      ],
+      "summary": "伦敦玛丽女王大学校长科林·贝利谈到中国将人工智能融入从小学到高等教育的多个阶段，并强调持续提问的重要性。",
+      "publishedAt": "2026-06-30T04:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://www.chinanews.com.cn/sh/2026/06-29/10649433.shtml"
+      ],
+      "score_breakdown": {
+        "final_score": 85,
+        "public_importance": 82,
+        "user_preference": 100,
+        "timeliness": 90,
+        "source_confidence": 80,
+        "content_quality": 54,
+        "ranking_reason": "匹配你的关注偏好，发布时间较新。"
+      }
+    },
+    {
+      "id": "sample-market-rate",
+      "title": "全球市场等待主要央行利率决定",
+      "url": "https://example.com/central-bank-rate",
+      "sourceId": "bloomberg",
+      "sourceName": "彭博社",
+      "language": "en-US",
+      "region": "global",
+      "categories": [
+        "finance",
+        "international",
+        "policy"
+      ],
+      "summary": "投资者关注主要央行接下来的利率路径，债券收益率、汇率和科技股估值均受到政策预期影响。",
+      "publishedAt": "2026-06-30T03:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.047Z",
+      "mayHavePaywall": true,
+      "sourceIds": [
+        "bloomberg"
+      ],
+      "sourceNames": [
+        "彭博社"
+      ],
+      "relatedUrls": [
+        "https://example.com/central-bank-rate"
+      ],
+      "score_breakdown": {
+        "final_score": 85,
+        "public_importance": 84,
+        "user_preference": 99,
+        "timeliness": 90,
+        "source_confidence": 79,
+        "content_quality": 45,
+        "ranking_reason": "匹配你的关注偏好，发布时间较新。"
+      }
+    },
+    {
+      "id": "sample-domestic-policy",
+      "title": "多部门发布促进民营经济和科技创新的新措施",
+      "url": "https://example.com/china-policy-innovation",
+      "sourceId": "people",
+      "sourceName": "人民网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "china",
+        "policy",
+        "technology",
+        "finance"
+      ],
+      "summary": "相关部门推出面向民营企业、科技创新和融资环境的政策措施，强调稳定预期、降低制度性成本和支持研发投入。",
+      "publishedAt": "2026-06-30T01:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.047Z",
+      "sourceIds": [
+        "people"
+      ],
+      "sourceNames": [
+        "人民网"
+      ],
+      "relatedUrls": [
+        "https://example.com/china-policy-innovation"
+      ],
+      "score_breakdown": {
+        "final_score": 85,
+        "public_importance": 84,
+        "user_preference": 100,
+        "timeliness": 78,
+        "source_confidence": 84,
+        "content_quality": 54,
+        "ranking_reason": "匹配你的关注偏好。"
+      }
+    },
+    {
+      "id": "firecrawl-bbc-burnham",
+      "title": "亨利·泽夫曼：安迪·伯纳姆展示其首相任期蓝图",
+      "url": "https://www.bbc.com/news/articles/cpq3yy48zglo",
+      "sourceId": "bbc",
+      "sourceName": "英国广播公司",
+      "language": "en-US",
+      "region": "europe",
+      "categories": [
+        "policy",
+        "international"
+      ],
+      "summary": "英国广播公司分析称，安迪·伯纳姆描绘了自己若出任首相可能带来的方向，但许多政策细节仍未明确。",
+      "publishedAt": "2026-06-30T06:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "bbc"
+      ],
+      "sourceNames": [
+        "英国广播公司"
+      ],
+      "relatedUrls": [
+        "https://www.bbc.com/news/articles/cpq3yy48zglo"
+      ],
+      "score_breakdown": {
+        "final_score": 83,
+        "public_importance": 84,
+        "user_preference": 81,
+        "timeliness": 90,
+        "source_confidence": 86,
+        "content_quality": 53,
+        "ranking_reason": "匹配你的关注偏好，发布时间较新，来源可信度高。"
+      }
+    },
+    {
+      "id": "sample-ai-product",
+      "title": "一家 AI 初创公司发布面向办公场景的新模型工具",
+      "url": "https://example.com/ai-productivity-tool",
+      "sourceId": "techcrunch",
+      "sourceName": "科技媒体 TechCrunch",
+      "language": "en-US",
+      "region": "us",
+      "categories": [
+        "ai",
+        "technology",
+        "finance"
+      ],
+      "summary": "一家初创公司发布新的办公自动化 AI 工具，强调文档处理、会议纪要和企业知识库检索能力，并公布新一轮融资。",
+      "publishedAt": "2026-06-30T07:03:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.047Z",
+      "sourceIds": [
+        "techcrunch"
+      ],
+      "sourceNames": [
+        "科技媒体 TechCrunch"
+      ],
+      "relatedUrls": [
+        "https://example.com/ai-productivity-tool"
+      ],
+      "score_breakdown": {
+        "final_score": 83,
+        "public_importance": 78,
+        "user_preference": 100,
+        "timeliness": 90,
+        "source_confidence": 74,
+        "content_quality": 54,
+        "ranking_reason": "匹配你的关注偏好，发布时间较新。"
+      }
+    },
+    {
+      "id": "firecrawl-chinanews-academic-yunnan",
+      "title": "学术边疆行 | 走进云南",
+      "url": "https://www.chinanews.com.cn/sh/2026/06-29/10649206.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "society",
+        "china",
+        "science"
+      ],
+      "summary": "报道聚焦云南地区推进中华民族共同体建设的实践，呈现各民族共同团结进步、共同繁荣发展的地方样本。",
+      "publishedAt": "2026-06-30T01:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://www.chinanews.com.cn/sh/2026/06-29/10649206.shtml"
+      ],
+      "score_breakdown": {
+        "final_score": 80,
+        "public_importance": 80,
+        "user_preference": 89,
+        "timeliness": 78,
+        "source_confidence": 80,
+        "content_quality": 53,
+        "ranking_reason": "匹配你的关注偏好。"
+      }
+    },
+    {
+      "id": "firecrawl-chinanews-ai-writing",
+      "title": "专家学者热议“AI写作”",
+      "url": "https://www.chinanews.com.cn/sh/2026/06-29/10649059.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "ai",
+        "science",
+        "society"
+      ],
+      "summary": "中国当代文学研究会学术年会期间，专家学者围绕 AI 写作、文学研究和创作边界展开讨论。",
+      "publishedAt": "2026-06-29T19:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://www.chinanews.com.cn/sh/2026/06-29/10649059.shtml"
+      ],
+      "score_breakdown": {
+        "final_score": 79,
+        "public_importance": 78,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 80,
+        "content_quality": 53,
+        "ranking_reason": "匹配你的关注偏好。"
+      }
+    },
+    {
+      "id": "firecrawl-people-invoice",
+      "title": "有奖发票，小激励激发大活力（财经观）",
+      "url": "http://finance.people.com.cn/n1/2026/0629/c1004-40749146.html",
+      "sourceId": "people",
+      "sourceName": "人民网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "society",
+        "china"
+      ],
+      "summary": "人民网关注多地升级有奖发票活动，借助小额激励带动消费场景活跃度，覆盖端午、“618”和暑期消费节点。",
+      "publishedAt": "2026-06-29T15:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "people"
+      ],
+      "sourceNames": [
+        "人民网"
+      ],
+      "relatedUrls": [
+        "http://finance.people.com.cn/n1/2026/0629/c1004-40749146.html"
+      ],
+      "score_breakdown": {
+        "final_score": 79,
+        "public_importance": 80,
+        "user_preference": 89,
+        "timeliness": 65,
+        "source_confidence": 84,
+        "content_quality": 54,
+        "ranking_reason": "匹配你的关注偏好。"
+      }
+    },
+    {
+      "id": "firecrawl-people-jingxian-culture",
+      "title": "泾县：以规划深耕墨园沃土 以存量赓续千年文脉",
+      "url": "http://ah.people.com.cn/BIG5/n2/2026/0629/c374164-41624344.html",
+      "sourceId": "people",
+      "sourceName": "人民网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "entertainment",
+        "society",
+        "china"
+      ],
+      "summary": "安徽泾县以中国宣纸股份有限公司老旧厂区更新改造为样本，将闲置工业土地转化为非遗传承和文旅融合空间。",
+      "publishedAt": "2026-06-30T00:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "people"
+      ],
+      "sourceNames": [
+        "人民网"
+      ],
+      "relatedUrls": [
+        "http://ah.people.com.cn/BIG5/n2/2026/0629/c374164-41624344.html"
+      ],
+      "score_breakdown": {
+        "final_score": 79,
+        "public_importance": 80,
+        "user_preference": 79,
+        "timeliness": 78,
+        "source_confidence": 84,
+        "content_quality": 54,
+        "ranking_reason": "综合公共重要性、偏好、时效性和来源可信度排序。"
+      }
+    },
+    {
+      "id": "firecrawl-chinanews-dairy-index",
+      "title": "2026中国奶商指数发布 启动孕婴营养关爱行动",
+      "url": "https://www.chinanews.com.cn/cj/2026/06-29/10649107.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "society",
+        "china"
+      ],
+      "summary": "荷兰皇家菲仕兰联合行业协会、医疗保健机构和京东超市发布《2026中国奶商指数报告》，并启动孕婴营养关爱行动。",
+      "publishedAt": "2026-06-29T20:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://www.chinanews.com.cn/cj/2026/06-29/10649107.shtml"
+      ],
+      "score_breakdown": {
+        "final_score": 78,
+        "public_importance": 80,
+        "user_preference": 89,
+        "timeliness": 65,
+        "source_confidence": 80,
+        "content_quality": 54,
+        "ranking_reason": "匹配你的关注偏好。"
+      }
+    },
+    {
+      "id": "sample-society",
+      "title": "多地发布高温与城市运行保障措施",
+      "url": "https://example.com/city-heat-response",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "society",
+        "china"
+      ],
+      "summary": "多地针对持续高温天气发布城市运行保障措施，重点覆盖电力供应、户外劳动保护、公共交通调度和重点人群服务。",
+      "publishedAt": "2026-06-30T02:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.047Z",
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://example.com/city-heat-response"
+      ],
+      "score_breakdown": {
+        "final_score": 77,
+        "public_importance": 80,
+        "user_preference": 71,
+        "timeliness": 78,
+        "source_confidence": 80,
+        "content_quality": 54,
+        "ranking_reason": "综合公共重要性、偏好、时效性和来源可信度排序。"
+      }
+    },
+    {
+      "id": "sample-science",
+      "title": "新一轮空间观测任务公布早期科学数据",
+      "url": "https://example.com/space-science-data",
+      "sourceId": "mit-tech-review",
+      "sourceName": "麻省理工科技评论",
+      "language": "en-US",
+      "region": "us",
+      "categories": [
+        "science",
+        "technology"
+      ],
+      "summary": "一项空间观测任务公布早期科学数据，研究人员将利用这些数据分析恒星形成、星系演化和高能天体活动。",
+      "publishedAt": "2026-06-30T00:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.047Z",
+      "sourceIds": [
+        "mit-tech-review"
+      ],
+      "sourceNames": [
+        "麻省理工科技评论"
+      ],
+      "relatedUrls": [
+        "https://example.com/space-science-data"
+      ],
+      "score_breakdown": {
+        "final_score": 77,
+        "public_importance": 72,
+        "user_preference": 93,
+        "timeliness": 78,
+        "source_confidence": 82,
+        "content_quality": 53,
+        "ranking_reason": "匹配你的关注偏好。"
+      }
+    },
+    {
+      "id": "firecrawl-bbc-beijing-plane",
+      "title": "北京“中国尊”撞机事件背后的三大疑点：空管、飞行员、动机",
+      "url": "https://www.bbc.com/zhongwen/articles/cn4d1ev0vlpo/simp",
+      "sourceId": "bbc",
+      "sourceName": "英国广播公司",
+      "language": "zh-CN",
+      "region": "global",
+      "categories": [
+        "society",
+        "china",
+        "international"
+      ],
+      "summary": "英国广播公司中文围绕北京“中国尊”撞机事件梳理空管、飞行员和动机等疑点，强调事件画面对公众造成的强烈冲击。",
+      "publishedAt": "2026-06-29T08:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "bbc"
+      ],
+      "sourceNames": [
+        "英国广播公司"
+      ],
+      "relatedUrls": [
+        "https://www.bbc.com/zhongwen/articles/cn4d1ev0vlpo/simp"
+      ],
+      "score_breakdown": {
+        "final_score": 76,
+        "public_importance": 82,
+        "user_preference": 89,
+        "timeliness": 42,
+        "source_confidence": 86,
+        "content_quality": 54,
+        "ranking_reason": "匹配你的关注偏好，来源可信度高。"
+      }
+    },
+    {
+      "id": "firecrawl-bbc-tartan-army",
+      "title": "苏格兰球迷方阵如何赢得波士顿的好感",
+      "url": "https://www.bbc.com/news/articles/cpq37gxjez9o",
+      "sourceId": "bbc",
+      "sourceName": "英国广播公司",
+      "language": "en-US",
+      "region": "global",
+      "categories": [
+        "sports",
+        "society",
+        "international"
+      ],
+      "summary": "英国广播公司报道称，数万名苏格兰球迷在苏格兰小组赛期间到访波士顿，他们在城市中的热烈存在引发关注。",
+      "publishedAt": "2026-06-23T08:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.046Z",
+      "sourceIds": [
+        "bbc"
+      ],
+      "sourceNames": [
+        "英国广播公司"
+      ],
+      "relatedUrls": [
+        "https://www.bbc.com/news/articles/cpq37gxjez9o"
+      ],
+      "score_breakdown": {
+        "final_score": 71,
+        "public_importance": 82,
+        "user_preference": 79,
+        "timeliness": 20,
+        "source_confidence": 86,
+        "content_quality": 54,
+        "ranking_reason": "来源可信度高。"
+      }
+    },
+    {
+      "id": "sample-entertainment",
+      "title": "暑期档影片带动周末票房回升",
+      "url": "https://example.com/summer-box-office",
+      "sourceId": "the-paper",
+      "sourceName": "澎湃新闻",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "entertainment",
+        "society"
+      ],
+      "summary": "多部暑期档影片上映后带动周末票房回升，院线排片、观众口碑和社交平台讨论度成为影响后续走势的关键因素。",
+      "publishedAt": "2026-06-29T22:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.047Z",
+      "sourceIds": [
+        "the-paper"
+      ],
+      "sourceNames": [
+        "澎湃新闻"
+      ],
+      "relatedUrls": [
+        "https://example.com/summer-box-office"
+      ],
+      "score_breakdown": {
+        "final_score": 65,
+        "public_importance": 62,
+        "user_preference": 61,
+        "timeliness": 78,
+        "source_confidence": 74,
+        "content_quality": 54,
+        "ranking_reason": "综合公共重要性、偏好、时效性和来源可信度排序。"
+      }
+    },
+    {
+      "id": "sample-sports",
+      "title": "国际赛事进入淘汰赛阶段",
+      "url": "https://example.com/sports-event",
+      "sourceId": "bbc",
+      "sourceName": "英国广播公司",
+      "language": "en-US",
+      "region": "global",
+      "categories": [
+        "sports"
+      ],
+      "summary": "一项国际体育赛事进入淘汰赛阶段，多支热门队伍公布首发阵容，赛事关注度继续上升。",
+      "publishedAt": "2026-06-30T04:33:37.047Z",
+      "extractedAt": "2026-06-30T08:33:37.047Z",
+      "sourceIds": [
+        "bbc"
+      ],
+      "sourceNames": [
+        "英国广播公司"
+      ],
+      "relatedUrls": [
+        "https://example.com/sports-event"
+      ],
+      "score_breakdown": {
+        "final_score": 60,
+        "public_importance": 50,
+        "user_preference": 53,
+        "timeliness": 90,
+        "source_confidence": 86,
+        "content_quality": 53,
+        "ranking_reason": "发布时间较新，来源可信度高。"
+      }
+    }
+  ],
+  "sourceCount": 9,
+  "notes": [
+    "排序由公共重要性、用户偏好、时效性、来源可信度和内容质量共同决定。",
+    "付费墙来源只使用公开标题、导语和元数据。"
+  ]
+}
