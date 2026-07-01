@@ -2,11 +2,11 @@ import { categoryImportance, highImpactKeywords, scoringWeights } from "../confi
 import { newsSources } from "../config/sources";
 import type { Category, NewsCluster, RankedNewsItem, ScoreBreakdown, UserPreferences } from "../types";
 import { normalizeText } from "./text";
+import { assessTrust } from "./trust";
 
 const preferencePoints = {
-  low: 8,
-  medium: 18,
-  high: 30,
+  "not-preferred": 0,
+  preferred: 30,
 } as const;
 
 const sourceById = new Map(newsSources.map((source) => [source.source_id, source]));
@@ -16,6 +16,7 @@ export function rankNews(items: NewsCluster[], preferences: UserPreferences, now
     .map((item) => ({
       ...item,
       score_breakdown: scoreNewsItem(item, preferences, now),
+      trust: assessTrust(item),
     }))
     .sort((left, right) => right.score_breakdown.final_score - left.score_breakdown.final_score);
 }
@@ -87,16 +88,6 @@ function scoreUserPreference(item: NewsCluster, preferences: UserPreferences): n
 
   for (const sourceId of item.sourceIds) {
     score += preferences.preferredSources[sourceId] ?? 0;
-  }
-
-  if (preferences.regionMode === "zh-first" && item.language === "zh-CN") {
-    score += 10;
-  }
-  if (preferences.regionMode === "global-first" && item.language === "en-US") {
-    score += 10;
-  }
-  if (preferences.regionMode === "balanced") {
-    score += item.sourceIds.length > 1 ? 6 : 0;
   }
 
   return clamp(score);

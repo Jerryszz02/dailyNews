@@ -13,8 +13,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type React from "react";
 import { defaultPreferences } from "./config/preferences";
 import { newsSources } from "./config/sources";
-import { sampleNews } from "./data/sampleNews";
+import { firecrawlSnapshotNews } from "./data/firecrawlSnapshot";
 import { buildDailyReport } from "./lib/newsPipeline";
+import { selectPreferredCategoryItems, sortByHotScoreWithoutPreferences, sortByNewest } from "./lib/newsOrdering";
 import { normalizeText } from "./lib/text";
 import type { Category, DailyNewsReport, PreferenceStrength, RankedNewsItem, RawNewsItem, UserPreferences } from "./types";
 
@@ -32,9 +33,8 @@ const categories: { id: Category; label: string }[] = [
 ];
 
 const strengthOptions: { value: PreferenceStrength; label: string }[] = [
-  { value: "low", label: "低" },
-  { value: "medium", label: "中" },
-  { value: "high", label: "高" },
+  { value: "not-preferred", label: "不偏好" },
+  { value: "preferred", label: "偏好" },
 ];
 
 type ActiveView = "preferred" | "settings" | Category;
@@ -46,7 +46,7 @@ const preferencesStorageKey = "daily-news-preferences";
 const refreshIntervalMs = 60_000;
 
 export function App() {
-  const [rawItems, setRawItems] = useState<RawNewsItem[]>(sampleNews);
+  const [rawItems, setRawItems] = useState<RawNewsItem[]>(firecrawlSnapshotNews);
   const [preferences, setPreferences] = useState<UserPreferences>(() => loadStoredPreferences());
   const [activeView, setActiveView] = useState<ActiveView>("preferred");
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,7 +64,7 @@ export function App() {
       setLoadError("");
       setLoadState("ready");
     } catch (error) {
-      setRawItems(sampleNews);
+      setRawItems(firecrawlSnapshotNews);
       setLoadError(String(error));
       setLoadState("error");
     }
@@ -94,14 +94,14 @@ export function App() {
 
     const baseItems =
       activeView === "preferred"
-        ? selectPreferredItems(report.items, preferences)
-        : report.items.filter((item) => item.categories.includes(activeView));
+        ? selectPreferredCategoryItems(report.items, preferences)
+        : sortByNewest(report.items.filter((item) => item.primaryCategory === activeView));
 
     return filterBySearch(baseItems, searchQuery);
   }, [activeView, preferences, report.items, searchQuery]);
   const pageItems = visibleItems.slice(0, visibleCount);
   const groupedItems = useMemo(() => groupByDay(pageItems), [pageItems]);
-  const hotItems = report.items.slice(0, 5);
+  const hotItems = sortByHotScoreWithoutPreferences(report.items).slice(0, 5);
   const canShowMore = visibleItems.length > pageItems.length;
 
   return (
@@ -131,7 +131,7 @@ export function App() {
           <div>
             <p className="eyebrow">{activeView === "preferred" ? "你的偏好" : activeView === "settings" ? "配置中心" : "分类动态"}</p>
             <h1>{viewTitle(activeView)}</h1>
-            <p className="hero-subtitle">多来源抓取 · 偏好重排 · 每分钟检查更新</p>
+            <p className="hero-subtitle">多来源抓取 · 时间排序 · 每分钟检查更新</p>
           </div>
           <div className="status-panel">
             <div>
@@ -183,7 +183,7 @@ export function App() {
               <div className="panel-title">
                 <Flame size={18} />
                 <h2>当前热点</h2>
-                <span>公共重要性 · 偏好 · 时效综合排序</span>
+                <span>公共重要性 · 时效 · 来源综合排序</span>
               </div>
               <ol className="hot-list">
                 {hotItems.map((item) => (
@@ -191,7 +191,10 @@ export function App() {
                     <a href={item.url} rel="noreferrer" target="_blank">
                       {item.title}
                     </a>
-                    <span>{item.sourceNames.length} 个信源 · {formatRelativeTime(item.publishedAt ?? item.extractedAt)}</span>
+                    <span>
+                      {item.sourceNames.length} 个信源 · {trustLabel(item.trust?.level ?? "medium")} ·{" "}
+                      {formatRelativeTime(item.publishedAt ?? item.extractedAt)}
+                    </span>
                   </li>
                 ))}
               </ol>
@@ -248,23 +251,6 @@ function PreferencesPanel({
         <h2>偏好</h2>
       </div>
 
-      <label className="field">
-        <span>地区与语言</span>
-        <select
-          value={preferences.regionMode}
-          onChange={(event) =>
-            setPreferences((current) => ({
-              ...current,
-              regionMode: event.target.value as UserPreferences["regionMode"],
-            }))
-          }
-        >
-          <option value="balanced">中英均衡</option>
-          <option value="zh-first">中文优先</option>
-          <option value="global-first">国际优先</option>
-        </select>
-      </label>
-
       <div className="topic-list">
         {categories.map((category) => (
           <div className="topic-row" key={category.id}>
@@ -272,7 +258,7 @@ function PreferencesPanel({
             <div className="segmented">
               {strengthOptions.map((option) => (
                 <button
-                  className={(preferences.topicWeights[category.id] ?? "low") === option.value ? "active" : ""}
+                  className={(preferences.topicWeights[category.id] ?? "not-preferred") === option.value ? "active" : ""}
                   key={option.value}
                   type="button"
                   onClick={() =>
@@ -311,6 +297,7 @@ function NewsCard({ item }: { item: RankedNewsItem }) {
         <div className="news-meta">
           <span>{item.sourceNames.map(sourceLabel).join(" / ")}</span>
           <strong>{item.score_breakdown.final_score}</strong>
+          <span className={`trust-pill ${item.trust?.level ?? "medium"}`}>{trustLabel(item.trust?.level ?? "medium")}</span>
         </div>
         <h2>
           <a href={item.url} rel="noreferrer" target="_blank">
@@ -319,10 +306,12 @@ function NewsCard({ item }: { item: RankedNewsItem }) {
         </h2>
         <p>{item.summary}</p>
         <div className="tags">
+          <span className="primary">{categoryLabel(item.primaryCategory)}</span>
           {item.categories.map((category) => (
-            <span key={category}>{categoryLabel(category)}</span>
+            category === item.primaryCategory ? null : <span key={category}>{categoryLabel(category)}</span>
           ))}
         </div>
+        <div className="trust-reason">{(item.trust?.reasons ?? []).join("，")}</div>
         <div className="reason">{item.score_breakdown.ranking_reason}</div>
       </div>
     </article>
@@ -336,7 +325,7 @@ async function loadReport(): Promise<DailyNewsReport> {
   const staticReport = await readReport("/daily-news.json");
   if (staticReport) return staticReport;
 
-  return buildDailyReport(sampleNews, defaultPreferences);
+  return buildDailyReport(firecrawlSnapshotNews, defaultPreferences);
 }
 
 async function readReport(url: string): Promise<DailyNewsReport | null> {
@@ -352,44 +341,13 @@ async function readReport(url: string): Promise<DailyNewsReport | null> {
   }
 }
 
-function selectPreferredItems(items: RankedNewsItem[], preferences: UserPreferences): RankedNewsItem[] {
-  const matches = items.filter((item) => isPreferenceMatch(item, preferences));
-  const pool = matches.length >= initialVisibleCount ? matches : uniqueItems([...matches, ...items]);
-  return pool.sort((left, right) => {
-    const preferenceDelta = right.score_breakdown.user_preference - left.score_breakdown.user_preference;
-    return preferenceDelta !== 0 ? preferenceDelta : right.score_breakdown.final_score - left.score_breakdown.final_score;
-  });
-}
-
-function isPreferenceMatch(item: RankedNewsItem, preferences: UserPreferences): boolean {
-  const text = normalizeText(`${item.title} ${item.summary}`);
-  if (preferences.blockedKeywords.some((keyword) => text.includes(normalizeText(keyword)))) {
-    return false;
-  }
-
-  if (item.categories.some((category) => preferences.topicWeights[category] === "high")) {
-    return true;
-  }
-  if (preferences.boostedKeywords.some((keyword) => text.includes(normalizeText(keyword)))) {
-    return true;
-  }
-  if (item.sourceIds.some((sourceId) => (preferences.preferredSources[sourceId] ?? 0) > 0)) {
-    return true;
-  }
-  if (preferences.regionMode === "zh-first" && item.language === "zh-CN") {
-    return true;
-  }
-  if (preferences.regionMode === "global-first" && item.language === "en-US") {
-    return true;
-  }
-  return item.score_breakdown.user_preference >= 78;
-}
-
 function filterBySearch(items: RankedNewsItem[], query: string): RankedNewsItem[] {
   const normalized = normalizeText(query);
   if (!normalized) return items;
   return items.filter((item) =>
-    normalizeText(`${item.title} ${item.summary} ${item.sourceNames.join(" ")} ${item.categories.join(" ")}`).includes(normalized),
+    normalizeText(
+      `${item.title} ${item.summary} ${item.sourceNames.join(" ")} ${item.primaryCategory} ${item.categories.join(" ")} ${trustLabel(item.trust?.level ?? "medium")}`,
+    ).includes(normalized),
   );
 }
 
@@ -400,15 +358,6 @@ function groupByDay(items: RankedNewsItem[]): { day: string; items: RankedNewsIt
     groups.set(day, [...(groups.get(day) ?? []), item]);
   }
   return Array.from(groups, ([day, groupItems]) => ({ day, items: groupItems }));
-}
-
-function uniqueItems(items: RankedNewsItem[]): RankedNewsItem[] {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    if (seen.has(item.id)) return false;
-    seen.add(item.id);
-    return true;
-  });
 }
 
 function viewTitle(view: ActiveView): string {
@@ -432,10 +381,22 @@ function sourceLabel(sourceName: string): string {
     "MIT Technology Review": "麻省理工科技评论",
     "The Guardian": "卫报",
     "The Verge": "科技媒体 The Verge",
+    "OpenAI X": "OpenAI 社交动态",
+    "Anthropic X": "Anthropic 社交动态",
+    "Google DeepMind X": "Google DeepMind 社交动态",
+    "Sam Altman X": "Sam Altman 社交动态",
+    "Greg Brockman X": "Greg Brockman 社交动态",
+    "Andrej Karpathy X": "Andrej Karpathy 社交动态",
     Wired: "连线",
   };
 
   return sourceLabels[sourceName] ?? sourceName;
+}
+
+function trustLabel(level: RankedNewsItem["trust"]["level"]): string {
+  if (level === "high") return "高可信";
+  if (level === "medium") return "中可信";
+  return "低可信";
 }
 
 function formatDay(value: string): string {
@@ -482,10 +443,7 @@ function loadStoredPreferences(): UserPreferences {
     return {
       ...defaultPreferences,
       ...parsed,
-      topicWeights: {
-        ...defaultPreferences.topicWeights,
-        ...parsed.topicWeights,
-      },
+      topicWeights: normalizeTopicWeights(parsed.topicWeights),
       preferredSources: parsed.preferredSources ?? defaultPreferences.preferredSources,
       blockedKeywords: parsed.blockedKeywords ?? defaultPreferences.blockedKeywords,
       boostedKeywords: parsed.boostedKeywords ?? defaultPreferences.boostedKeywords,
@@ -493,4 +451,16 @@ function loadStoredPreferences(): UserPreferences {
   } catch {
     return defaultPreferences;
   }
+}
+
+function normalizeTopicWeights(topicWeights: Partial<Record<Category, unknown>> | undefined): Partial<Record<Category, PreferenceStrength>> {
+  const normalized: Partial<Record<Category, PreferenceStrength>> = {};
+  for (const category of categories) {
+    normalized[category.id] = normalizePreferenceStrength(topicWeights?.[category.id] ?? defaultPreferences.topicWeights[category.id]);
+  }
+  return normalized;
+}
+
+function normalizePreferenceStrength(value: unknown): PreferenceStrength {
+  return value === "preferred" || value === "medium" || value === "high" ? "preferred" : "not-preferred";
 }

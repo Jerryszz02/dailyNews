@@ -4,12 +4,12 @@ Daily News is a Vite + React + TypeScript news-ranking app with a small Node API
 
 ## Data Flow
 
-1. `src/config/sources.ts` defines enabled sources, sections, categories, language, region, credibility and paywall hints.
-2. `scripts/newsService.ts` loads local environment variables, fetches Firecrawl news results when `FIRECRAWL_API_KEY` is set, and merges checked-in fallback items for category coverage.
-3. `src/lib/dedupe.ts` clusters similar stories by URL and token overlap.
-4. `src/lib/scoring.ts` ranks clusters by public importance, user preference, timeliness, source confidence and content quality.
+1. `src/config/sources.ts` defines enabled sources, sections, search terms, primary categories, language, region, credibility and paywall hints.
+2. `scripts/newsService.ts` loads local environment variables, fetches Firecrawl news/web results through keyless mode, falls back to direct public source page/feed fetching when Firecrawl returns no live items or hits keyless limits, optionally rewrites English title/summary text through a server-side OpenAI-compatible translation endpoint, and merges checked-in fallback items for category coverage.
+3. `src/lib/dedupe.ts` clusters similar stories by URL and token overlap, then chooses one `primaryCategory` per cluster so category views do not repeat the same story.
+4. `src/lib/scoring.ts` ranks clusters by public importance, user preference, timeliness, source confidence and content quality. `src/lib/trust.ts` independently assigns low/medium/high trust and decides whether a story is too low quality to show.
 5. `scripts/newsServer.ts` caches the report in memory and exposes `GET /api/news`.
-6. `src/App.tsx` fetches `/api/news`, falls back to `/daily-news.json`, then to `sampleNews`.
+6. `src/App.tsx` fetches `/api/news`, falls back to `/daily-news.json`, then to the checked-in `firecrawlSnapshotNews`.
 
 ## Runtime Shape
 
@@ -20,12 +20,13 @@ Daily News is a Vite + React + TypeScript news-ranking app with a small Node API
 
 ## API Routes
 
-- `GET /api/news`: returns the current `DailyNewsReport` plus refresh metadata.
+- `GET /api/news`: returns the current `DailyNewsReport` plus refresh metadata. Each item includes `primaryCategory` and `trust`.
 - `POST /api/refresh`: triggers a refresh and returns the new `generatedAt`.
 - `GET /api/health`: returns service health, item count and last refresh error.
 
 ## Security Boundaries
 
-- `FIRECRAWL_API_KEY` is read only by Node scripts and `scripts/newsServer.ts`.
-- The browser never reads `.env`, `.env.local` or Firecrawl credentials.
+- Firecrawl runs in keyless mode; the app does not require or read `FIRECRAWL_API_KEY`.
+- `DAILY_NEWS_TRANSLATION_BASE_URL`, `DAILY_NEWS_TRANSLATION_API_KEY`, and `DAILY_NEWS_TRANSLATION_MODEL` are read only by Node scripts and are required only when English-only sources should be rewritten into Chinese.
+- The browser never reads `.env`, `.env.local` or translation credentials.
 - Public static fallback data lives in `public/daily-news.json`; it is generated output, not the editing source of truth.

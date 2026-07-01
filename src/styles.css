@@ -380,6 +380,31 @@ h1 {
   padding: 2px 8px;
 }
 
+.trust-pill {
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 8px;
+}
+
+.trust-pill.high {
+  background: #eefaf2;
+  border: 1px solid #c7edd3;
+  color: #20844f;
+}
+
+.trust-pill.medium {
+  background: #eef5ff;
+  border: 1px solid #c9def8;
+  color: #2a5c99;
+}
+
+.trust-pill.low {
+  background: #fff6e8;
+  border: 1px solid #f1d3a5;
+  color: #9a5a13;
+}
+
 .news-card h2 {
   font-size: 17px;
   line-height: 1.4;
@@ -412,6 +437,20 @@ h1 {
   font-size: 12px;
   line-height: 1.2;
   padding: 4px 7px;
+}
+
+.tags .primary {
+  background: #e7f9fb;
+  border-color: #bde8ef;
+  color: #057595;
+  font-weight: 800;
+}
+
+.trust-reason {
+  color: #687887;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 8px;
 }
 
 .reason {
@@ -477,7 +516,7 @@ select {
   background: #edf3f7;
   border-radius: 7px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 3px;
 }
 

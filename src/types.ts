@@ -7,7 +7,9 @@ export type MediaType =
   | "public"
   | "commercial"
   | "business"
-  | "technology";
+  | "technology"
+  | "official"
+  | "social";
 
 export type Category =
   | "ai"
@@ -21,7 +23,7 @@ export type Category =
   | "entertainment"
   | "science";
 
-export type PreferenceStrength = "low" | "medium" | "high";
+export type PreferenceStrength = "not-preferred" | "preferred";
 
 export interface NewsSource {
   source_id: string;
@@ -40,11 +42,16 @@ export interface SourceSection {
   label: string;
   url: string;
   categories: Category[];
+  primaryCategory: Category;
+  searchTerms?: string[];
+  searchSources?: SearchSourceType[];
+  requireChinese?: boolean;
 }
+
+export type SearchSourceType = "web" | "news";
 
 export interface UserPreferences {
   topicWeights: Partial<Record<Category, PreferenceStrength>>;
-  regionMode: "zh-first" | "global-first" | "balanced";
   preferredSources: Record<string, number>;
   blockedKeywords: string[];
   boostedKeywords: string[];
@@ -59,6 +66,7 @@ export interface RawNewsItem {
   language: Locale;
   region: Region;
   categories: Category[];
+  primaryCategory?: Category;
   summary: string;
   publishedAt?: string;
   extractedAt: string;
@@ -66,9 +74,20 @@ export interface RawNewsItem {
 }
 
 export interface NewsCluster extends RawNewsItem {
+  primaryCategory: Category;
   sourceIds: string[];
   sourceNames: string[];
   relatedUrls: string[];
+  primaryCategoryVotes: Category[];
+}
+
+export type TrustLevel = "low" | "medium" | "high";
+
+export interface TrustAssessment {
+  score: number;
+  level: TrustLevel;
+  shouldShow: boolean;
+  reasons: string[];
 }
 
 export interface ScoreBreakdown {
@@ -83,6 +102,7 @@ export interface ScoreBreakdown {
 
 export interface RankedNewsItem extends NewsCluster {
   score_breakdown: ScoreBreakdown;
+  trust: TrustAssessment;
 }
 
 export interface DailyNewsReport {

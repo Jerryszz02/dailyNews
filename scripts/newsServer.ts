@@ -20,15 +20,21 @@ let refreshInFlight: Promise<void> | null = null;
 
 loadLocalEnv();
 
-await refreshNews();
-setInterval(() => {
-  void refreshNews();
-}, refreshIntervalMs).unref();
-
 const server = createServer((request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
 
   if (request.method === "GET" && url.pathname === "/api/news") {
+    if (!cachedReport) {
+      writeJson(response, 503, {
+        error: "News report is still loading",
+        refresh: {
+          intervalMinutes: refreshIntervalMinutes,
+          lastError: lastError || null,
+        },
+      });
+      return;
+    }
+
     writeJson(response, 200, {
       ...cachedReport,
       refresh: {
@@ -66,6 +72,10 @@ const server = createServer((request, response) => {
 
 server.listen(port, "127.0.0.1", () => {
   console.log(`Daily News API listening on http://127.0.0.1:${port}`);
+  void refreshNews();
+  setInterval(() => {
+    void refreshNews();
+  }, refreshIntervalMs).unref();
 });
 
 async function refreshNews(): Promise<void> {
@@ -74,7 +84,13 @@ async function refreshNews(): Promise<void> {
   }
 
   refreshInFlight = generateDailyNewsReport()
-    .then(({ report, mode, rawItemCount }) => {
+    .then(({ report, mode, rawItemCount, usedLiveData }) => {
+      if (cachedReport && !usedLiveData) {
+        lastError = "Live refresh returned no items; kept the previous cache.";
+        console.warn(lastError);
+        return;
+      }
+
       cachedReport = report;
       lastError = "";
       console.log(`Refreshed ${report.items.length} ranked items from ${report.sourceCount} sources using ${mode} (${rawItemCount} raw items).`);
