@@ -1,4 +1,4 @@
-import { newsSources } from "../config/sources";
+import { newsSources } from "../config/sources.js";
 import type { NewsCluster, TrustAssessment, TrustLevel } from "../types";
 
 const sourceById = new Map(newsSources.map((source) => [source.source_id, source]));

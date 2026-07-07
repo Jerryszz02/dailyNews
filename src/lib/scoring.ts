@@ -1,8 +1,8 @@
-import { categoryImportance, highImpactKeywords, scoringWeights } from "../config/scoring";
-import { newsSources } from "../config/sources";
+import { categoryImportance, highImpactKeywords, scoringWeights } from "../config/scoring.js";
+import { newsSources } from "../config/sources.js";
 import type { Category, NewsCluster, RankedNewsItem, ScoreBreakdown, UserPreferences } from "../types";
-import { normalizeText } from "./text";
-import { assessTrust } from "./trust";
+import { normalizeText } from "./text.js";
+import { assessTrust } from "./trust.js";
 
 const preferencePoints = {
   "not-preferred": 0,

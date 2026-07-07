@@ -13,7 +13,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "china",
     categories: ["ai", "technology", "science", "china"],
     summary: "中国“异算方舟”国产计算系统软件生态全栈平台在北京发布，围绕算法供给、代码、大模型和智能体能力建设展开。",
-    publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -26,7 +26,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "china",
     categories: ["ai", "science", "society"],
     summary: "中国当代文学研究会学术年会期间，专家学者围绕 AI 写作、文学研究和创作边界展开讨论。",
-    publishedAt: new Date(Date.now() - 13 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -39,7 +39,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "china",
     categories: ["society", "china", "science"],
     summary: "报道聚焦云南地区推进中华民族共同体建设的实践，呈现各民族共同团结进步、共同繁荣发展的地方样本。",
-    publishedAt: new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -52,7 +52,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "china",
     categories: ["science", "society", "international", "ai"],
     summary: "伦敦玛丽女王大学校长科林·贝利谈到中国将人工智能融入从小学到高等教育的多个阶段，并强调持续提问的重要性。",
-    publishedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -65,7 +65,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "china",
     categories: ["finance", "society", "china"],
     summary: "荷兰皇家菲仕兰联合行业协会、医疗保健机构和京东超市发布《2026中国奶商指数报告》，并启动孕婴营养关爱行动。",
-    publishedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -78,7 +78,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "global",
     categories: ["ai", "technology", "finance", "international", "policy"],
     summary: "韩国公布以半导体和人工智能为核心的全面产业战略，三星和SK海力士将在这轮投资推进中扮演关键角色。",
-    publishedAt: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -91,7 +91,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "global",
     categories: ["finance", "ai", "technology"],
     summary: "与人工智能相关的企业借款持续增加，促使银行家寻找新方式来承销和分销规模更大的AI相关债务交易。",
-    publishedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -104,7 +104,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "global",
     categories: ["ai", "technology", "finance"],
     summary: "按用量计费的AI定价让企业支出更难预测，即便token价格下降，也正在影响公司选择模型的方式。",
-    publishedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -117,7 +117,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "global",
     categories: ["finance", "international", "ai"],
     summary: "亚洲市场走势分化，投资者在AI驱动的增长前景与成本压力之间权衡，同时继续关注伊朗相关地缘政治进展。",
-    publishedAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -130,7 +130,6 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "europe",
     categories: ["policy", "international"],
     summary: "英国广播公司分析称，安迪·伯纳姆描绘了自己若出任首相可能带来的方向，但许多政策细节仍未明确。",
-    publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     extractedAt,
   },
   {
@@ -143,7 +142,6 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "global",
     categories: ["sports", "society", "international"],
     summary: "英国广播公司报道称，数万名苏格兰球迷在苏格兰小组赛期间到访波士顿，他们在城市中的热烈存在引发关注。",
-    publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     extractedAt,
   },
   {
@@ -156,7 +154,6 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "global",
     categories: ["society", "china", "international"],
     summary: "英国广播公司中文围绕北京“中国尊”撞机事件梳理空管、飞行员和动机等疑点，强调事件画面对公众造成的强烈冲击。",
-    publishedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     extractedAt,
   },
   {
@@ -169,7 +166,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "china",
     categories: ["finance", "society", "china"],
     summary: "人民网关注多地升级有奖发票活动，借助小额激励带动消费场景活跃度，覆盖端午、“618”和暑期消费节点。",
-    publishedAt: new Date(Date.now() - 17 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
   {
@@ -182,7 +179,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
     region: "china",
     categories: ["entertainment", "society", "china"],
     summary: "安徽泾县以中国宣纸股份有限公司老旧厂区更新改造为样本，将闲置工业土地转化为非遗传承和文旅融合空间。",
-    publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+    publishedAt: "2026-06-28T16:00:00.000Z",
     extractedAt,
   },
 ];

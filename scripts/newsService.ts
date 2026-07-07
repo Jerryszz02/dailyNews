@@ -1,11 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { Firecrawl } from "firecrawl";
-import { defaultPreferences } from "../src/config/preferences";
-import { newsSources } from "../src/config/sources";
-import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot";
-import { buildDailyReport } from "../src/lib/newsPipeline";
-import { hostnameFromUrl } from "../src/lib/text";
-import type { DailyNewsReport, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
+import { defaultPreferences } from "../src/config/preferences.js";
+import { newsSources } from "../src/config/sources.js";
+import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot.js";
+import { buildDailyReport } from "../src/lib/newsPipeline.js";
+import { hostnameFromUrl } from "../src/lib/text.js";
+import type { DailyNewsReport, NewsSource, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
 
 export const defaultLimitPerSection = 5;
 export const defaultMaxSources = newsSources.filter((source) => source.enabled).length;
@@ -40,7 +40,7 @@ export async function generateDailyNewsReport(options: NewsGenerationOptions = {
     fetchedItems.length > 0 ? [] : await fetchDirectSources({ limitPerSection, maxSources, translationConfig });
   const liveItems = fetchedItems.length > 0 ? fetchedItems : directItems;
   const fallbackItems = readGeneratedFallbackItems();
-  const rawItems = liveItems.length > 0 ? [...liveItems, ...firecrawlSnapshotNews] : fallbackItems;
+  const rawItems = liveItems.length > 0 ? liveItems : fallbackItems;
   const report = buildDailyReport(rawItems, defaultPreferences, options.now);
   const usedLiveData = liveItems.length > 0;
 
@@ -102,7 +102,7 @@ async function fetchWithFirecrawlKeyless(
 ): Promise<RawNewsItem[]> {
   const app = new Firecrawl({ apiKey: "" });
   const items: RawNewsItem[] = [];
-  const enabledSources = newsSources.filter((source) => source.enabled).slice(0, options.maxSources);
+  const enabledSources = selectNewsSources(options.maxSources);
   let warnedMissingTranslation = false;
 
   for (const source of enabledSources) {
@@ -156,6 +156,8 @@ async function fetchWithFirecrawlKeyless(
             if (!containsChinese(title) && !containsChinese(summary)) continue;
           }
 
+          const publishedAt = extractDate(result) ?? inferPublishedDateFromUrl(url);
+
           items.push({
             id: `${source.source_id}-${hashId(url)}`,
             title,
@@ -167,7 +169,7 @@ async function fetchWithFirecrawlKeyless(
             categories: section.categories,
             primaryCategory: section.primaryCategory,
             summary,
-            publishedAt: extractDate(result),
+            publishedAt,
             extractedAt: new Date().toISOString(),
             mayHavePaywall: source.mayHavePaywall,
           });
@@ -197,11 +199,48 @@ function isKeylessLimitError(error: unknown): boolean {
   );
 }
 
+function selectNewsSources(maxSources: number): NewsSource[] {
+  const enabledSources = newsSources.filter((source) => source.enabled);
+  if (maxSources >= enabledSources.length) return enabledSources;
+
+  const prioritySourceIds = [
+    "xinhua",
+    "cnn",
+    "cctv",
+    "chinanews",
+    "ap",
+    "bbc",
+    "aljazeera",
+    "npr",
+    "36kr",
+    "tmtpost",
+    "jiqizhixin",
+    "qbitai",
+    "techcrunch",
+  ];
+  const selected: NewsSource[] = [];
+
+  for (const sourceId of prioritySourceIds) {
+    if (selected.length >= maxSources) break;
+    const source = enabledSources.find((candidate) => candidate.source_id === sourceId);
+    if (!source) continue;
+    selected.push(source);
+  }
+
+  for (const source of enabledSources) {
+    if (selected.length >= maxSources) break;
+    if (selected.some((selectedSource) => selectedSource.source_id === source.source_id)) continue;
+    selected.push(source);
+  }
+
+  return selected;
+}
+
 async function fetchDirectSources(
   options: { limitPerSection: number; maxSources: number; translationConfig?: TranslationConfig },
 ): Promise<RawNewsItem[]> {
   const items: RawNewsItem[] = [];
-  const enabledSources = newsSources.filter((source) => source.enabled).slice(0, options.maxSources);
+  const enabledSources = selectNewsSources(options.maxSources);
   let warnedMissingTranslation = false;
 
   for (const source of enabledSources) {
@@ -234,6 +273,8 @@ async function fetchDirectSources(
             if (!containsChinese(title) && !containsChinese(summary)) continue;
           }
 
+          const publishedAt = candidate.publishedAt ?? inferPublishedDateFromUrl(url);
+
           items.push({
             id: `${source.source_id}-direct-${hashId(url)}`,
             title,
@@ -245,7 +286,7 @@ async function fetchDirectSources(
             categories: section.categories,
             primaryCategory: section.primaryCategory,
             summary,
-            publishedAt: candidate.publishedAt,
+            publishedAt,
             extractedAt: new Date().toISOString(),
             mayHavePaywall: source.mayHavePaywall,
           });
@@ -298,9 +339,9 @@ function readFeedCandidates(html: string, baseUrl: string): Array<{ title: strin
   return uniqueCandidates(candidates);
 }
 
-function readHtmlLinkCandidates(html: string, baseUrl: string): Array<{ title: string; url: string; summary: string }> {
+function readHtmlLinkCandidates(html: string, baseUrl: string): Array<{ title: string; url: string; summary: string; publishedAt?: string }> {
   const baseHost = hostnameFromUrl(baseUrl);
-  const candidates: Array<{ title: string; url: string; summary: string }> = [];
+  const candidates: Array<{ title: string; url: string; summary: string; publishedAt?: string }> = [];
   const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   for (const match of html.matchAll(anchorPattern)) {
     const url = resolveCandidateUrl(match[1], baseUrl);
@@ -310,7 +351,7 @@ function readHtmlLinkCandidates(html: string, baseUrl: string): Array<{ title: s
     if (!isLikelyArticleUrl(url)) continue;
     if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|zip)(\?|$)/i.test(url)) continue;
     if (url === baseUrl || url.endsWith("#")) continue;
-    candidates.push({ title, url, summary: title });
+    candidates.push({ title, url, summary: title, publishedAt: inferPublishedDateFromUrl(url) });
   }
   return uniqueCandidates(candidates);
 }
@@ -415,6 +456,46 @@ function extractDate(result: unknown): string | undefined {
   const possibleDate =
     readString(result, "publishedDate") || readString(result, "date") || readString(result, "publishedAt");
   return typeof possibleDate === "string" && Number.isFinite(Date.parse(possibleDate)) ? possibleDate : undefined;
+}
+
+export function inferPublishedDateFromUrl(url: string): string | undefined {
+  let path: string;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    return undefined;
+  }
+
+  const patterns = [
+    /\/(20\d{2})\/(\d{2})-(\d{2})(?:\/|$)/,
+    /\/(20\d{2})\/(\d{2})(\d{2})(?:\/|[-_.])/,
+    /(?:\/|-)(20\d{2})-(\d{2})-(\d{2})(?:\/|$)/,
+    /\/(20\d{2})(\d{2})(\d{2})(?:\/|[-_.])/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = path.match(pattern);
+    if (!match) continue;
+    const isoDate = chinaLocalDateToIso(match[1], match[2], match[3]);
+    if (isoDate) return isoDate;
+  }
+
+  return undefined;
+}
+
+function chinaLocalDateToIso(yearValue: string, monthValue: string, dayValue: string): string | undefined {
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  const day = Number(dayValue);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return undefined;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return undefined;
+
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  if (utcDate.getUTCFullYear() !== year || utcDate.getUTCMonth() !== month - 1 || utcDate.getUTCDate() !== day) {
+    return undefined;
+  }
+
+  return new Date(`${yearValue}-${monthValue}-${dayValue}T00:00:00+08:00`).toISOString();
 }
 
 function readString(value: unknown, key: string): string {

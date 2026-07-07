@@ -357,6 +357,12 @@ h1 {
   line-height: 1.2;
 }
 
+.time-cell.unknown {
+  color: #7c8d9d;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .news-body {
   min-width: 0;
 }

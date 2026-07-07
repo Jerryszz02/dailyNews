@@ -1,5 +1,5 @@
 import type { Category, NewsCluster, RawNewsItem } from "../types";
-import { normalizeText, tokenOverlap } from "./text";
+import { normalizeText, tokenOverlap } from "./text.js";
 
 const categoryPriority: Category[] = [
   "sports",

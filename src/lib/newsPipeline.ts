@@ -1,8 +1,8 @@
-import { defaultPreferences } from "../config/preferences";
-import { newsSources } from "../config/sources";
+import { defaultPreferences } from "../config/preferences.js";
+import { newsSources } from "../config/sources.js";
 import type { DailyNewsReport, RawNewsItem, UserPreferences } from "../types";
-import { clusterNews } from "./dedupe";
-import { rankNews } from "./scoring";
+import { clusterNews } from "./dedupe.js";
+import { rankNews } from "./scoring.js";
 
 export function buildDailyReport(
   rawItems: RawNewsItem[] = [],

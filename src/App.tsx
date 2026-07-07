@@ -192,8 +192,7 @@ export function App() {
                       {item.title}
                     </a>
                     <span>
-                      {item.sourceNames.length} 个信源 · {trustLabel(item.trust?.level ?? "medium")} ·{" "}
-                      {formatRelativeTime(item.publishedAt ?? item.extractedAt)}
+                      {formatSourceSummary(item.sourceNames)} · {trustLabel(item.trust?.level ?? "medium")} · {formatNewsAge(item)}
                     </span>
                   </li>
                 ))}
@@ -290,9 +289,11 @@ function PreferencesPanel({
 }
 
 function NewsCard({ item }: { item: RankedNewsItem }) {
+  const hasPublishedAt = Boolean(item.publishedAt);
+
   return (
     <article className="news-card">
-      <div className="time-cell">{formatTime(item.publishedAt ?? item.extractedAt)}</div>
+      <div className={`time-cell${hasPublishedAt ? "" : " unknown"}`}>{formatNewsTime(item)}</div>
       <div className="news-body">
         <div className="news-meta">
           <span>{item.sourceNames.map(sourceLabel).join(" / ")}</span>
@@ -393,6 +394,12 @@ function sourceLabel(sourceName: string): string {
   return sourceLabels[sourceName] ?? sourceName;
 }
 
+function formatSourceSummary(sourceNames: string[]): string {
+  const labels = sourceNames.map(sourceLabel);
+  if (labels.length <= 1) return labels[0] ?? "来源待确认";
+  return `${labels.length} 个聚合信源`;
+}
+
 function trustLabel(level: RankedNewsItem["trust"]["level"]): string {
   if (level === "high") return "高可信";
   if (level === "medium") return "中可信";
@@ -419,6 +426,14 @@ function formatTime(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function formatNewsTime(item: RankedNewsItem): string {
+  return item.publishedAt ? formatTime(item.publishedAt) : "待确认";
+}
+
+function formatNewsAge(item: RankedNewsItem): string {
+  return item.publishedAt ? formatRelativeTime(item.publishedAt) : "发布时间待确认";
 }
 
 function formatRelativeTime(value: string): string {

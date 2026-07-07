@@ -317,6 +317,18 @@ export const newsSources: NewsSource[] = [
     sections: [section("Top News", "https://apnews.com/", "international", ["international", "policy", "society"], ["Associated Press top news", "AP world news"], newsOnly, false)],
   },
   {
+    source_id: "cnn",
+    name: "CNN",
+    countryOrRegion: "us",
+    language: "en-US",
+    mediaType: "commercial",
+    defaultWeight: 0.82,
+    credibility: 78,
+    mayHavePaywall: false,
+    enabled: true,
+    sections: [section("World", "https://www.cnn.com/world", "international", ["international", "policy", "society"], ["CNN world news latest", "CNN international news"], newsOnly, false)],
+  },
+  {
     source_id: "bbc",
     name: "BBC",
     countryOrRegion: "global",
