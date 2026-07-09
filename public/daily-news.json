@@ -1,95 +1,97 @@
 {
-  "generatedAt": "2026-07-01T08:27:51.459Z",
+  "generatedAt": "2026-07-09T05:31:46.178Z",
   "items": [
     {
-      "id": "firecrawl-chinanews-yisuan-ark",
-      "title": "中国发布“异算方舟”全栈平台 打造算法库、大模型、智能体核心能力",
-      "url": "https://www.chinanews.com.cn/gn/2026/06-29/10649512.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
+      "id": "xinhua-direct-2zzlan",
+      "title": "温暖瞬间 深切关怀",
+      "url": "https://www.news.cn/politics/leaders/20260709/dbfabb1becc54f1cbc6cd927a58f0b03/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
       "language": "zh-CN",
       "region": "china",
       "categories": [
-        "ai",
-        "technology",
-        "science",
-        "china"
-      ],
-      "summary": "中国“异算方舟”国产计算系统软件生态全栈平台在北京发布，围绕算法供给、代码、大模型和智能体能力建设展开。",
-      "publishedAt": "2026-07-01T06:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
-      "primaryCategory": "ai",
-      "sourceIds": [
-        "chinanews"
-      ],
-      "sourceNames": [
-        "中国新闻网"
-      ],
-      "relatedUrls": [
-        "https://www.chinanews.com.cn/gn/2026/06-29/10649512.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "ai"
-      ],
-      "score_breakdown": {
-        "final_score": 90,
-        "public_importance": 92,
-        "user_preference": 100,
-        "timeliness": 90,
-        "source_confidence": 80,
-        "content_quality": 54,
-        "ranking_reason": "公共影响高，匹配你的关注偏好，发布时间较新。"
-      },
-      "trust": {
-        "score": 50,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
-          "包含发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "firecrawl-bbc-burnham",
-      "title": "亨利·泽夫曼：安迪·伯纳姆展示其首相任期蓝图",
-      "url": "https://www.bbc.com/news/articles/cpq3yy48zglo",
-      "sourceId": "bbc",
-      "sourceName": "英国广播公司",
-      "language": "en-US",
-      "region": "europe",
-      "categories": [
         "policy",
+        "china",
         "international"
       ],
-      "summary": "英国广播公司分析称，安迪·伯纳姆描绘了自己若出任首相可能带来的方向，但许多政策细节仍未明确。",
-      "publishedAt": "2026-07-01T06:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
       "primaryCategory": "policy",
+      "summary": "温暖瞬间 深切关怀",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.330Z",
+      "mayHavePaywall": false,
       "sourceIds": [
-        "bbc"
+        "xinhua"
       ],
       "sourceNames": [
-        "英国广播公司"
+        "新华网"
       ],
       "relatedUrls": [
-        "https://www.bbc.com/news/articles/cpq3yy48zglo"
+        "https://www.news.cn/politics/leaders/20260709/dbfabb1becc54f1cbc6cd927a58f0b03/c.html"
       ],
       "primaryCategoryVotes": [
         "policy"
       ],
       "score_breakdown": {
-        "final_score": 87,
-        "public_importance": 84,
+        "final_score": 86,
+        "public_importance": 89,
         "user_preference": 100,
-        "timeliness": 90,
-        "source_confidence": 86,
-        "content_quality": 53,
-        "ranking_reason": "匹配你的关注偏好，发布时间较新，来源可信度高。"
+        "timeliness": 65,
+        "source_confidence": 88,
+        "content_quality": 50,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
       },
       "trust": {
-        "score": 53,
+        "score": 70,
         "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "yicai-direct-fcv77t",
+      "title": "IMF最新展望：下调今年全球增速至3.0%，“二次通胀”警报拉响",
+      "url": "https://www.yicai.com/news/103266247.html",
+      "sourceId": "yicai",
+      "sourceName": "第一财经",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "china"
+      ],
+      "primaryCategory": "finance",
+      "summary": "IMF最新展望：下调今年全球增速至3.0%，“二次通胀”警报拉响",
+      "publishedAt": "2026-07-08T13:00:54.000Z",
+      "extractedAt": "2026-07-09T05:32:04.505Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "yicai"
+      ],
+      "sourceNames": [
+        "第一财经"
+      ],
+      "relatedUrls": [
+        "https://www.yicai.com/news/103266247.html"
+      ],
+      "primaryCategoryVotes": [
+        "finance"
+      ],
+      "score_breakdown": {
+        "final_score": 86,
+        "public_importance": 92,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 76,
+        "content_quality": 52,
+        "ranking_reason": "公共影响高，匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 47,
+        "level": "low",
         "shouldShow": true,
         "reasons": [
           "包含发布时间",
@@ -98,47 +100,96 @@
       }
     },
     {
-      "id": "firecrawl-chinanews-qmul-president",
-      "title": "伦敦玛丽女王大学校长科林·贝利：永远不要停止提问",
-      "url": "https://www.chinanews.com.cn/sh/2026/06-29/10649433.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
+      "id": "xinhua-direct-kmgy2w",
+      "title": "一线观制造：多点产业焕新 夯实实体经济根基",
+      "url": "https://www.news.cn/tech/20260709/77659153e11c4533afabc68e332c9f02/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
       "language": "zh-CN",
       "region": "china",
       "categories": [
+        "technology",
         "science",
-        "society",
-        "international",
-        "ai"
+        "china"
       ],
-      "summary": "伦敦玛丽女王大学校长科林·贝利谈到中国将人工智能融入从小学到高等教育的多个阶段，并强调持续提问的重要性。",
-      "publishedAt": "2026-07-01T04:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
-      "primaryCategory": "science",
+      "primaryCategory": "technology",
+      "summary": "一线观制造：多点产业焕新 夯实实体经济根基",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.638Z",
+      "mayHavePaywall": false,
       "sourceIds": [
-        "chinanews"
+        "xinhua"
       ],
       "sourceNames": [
-        "中国新闻网"
+        "新华网"
       ],
       "relatedUrls": [
-        "https://www.chinanews.com.cn/sh/2026/06-29/10649433.shtml"
+        "https://www.news.cn/tech/20260709/77659153e11c4533afabc68e332c9f02/c.html"
       ],
       "primaryCategoryVotes": [
-        "science"
+        "technology"
       ],
       "score_breakdown": {
-        "final_score": 85,
-        "public_importance": 82,
+        "final_score": 84,
+        "public_importance": 85,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 88,
+        "content_quality": 51,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "yicai-direct-bmwn4q",
+      "title": "6月CPI同比涨幅回落，AI相关领域价格上行",
+      "url": "https://www.yicai.com/news/103267157.html",
+      "sourceId": "yicai",
+      "sourceName": "第一财经",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "china"
+      ],
+      "primaryCategory": "finance",
+      "summary": "6月CPI同比涨幅回落，AI相关领域价格上行",
+      "publishedAt": "2026-07-09T04:10:52.000Z",
+      "extractedAt": "2026-07-09T05:32:04.399Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "yicai"
+      ],
+      "sourceNames": [
+        "第一财经"
+      ],
+      "relatedUrls": [
+        "https://www.yicai.com/news/103267157.html"
+      ],
+      "primaryCategoryVotes": [
+        "finance"
+      ],
+      "score_breakdown": {
+        "final_score": 84,
+        "public_importance": 80,
         "user_preference": 100,
         "timeliness": 90,
-        "source_confidence": 80,
-        "content_quality": 54,
+        "source_confidence": 76,
+        "content_quality": 51,
         "ranking_reason": "匹配你的关注偏好，发布时间较新。"
       },
       "trust": {
-        "score": 50,
-        "level": "medium",
+        "score": 47,
+        "level": "low",
         "shouldShow": true,
         "reasons": [
           "包含发布时间",
@@ -147,258 +198,11 @@
       }
     },
     {
-      "id": "xinhua-m5s5ci",
-      "title": "微视频｜红船载初心",
-      "url": "https://www.news.cn/20260701/8cccd5acdb4845759b542c4ceef7a7d3/c.html",
-      "sourceId": "xinhua",
-      "sourceName": "新华网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "微视频｜红船载初心",
-      "extractedAt": "2026-07-01T08:27:29.582Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "xinhua"
-      ],
-      "sourceNames": [
-        "新华网"
-      ],
-      "relatedUrls": [
-        "https://www.news.cn/20260701/8cccd5acdb4845759b542c4ceef7a7d3/c.html"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 82,
-        "public_importance": 89,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 88,
-        "content_quality": 40,
-        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
-      },
-      "trust": {
-        "score": 56,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
-          "通讯社来源",
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "xinhua-azbyfn",
-      "title": "推进党的建设新的伟大工程",
-      "url": "https://www.news.cn/politics/leaders/20260701/db2bf0547d8740e8a72b8fd37d74b8fb/c.html",
-      "sourceId": "xinhua",
-      "sourceName": "新华网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "推进党的建设新的伟大工程",
-      "extractedAt": "2026-07-01T08:27:29.582Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "xinhua"
-      ],
-      "sourceNames": [
-        "新华网"
-      ],
-      "relatedUrls": [
-        "https://www.news.cn/politics/leaders/20260701/db2bf0547d8740e8a72b8fd37d74b8fb/c.html"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 82,
-        "public_importance": 89,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 88,
-        "content_quality": 41,
-        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
-      },
-      "trust": {
-        "score": 56,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
-          "通讯社来源",
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "xinhua-h01mla",
-      "title": "世界读懂中国共产党｜“实现愿景的非凡能力”",
-      "url": "https://www.news.cn/20260701/eb1f6c2586a94f1ca1a932ccdf5bfd89/c.html",
-      "sourceId": "xinhua",
-      "sourceName": "新华网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "世界读懂中国共产党｜“实现愿景的非凡能力”",
-      "extractedAt": "2026-07-01T08:27:29.582Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "xinhua"
-      ],
-      "sourceNames": [
-        "新华网"
-      ],
-      "relatedUrls": [
-        "https://www.news.cn/20260701/eb1f6c2586a94f1ca1a932ccdf5bfd89/c.html",
-        "https://www.news.cn/world/20260701/669d6707a0a64734ad7830c36cf59295/c.html"
-      ],
-      "primaryCategoryVotes": [
-        "china",
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 82,
-        "public_importance": 89,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 88,
-        "content_quality": 41,
-        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
-      },
-      "trust": {
-        "score": 56,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
-          "通讯社来源",
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "xinhua-9ckkko",
-      "title": "U17男篮世界杯：中国队1胜2负结束小组赛",
-      "url": "http://www.news.cn/sports/20260701/9d53b59b13014971ad5163a1ed12f8d5/c.html",
-      "sourceId": "xinhua",
-      "sourceName": "新华网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "U17男篮世界杯：中国队1胜2负结束小组赛",
-      "extractedAt": "2026-07-01T08:27:29.582Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "xinhua"
-      ],
-      "sourceNames": [
-        "新华网"
-      ],
-      "relatedUrls": [
-        "http://www.news.cn/sports/20260701/9d53b59b13014971ad5163a1ed12f8d5/c.html"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 82,
-        "public_importance": 89,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 88,
-        "content_quality": 41,
-        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
-      },
-      "trust": {
-        "score": 56,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
-          "通讯社来源",
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "xinhua-sfdmt6",
-      "title": "国际小行星日：一起走近行星科学前沿",
-      "url": "http://www.news.cn/tech/20260701/2217fc5b53264fb9a8b8931220264947/c.html",
-      "sourceId": "xinhua",
-      "sourceName": "新华网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "国际小行星日：一起走近行星科学前沿",
-      "extractedAt": "2026-07-01T08:27:29.582Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "xinhua"
-      ],
-      "sourceNames": [
-        "新华网"
-      ],
-      "relatedUrls": [
-        "http://www.news.cn/tech/20260701/2217fc5b53264fb9a8b8931220264947/c.html"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 82,
-        "public_importance": 89,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 88,
-        "content_quality": 41,
-        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
-      },
-      "trust": {
-        "score": 56,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
-          "通讯社来源",
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "people-k35gm0",
-      "title": "七部门启动全国社会救助法宣传周活动",
-      "url": "http://politics.people.com.cn/n1/2026/0629/c461001-40750221.html",
-      "sourceId": "people",
-      "sourceName": "人民网",
+      "id": "cctv-direct-5gho22",
+      "title": "2026年全国暑期文化和旅游消费季启动",
+      "url": "https://news.cctv.com/2026/07/09/ARTIoSFqdcxaIFedl4GGHNO1260709.shtml",
+      "sourceId": "cctv",
+      "sourceName": "央视网",
       "language": "zh-CN",
       "region": "china",
       "categories": [
@@ -407,51 +211,339 @@
         "society"
       ],
       "primaryCategory": "china",
-      "summary": "七部门启动全国社会救助法宣传周活动",
-      "extractedAt": "2026-07-01T08:27:30.262Z",
+      "summary": "2026年全国暑期文化和旅游消费季启动",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.276Z",
       "mayHavePaywall": false,
       "sourceIds": [
-        "people",
-        "the-paper"
+        "cctv"
       ],
       "sourceNames": [
-        "人民网",
-        "澎湃新闻"
+        "央视网"
       ],
       "relatedUrls": [
-        "http://politics.people.com.cn/n1/2026/0629/c461001-40750221.html",
-        "/goto?url=CAESeAHuR6pNqQ0HEU4cmgWRXisHRvNJfJIlHTZ8FJrv__SEon3uQ3dHqPJ9VE_ZOf1fGMLSjDpIgqsqbopaAkJCl0K0JBZMo4GrqBVmNHKc_71x7x-rCwuSq84Ts5nnArvhTEQNH-tIp4t6e7jKB6f5qBh-tZtHf5e_Ig==",
-        "https://m.thepaper.cn/newsDetail_forward_33485210"
+        "https://news.cctv.com/2026/07/09/ARTIoSFqdcxaIFedl4GGHNO1260709.shtml"
       ],
       "primaryCategoryVotes": [
-        "china",
-        "china",
         "china"
       ],
       "score_breakdown": {
-        "final_score": 82,
-        "public_importance": 90,
+        "final_score": 83,
+        "public_importance": 84,
         "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 85,
-        "content_quality": 41,
-        "ranking_reason": "公共影响高，匹配你的关注偏好，2 个来源相互印证，来源可信度高。"
+        "timeliness": 65,
+        "source_confidence": 84,
+        "content_quality": 51,
+        "ranking_reason": "匹配你的关注偏好。"
       },
       "trust": {
-        "score": 43,
-        "level": "low",
+        "score": 52,
+        "level": "medium",
         "shouldShow": true,
         "reasons": [
-          "多信源相互印证",
-          "缺少发布时间",
+          "包含发布时间",
           "摘要信息较少"
         ]
       }
     },
     {
-      "id": "tmtpost-41nq0r",
-      "title": "【钛晨报】\"十五五\"能源规划出台：2030年非化石能源将成电量主体；IBM推出全球首款亚1纳米芯片技术；上交所半年报预约披露时间出炉，中船特气拔得头筹",
-      "url": "https://www.tmtpost.com/8041868.html",
+      "id": "cctv-direct-y0dod1",
+      "title": "党旗在基层一线高高飘扬丨全力挺进抗洪救灾一线",
+      "url": "https://news.cctv.com/2026/07/09/ARTInfFLQ9aeBjfpWtkEF9ya260709.shtml",
+      "sourceId": "cctv",
+      "sourceName": "央视网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "china",
+        "policy",
+        "society"
+      ],
+      "primaryCategory": "china",
+      "summary": "党旗在基层一线高高飘扬丨全力挺进抗洪救灾一线",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.276Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "cctv"
+      ],
+      "sourceNames": [
+        "央视网"
+      ],
+      "relatedUrls": [
+        "https://news.cctv.com/2026/07/09/ARTInfFLQ9aeBjfpWtkEF9ya260709.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "china"
+      ],
+      "score_breakdown": {
+        "final_score": 83,
+        "public_importance": 84,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 84,
+        "content_quality": 51,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 52,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "cctv-direct-e3h47g",
+      "title": "内部押题？国安部提示：这类“上岸捷径”全是骗局！",
+      "url": "https://news.cctv.com/2026/07/09/ARTIp4HSvmM3IzkBw5FhGAlC260709.shtml",
+      "sourceId": "cctv",
+      "sourceName": "央视网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "china",
+        "policy",
+        "society"
+      ],
+      "primaryCategory": "china",
+      "summary": "内部押题？国安部提示：这类“上岸捷径”全是骗局！",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.276Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "cctv"
+      ],
+      "sourceNames": [
+        "央视网"
+      ],
+      "relatedUrls": [
+        "https://news.cctv.com/2026/07/09/ARTIp4HSvmM3IzkBw5FhGAlC260709.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "china"
+      ],
+      "score_breakdown": {
+        "final_score": 83,
+        "public_importance": 84,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 84,
+        "content_quality": 52,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 52,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "cctv-direct-9c62c8",
+      "title": "霍尔木兹海峡油轮通行“基本停止”",
+      "url": "https://news.cctv.com/2026/07/09/ARTIIXeu5EacuBmrDzoQVtSk260709.shtml",
+      "sourceId": "cctv",
+      "sourceName": "央视网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "international",
+        "policy"
+      ],
+      "primaryCategory": "international",
+      "summary": "霍尔木兹海峡油轮通行“基本停止”",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.350Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "cctv"
+      ],
+      "sourceNames": [
+        "央视网"
+      ],
+      "relatedUrls": [
+        "https://news.cctv.com/2026/07/09/ARTIIXeu5EacuBmrDzoQVtSk260709.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "international"
+      ],
+      "score_breakdown": {
+        "final_score": 83,
+        "public_importance": 84,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 84,
+        "content_quality": 51,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 52,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "xinhua-direct-qcxuq0",
+      "title": "“上海的党建重点是楼宇”",
+      "url": "https://www.news.cn/politics/leaders/20260708/381166776d43428883e0f00bf761a435/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "policy",
+        "china",
+        "international"
+      ],
+      "primaryCategory": "policy",
+      "summary": "“上海的党建重点是楼宇”",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.330Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://www.news.cn/politics/leaders/20260708/381166776d43428883e0f00bf761a435/c.html"
+      ],
+      "primaryCategoryVotes": [
+        "policy"
+      ],
+      "score_breakdown": {
+        "final_score": 82,
+        "public_importance": 89,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 88,
+        "content_quality": 51,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "xinhua-direct-5v0uw1",
+      "title": "欧盟航空安全局建议航司避开两伊和黎巴嫩空域",
+      "url": "https://www.news.cn/world/20260708/3417a3f6291f47edae84df76ab4e92cb/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "international",
+        "policy"
+      ],
+      "primaryCategory": "international",
+      "summary": "欧盟航空安全局建议航司避开两伊和黎巴嫩空域",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.371Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://www.news.cn/world/20260708/3417a3f6291f47edae84df76ab4e92cb/c.html"
+      ],
+      "primaryCategoryVotes": [
+        "international"
+      ],
+      "score_breakdown": {
+        "final_score": 82,
+        "public_importance": 89,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 88,
+        "content_quality": 51,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "xinhua-direct-dtp871",
+      "title": "比利时首相：我不会刺激特朗普",
+      "url": "https://www.news.cn/world/20260708/93c0f1bc833b4104b6ed6d7b354ba3ae/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "international",
+        "policy"
+      ],
+      "primaryCategory": "international",
+      "summary": "比利时首相：我不会刺激特朗普",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.371Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://www.news.cn/world/20260708/93c0f1bc833b4104b6ed6d7b354ba3ae/c.html"
+      ],
+      "primaryCategoryVotes": [
+        "international"
+      ],
+      "score_breakdown": {
+        "final_score": 82,
+        "public_importance": 89,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 88,
+        "content_quality": 51,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "tmtpost-direct-rvsdt5",
+      "title": "盈利新高市值蒸发：谁在砸盘存储股？",
+      "url": "https://www.tmtpost.com/8058046.html",
       "sourceId": "tmtpost",
       "sourceName": "钛媒体",
       "language": "zh-CN",
@@ -461,8 +553,9 @@
         "ai"
       ],
       "primaryCategory": "technology",
-      "summary": "【钛晨报】\"十五五\"能源规划出台：2030年非化石能源将成电量主体；IBM推出全球首款亚1纳米芯片技术；上交所半年报预约披露时间出炉，中船特气拔得头筹",
-      "extractedAt": "2026-07-01T08:27:40.328Z",
+      "summary": "盈利新高市值蒸发：谁在砸盘存储股？",
+      "publishedAt": "2026-07-09T01:24:00.000Z",
+      "extractedAt": "2026-07-09T05:32:01.240Z",
       "mayHavePaywall": false,
       "sourceIds": [
         "tmtpost"
@@ -471,18 +564,361 @@
         "钛媒体"
       ],
       "relatedUrls": [
-        "https://www.tmtpost.com/8041868.html"
+        "https://www.tmtpost.com/8058046.html"
       ],
       "primaryCategoryVotes": [
         "technology"
       ],
       "score_breakdown": {
         "final_score": 82,
+        "public_importance": 78,
+        "user_preference": 100,
+        "timeliness": 90,
+        "source_confidence": 68,
+        "content_quality": 51,
+        "ranking_reason": "匹配你的关注偏好，发布时间较新。"
+      },
+      "trust": {
+        "score": 43,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "tmtpost-direct-dbhhbq",
+      "title": "乱用AI，打工人被坑惨了",
+      "url": "https://www.tmtpost.com/8058067.html",
+      "sourceId": "tmtpost",
+      "sourceName": "钛媒体",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "technology",
+        "ai"
+      ],
+      "primaryCategory": "technology",
+      "summary": "乱用AI，打工人被坑惨了",
+      "publishedAt": "2026-07-09T02:22:00.000Z",
+      "extractedAt": "2026-07-09T05:32:01.555Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "tmtpost"
+      ],
+      "sourceNames": [
+        "钛媒体"
+      ],
+      "relatedUrls": [
+        "https://www.tmtpost.com/8058067.html"
+      ],
+      "primaryCategoryVotes": [
+        "technology"
+      ],
+      "score_breakdown": {
+        "final_score": 82,
+        "public_importance": 78,
+        "user_preference": 100,
+        "timeliness": 90,
+        "source_confidence": 68,
+        "content_quality": 51,
+        "ranking_reason": "匹配你的关注偏好，发布时间较新。"
+      },
+      "trust": {
+        "score": 43,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "caixin-direct-stnwmm",
+      "title": "T早报｜长鑫科技7月16日新股申购；工信部提示Claude Code存在安全后门隐患；智谱基石解禁首日涨13%",
+      "url": "https://www.caixin.com/2026-07-09/102462153.html",
+      "sourceId": "caixin",
+      "sourceName": "财新",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "china",
+        "policy"
+      ],
+      "primaryCategory": "finance",
+      "summary": "T早报｜长鑫科技7月16日新股申购；工信部提示Claude Code存在安全后门隐患；智谱基石解禁首日涨13%",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:32:03.935Z",
+      "mayHavePaywall": true,
+      "sourceIds": [
+        "caixin"
+      ],
+      "sourceNames": [
+        "财新"
+      ],
+      "relatedUrls": [
+        "https://www.caixin.com/2026-07-09/102462153.html"
+      ],
+      "primaryCategoryVotes": [
+        "finance"
+      ],
+      "score_breakdown": {
+        "final_score": 82,
+        "public_importance": 84,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 77,
+        "content_quality": 46,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 47,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少",
+          "付费墙来源只使用公开元数据"
+        ]
+      }
+    },
+    {
+      "id": "caixin-direct-rej1g1",
+      "title": "AI深入医疗场景，如何驱动药械行业新范式？",
+      "url": "https://www.caixin.com/2026-07-09/102462150.html",
+      "sourceId": "caixin",
+      "sourceName": "财新",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "china",
+        "policy"
+      ],
+      "primaryCategory": "finance",
+      "summary": "AI深入医疗场景，如何驱动药械行业新范式？",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:32:03.935Z",
+      "mayHavePaywall": true,
+      "sourceIds": [
+        "caixin"
+      ],
+      "sourceNames": [
+        "财新"
+      ],
+      "relatedUrls": [
+        "https://www.caixin.com/2026-07-09/102462150.html"
+      ],
+      "primaryCategoryVotes": [
+        "finance"
+      ],
+      "score_breakdown": {
+        "final_score": 82,
+        "public_importance": 84,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 77,
+        "content_quality": 43,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 47,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少",
+          "付费墙来源只使用公开元数据"
+        ]
+      }
+    },
+    {
+      "id": "chinanews-direct-75snwm",
+      "title": "勇攀高峰，向着科技强国目标坚定迈进",
+      "url": "https://www.chinanews.com.cn/gn/2026/07-09/10655814.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "china",
+        "international",
+        "society"
+      ],
+      "primaryCategory": "china",
+      "summary": "勇攀高峰，向着科技强国目标坚定迈进",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.576Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://www.chinanews.com.cn/gn/2026/07-09/10655814.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "china"
+      ],
+      "score_breakdown": {
+        "final_score": 81,
+        "public_importance": 82,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 80,
+        "content_quality": 51,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 50,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "chinanews-direct-nnw7vt",
+      "title": "此行间·105年不懈奋斗！跟着总书记学党史",
+      "url": "https://www.chinanews.com.cn/gn/2026/07-09/10655828.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "china",
+        "international",
+        "society"
+      ],
+      "primaryCategory": "china",
+      "summary": "此行间·105年不懈奋斗！跟着总书记学党史",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.576Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://www.chinanews.com.cn/gn/2026/07-09/10655828.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "china"
+      ],
+      "score_breakdown": {
+        "final_score": 81,
+        "public_importance": 82,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 80,
+        "content_quality": 51,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 50,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "chinanews-direct-au87ud",
+      "title": "青海中控德令哈50MW塔式光热电站四年累计实际发电量达5.82亿千瓦时",
+      "url": "https://www.chinanews.com.cn/tp/hd2011/2026/07-09/1197645.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "china",
+        "international",
+        "society"
+      ],
+      "primaryCategory": "china",
+      "summary": "青海中控德令哈50MW塔式光热电站四年累计实际发电量达5.82亿千瓦时",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.576Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://www.chinanews.com.cn/tp/hd2011/2026/07-09/1197645.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "china"
+      ],
+      "score_breakdown": {
+        "final_score": 81,
+        "public_importance": 82,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 80,
+        "content_quality": 52,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 50,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "tmtpost-direct-mye2uk",
+      "title": "AI猜球总翻车？世界杯给了大模型一次压力测试",
+      "url": "https://www.tmtpost.com/8052191.html",
+      "sourceId": "tmtpost",
+      "sourceName": "钛媒体",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "ai",
+        "technology"
+      ],
+      "primaryCategory": "ai",
+      "summary": "AI猜球总翻车？世界杯给了大模型一次压力测试",
+      "publishedAt": "2026-07-08T02:58:00.000Z",
+      "extractedAt": "2026-07-09T05:32:02.234Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "tmtpost"
+      ],
+      "sourceNames": [
+        "钛媒体"
+      ],
+      "relatedUrls": [
+        "https://www.tmtpost.com/8052191.html"
+      ],
+      "primaryCategoryVotes": [
+        "ai"
+      ],
+      "score_breakdown": {
+        "final_score": 81,
         "public_importance": 90,
         "user_preference": 100,
-        "timeliness": 45,
+        "timeliness": 42,
         "source_confidence": 68,
-        "content_quality": 66,
+        "content_quality": 51,
         "ranking_reason": "公共影响高，匹配你的关注偏好。"
       },
       "trust": {
@@ -490,240 +926,36 @@
         "level": "low",
         "shouldShow": true,
         "reasons": [
-          "缺少发布时间",
-          "摘要信息完整"
-        ]
-      }
-    },
-    {
-      "id": "firecrawl-chinanews-academic-yunnan",
-      "title": "学术边疆行 | 走进云南",
-      "url": "https://www.chinanews.com.cn/sh/2026/06-29/10649206.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "society",
-        "china",
-        "science"
-      ],
-      "summary": "报道聚焦云南地区推进中华民族共同体建设的实践，呈现各民族共同团结进步、共同繁荣发展的地方样本。",
-      "publishedAt": "2026-07-01T01:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
-      "primaryCategory": "society",
-      "sourceIds": [
-        "chinanews"
-      ],
-      "sourceNames": [
-        "中国新闻网"
-      ],
-      "relatedUrls": [
-        "https://www.chinanews.com.cn/sh/2026/06-29/10649206.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "society"
-      ],
-      "score_breakdown": {
-        "final_score": 82,
-        "public_importance": 80,
-        "user_preference": 100,
-        "timeliness": 78,
-        "source_confidence": 80,
-        "content_quality": 53,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 50,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
           "包含发布时间",
           "摘要信息较少"
         ]
       }
     },
     {
-      "id": "firecrawl-people-invoice",
-      "title": "有奖发票，小激励激发大活力（财经观）",
-      "url": "http://finance.people.com.cn/n1/2026/0629/c1004-40749146.html",
-      "sourceId": "people",
-      "sourceName": "人民网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "society",
-        "china"
-      ],
-      "summary": "人民网关注多地升级有奖发票活动，借助小额激励带动消费场景活跃度，覆盖端午、“618”和暑期消费节点。",
-      "publishedAt": "2026-06-30T15:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
-      "primaryCategory": "finance",
-      "sourceIds": [
-        "people"
-      ],
-      "sourceNames": [
-        "人民网"
-      ],
-      "relatedUrls": [
-        "http://finance.people.com.cn/n1/2026/0629/c1004-40749146.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 81,
-        "public_importance": 80,
-        "user_preference": 100,
-        "timeliness": 65,
-        "source_confidence": 84,
-        "content_quality": 54,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 52,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
-          "包含发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "yicai-lmxue",
-      "title": "信通电子：部分董事、高管及大股东自愿承诺6个月内不减持公司股份",
-      "url": "https://www.yicai.com/news/103249715.html",
+      "id": "yicai-direct-t7hqu5",
+      "title": "汽车越来越像手机？油车平均车龄8年，电车不到2年",
+      "url": "https://www.yicai.com/news/103266197.html",
       "sourceId": "yicai",
       "sourceName": "第一财经",
       "language": "zh-CN",
       "region": "china",
       "categories": [
         "finance",
-        "china",
-        "technology",
-        "society"
-      ],
-      "primaryCategory": "finance",
-      "summary": "信通电子：部分董事、高管及大股东自愿承诺6个月内不减持公司股份",
-      "extractedAt": "2026-07-01T08:27:36.881Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "yicai",
-        "jiemian"
-      ],
-      "sourceNames": [
-        "第一财经",
-        "界面新闻"
-      ],
-      "relatedUrls": [
-        "https://www.yicai.com/news/103249715.html",
-        "https://m.jiemian.com/article/14659938.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance",
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 80,
-        "public_importance": 86,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 80,
-        "content_quality": 42,
-        "ranking_reason": "公共影响高，匹配你的关注偏好，2 个来源相互印证。"
-      },
-      "trust": {
-        "score": 40,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "多信源相互印证",
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "yicai-yg2uef",
-      "title": "好利科技：筹划公司控制权变更事项，股票继续停牌",
-      "url": "https://www.yicai.com/news/103253683.html",
-      "sourceId": "yicai",
-      "sourceName": "第一财经",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china",
-        "technology",
-        "society"
-      ],
-      "primaryCategory": "finance",
-      "summary": "好利科技：筹划公司控制权变更事项，股票继续停牌",
-      "extractedAt": "2026-07-01T08:27:36.881Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "yicai",
-        "jiemian"
-      ],
-      "sourceNames": [
-        "第一财经",
-        "界面新闻"
-      ],
-      "relatedUrls": [
-        "https://www.yicai.com/news/103253683.html",
-        "https://www.jiemian.com/article/14675261.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance",
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 80,
-        "public_importance": 86,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 80,
-        "content_quality": 41,
-        "ranking_reason": "公共影响高，匹配你的关注偏好，2 个来源相互印证。"
-      },
-      "trust": {
-        "score": 40,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "多信源相互印证",
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "firecrawl-chinanews-dairy-index",
-      "title": "2026中国奶商指数发布 启动孕婴营养关爱行动",
-      "url": "https://www.chinanews.com.cn/cj/2026/06-29/10649107.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "society",
         "china"
       ],
-      "summary": "荷兰皇家菲仕兰联合行业协会、医疗保健机构和京东超市发布《2026中国奶商指数报告》，并启动孕婴营养关爱行动。",
-      "publishedAt": "2026-06-30T20:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
       "primaryCategory": "finance",
+      "summary": "汽车越来越像手机？油车平均车龄8年，电车不到2年",
+      "publishedAt": "2026-07-08T12:17:12.000Z",
+      "extractedAt": "2026-07-09T05:32:04.434Z",
+      "mayHavePaywall": false,
       "sourceIds": [
-        "chinanews"
+        "yicai"
       ],
       "sourceNames": [
-        "中国新闻网"
+        "第一财经"
       ],
       "relatedUrls": [
-        "https://www.chinanews.com.cn/cj/2026/06-29/10649107.shtml"
+        "https://www.yicai.com/news/103266197.html"
       ],
       "primaryCategoryVotes": [
         "finance"
@@ -733,13 +965,13 @@
         "public_importance": 80,
         "user_preference": 100,
         "timeliness": 65,
-        "source_confidence": 80,
-        "content_quality": 54,
+        "source_confidence": 76,
+        "content_quality": 52,
         "ranking_reason": "匹配你的关注偏好。"
       },
       "trust": {
-        "score": 50,
-        "level": "medium",
+        "score": 47,
+        "level": "low",
         "shouldShow": true,
         "reasons": [
           "包含发布时间",
@@ -748,490 +980,46 @@
       }
     },
     {
-      "id": "people-xiz8kx",
-      "title": "《中华人民共和国社会救助法》宣传周活动启动",
-      "url": "http://paper.people.com.cn/rmrb/pc/content/202606/30/content_30165695.html",
-      "sourceId": "people",
-      "sourceName": "人民网",
+      "id": "yicai-direct-qfp8al",
+      "title": "美韩巨头如果杀回马枪，长鑫科技抢下的地盘能守住吗？",
+      "url": "https://www.yicai.com/news/103266065.html",
+      "sourceId": "yicai",
+      "sourceName": "第一财经",
       "language": "zh-CN",
       "region": "china",
       "categories": [
-        "china",
-        "policy",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "《中华人民共和国社会救助法》宣传周活动启动",
-      "extractedAt": "2026-07-01T08:27:30.262Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "people"
-      ],
-      "sourceNames": [
-        "人民网"
-      ],
-      "relatedUrls": [
-        "http://paper.people.com.cn/rmrb/pc/content/202606/30/content_30165695.html",
-        "http://sc.people.com.cn/n2/2026/0630/c345460-41625162.html",
-        "http://gs.people.com.cn/n2/2026/0630/c183342-41625034.html",
-        "/goto?url=CAEScgHuR6pNx-gnh2kA3Q_9yXUROcyQD6LgTKzAI0csXvOLUS6_5-cB4D6u2Ccn74DhPA4mcj6soeTNEmuNsQLFzhACdbP07RTDQBoDd-xHpIgKsZcnRoSmlvlRR09ELm51pWTNpZcMakJZEcGoXOrwS7-ZgA==",
-        "/goto?url=CAEScwHuR6pNyio6rIyQTR26_KRdn4UvNdAaJosxaxvhIQE4GBoJFXdWWo7hWMjKh66trEzQkfZ41JJQuf8cC0nH3uBvWq8n4zvXRSYUCcVeJxaGH7O0WOmcsdfRPUbuTCt5NjzhqPWJwChOyvNjGrkmU6xUkV0=",
-        "/goto?url=CAEScgHuR6pNBCv0Y_iX6XIFHcj7d2u7J84PjfIc2DeF3PONQHD9MualYQeQqQwk0YTMo8j03ucdOWltGahgArEb94j7vclzlshdFAKPRNdjX5YO-NrU2dWt98ZtbjMQQULbaLnlSMUHl5QdtG3XU2lqK32KHw==",
-        "/goto?url=CAEScgHuR6pNEMrNj-K4NlLKlOHUJIQXSZz1a0W5oHPsCA0Doc0GwhtRYyvBaKi44VhICd0rp4W0OhXY_pPfXIImXde9YohScNorNOC6Pid48h0FK2eI7yxJpOQz2wpv3lmbo7sBmC38U0Bpck25nkPlThBEOA=="
-      ],
-      "primaryCategoryVotes": [
-        "china",
-        "china",
-        "china",
-        "china",
-        "china",
-        "china",
+        "finance",
         "china"
       ],
-      "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 84,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 38,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "people-j2ytbf",
-      "title": "《中華人民共和國社會救助法》宣傳周活動啟動--新聞報道-中國共產黨新聞網",
-      "url": "http://cpc.people.com.cn/BIG5/n1/2026/0630/c64387-40750353.html",
-      "sourceId": "people",
-      "sourceName": "人民网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "《中華人民共和國社會救助法》宣傳周活動啟動--新聞報道-中國共產黨新聞網",
-      "extractedAt": "2026-07-01T08:27:30.262Z",
+      "primaryCategory": "finance",
+      "summary": "美韩巨头如果杀回马枪，长鑫科技抢下的地盘能守住吗？",
+      "publishedAt": "2026-07-08T11:01:04.000Z",
+      "extractedAt": "2026-07-09T05:32:04.469Z",
       "mayHavePaywall": false,
       "sourceIds": [
-        "people"
+        "yicai"
       ],
       "sourceNames": [
-        "人民网"
+        "第一财经"
       ],
       "relatedUrls": [
-        "http://cpc.people.com.cn/BIG5/n1/2026/0630/c64387-40750353.html"
+        "https://www.yicai.com/news/103266065.html"
       ],
       "primaryCategoryVotes": [
-        "china"
+        "finance"
       ],
       "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 84,
-        "content_quality": 43,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 38,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "cctv-94jah9",
-      "title": "一组数据带你看懂“十五五”能源强国新图景",
-      "url": "https://news.cctv.com/2026/07/01/ARTIjw2SJyTm3ZRE6PtHUE7z260630.shtml",
-      "sourceId": "cctv",
-      "sourceName": "央视网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "一组数据带你看懂“十五五”能源强国新图景",
-      "extractedAt": "2026-07-01T08:27:31.312Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "cctv"
-      ],
-      "sourceNames": [
-        "央视网"
-      ],
-      "relatedUrls": [
-        "https://news.cctv.com/2026/07/01/ARTIjw2SJyTm3ZRE6PtHUE7z260630.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 84,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 38,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "cctv-s3fzl3",
-      "title": "乌克兰获欧盟39亿欧元贷款用于国防",
-      "url": "https://news.cctv.com/2026/07/01/ARTI3F2FTqStz3BIwe0E810O260701.shtml",
-      "sourceId": "cctv",
-      "sourceName": "央视网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "乌克兰获欧盟39亿欧元贷款用于国防",
-      "extractedAt": "2026-07-01T08:27:31.312Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "cctv"
-      ],
-      "sourceNames": [
-        "央视网"
-      ],
-      "relatedUrls": [
-        "https://news.cctv.com/2026/07/01/ARTI3F2FTqStz3BIwe0E810O260701.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 84,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 38,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "cctv-iclfi0",
-      "title": "81部经典剧目！2026年经典折子戏展演7至8月北京开演",
-      "url": "https://news.cctv.com/2026/07/01/ARTIvbN32RFL5yr8yMDAQ7we260630.shtml",
-      "sourceId": "cctv",
-      "sourceName": "央视网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "81部经典剧目！2026年经典折子戏展演7至8月北京开演",
-      "extractedAt": "2026-07-01T08:27:31.312Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "cctv"
-      ],
-      "sourceNames": [
-        "央视网"
-      ],
-      "relatedUrls": [
-        "https://news.cctv.com/2026/07/01/ARTIvbN32RFL5yr8yMDAQ7we260630.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 84,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 38,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "cctv-nc3eh5",
-      "title": "雪山下的一堂足球课",
-      "url": "https://news.cctv.com/2026/07/01/ARTIkvfoau593yqK0wI9CJvs260630.shtml",
-      "sourceId": "cctv",
-      "sourceName": "央视网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "雪山下的一堂足球课",
-      "extractedAt": "2026-07-01T08:27:31.312Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "cctv"
-      ],
-      "sourceNames": [
-        "央视网"
-      ],
-      "relatedUrls": [
-        "https://news.cctv.com/2026/07/01/ARTIkvfoau593yqK0wI9CJvs260630.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 84,
-        "content_quality": 40,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 38,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "cctv-8qlg8m",
-      "title": "记者探访海上“超级大冰箱”液化天然气船",
-      "url": "https://news.cctv.com/2026/07/01/ARTIYNkg5BGdAFCiW99R9Rwq260630.shtml",
-      "sourceId": "cctv",
-      "sourceName": "央视网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "记者探访海上“超级大冰箱”液化天然气船",
-      "extractedAt": "2026-07-01T08:27:31.312Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "cctv"
-      ],
-      "sourceNames": [
-        "央视网"
-      ],
-      "relatedUrls": [
-        "https://news.cctv.com/2026/07/01/ARTIYNkg5BGdAFCiW99R9Rwq260630.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 84,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 38,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "cctv-ef06x9",
-      "title": "订单排到8月！中国“降温神器”为何热卖全球？",
-      "url": "https://news.cctv.com/2026/07/01/ARTIPYsnA8gy0RGcw5kbya15260701.shtml",
-      "sourceId": "cctv",
-      "sourceName": "央视网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "订单排到8月！中国“降温神器”为何热卖全球？",
-      "extractedAt": "2026-07-01T08:27:31.312Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "cctv"
-      ],
-      "sourceNames": [
-        "央视网"
-      ],
-      "relatedUrls": [
-        "https://news.cctv.com/2026/07/01/ARTIPYsnA8gy0RGcw5kbya15260701.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 84,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 38,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "cctv-dmsrcx",
-      "title": "同一天捷报频传！海上双船交付 多地工程突破不断",
-      "url": "https://news.cctv.com/2026/07/01/ARTI0MFicgboL1rR7bUs0FP5260701.shtml",
-      "sourceId": "cctv",
-      "sourceName": "央视网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "policy",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "同一天捷报频传！海上双船交付 多地工程突破不断",
-      "extractedAt": "2026-07-01T08:27:31.312Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "cctv"
-      ],
-      "sourceNames": [
-        "央视网"
-      ],
-      "relatedUrls": [
-        "https://news.cctv.com/2026/07/01/ARTI0MFicgboL1rR7bUs0FP5260701.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 84,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 38,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "firecrawl-chinanews-ai-writing",
-      "title": "专家学者热议“AI写作”",
-      "url": "https://www.chinanews.com.cn/sh/2026/06-29/10649059.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "ai",
-        "science",
-        "society"
-      ],
-      "summary": "中国当代文学研究会学术年会期间，专家学者围绕 AI 写作、文学研究和创作边界展开讨论。",
-      "publishedAt": "2026-06-30T19:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
-      "primaryCategory": "ai",
-      "sourceIds": [
-        "chinanews"
-      ],
-      "sourceNames": [
-        "中国新闻网"
-      ],
-      "relatedUrls": [
-        "https://www.chinanews.com.cn/sh/2026/06-29/10649059.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "ai"
-      ],
-      "score_breakdown": {
-        "final_score": 79,
-        "public_importance": 78,
+        "final_score": 80,
+        "public_importance": 80,
         "user_preference": 100,
         "timeliness": 65,
-        "source_confidence": 80,
-        "content_quality": 53,
+        "source_confidence": 76,
+        "content_quality": 52,
         "ranking_reason": "匹配你的关注偏好。"
       },
       "trust": {
-        "score": 50,
-        "level": "medium",
+        "score": 47,
+        "level": "low",
         "shouldShow": true,
         "reasons": [
           "包含发布时间",
@@ -1240,1580 +1028,241 @@
       }
     },
     {
-      "id": "firecrawl-bbc-beijing-plane",
-      "title": "北京“中国尊”撞机事件背后的三大疑点：空管、飞行员、动机",
-      "url": "https://www.bbc.com/zhongwen/articles/cn4d1ev0vlpo/simp",
-      "sourceId": "bbc",
-      "sourceName": "英国广播公司",
+      "id": "yicai-direct-wm70id",
+      "title": "北约峰会闹别扭：特朗普威胁撤出所有驻欧美军，重提格陵兰岛",
+      "url": "https://www.yicai.com/news/103265886.html",
+      "sourceId": "yicai",
+      "sourceName": "第一财经",
       "language": "zh-CN",
-      "region": "global",
+      "region": "china",
       "categories": [
-        "society",
+        "finance",
+        "china"
+      ],
+      "primaryCategory": "finance",
+      "summary": "北约峰会闹别扭：特朗普威胁撤出所有驻欧美军，重提格陵兰岛",
+      "publishedAt": "2026-07-08T09:15:01.000Z",
+      "extractedAt": "2026-07-09T05:32:04.541Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "yicai"
+      ],
+      "sourceNames": [
+        "第一财经"
+      ],
+      "relatedUrls": [
+        "https://www.yicai.com/news/103265886.html"
+      ],
+      "primaryCategoryVotes": [
+        "finance"
+      ],
+      "score_breakdown": {
+        "final_score": 80,
+        "public_importance": 80,
+        "user_preference": 100,
+        "timeliness": 65,
+        "source_confidence": 76,
+        "content_quality": 52,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 47,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "xinhua-direct-abqimw",
+      "title": "习近平总书记引领科技强国建设纪实",
+      "url": "https://www.news.cn/politics/leaders/20260707/0f3a59dfecf14853abb3bbd547f878ae/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "policy",
         "china",
         "international"
       ],
-      "summary": "英国广播公司中文围绕北京“中国尊”撞机事件梳理空管、飞行员和动机等疑点，强调事件画面对公众造成的强烈冲击。",
-      "publishedAt": "2026-06-30T08:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
-      "primaryCategory": "society",
+      "primaryCategory": "policy",
+      "summary": "学习进行时丨建设科技强国，习近平总书记这样引领推动",
+      "publishedAt": "2026-07-06T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.330Z",
+      "mayHavePaywall": false,
       "sourceIds": [
-        "bbc"
+        "xinhua"
       ],
       "sourceNames": [
-        "英国广播公司"
+        "新华网"
       ],
       "relatedUrls": [
-        "https://www.bbc.com/zhongwen/articles/cn4d1ev0vlpo/simp"
+        "https://www.news.cn/politics/leaders/20260707/0f3a59dfecf14853abb3bbd547f878ae/c.html",
+        "https://www.news.cn/politics/xxjxs/20260709/fdc734c1b0ba4383bc9fe83731be24eb/c.html"
       ],
       "primaryCategoryVotes": [
-        "society"
+        "policy",
+        "policy"
       ],
       "score_breakdown": {
         "final_score": 79,
+        "public_importance": 89,
+        "user_preference": 100,
+        "timeliness": 20,
+        "source_confidence": 88,
+        "content_quality": 52,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "xinhua-direct-ss0ute",
+      "title": "朝着建成科技强国的宏伟目标奋勇前进",
+      "url": "https://www.news.cn/video/20260707/6fa1381874714b4bbfb731246c7c6594/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "china",
+        "policy",
+        "international"
+      ],
+      "primaryCategory": "china",
+      "summary": "朝着建成科技强国的宏伟目标奋勇前进",
+      "publishedAt": "2026-07-06T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.330Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://www.news.cn/video/20260707/6fa1381874714b4bbfb731246c7c6594/c.html"
+      ],
+      "primaryCategoryVotes": [
+        "china"
+      ],
+      "score_breakdown": {
+        "final_score": 79,
+        "public_importance": 89,
+        "user_preference": 100,
+        "timeliness": 20,
+        "source_confidence": 88,
+        "content_quality": 51,
+        "ranking_reason": "公共影响高，匹配你的关注偏好，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "xinhua-direct-ks9vrv",
+      "title": "考文垂：运动员不该为政府行为承担责任 2026-07-09 09:11:28",
+      "url": "https://sports.news.cn/sports/20260709/746e3047806245ad8b8091fd2fbe819a/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "考文垂：运动员不该为政府行为承担责任 2026-07-09 09:11:28",
+      "publishedAt": "2026-07-08T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.608Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://sports.news.cn/sports/20260709/746e3047806245ad8b8091fd2fbe819a/c.html"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 79,
+        "public_importance": 85,
+        "user_preference": 75,
+        "timeliness": 65,
+        "source_confidence": 88,
+        "content_quality": 53,
+        "ranking_reason": "公共影响高，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "chinanews-direct-kbxzr3",
+      "title": "习言道｜我们必须抓住历史机遇，迎接时代挑战，加快推进高水平科技自立自强",
+      "url": "https://www.chinanews.com.cn/gn/2026/07-08/10655542.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "china",
+        "international",
+        "society"
+      ],
+      "primaryCategory": "china",
+      "summary": "习言道｜我们必须抓住历史机遇，迎接时代挑战，加快推进高水平科技自立自强",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.576Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "chinanews"
+      ],
+      "sourceNames": [
+        "中国新闻网"
+      ],
+      "relatedUrls": [
+        "https://www.chinanews.com.cn/gn/2026/07-08/10655542.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "china"
+      ],
+      "score_breakdown": {
+        "final_score": 78,
         "public_importance": 82,
         "user_preference": 100,
         "timeliness": 42,
-        "source_confidence": 86,
-        "content_quality": 54,
-        "ranking_reason": "匹配你的关注偏好，来源可信度高。"
-      },
-      "trust": {
-        "score": 53,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
-          "包含发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "chinanews-robw9e",
-      "title": "习言道｜不忘初心，方得始终",
-      "url": "https://www.chinanews.com.cn/gn/shipin/2026/07-01/news1060022.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "习言道｜不忘初心，方得始终",
-      "extractedAt": "2026-07-01T08:27:32.735Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "chinanews"
-      ],
-      "sourceNames": [
-        "中国新闻网"
-      ],
-      "relatedUrls": [
-        "https://www.chinanews.com.cn/gn/shipin/2026/07-01/news1060022.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
         "source_confidence": 80,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 36,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "chinanews-8ux8lz",
-      "title": "委内瑞拉连续发生7级以上强震 直击现场",
-      "url": "https://www.chinanews.com.cn/shipin/spfts/20260625/6575.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "委内瑞拉连续发生7级以上强震 直击现场",
-      "extractedAt": "2026-07-01T08:27:32.735Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "chinanews"
-      ],
-      "sourceNames": [
-        "中国新闻网"
-      ],
-      "relatedUrls": [
-        "https://www.chinanews.com.cn/shipin/spfts/20260625/6575.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 80,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 36,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "chinanews-j00ljj",
-      "title": "叠滘龙船漂移火热上演",
-      "url": "https://www.chinanews.com.cn/shipin/spfts/20260620/6567.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "叠滘龙船漂移火热上演",
-      "extractedAt": "2026-07-01T08:27:32.735Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "chinanews"
-      ],
-      "sourceNames": [
-        "中国新闻网"
-      ],
-      "relatedUrls": [
-        "https://www.chinanews.com.cn/shipin/spfts/20260620/6567.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 80,
-        "content_quality": 40,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 36,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "chinanews-qfazve",
-      "title": "苏超常州VS盐城 “逆袭队伍”迎战“榜一大哥”",
-      "url": "https://www.chinanews.com.cn/shipin/spfts/20260618/6565.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "苏超常州VS盐城 “逆袭队伍”迎战“榜一大哥”",
-      "extractedAt": "2026-07-01T08:27:32.735Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "chinanews"
-      ],
-      "sourceNames": [
-        "中国新闻网"
-      ],
-      "relatedUrls": [
-        "https://www.chinanews.com.cn/shipin/spfts/20260618/6565.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 80,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 36,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "chinanews-pue88w",
-      "title": "李强签署国务院令 公布《国务院关于对外投资的规定》",
-      "url": "https://www.chinanews.com.cn/gn/2026/06-01/10632085.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "李强签署国务院令 公布《国务院关于对外投资的规定》",
-      "extractedAt": "2026-07-01T08:27:32.735Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "chinanews"
-      ],
-      "sourceNames": [
-        "中国新闻网"
-      ],
-      "relatedUrls": [
-        "https://www.chinanews.com.cn/gn/2026/06-01/10632085.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 80,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 36,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "china-daily-uhscge",
-      "title": "上海与纽约因影像而连接",
-      "url": "https://cn.chinadaily.com.cn/a/202607/01/WS6a43f3b9a310d709c2fbb2aa.html",
-      "sourceId": "china-daily",
-      "sourceName": "中国日报网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "上海与纽约因影像而连接",
-      "extractedAt": "2026-07-01T08:27:35.049Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "china-daily"
-      ],
-      "sourceNames": [
-        "中国日报网"
-      ],
-      "relatedUrls": [
-        "https://cn.chinadaily.com.cn/a/202607/01/WS6a43f3b9a310d709c2fbb2aa.html"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 78,
-        "content_quality": 40,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 34,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "china-daily-xet70s",
-      "title": "江苏省 常熟市 关于【标的：常孰一批汽车备件处置项目】的竞拍公告",
-      "url": "https://cn.chinadaily.com.cn/a/202606/29/WS6a421314a310d709c2fbaaa6.html",
-      "sourceId": "china-daily",
-      "sourceName": "中国日报网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "江苏省 常熟市 关于【标的：常孰一批汽车备件处置项目】的竞拍公告",
-      "extractedAt": "2026-07-01T08:27:35.049Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "china-daily"
-      ],
-      "sourceNames": [
-        "中国日报网"
-      ],
-      "relatedUrls": [
-        "https://cn.chinadaily.com.cn/a/202606/29/WS6a421314a310d709c2fbaaa6.html"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 78,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 34,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "china-daily-8e6u04",
-      "title": "吉林省 长春市 关于【标的：迎春南路5418㎡土地租赁】的竞拍公告",
-      "url": "https://cn.chinadaily.com.cn/a/202606/29/WS6a42222aa310d709c2fbab93.html",
-      "sourceId": "china-daily",
-      "sourceName": "中国日报网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "吉林省 长春市 关于【标的：迎春南路5418㎡土地租赁】的竞拍公告",
-      "extractedAt": "2026-07-01T08:27:35.049Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "china-daily"
-      ],
-      "sourceNames": [
-        "中国日报网"
-      ],
-      "relatedUrls": [
-        "https://cn.chinadaily.com.cn/a/202606/29/WS6a42222aa310d709c2fbab93.html"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 78,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 34,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "china-daily-4887bf",
-      "title": "与你我有关！下月起，这些新规将施行",
-      "url": "https://cn.chinadaily.com.cn/a/202606/28/WS6a405d30a310d709c2fba7ac.html",
-      "sourceId": "china-daily",
-      "sourceName": "中国日报网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "与你我有关！下月起，这些新规将施行",
-      "extractedAt": "2026-07-01T08:27:35.049Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "china-daily"
-      ],
-      "sourceNames": [
-        "中国日报网"
-      ],
-      "relatedUrls": [
-        "https://cn.chinadaily.com.cn/a/202606/28/WS6a405d30a310d709c2fba7ac.html"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 78,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 34,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "china-daily-8v9jjc",
-      "title": "每日一词 | 对外投资 outbound investment",
-      "url": "https://cn.chinadaily.com.cn/a/202606/03/WS6a1ff566a310942cc49afe5d.html",
-      "sourceId": "china-daily",
-      "sourceName": "中国日报网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international"
-      ],
-      "primaryCategory": "china",
-      "summary": "每日一词 | 对外投资 outbound investment",
-      "extractedAt": "2026-07-01T08:27:35.049Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "china-daily"
-      ],
-      "sourceNames": [
-        "中国日报网"
-      ],
-      "relatedUrls": [
-        "https://cn.chinadaily.com.cn/a/202606/03/WS6a1ff566a310942cc49afe5d.html"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 78,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 34,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "caixin-33vg4x",
-      "title": "中国移动设立集团级Token办公室 推进算力商业化",
-      "url": "https://companies.caixin.com/m/2026-06-30/102459427.html",
-      "sourceId": "caixin",
-      "sourceName": "财新",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china",
-        "policy"
-      ],
-      "primaryCategory": "finance",
-      "summary": "中国移动设立集团级Token办公室 推进算力商业化",
-      "extractedAt": "2026-07-01T08:27:36.047Z",
-      "mayHavePaywall": true,
-      "sourceIds": [
-        "caixin"
-      ],
-      "sourceNames": [
-        "财新"
-      ],
-      "relatedUrls": [
-        "https://companies.caixin.com/m/2026-06-30/102459427.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 77,
-        "content_quality": 34,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少",
-          "付费墙来源只使用公开元数据"
-        ]
-      }
-    },
-    {
-      "id": "caixin-7276lj",
-      "title": "李强签署国务院令 公布修订后的《中华人民共和国行政复议法实施条例》",
-      "url": "https://database.caixin.com/m/2026-05-08/102442069.html",
-      "sourceId": "caixin",
-      "sourceName": "财新",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china",
-        "policy"
-      ],
-      "primaryCategory": "finance",
-      "summary": "李强签署国务院令 公布修订后的《中华人民共和国行政复议法实施条例》",
-      "extractedAt": "2026-07-01T08:27:36.047Z",
-      "mayHavePaywall": true,
-      "sourceIds": [
-        "caixin"
-      ],
-      "sourceNames": [
-        "财新"
-      ],
-      "relatedUrls": [
-        "https://database.caixin.com/m/2026-05-08/102442069.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 77,
-        "content_quality": 34,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少",
-          "付费墙来源只使用公开元数据"
-        ]
-      }
-    },
-    {
-      "id": "caixin-qvkm6o",
-      "title": "国务院公布对外投资新规 明确禁止投资相关罚则",
-      "url": "https://china.caixin.com/2026-06-01/102449915.html",
-      "sourceId": "caixin",
-      "sourceName": "财新",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china",
-        "policy"
-      ],
-      "primaryCategory": "finance",
-      "summary": "国务院公布对外投资新规 明确禁止投资相关罚则",
-      "extractedAt": "2026-07-01T08:27:36.047Z",
-      "mayHavePaywall": true,
-      "sourceIds": [
-        "caixin"
-      ],
-      "sourceNames": [
-        "财新"
-      ],
-      "relatedUrls": [
-        "https://china.caixin.com/2026-06-01/102449915.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 77,
-        "content_quality": 33,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少",
-          "付费墙来源只使用公开元数据"
-        ]
-      }
-    },
-    {
-      "id": "caixin-r9y1iz",
-      "title": "对外投资新规落地：不同市场主体面临何种影响",
-      "url": "https://opinion.caixin.com/2026-06-04/102450792.html",
-      "sourceId": "caixin",
-      "sourceName": "财新",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china",
-        "policy"
-      ],
-      "primaryCategory": "finance",
-      "summary": "对外投资新规落地：不同市场主体面临何种影响",
-      "extractedAt": "2026-07-01T08:27:36.047Z",
-      "mayHavePaywall": true,
-      "sourceIds": [
-        "caixin"
-      ],
-      "sourceNames": [
-        "财新"
-      ],
-      "relatedUrls": [
-        "https://opinion.caixin.com/2026-06-04/102450792.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 77,
-        "content_quality": 33,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少",
-          "付费墙来源只使用公开元数据"
-        ]
-      }
-    },
-    {
-      "id": "caixin-clic3a",
-      "title": "分析｜对外投资新规出台 如何管理优势产业技术扩散和产线外迁",
-      "url": "https://m.caixin.com/m/2026-06-03/102450366.html",
-      "sourceId": "caixin",
-      "sourceName": "财新",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china",
-        "policy"
-      ],
-      "primaryCategory": "finance",
-      "summary": "分析｜对外投资新规出台 如何管理优势产业技术扩散和产线外迁",
-      "extractedAt": "2026-07-01T08:27:36.047Z",
-      "mayHavePaywall": true,
-      "sourceIds": [
-        "caixin"
-      ],
-      "sourceNames": [
-        "财新"
-      ],
-      "relatedUrls": [
-        "https://m.caixin.com/m/2026-06-03/102450366.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 77,
-        "content_quality": 34,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少",
-          "付费墙来源只使用公开元数据"
-        ]
-      }
-    },
-    {
-      "id": "caixin-id6vku",
-      "title": "对外投资规定：与世界同步立法",
-      "url": "https://opinion.caixin.com/2026-06-08/102452038.html",
-      "sourceId": "caixin",
-      "sourceName": "财新",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china",
-        "policy"
-      ],
-      "primaryCategory": "finance",
-      "summary": "对外投资规定：与世界同步立法",
-      "extractedAt": "2026-07-01T08:27:36.047Z",
-      "mayHavePaywall": true,
-      "sourceIds": [
-        "caixin"
-      ],
-      "sourceNames": [
-        "财新"
-      ],
-      "relatedUrls": [
-        "https://opinion.caixin.com/2026-06-08/102452038.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 77,
-        "content_quality": 33,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少",
-          "付费墙来源只使用公开元数据"
-        ]
-      }
-    },
-    {
-      "id": "the-paper-ikkct8",
-      "title": "行程万里不忘初心，庆祝建党105周年",
-      "url": "https://www.thepaper.cn/newsDetail_forward_33489256",
-      "sourceId": "the-paper",
-      "sourceName": "澎湃新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "society",
-        "policy"
-      ],
-      "primaryCategory": "china",
-      "summary": "行程万里不忘初心，庆祝建党105周年",
-      "extractedAt": "2026-07-01T08:27:38.721Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "the-paper"
-      ],
-      "sourceNames": [
-        "澎湃新闻"
-      ],
-      "relatedUrls": [
-        "https://www.thepaper.cn/newsDetail_forward_33489256"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 74,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 32,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "the-paper-ikghh3",
-      "title": "传媒湃｜继“天涯社区”后，知名网络论坛“西祠胡同”也将回归",
-      "url": "https://www.thepaper.cn/newsDetail_forward_33483080",
-      "sourceId": "the-paper",
-      "sourceName": "澎湃新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "society",
-        "policy"
-      ],
-      "primaryCategory": "china",
-      "summary": "传媒湃｜继“天涯社区”后，知名网络论坛“西祠胡同”也将回归",
-      "extractedAt": "2026-07-01T08:27:38.721Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "the-paper"
-      ],
-      "sourceNames": [
-        "澎湃新闻"
-      ],
-      "relatedUrls": [
-        "https://www.thepaper.cn/newsDetail_forward_33483080"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 74,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 32,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "the-paper-fq9yrx",
-      "title": "国际观察丨藤森庆子胜选，秘鲁治理难题待解",
-      "url": "https://m.thepaper.cn/newsDetail_forward_33489680",
-      "sourceId": "the-paper",
-      "sourceName": "澎湃新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "society",
-        "policy"
-      ],
-      "primaryCategory": "china",
-      "summary": "国际观察丨藤森庆子胜选，秘鲁治理难题待解",
-      "extractedAt": "2026-07-01T08:27:38.721Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "the-paper"
-      ],
-      "sourceNames": [
-        "澎湃新闻"
-      ],
-      "relatedUrls": [
-        "https://m.thepaper.cn/newsDetail_forward_33489680"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 74,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 32,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "the-paper-fp0jqt",
-      "title": "7月1日起，将调整最低生活保障等社会救助相关标准、失业保险金支付标准、职工医保统筹基金最高支付限额",
-      "url": "https://m.thepaper.cn/newsDetail_forward_33460285",
-      "sourceId": "the-paper",
-      "sourceName": "澎湃新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "society",
-        "policy"
-      ],
-      "primaryCategory": "china",
-      "summary": "7月1日起，将调整最低生活保障等社会救助相关标准、失业保险金支付标准、职工医保统筹基金最高支付限额",
-      "extractedAt": "2026-07-01T08:27:38.721Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "the-paper"
-      ],
-      "sourceNames": [
-        "澎湃新闻"
-      ],
-      "relatedUrls": [
-        "https://m.thepaper.cn/newsDetail_forward_33460285"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 74,
-        "content_quality": 44,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 32,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "the-paper-r7zra3",
-      "title": "7月起一批新规将施行，涉及新能源车两项新国标等",
-      "url": "https://m.thepaper.cn/detail/33470225",
-      "sourceId": "the-paper",
-      "sourceName": "澎湃新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "society",
-        "policy"
-      ],
-      "primaryCategory": "china",
-      "summary": "7月起一批新规将施行，涉及新能源车两项新国标等",
-      "extractedAt": "2026-07-01T08:27:38.721Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "the-paper"
-      ],
-      "sourceNames": [
-        "澎湃新闻"
-      ],
-      "relatedUrls": [
-        "https://m.thepaper.cn/detail/33470225"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 74,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 32,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "the-paper-fojxwx",
-      "title": "四川居民阶梯电价7月1日起调整！权威解读来了",
-      "url": "https://m.thepaper.cn/newsDetail_forward_33455210",
-      "sourceId": "the-paper",
-      "sourceName": "澎湃新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "society",
-        "policy"
-      ],
-      "primaryCategory": "china",
-      "summary": "四川居民阶梯电价7月1日起调整！权威解读来了",
-      "extractedAt": "2026-07-01T08:27:38.721Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "the-paper"
-      ],
-      "sourceNames": [
-        "澎湃新闻"
-      ],
-      "relatedUrls": [
-        "https://m.thepaper.cn/newsDetail_forward_33455210"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 74,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 32,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "36kr-4ikdbf",
-      "title": "昀冢科技：股票交易停牌核查完成，7月1日起复牌",
-      "url": "https://36kr.com/newsflashes/3875563794297089",
-      "sourceId": "36kr",
-      "sourceName": "36氪",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai",
-        "finance"
-      ],
-      "primaryCategory": "technology",
-      "summary": "昀冢科技：股票交易停牌核查完成，7月1日起复牌",
-      "extractedAt": "2026-07-01T08:27:39.637Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "36kr",
-        "tmtpost"
-      ],
-      "sourceNames": [
-        "36氪",
-        "钛媒体"
-      ],
-      "relatedUrls": [
-        "https://36kr.com/newsflashes/3875563794297089",
-        "https://www.tmtpost.com/nictation/8047420.html"
-      ],
-      "primaryCategoryVotes": [
-        "technology",
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 84,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 75,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好，2 个来源相互印证。"
-      },
-      "trust": {
-        "score": 37,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "多信源相互印证",
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "firecrawl-people-jingxian-culture",
-      "title": "泾县：以规划深耕墨园沃土 以存量赓续千年文脉",
-      "url": "http://ah.people.com.cn/BIG5/n2/2026/0629/c374164-41624344.html",
-      "sourceId": "people",
-      "sourceName": "人民网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "entertainment",
-        "society",
-        "china"
-      ],
-      "summary": "安徽泾县以中国宣纸股份有限公司老旧厂区更新改造为样本，将闲置工业土地转化为非遗传承和文旅融合空间。",
-      "publishedAt": "2026-07-01T00:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
-      "primaryCategory": "entertainment",
-      "sourceIds": [
-        "people"
-      ],
-      "sourceNames": [
-        "人民网"
-      ],
-      "relatedUrls": [
-        "http://ah.people.com.cn/BIG5/n2/2026/0629/c374164-41624344.html"
-      ],
-      "primaryCategoryVotes": [
-        "entertainment"
-      ],
-      "score_breakdown": {
-        "final_score": 78,
-        "public_importance": 80,
-        "user_preference": 75,
-        "timeliness": 78,
-        "source_confidence": 84,
-        "content_quality": 54,
-        "ranking_reason": "综合公共重要性、偏好、时效性和来源可信度排序。"
-      },
-      "trust": {
-        "score": 52,
-        "level": "medium",
-        "shouldShow": true,
-        "reasons": [
-          "包含发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "yicai-z4s6hn",
-      "title": "世界大型企业研究会：美国6月就业市场现疲软迹象",
-      "url": "https://www.yicai.com/brief/103254139.html",
-      "sourceId": "yicai",
-      "sourceName": "第一财经",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china"
-      ],
-      "primaryCategory": "finance",
-      "summary": "世界大型企业研究会：美国6月就业市场现疲软迹象",
-      "extractedAt": "2026-07-01T08:27:36.881Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "yicai"
-      ],
-      "sourceNames": [
-        "第一财经"
-      ],
-      "relatedUrls": [
-        "https://www.yicai.com/brief/103254139.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 76,
-        "public_importance": 80,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 76,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "yicai-ovgbm6",
-      "title": "*ST大晟：7月1日起撤销退市风险警示，证券简称变更为“大晟文化”",
-      "url": "https://www.yicai.com/news/103251637.html",
-      "sourceId": "yicai",
-      "sourceName": "第一财经",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china"
-      ],
-      "primaryCategory": "finance",
-      "summary": "*ST大晟：7月1日起撤销退市风险警示，证券简称变更为“大晟文化”",
-      "extractedAt": "2026-07-01T08:27:36.881Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "yicai"
-      ],
-      "sourceNames": [
-        "第一财经"
-      ],
-      "relatedUrls": [
-        "https://www.yicai.com/news/103251637.html",
-        "https://www.yicai.com/brief/103251636.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance",
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 76,
-        "public_importance": 80,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 76,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "yicai-sbzit5",
-      "title": "ST星农：玖元亨通将成为公司控股股东 明起复牌",
-      "url": "https://www.yicai.com/news/103254101.html",
-      "sourceId": "yicai",
-      "sourceName": "第一财经",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china"
-      ],
-      "primaryCategory": "finance",
-      "summary": "ST星农：玖元亨通将成为公司控股股东 明起复牌",
-      "extractedAt": "2026-07-01T08:27:36.881Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "yicai"
-      ],
-      "sourceNames": [
-        "第一财经"
-      ],
-      "relatedUrls": [
-        "https://www.yicai.com/news/103254101.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 76,
-        "public_importance": 80,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 76,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "yicai-du9xn6",
-      "title": "财通福鑫定开混合：将于7月1日全天停牌",
-      "url": "https://m.yicai.com/news/103253750.html",
-      "sourceId": "yicai",
-      "sourceName": "第一财经",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china"
-      ],
-      "primaryCategory": "finance",
-      "summary": "财通福鑫定开混合：将于7月1日全天停牌",
-      "extractedAt": "2026-07-01T08:27:36.881Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "yicai"
-      ],
-      "sourceNames": [
-        "第一财经"
-      ],
-      "relatedUrls": [
-        "https://m.yicai.com/news/103253750.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 76,
-        "public_importance": 80,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 76,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "yicai-p0akf0",
-      "title": "美最高法院推翻特朗普限制“出生公民权”行政令",
-      "url": "https://www.yicai.com/brief/103254141.html",
-      "sourceId": "yicai",
-      "sourceName": "第一财经",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china"
-      ],
-      "primaryCategory": "finance",
-      "summary": "美最高法院推翻特朗普限制“出生公民权”行政令",
-      "extractedAt": "2026-07-01T08:27:36.881Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "yicai"
-      ],
-      "sourceNames": [
-        "第一财经"
-      ],
-      "relatedUrls": [
-        "https://www.yicai.com/brief/103254141.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 76,
-        "public_importance": 80,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 76,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "yicai-6g0162",
-      "title": "功率半导体厂商集体调价 机构看好功率半导体概念股盈利增长",
-      "url": "https://www.yicai.com/brief/103252901.html",
-      "sourceId": "yicai",
-      "sourceName": "第一财经",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "china"
-      ],
-      "primaryCategory": "finance",
-      "summary": "功率半导体厂商集体调价 机构看好功率半导体概念股盈利增长",
-      "extractedAt": "2026-07-01T08:27:36.881Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "yicai"
-      ],
-      "sourceNames": [
-        "第一财经"
-      ],
-      "relatedUrls": [
-        "https://www.yicai.com/brief/103252901.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 76,
-        "public_importance": 80,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 76,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 33,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "36kr-2g0rcy",
-      "title": "8点1氪丨两大存储巨头今日发布大规模投资计划；江淮汽车股价腰斩，章建平9日套现近3亿元；Anthropic Fable 5有望很快恢复访问",
-      "url": "https://www.36kr.com/p/3873476968272902",
-      "sourceId": "36kr",
-      "sourceName": "36氪",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai",
-        "finance"
-      ],
-      "primaryCategory": "technology",
-      "summary": "8点1氪丨两大存储巨头今日发布大规模投资计划；江淮汽车股价腰斩，章建平9日套现近3亿元；Anthropic Fable 5有望很快恢复访问",
-      "extractedAt": "2026-07-01T08:27:39.637Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "36kr"
-      ],
-      "sourceNames": [
-        "36氪"
-      ],
-      "relatedUrls": [
-        "https://www.36kr.com/p/3873476968272902"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 76,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 70,
-        "content_quality": 65,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 44,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息完整"
-        ]
-      }
-    },
-    {
-      "id": "chinanews-f28873",
-      "title": "我国出台社会救助法 自2026年7月1日起施行",
-      "url": "https://www.chinanews.com.cn/gn/2026/04-30/10613483.shtml",
-      "sourceId": "chinanews",
-      "sourceName": "中国新闻网",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "china",
-        "international",
-        "society"
-      ],
-      "primaryCategory": "china",
-      "summary": "我国出台社会救助法 自2026年7月1日起施行",
-      "publishedAt": "Apr 30, 2026",
-      "extractedAt": "2026-07-01T08:27:32.735Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "chinanews"
-      ],
-      "sourceNames": [
-        "中国新闻网"
-      ],
-      "relatedUrls": [
-        "https://www.chinanews.com.cn/gn/2026/04-30/10613483.shtml"
-      ],
-      "primaryCategoryVotes": [
-        "china"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 82,
-        "user_preference": 100,
-        "timeliness": 20,
-        "source_confidence": 80,
-        "content_quality": 51,
+        "content_quality": 52,
         "ranking_reason": "匹配你的关注偏好。"
       },
       "trust": {
@@ -2827,812 +1276,47 @@
       }
     },
     {
-      "id": "36kr-nzibt6",
-      "title": "8点1氪丨追觅辟谣汽车CEO离职：职务与网传不符；微信小范围内测原生AI助手；苹果、特斯拉核心供应商数据泄露",
-      "url": "https://m.36kr.com/p/3866428592657411",
-      "sourceId": "36kr",
-      "sourceName": "36氪",
+      "id": "chinanews-direct-yh3qxp",
+      "title": "国家科学技术奖励大会两院院士大会中国科协第十一次全国代表大会召开",
+      "url": "https://www.chinanews.com.cn/tp/hd2011/2026/07-08/1197572.shtml",
+      "sourceId": "chinanews",
+      "sourceName": "中国新闻网",
       "language": "zh-CN",
       "region": "china",
       "categories": [
-        "technology",
-        "ai",
-        "finance"
-      ],
-      "primaryCategory": "technology",
-      "summary": "8点1氪丨追觅辟谣汽车CEO离职：职务与网传不符；微信小范围内测原生AI助手；苹果、特斯拉核心供应商数据泄露",
-      "extractedAt": "2026-07-01T08:27:39.637Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "36kr"
-      ],
-      "sourceNames": [
-        "36氪"
-      ],
-      "relatedUrls": [
-        "https://m.36kr.com/p/3866428592657411"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 70,
-        "content_quality": 44,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 30,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "36kr-8pa14n",
-      "title": "电池新规来了，7月1日施行",
-      "url": "https://www.36kr.com/p/3872971526198534",
-      "sourceId": "36kr",
-      "sourceName": "36氪",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai",
-        "finance"
-      ],
-      "primaryCategory": "technology",
-      "summary": "电池新规来了，7月1日施行",
-      "extractedAt": "2026-07-01T08:27:39.637Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "36kr"
-      ],
-      "sourceNames": [
-        "36氪"
-      ],
-      "relatedUrls": [
-        "https://www.36kr.com/p/3872971526198534"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 70,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 30,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "36kr-7is3n0",
-      "title": "刘强东再度痛失一员大将",
-      "url": "https://www.36kr.com/p/3869792144086273",
-      "sourceId": "36kr",
-      "sourceName": "36氪",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai",
-        "finance"
-      ],
-      "primaryCategory": "technology",
-      "summary": "刘强东再度痛失一员大将",
-      "extractedAt": "2026-07-01T08:27:39.637Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "36kr"
-      ],
-      "sourceNames": [
-        "36氪"
-      ],
-      "relatedUrls": [
-        "https://www.36kr.com/p/3869792144086273"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 70,
-        "content_quality": 40,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 30,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "36kr-hrn8o8",
-      "title": "427亿，马斯克拿下AI算力大单",
-      "url": "https://m.36kr.com/p/3865434226726151",
-      "sourceId": "36kr",
-      "sourceName": "36氪",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai",
-        "finance"
-      ],
-      "primaryCategory": "technology",
-      "summary": "427亿，马斯克拿下AI算力大单",
-      "extractedAt": "2026-07-01T08:27:39.637Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "36kr"
-      ],
-      "sourceNames": [
-        "36氪"
-      ],
-      "relatedUrls": [
-        "https://m.36kr.com/p/3865434226726151"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 70,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 30,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "tmtpost-tt0uzn",
-      "title": "智能硬件“真智能”时代，AI母婴智能产品要怎么做？",
-      "url": "https://www.tmtpost.com/8042487.html",
-      "sourceId": "tmtpost",
-      "sourceName": "钛媒体",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai"
-      ],
-      "primaryCategory": "technology",
-      "summary": "智能硬件“真智能”时代，AI母婴智能产品要怎么做？",
-      "extractedAt": "2026-07-01T08:27:40.328Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "tmtpost"
-      ],
-      "sourceNames": [
-        "钛媒体"
-      ],
-      "relatedUrls": [
-        "https://www.tmtpost.com/8042487.html"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 68,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 29,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "tmtpost-6q1lwz",
-      "title": "IC设计涨价潮，谁是下一个主角？",
-      "url": "https://www.tmtpost.com/8039584.html",
-      "sourceId": "tmtpost",
-      "sourceName": "钛媒体",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai"
-      ],
-      "primaryCategory": "technology",
-      "summary": "IC设计涨价潮，谁是下一个主角？",
-      "extractedAt": "2026-07-01T08:27:40.328Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "tmtpost"
-      ],
-      "sourceNames": [
-        "钛媒体"
-      ],
-      "relatedUrls": [
-        "https://www.tmtpost.com/8039584.html"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 68,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 29,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "tmtpost-1q3wby",
-      "title": "意大利对微软亮剑，AI捆绑涨价该有人管了",
-      "url": "https://www.tmtpost.com/agent/ai-article?id=18619",
-      "sourceId": "tmtpost",
-      "sourceName": "钛媒体",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai"
-      ],
-      "primaryCategory": "technology",
-      "summary": "意大利对微软亮剑，AI捆绑涨价该有人管了",
-      "extractedAt": "2026-07-01T08:27:40.328Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "tmtpost"
-      ],
-      "sourceNames": [
-        "钛媒体"
-      ],
-      "relatedUrls": [
-        "https://www.tmtpost.com/agent/ai-article?id=18619"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 68,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 29,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "tmtpost-1q40pm",
-      "title": "意大利加速落实欧盟AI法案：3500万欧元罚款与沙箱机制如何重塑区域AI生态？",
-      "url": "https://www.tmtpost.com/agent/ai-article?id=18046",
-      "sourceId": "tmtpost",
-      "sourceName": "钛媒体",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai"
-      ],
-      "primaryCategory": "technology",
-      "summary": "意大利加速落实欧盟AI法案：3500万欧元罚款与沙箱机制如何重塑区域AI生态？",
-      "extractedAt": "2026-07-01T08:27:40.328Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "tmtpost"
-      ],
-      "sourceNames": [
-        "钛媒体"
-      ],
-      "relatedUrls": [
-        "https://www.tmtpost.com/agent/ai-article?id=18046"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 68,
-        "content_quality": 43,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 29,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "tmtpost-fu422x",
-      "title": "2026年6月26日钛早·语音播报",
-      "url": "https://www.tmtpost.com/fm/8041976.html",
-      "sourceId": "tmtpost",
-      "sourceName": "钛媒体",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai"
-      ],
-      "primaryCategory": "technology",
-      "summary": "2026年6月26日钛早·语音播报",
-      "extractedAt": "2026-07-01T08:27:40.328Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "tmtpost"
-      ],
-      "sourceNames": [
-        "钛媒体"
-      ],
-      "relatedUrls": [
-        "https://www.tmtpost.com/fm/8041976.html"
-      ],
-      "primaryCategoryVotes": [
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 75,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 68,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 29,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "jiemian-thyuk9",
-      "title": "迅雷宣布2000万美元股票回购计划",
-      "url": "https://m.jiemian.com/article/14657056.html",
-      "sourceId": "jiemian",
-      "sourceName": "界面新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "technology",
+        "china",
+        "international",
         "society"
       ],
-      "primaryCategory": "finance",
-      "summary": "迅雷宣布2000万美元股票回购计划",
-      "extractedAt": "2026-07-01T08:27:37.885Z",
+      "primaryCategory": "china",
+      "summary": "国家科学技术奖励大会两院院士大会中国科协第十一次全国代表大会召开",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.576Z",
       "mayHavePaywall": false,
       "sourceIds": [
-        "jiemian"
+        "chinanews"
       ],
       "sourceNames": [
-        "界面新闻"
+        "中国新闻网"
       ],
       "relatedUrls": [
-        "https://m.jiemian.com/article/14657056.html"
+        "https://www.chinanews.com.cn/tp/hd2011/2026/07-08/1197572.shtml"
       ],
       "primaryCategoryVotes": [
-        "finance"
+        "china"
       ],
       "score_breakdown": {
-        "final_score": 74,
-        "public_importance": 76,
+        "final_score": 78,
+        "public_importance": 82,
         "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 72,
-        "content_quality": 41,
+        "timeliness": 42,
+        "source_confidence": 80,
+        "content_quality": 52,
         "ranking_reason": "匹配你的关注偏好。"
       },
       "trust": {
-        "score": 31,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "jiemian-425vvh",
-      "title": "英飞凌创新空间在上海正式启用，明日起组织架构调整为三大事业部",
-      "url": "https://m.jiemian.com/article/14675661.html",
-      "sourceId": "jiemian",
-      "sourceName": "界面新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "technology",
-        "society"
-      ],
-      "primaryCategory": "finance",
-      "summary": "英飞凌创新空间在上海正式启用，明日起组织架构调整为三大事业部",
-      "extractedAt": "2026-07-01T08:27:37.885Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "jiemian"
-      ],
-      "sourceNames": [
-        "界面新闻"
-      ],
-      "relatedUrls": [
-        "https://m.jiemian.com/article/14675661.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 74,
-        "public_importance": 76,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 72,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 31,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "jiemian-5ehzm4",
-      "title": "*ST金科：7月2日起撤销退市风险警示及其他风险警示，股票简称变更为“金科股份”",
-      "url": "https://www.jiemian.com/article/14675772.html",
-      "sourceId": "jiemian",
-      "sourceName": "界面新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "technology",
-        "society"
-      ],
-      "primaryCategory": "finance",
-      "summary": "*ST金科：7月2日起撤销退市风险警示及其他风险警示，股票简称变更为“金科股份”",
-      "extractedAt": "2026-07-01T08:27:37.885Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "jiemian"
-      ],
-      "sourceNames": [
-        "界面新闻"
-      ],
-      "relatedUrls": [
-        "https://www.jiemian.com/article/14675772.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 74,
-        "public_importance": 76,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 72,
-        "content_quality": 43,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 31,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "jiemian-uxvr",
-      "title": "商务部：调查机关初步认定，原产于加拿大的进口豌豆淀粉存在倾销",
-      "url": "https://m.jiemian.com/article/14672525.html",
-      "sourceId": "jiemian",
-      "sourceName": "界面新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "technology",
-        "society"
-      ],
-      "primaryCategory": "finance",
-      "summary": "商务部：调查机关初步认定，原产于加拿大的进口豌豆淀粉存在倾销",
-      "extractedAt": "2026-07-01T08:27:37.885Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "jiemian"
-      ],
-      "sourceNames": [
-        "界面新闻"
-      ],
-      "relatedUrls": [
-        "https://m.jiemian.com/article/14672525.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 74,
-        "public_importance": 76,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 72,
-        "content_quality": 42,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 31,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "jiemian-utl2m3",
-      "title": "继天涯社区重启后，老牌论坛西祠胡同也将回归",
-      "url": "https://www.jiemian.com/article/14671764.html",
-      "sourceId": "jiemian",
-      "sourceName": "界面新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "technology",
-        "society"
-      ],
-      "primaryCategory": "finance",
-      "summary": "继天涯社区重启后，老牌论坛西祠胡同也将回归",
-      "extractedAt": "2026-07-01T08:27:37.885Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "jiemian"
-      ],
-      "sourceNames": [
-        "界面新闻"
-      ],
-      "relatedUrls": [
-        "https://www.jiemian.com/article/14671764.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 74,
-        "public_importance": 76,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 72,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 31,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "jiemian-285l5h",
-      "title": "雷诺集团任命基特里·德·佩勒波尔为总秘书长",
-      "url": "https://www.jiemian.com/article/14671494.html",
-      "sourceId": "jiemian",
-      "sourceName": "界面新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "technology",
-        "society"
-      ],
-      "primaryCategory": "finance",
-      "summary": "雷诺集团任命基特里·德·佩勒波尔为总秘书长",
-      "extractedAt": "2026-07-01T08:27:37.885Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "jiemian"
-      ],
-      "sourceNames": [
-        "界面新闻"
-      ],
-      "relatedUrls": [
-        "https://www.jiemian.com/article/14671494.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 74,
-        "public_importance": 76,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 72,
-        "content_quality": 41,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 31,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "jiemian-4g4pt2",
-      "title": "首批中证REITs全收益指数基金7月1日起发售，公募REITs迈入指数化投资新阶段",
-      "url": "https://www.jiemian.com/article/14643647.html",
-      "sourceId": "jiemian",
-      "sourceName": "界面新闻",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "finance",
-        "technology",
-        "society"
-      ],
-      "primaryCategory": "finance",
-      "summary": "首批中证REITs全收益指数基金7月1日起发售，公募REITs迈入指数化投资新阶段",
-      "extractedAt": "2026-07-01T08:27:37.885Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "jiemian"
-      ],
-      "sourceNames": [
-        "界面新闻"
-      ],
-      "relatedUrls": [
-        "https://www.jiemian.com/article/14643647.html"
-      ],
-      "primaryCategoryVotes": [
-        "finance"
-      ],
-      "score_breakdown": {
-        "final_score": 74,
-        "public_importance": 76,
-        "user_preference": 100,
-        "timeliness": 45,
-        "source_confidence": 72,
-        "content_quality": 43,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 31,
-        "level": "low",
-        "shouldShow": true,
-        "reasons": [
-          "缺少发布时间",
-          "摘要信息较少"
-        ]
-      }
-    },
-    {
-      "id": "36kr-3man2g",
-      "title": "快讯_融资_互联网_资本_科技_合并_最新快讯",
-      "url": "https://36kr.com/newsflashes",
-      "sourceId": "36kr",
-      "sourceName": "36氪",
-      "language": "zh-CN",
-      "region": "china",
-      "categories": [
-        "technology",
-        "ai",
-        "finance"
-      ],
-      "primaryCategory": "technology",
-      "summary": "快讯_融资_互联网_资本_科技_合并_最新快讯",
-      "publishedAt": "Sep 27, 2015",
-      "extractedAt": "2026-07-01T08:27:39.637Z",
-      "mayHavePaywall": false,
-      "sourceIds": [
-        "36kr"
-      ],
-      "sourceNames": [
-        "36氪"
-      ],
-      "relatedUrls": [
-        "https://36kr.com/newsflashes",
-        "https://36kr.com/newsflashes/"
-      ],
-      "primaryCategoryVotes": [
-        "technology",
-        "technology"
-      ],
-      "score_breakdown": {
-        "final_score": 72,
-        "public_importance": 78,
-        "user_preference": 100,
-        "timeliness": 20,
-        "source_confidence": 70,
-        "content_quality": 51,
-        "ranking_reason": "匹配你的关注偏好。"
-      },
-      "trust": {
-        "score": 44,
-        "level": "low",
+        "score": 50,
+        "level": "medium",
         "shouldShow": true,
         "reasons": [
           "包含发布时间",
@@ -3641,9 +1325,159 @@
       }
     },
     {
-      "id": "jiemian-hq98d0",
-      "title": "海南调整住房公积金缴存基数，7月起执行",
-      "url": "https://www.jiemian.com/article/14658241.html",
+      "id": "caixin-direct-j2qllm",
+      "title": "上半年国内乘用车销量同比下跌逾两成 燃油和新能源双双承压",
+      "url": "https://www.caixin.com/2026-07-08/102462118.html",
+      "sourceId": "caixin",
+      "sourceName": "财新",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "china",
+        "policy"
+      ],
+      "primaryCategory": "finance",
+      "summary": "上半年国内乘用车销量同比下跌逾两成 燃油和新能源双双承压",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:32:03.936Z",
+      "mayHavePaywall": true,
+      "sourceIds": [
+        "caixin"
+      ],
+      "sourceNames": [
+        "财新"
+      ],
+      "relatedUrls": [
+        "https://www.caixin.com/2026-07-08/102462118.html"
+      ],
+      "primaryCategoryVotes": [
+        "finance"
+      ],
+      "score_breakdown": {
+        "final_score": 78,
+        "public_importance": 84,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 77,
+        "content_quality": 44,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 47,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少",
+          "付费墙来源只使用公开元数据"
+        ]
+      }
+    },
+    {
+      "id": "caixin-direct-m6nqix",
+      "title": "大学生骗入特训营 矫正产业链远至几内亚比绍",
+      "url": "https://www.caixin.com/2026-07-08/102462016.html",
+      "sourceId": "caixin",
+      "sourceName": "财新",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "china",
+        "policy"
+      ],
+      "primaryCategory": "finance",
+      "summary": "大学生骗入特训营 矫正产业链远至几内亚比绍",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:32:03.936Z",
+      "mayHavePaywall": true,
+      "sourceIds": [
+        "caixin"
+      ],
+      "sourceNames": [
+        "财新"
+      ],
+      "relatedUrls": [
+        "https://www.caixin.com/2026-07-08/102462016.html"
+      ],
+      "primaryCategoryVotes": [
+        "finance"
+      ],
+      "score_breakdown": {
+        "final_score": 78,
+        "public_importance": 84,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 77,
+        "content_quality": 43,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 47,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少",
+          "付费墙来源只使用公开元数据"
+        ]
+      }
+    },
+    {
+      "id": "caixin-direct-x8bj9q",
+      "title": "Momenta创始人：2028年智驾渗透率有望突破60%",
+      "url": "https://www.caixin.com/2026-07-08/102462073.html",
+      "sourceId": "caixin",
+      "sourceName": "财新",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "china",
+        "policy"
+      ],
+      "primaryCategory": "finance",
+      "summary": "Momenta创始人：2028年智驾渗透率有望突破60%",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:32:03.936Z",
+      "mayHavePaywall": true,
+      "sourceIds": [
+        "caixin"
+      ],
+      "sourceNames": [
+        "财新"
+      ],
+      "relatedUrls": [
+        "https://www.caixin.com/2026-07-08/102462073.html"
+      ],
+      "primaryCategoryVotes": [
+        "finance"
+      ],
+      "score_breakdown": {
+        "final_score": 78,
+        "public_importance": 84,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 77,
+        "content_quality": 44,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 47,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少",
+          "付费墙来源只使用公开元数据"
+        ]
+      }
+    },
+    {
+      "id": "jiemian-direct-29oq3a",
+      "title": "上市银行6456亿分红创新高，但超三成每股股息“缩水”，如何守住收益？",
+      "url": "https://www.jiemian.com/article/14721952.html",
       "sourceId": "jiemian",
       "sourceName": "界面新闻",
       "language": "zh-CN",
@@ -3654,9 +1488,9 @@
         "society"
       ],
       "primaryCategory": "finance",
-      "summary": "海南调整住房公积金缴存基数，7月起执行",
-      "publishedAt": "Jun 13, 2019",
-      "extractedAt": "2026-07-01T08:27:37.885Z",
+      "summary": "上市银行6456亿分红创新高，但超三成每股股息“缩水”，如何守住收益？",
+      "publishedAt": "2026-07-08T08:07:00.000Z",
+      "extractedAt": "2026-07-09T05:32:04.988Z",
       "mayHavePaywall": false,
       "sourceIds": [
         "jiemian"
@@ -3665,18 +1499,18 @@
         "界面新闻"
       ],
       "relatedUrls": [
-        "https://www.jiemian.com/article/14658241.html"
+        "https://www.jiemian.com/article/14721952.html"
       ],
       "primaryCategoryVotes": [
         "finance"
       ],
       "score_breakdown": {
-        "final_score": 71,
+        "final_score": 78,
         "public_importance": 76,
         "user_preference": 100,
-        "timeliness": 20,
+        "timeliness": 65,
         "source_confidence": 72,
-        "content_quality": 51,
+        "content_quality": 52,
         "ranking_reason": "匹配你的关注偏好。"
       },
       "trust": {
@@ -3690,9 +1524,253 @@
       }
     },
     {
-      "id": "qbitai-7hfkdz",
-      "title": "华人再破硅谷天花板！AI黑马新任CTO，中科大80后",
-      "url": "https://www.qbitai.com/2026/04/406934.html",
+      "id": "xinhua-direct-shzayf",
+      "title": "“滑野雪”为何能成为冬奥会新项目 2026-07-08 20:58:34",
+      "url": "https://sports.news.cn/sports/20260708/c52104e2ddd54dd68ce881ced8419a31/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "“滑野雪”为何能成为冬奥会新项目 2026-07-08 20:58:34",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.608Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://sports.news.cn/sports/20260708/c52104e2ddd54dd68ce881ced8419a31/c.html"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 75,
+        "public_importance": 85,
+        "user_preference": 75,
+        "timeliness": 42,
+        "source_confidence": 88,
+        "content_quality": 53,
+        "ranking_reason": "公共影响高，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "xinhua-direct-2n0g9v",
+      "title": "国足成绩再不好，也不是造谣的理由 2026-07-08 21:22:02",
+      "url": "https://sports.news.cn/sports/20260708/3f5786bc311045cba8d2f97a15344cae/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "国足成绩再不好，也不是造谣的理由 2026-07-08 21:22:02",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.608Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://sports.news.cn/sports/20260708/3f5786bc311045cba8d2f97a15344cae/c.html"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 75,
+        "public_importance": 85,
+        "user_preference": 75,
+        "timeliness": 42,
+        "source_confidence": 88,
+        "content_quality": 53,
+        "ranking_reason": "公共影响高，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "xinhua-direct-xddzny",
+      "title": "世界杯｜三球逆转，最后13分钟里的“阿根廷战术” 2026-07-08 17:10:55",
+      "url": "https://sports.news.cn/sports/20260708/379944da070b4ae586edf573058a720d/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "世界杯｜三球逆转，最后13分钟里的“阿根廷战术” 2026-07-08 17:10:55",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.608Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://sports.news.cn/sports/20260708/379944da070b4ae586edf573058a720d/c.html"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 75,
+        "public_importance": 85,
+        "user_preference": 75,
+        "timeliness": 42,
+        "source_confidence": 88,
+        "content_quality": 53,
+        "ranking_reason": "公共影响高，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "xinhua-direct-e038vp",
+      "title": "世界杯 | 新闻分析：“同款”进球，为何判罚结果截然不同 2026-07-08 17:14:30",
+      "url": "https://sports.news.cn/sports/20260708/b52120165f884fdb813659bcb942a086/c.html",
+      "sourceId": "xinhua",
+      "sourceName": "新华网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "世界杯 | 新闻分析：“同款”进球，为何判罚结果截然不同 2026-07-08 17:14:30",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:47.608Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "xinhua"
+      ],
+      "sourceNames": [
+        "新华网"
+      ],
+      "relatedUrls": [
+        "https://sports.news.cn/sports/20260708/b52120165f884fdb813659bcb942a086/c.html"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 75,
+        "public_importance": 85,
+        "user_preference": 75,
+        "timeliness": 42,
+        "source_confidence": 88,
+        "content_quality": 54,
+        "ranking_reason": "公共影响高，来源可信度高。"
+      },
+      "trust": {
+        "score": 70,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "通讯社来源",
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "tmtpost-direct-ky0o7e",
+      "title": "实测微信小微：一个“生在微信里”的AI，边界在哪里",
+      "url": "https://www.tmtpost.com/8054184.html",
+      "sourceId": "tmtpost",
+      "sourceName": "钛媒体",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "technology",
+        "ai"
+      ],
+      "primaryCategory": "technology",
+      "summary": "实测微信小微：一个“生在微信里”的AI，边界在哪里",
+      "publishedAt": "2026-07-08T02:27:00.000Z",
+      "extractedAt": "2026-07-09T05:32:02.134Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "tmtpost"
+      ],
+      "sourceNames": [
+        "钛媒体"
+      ],
+      "relatedUrls": [
+        "https://www.tmtpost.com/8054184.html"
+      ],
+      "primaryCategoryVotes": [
+        "technology"
+      ],
+      "score_breakdown": {
+        "final_score": 75,
+        "public_importance": 78,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 68,
+        "content_quality": 52,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 43,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "qbitai-direct-v0h53q",
+      "title": "60000小时炼出新开源VLA！20多种机器人都能用",
+      "url": "https://www.qbitai.com/2026/07/445678.html",
       "sourceId": "qbitai",
       "sourceName": "量子位",
       "language": "zh-CN",
@@ -3702,9 +1780,9 @@
         "technology"
       ],
       "primaryCategory": "ai",
-      "summary": "华人再破硅谷天花板！AI黑马新任CTO，中科大80后",
-      "publishedAt": "Apr 24, 2026",
-      "extractedAt": "2026-07-01T08:27:42.331Z",
+      "summary": "60000小时炼出新开源VLA！20多种机器人都能用",
+      "publishedAt": "2026-07-08T03:54:42.000Z",
+      "extractedAt": "2026-07-09T05:32:02.849Z",
       "mayHavePaywall": false,
       "sourceIds": [
         "qbitai"
@@ -3713,7 +1791,392 @@
         "量子位"
       ],
       "relatedUrls": [
-        "https://www.qbitai.com/2026/04/406934.html"
+        "https://www.qbitai.com/2026/07/445678.html"
+      ],
+      "primaryCategoryVotes": [
+        "ai"
+      ],
+      "score_breakdown": {
+        "final_score": 75,
+        "public_importance": 78,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 68,
+        "content_quality": 52,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 43,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "qbitai-direct-8ayzab",
+      "title": "DeepSeek招聘被「华为天才少年」公开吐槽，“面到最不专业的”",
+      "url": "https://www.qbitai.com/2026/07/445608.html",
+      "sourceId": "qbitai",
+      "sourceName": "量子位",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "ai",
+        "technology"
+      ],
+      "primaryCategory": "ai",
+      "summary": "DeepSeek招聘被「华为天才少年」公开吐槽，“面到最不专业的”",
+      "publishedAt": "2026-07-07T11:43:08.000Z",
+      "extractedAt": "2026-07-09T05:32:02.865Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "qbitai"
+      ],
+      "sourceNames": [
+        "量子位"
+      ],
+      "relatedUrls": [
+        "https://www.qbitai.com/2026/07/445608.html"
+      ],
+      "primaryCategoryVotes": [
+        "ai"
+      ],
+      "score_breakdown": {
+        "final_score": 75,
+        "public_importance": 78,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 68,
+        "content_quality": 52,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 43,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "jiemian-direct-a78vyj",
+      "title": "【图集】直击南宁云表镇救援现场：村民陆续获救，茉莉花田成泽国",
+      "url": "https://www.jiemian.com/article/14720026.html",
+      "sourceId": "jiemian",
+      "sourceName": "界面新闻",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "finance",
+        "technology",
+        "society"
+      ],
+      "primaryCategory": "finance",
+      "summary": "【图集】直击南宁云表镇救援现场：村民陆续获救，茉莉花田成泽国",
+      "publishedAt": "2026-07-08T03:05:00.000Z",
+      "extractedAt": "2026-07-09T05:32:05.039Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "jiemian"
+      ],
+      "sourceNames": [
+        "界面新闻"
+      ],
+      "relatedUrls": [
+        "https://www.jiemian.com/article/14720026.html"
+      ],
+      "primaryCategoryVotes": [
+        "finance"
+      ],
+      "score_breakdown": {
+        "final_score": 74,
+        "public_importance": 76,
+        "user_preference": 100,
+        "timeliness": 42,
+        "source_confidence": 72,
+        "content_quality": 52,
+        "ranking_reason": "匹配你的关注偏好。"
+      },
+      "trust": {
+        "score": 45,
+        "level": "low",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "cctv-direct-t7hxvs",
+      "title": "美加墨世界杯八强全部产生",
+      "url": "https://sports.cctv.com/2026/07/08/ARTIcy65jHo0EFNceaJmoTml260708.shtml",
+      "sourceId": "cctv",
+      "sourceName": "央视网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "美加墨世界杯八强全部产生",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.445Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "cctv"
+      ],
+      "sourceNames": [
+        "央视网"
+      ],
+      "relatedUrls": [
+        "https://sports.cctv.com/2026/07/08/ARTIcy65jHo0EFNceaJmoTml260708.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 72,
+        "public_importance": 80,
+        "user_preference": 75,
+        "timeliness": 42,
+        "source_confidence": 84,
+        "content_quality": 51,
+        "ranking_reason": "综合公共重要性、偏好、时效性和来源可信度排序。"
+      },
+      "trust": {
+        "score": 52,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "cctv-direct-wglc6k",
+      "title": "1/4决赛对阵和赛程出炉",
+      "url": "https://sports.cctv.com/2026/07/08/ARTIROc1R0y5NvrQF0fsoqYM260708.shtml",
+      "sourceId": "cctv",
+      "sourceName": "央视网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "1/4决赛对阵和赛程出炉",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.445Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "cctv"
+      ],
+      "sourceNames": [
+        "央视网"
+      ],
+      "relatedUrls": [
+        "https://sports.cctv.com/2026/07/08/ARTIROc1R0y5NvrQF0fsoqYM260708.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 72,
+        "public_importance": 80,
+        "user_preference": 75,
+        "timeliness": 42,
+        "source_confidence": 84,
+        "content_quality": 51,
+        "ranking_reason": "综合公共重要性、偏好、时效性和来源可信度排序。"
+      },
+      "trust": {
+        "score": 52,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "cctv-direct-6pvahe",
+      "title": "法国队严阵以待 姆巴佩领衔众将全力备战",
+      "url": "https://sports.cctv.com/2026/07/08/VIDE5WpdWEzS0TUpVpfE1YLX260708.shtml",
+      "sourceId": "cctv",
+      "sourceName": "央视网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "法国队严阵以待 姆巴佩领衔众将全力备战",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.445Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "cctv"
+      ],
+      "sourceNames": [
+        "央视网"
+      ],
+      "relatedUrls": [
+        "https://sports.cctv.com/2026/07/08/VIDE5WpdWEzS0TUpVpfE1YLX260708.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 72,
+        "public_importance": 80,
+        "user_preference": 75,
+        "timeliness": 42,
+        "source_confidence": 84,
+        "content_quality": 51,
+        "ranking_reason": "综合公共重要性、偏好、时效性和来源可信度排序。"
+      },
+      "trust": {
+        "score": 52,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "cctv-direct-k2zx0l",
+      "title": "王楠：阿根廷队的目标是冠军",
+      "url": "https://sports.cctv.com/2026/07/08/VIDEsiCBna3JUww92qy0ZPXe260708.shtml",
+      "sourceId": "cctv",
+      "sourceName": "央视网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "王楠：阿根廷队的目标是冠军",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.446Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "cctv"
+      ],
+      "sourceNames": [
+        "央视网"
+      ],
+      "relatedUrls": [
+        "https://sports.cctv.com/2026/07/08/VIDEsiCBna3JUww92qy0ZPXe260708.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 72,
+        "public_importance": 80,
+        "user_preference": 75,
+        "timeliness": 42,
+        "source_confidence": 84,
+        "content_quality": 51,
+        "ranking_reason": "综合公共重要性、偏好、时效性和来源可信度排序。"
+      },
+      "trust": {
+        "score": 52,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "cctv-direct-uzpa46",
+      "title": "埃及队员济科：不公平！很明显的不公平！",
+      "url": "https://sports.cctv.com/2026/07/08/VIDEbjkSjRo5mrs5KB0SBiN5260708.shtml",
+      "sourceId": "cctv",
+      "sourceName": "央视网",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "sports",
+        "china"
+      ],
+      "primaryCategory": "sports",
+      "summary": "埃及队员济科：不公平！很明显的不公平！",
+      "publishedAt": "2026-07-07T16:00:00.000Z",
+      "extractedAt": "2026-07-09T05:31:49.446Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "cctv"
+      ],
+      "sourceNames": [
+        "央视网"
+      ],
+      "relatedUrls": [
+        "https://sports.cctv.com/2026/07/08/VIDEbjkSjRo5mrs5KB0SBiN5260708.shtml"
+      ],
+      "primaryCategoryVotes": [
+        "sports"
+      ],
+      "score_breakdown": {
+        "final_score": 72,
+        "public_importance": 80,
+        "user_preference": 75,
+        "timeliness": 42,
+        "source_confidence": 84,
+        "content_quality": 51,
+        "ranking_reason": "综合公共重要性、偏好、时效性和来源可信度排序。"
+      },
+      "trust": {
+        "score": 52,
+        "level": "medium",
+        "shouldShow": true,
+        "reasons": [
+          "包含发布时间",
+          "摘要信息较少"
+        ]
+      }
+    },
+    {
+      "id": "qbitai-direct-4af0j6",
+      "title": "刚刚，首个空间原生的具身视觉基模开源！机器人更会看我们的世界了",
+      "url": "https://www.qbitai.com/2026/07/445230.html",
+      "sourceId": "qbitai",
+      "sourceName": "量子位",
+      "language": "zh-CN",
+      "region": "china",
+      "categories": [
+        "ai",
+        "technology"
+      ],
+      "primaryCategory": "ai",
+      "summary": "刚刚，首个空间原生的具身视觉基模开源！机器人更会看我们的世界了",
+      "publishedAt": "2026-07-07T04:48:40.000Z",
+      "extractedAt": "2026-07-09T05:32:02.882Z",
+      "mayHavePaywall": false,
+      "sourceIds": [
+        "qbitai"
+      ],
+      "sourceNames": [
+        "量子位"
+      ],
+      "relatedUrls": [
+        "https://www.qbitai.com/2026/07/445230.html"
       ],
       "primaryCategoryVotes": [
         "ai"
@@ -3738,46 +2201,46 @@
       }
     },
     {
-      "id": "firecrawl-bbc-tartan-army",
-      "title": "苏格兰球迷方阵如何赢得波士顿的好感",
-      "url": "https://www.bbc.com/news/articles/cpq37gxjez9o",
-      "sourceId": "bbc",
-      "sourceName": "英国广播公司",
-      "language": "en-US",
-      "region": "global",
+      "id": "qbitai-direct-jn8uok",
+      "title": "Claude的脑子里，也长出了一块「意识」",
+      "url": "https://www.qbitai.com/2026/07/444741.html",
+      "sourceId": "qbitai",
+      "sourceName": "量子位",
+      "language": "zh-CN",
+      "region": "china",
       "categories": [
-        "sports",
-        "society",
-        "international"
+        "ai",
+        "technology"
       ],
-      "summary": "英国广播公司报道称，数万名苏格兰球迷在苏格兰小组赛期间到访波士顿，他们在城市中的热烈存在引发关注。",
-      "publishedAt": "2026-06-24T08:27:28.051Z",
-      "extractedAt": "2026-07-01T08:27:28.051Z",
-      "primaryCategory": "sports",
+      "primaryCategory": "ai",
+      "summary": "Claude的脑子里，也长出了一块「意识」",
+      "publishedAt": "2026-07-07T01:38:18.000Z",
+      "extractedAt": "2026-07-09T05:32:02.912Z",
+      "mayHavePaywall": false,
       "sourceIds": [
-        "bbc"
+        "qbitai"
       ],
       "sourceNames": [
-        "英国广播公司"
+        "量子位"
       ],
       "relatedUrls": [
-        "https://www.bbc.com/news/articles/cpq37gxjez9o"
+        "https://www.qbitai.com/2026/07/444741.html"
       ],
       "primaryCategoryVotes": [
-        "sports"
+        "ai"
       ],
       "score_breakdown": {
-        "final_score": 70,
-        "public_importance": 82,
-        "user_preference": 75,
+        "final_score": 71,
+        "public_importance": 78,
+        "user_preference": 100,
         "timeliness": 20,
-        "source_confidence": 86,
-        "content_quality": 54,
-        "ranking_reason": "来源可信度高。"
+        "source_confidence": 68,
+        "content_quality": 51,
+        "ranking_reason": "匹配你的关注偏好。"
       },
       "trust": {
-        "score": 53,
-        "level": "medium",
+        "score": 43,
+        "level": "low",
         "shouldShow": true,
         "reasons": [
           "包含发布时间",
@@ -3786,7 +2249,7 @@
       }
     }
   ],
-  "sourceCount": 13,
+  "sourceCount": 8,
   "notes": [
     "排序由公共重要性、用户偏好、时效性、来源可信度和内容质量共同决定。",
     "可信度分级独立于排序，低可信内容会保留标记，极低质量内容不展示。",

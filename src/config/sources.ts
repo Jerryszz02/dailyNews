@@ -26,7 +26,12 @@ export const newsSources: NewsSource[] = [
     credibility: 88,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("要闻", "https://www.news.cn/", "china", ["china", "policy", "international"], ["新华网 要闻", "新华社 中国 时政 国际"])],
+    sections: [
+      section("要闻", "https://www.news.cn/", "china", ["china", "policy", "international"], ["新华网 要闻", "新华社 中国 时政 国际"]),
+      section("国际", "https://www.news.cn/world/", "international", ["international", "policy"], ["新华网 国际", "新华社 国际 世界"]),
+      section("体育", "https://sports.news.cn/", "sports", ["sports", "china"], ["新华网 体育", "新华社 体育 足球 篮球"]),
+      section("科技", "https://www.news.cn/tech/", "science", ["science", "technology", "china"], ["新华网 科技", "新华社 科学 技术"]),
+    ],
   },
   {
     source_id: "people",
@@ -50,7 +55,12 @@ export const newsSources: NewsSource[] = [
     credibility: 84,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("新闻", "https://news.cctv.com/", "china", ["china", "policy", "society"], ["央视网 新闻", "央视网 国内 国际"])],
+    sections: [
+      section("新闻", "https://news.cctv.com/", "china", ["china", "policy", "society"], ["央视网 新闻", "央视网 国内 国际"]),
+      section("国际", "https://news.cctv.com/world/", "international", ["international", "policy"], ["央视网 国际", "央视网 世界 新闻"]),
+      section("体育", "https://sports.cctv.com/", "sports", ["sports", "china"], ["央视网 体育", "央视网 足球 篮球"]),
+      section("文娱", "https://ent.cctv.com/", "entertainment", ["entertainment", "china"], ["央视网 文娱", "央视网 影视 娱乐"]),
+    ],
   },
   {
     source_id: "chinanews",
@@ -62,7 +72,12 @@ export const newsSources: NewsSource[] = [
     credibility: 80,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("即时", "https://www.chinanews.com.cn/", "china", ["china", "international", "society"], ["中国新闻网 即时新闻", "中新网 中国 国际 社会"])],
+    sections: [
+      section("即时", "https://www.chinanews.com.cn/", "china", ["china", "international", "society"], ["中国新闻网 即时新闻", "中新网 中国 国际 社会"]),
+      section("国际", "https://www.chinanews.com.cn/gj/", "international", ["international", "policy"], ["中国新闻网 国际", "中新网 国际 世界"]),
+      section("体育", "https://www.chinanews.com.cn/ty/", "sports", ["sports", "china"], ["中国新闻网 体育", "中新网 体育 足球 篮球"]),
+      section("文娱", "https://www.chinanews.com.cn/yl/", "entertainment", ["entertainment", "china"], ["中国新闻网 文娱", "中新网 影视 娱乐"]),
+    ],
   },
   {
     source_id: "china-daily",

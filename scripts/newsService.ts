@@ -5,11 +5,12 @@ import { newsSources } from "../src/config/sources.js";
 import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot.js";
 import { buildDailyReport } from "../src/lib/newsPipeline.js";
 import { hostnameFromUrl } from "../src/lib/text.js";
-import type { DailyNewsReport, NewsSource, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
+import type { Category, DailyNewsReport, NewsSource, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
 
 export const defaultLimitPerSection = 5;
 export const defaultMaxSources = newsSources.filter((source) => source.enabled).length;
 export const defaultRefreshIntervalMinutes = 15;
+export const defaultMaxNewsAgeHours = 72;
 
 export interface NewsGenerationOptions {
   limitPerSection?: number;
@@ -34,14 +35,17 @@ export async function generateDailyNewsReport(options: NewsGenerationOptions = {
   loadLocalEnv();
   const limitPerSection = options.limitPerSection ?? readPositiveInteger("DAILY_NEWS_LIMIT_PER_SECTION", defaultLimitPerSection);
   const maxSources = options.maxSources ?? readPositiveInteger("DAILY_NEWS_MAX_SOURCES", defaultMaxSources);
+  const now = options.now ?? new Date();
+  const maxNewsAgeHours = readPositiveInteger("DAILY_NEWS_MAX_AGE_HOURS", defaultMaxNewsAgeHours);
   const translationConfig = readTranslationConfig();
   const fetchedItems = await fetchWithFirecrawlKeyless({ limitPerSection, maxSources, translationConfig });
   const directItems =
     fetchedItems.length > 0 ? [] : await fetchDirectSources({ limitPerSection, maxSources, translationConfig });
   const liveItems = fetchedItems.length > 0 ? fetchedItems : directItems;
   const fallbackItems = readGeneratedFallbackItems();
-  const rawItems = liveItems.length > 0 ? liveItems : fallbackItems;
-  const report = buildDailyReport(rawItems, defaultPreferences, options.now);
+  const recentLiveItems = filterRecentItems(liveItems, now, maxNewsAgeHours);
+  const rawItems = liveItems.length > 0 ? recentLiveItems : fallbackItems;
+  const report = buildDailyReport(rawItems, defaultPreferences, now);
   const usedLiveData = liveItems.length > 0;
 
   return {
@@ -50,6 +54,17 @@ export async function generateDailyNewsReport(options: NewsGenerationOptions = {
     rawItemCount: rawItems.length,
     usedLiveData,
   };
+}
+
+function filterRecentItems(items: RawNewsItem[], now: Date, maxAgeHours: number): RawNewsItem[] {
+  const maxAgeMs = maxAgeHours * 3_600_000;
+  return items.filter((item) => {
+    if (!item.publishedAt) return false;
+    const publishedAt = Date.parse(item.publishedAt);
+    if (!Number.isFinite(publishedAt)) return false;
+    const ageMs = now.getTime() - publishedAt;
+    return ageMs >= 0 && ageMs <= maxAgeMs;
+  });
 }
 
 function readGeneratedFallbackItems(): RawNewsItem[] {
@@ -156,7 +171,10 @@ async function fetchWithFirecrawlKeyless(
             if (!containsChinese(title) && !containsChinese(summary)) continue;
           }
 
-          const publishedAt = extractDate(result) ?? inferPublishedDateFromUrl(url);
+          const publishedAt = await resolvePublishedAt(url, extractDate(result));
+          if (!publishedAt) continue;
+          const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
+          const categories = uniqueValues([primaryCategory, ...section.categories]);
 
           items.push({
             id: `${source.source_id}-${hashId(url)}`,
@@ -166,8 +184,8 @@ async function fetchWithFirecrawlKeyless(
             sourceName: source.name,
             language: source.language,
             region: source.countryOrRegion,
-            categories: section.categories,
-            primaryCategory: section.primaryCategory,
+            categories,
+            primaryCategory,
             summary,
             publishedAt,
             extractedAt: new Date().toISOString(),
@@ -273,7 +291,10 @@ async function fetchDirectSources(
             if (!containsChinese(title) && !containsChinese(summary)) continue;
           }
 
-          const publishedAt = candidate.publishedAt ?? inferPublishedDateFromUrl(url);
+          const publishedAt = await resolvePublishedAt(url, candidate.publishedAt);
+          if (!publishedAt) continue;
+          const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
+          const categories = uniqueValues([primaryCategory, ...section.categories]);
 
           items.push({
             id: `${source.source_id}-direct-${hashId(url)}`,
@@ -283,8 +304,8 @@ async function fetchDirectSources(
             sourceName: source.name,
             language: source.language,
             region: source.countryOrRegion,
-            categories: section.categories,
-            primaryCategory: section.primaryCategory,
+            categories,
+            primaryCategory,
             summary,
             publishedAt,
             extractedAt: new Date().toISOString(),
@@ -388,7 +409,7 @@ function resolveCandidateUrl(value: string, baseUrl: string): string {
 
 function readPublishedDate(value: string): string | undefined {
   const cleaned = cleanText(value);
-  return cleaned && Number.isFinite(Date.parse(cleaned)) ? new Date(cleaned).toISOString() : undefined;
+  return parsePublishedDate(cleaned);
 }
 
 function cleanText(value: string): string {
@@ -417,6 +438,154 @@ function uniqueCandidates<T extends { url: string }>(items: T[]): T[] {
     seen.add(item.url);
     return true;
   });
+}
+
+function uniqueValues<T>(items: T[]): T[] {
+  return Array.from(new Set(items));
+}
+
+async function resolvePublishedAt(url: string, candidateDate?: string): Promise<string | undefined> {
+  const parsedCandidate = parsePublishedDate(candidateDate);
+  if (parsedCandidate) return parsedCandidate;
+
+  const articleDate = await readArticlePublishedAt(url);
+  if (articleDate) return articleDate;
+
+  return inferPublishedDateFromUrl(url);
+}
+
+async function readArticlePublishedAt(url: string): Promise<string | undefined> {
+  try {
+    const html = await fetchText(url);
+    return extractPublishedDateFromHtml(html);
+  } catch {
+    return undefined;
+  }
+}
+
+export function extractPublishedDateFromHtml(html: string): string | undefined {
+  const candidates = [
+    ...readInlineDates(html),
+    ...readTimeTagDates(html),
+    ...readJsonLdDates(html),
+    ...readMetaDates(html),
+  ].sort((left, right) => Number(hasClockTime(right)) - Number(hasClockTime(left)));
+
+  for (const candidate of candidates) {
+    const publishedAt = parsePublishedDate(candidate);
+    if (publishedAt) return publishedAt;
+  }
+
+  return undefined;
+}
+
+function readMetaDates(html: string): string[] {
+  const values: string[] = [];
+  const metaPattern = /<meta\b[^>]*>/gi;
+  for (const match of html.matchAll(metaPattern)) {
+    const tag = match[0];
+    const key = readAttribute(tag, "property") || readAttribute(tag, "name") || readAttribute(tag, "itemprop");
+    if (!isDateMetaKey(key)) continue;
+    const content = readAttribute(tag, "content");
+    if (content) values.push(content);
+  }
+  return values;
+}
+
+function readJsonLdDates(html: string): string[] {
+  const values: string[] = [];
+  const scriptPattern = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  for (const match of html.matchAll(scriptPattern)) {
+    const text = cleanText(match[1]);
+    values.push(...readJsonDateValues(text));
+  }
+  return values;
+}
+
+function readJsonDateValues(value: string): string[] {
+  const values: string[] = [];
+  try {
+    collectJsonDateValues(JSON.parse(value), values);
+  } catch {
+    for (const match of value.matchAll(/"date(?:Published|Created|Modified)"\s*:\s*"([^"]+)"/gi)) {
+      values.push(match[1]);
+    }
+  }
+  return values;
+}
+
+function collectJsonDateValues(value: unknown, values: string[]) {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectJsonDateValues(item, values);
+    return;
+  }
+
+  const record = value as Record<string, unknown>;
+  for (const key of ["datePublished", "dateCreated", "dateModified"]) {
+    if (typeof record[key] === "string") values.push(record[key]);
+  }
+  for (const item of Object.values(record)) collectJsonDateValues(item, values);
+}
+
+function readTimeTagDates(html: string): string[] {
+  const values: string[] = [];
+  const timePattern = /<time\b[^>]*>([\s\S]*?)<\/time>/gi;
+  for (const match of html.matchAll(timePattern)) {
+    const tag = match[0];
+    const datetime = readAttribute(tag, "datetime");
+    if (datetime) values.push(datetime);
+    const text = cleanText(match[1]);
+    if (text) values.push(text);
+  }
+  return values;
+}
+
+function readInlineDates(html: string): string[] {
+  const text = cleanText(html);
+  const values: string[] = [];
+  const splitDate = readSplitHeaderDate(html);
+  if (splitDate) values.push(splitDate);
+
+  const patterns = [
+    /var\s+publishDate\s*=\s*["']\s*(20\d{12})\s*["']/g,
+    /(?:发布时间|发表时间|更新时间|发布日期|发布于|时间)[:：\s]*(20\d{2}[-/.年]\d{1,2}[-/.月]\d{1,2}(?:日)?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/g,
+    /(20\d{2}年\d{1,2}月\d{1,2}日\s+\d{1,2}:\d{2}(?::\d{2})?)/g,
+    /\b(20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?)\b/g,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      values.push(match[1]);
+    }
+  }
+
+  for (const match of text.matchAll(/\b(20\d{2})\s+(\d{1,2})\s*\/\s*(\d{1,2})\s+(\d{1,2}:\d{2}(?::\d{2})?)\b/g)) {
+    values.push(`${match[1]}-${match[2]}-${match[3]} ${match[4]}`);
+  }
+  return values;
+}
+
+function readSplitHeaderDate(html: string): string | undefined {
+  const year = html.match(/class=["'][^"']*year[^"']*["'][^>]*>\s*<em>\s*(20\d{2})\s*<\/em>/i)?.[1];
+  const day = html.match(/class=["'][^"']*day[^"']*["'][^>]*>\s*<em>\s*(\d{1,2})\s*<\/em>\s*\/\s*<em>\s*(\d{1,2})\s*<\/em>/i);
+  const time = html.match(/class=["'][^"']*time[^"']*["'][^>]*>\s*(\d{1,2}:\d{2}(?::\d{2})?)/i)?.[1];
+  return year && day && time ? `${year}-${day[1]}-${day[2]} ${time}` : undefined;
+}
+
+function hasClockTime(value: string): boolean {
+  return /\d{1,2}:\d{2}/.test(value) || /\b20\d{12}\b/.test(value);
+}
+
+function readAttribute(tag: string, name: string): string {
+  const pattern = new RegExp(`\\b${name}=["']([^"']+)["']`, "i");
+  return decodeHtml(tag.match(pattern)?.[1] ?? "").trim();
+}
+
+function isDateMetaKey(value: string): boolean {
+  return /(^|:|_)(published_time|publishdate|pubdate|datepublished|datecreated|publish_time|pubtime|date|createdate|article_date)$/i.test(
+    value.replace(/[-.]/g, "_"),
+  );
 }
 
 function containsChinese(value: string): boolean {
@@ -454,8 +623,56 @@ function buildQuery(term: string): string {
 
 function extractDate(result: unknown): string | undefined {
   const possibleDate =
-    readString(result, "publishedDate") || readString(result, "date") || readString(result, "publishedAt");
-  return typeof possibleDate === "string" && Number.isFinite(Date.parse(possibleDate)) ? possibleDate : undefined;
+    readString(result, "publishedDate") ||
+    readString(result, "date") ||
+    readString(result, "publishedAt") ||
+    readNestedString(result, ["metadata", "publishedDate"]) ||
+    readNestedString(result, ["metadata", "publishedAt"]) ||
+    readNestedString(result, ["metadata", "date"]);
+  return parsePublishedDate(possibleDate);
+}
+
+export function parsePublishedDate(value?: string): string | undefined {
+  const cleaned = cleanText(value ?? "");
+  if (!cleaned) return undefined;
+
+  if (hasExplicitTimezone(cleaned)) {
+    const timestamp = Date.parse(cleaned);
+    return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : undefined;
+  }
+
+  const chinaDateTime = cleaned.match(
+    /(20\d{2})\s*[年/.-]\s*(\d{1,2})\s*[月/.-]\s*(\d{1,2})(?:\s*日)?(?:[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
+  );
+  if (chinaDateTime) {
+    return chinaLocalDateTimeToIso(
+      chinaDateTime[1],
+      chinaDateTime[2],
+      chinaDateTime[3],
+      chinaDateTime[4] ?? "00",
+      chinaDateTime[5] ?? "00",
+      chinaDateTime[6] ?? "00",
+    );
+  }
+
+  const compactDateTime = cleaned.match(/\b(20\d{2})(\d{2})(\d{2})(?:(\d{2})(\d{2})(\d{2})|[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?\b/);
+  if (compactDateTime) {
+    return chinaLocalDateTimeToIso(
+      compactDateTime[1],
+      compactDateTime[2],
+      compactDateTime[3],
+      compactDateTime[4] ?? compactDateTime[7] ?? "00",
+      compactDateTime[5] ?? compactDateTime[8] ?? "00",
+      compactDateTime[6] ?? compactDateTime[9] ?? "00",
+    );
+  }
+
+  const timestamp = Date.parse(cleaned);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : undefined;
+}
+
+function hasExplicitTimezone(value: string): boolean {
+  return /\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})\b/i.test(value) || /\b(?:GMT|UTC)\b/i.test(value);
 }
 
 export function inferPublishedDateFromUrl(url: string): string | undefined {
@@ -467,6 +684,7 @@ export function inferPublishedDateFromUrl(url: string): string | undefined {
   }
 
   const patterns = [
+    /\/(20\d{2})\/(\d{2})\/(\d{2})(?:\/|$)/,
     /\/(20\d{2})\/(\d{2})-(\d{2})(?:\/|$)/,
     /\/(20\d{2})\/(\d{2})(\d{2})(?:\/|[-_.])/,
     /(?:\/|-)(20\d{2})-(\d{2})-(\d{2})(?:\/|$)/,
@@ -480,22 +698,61 @@ export function inferPublishedDateFromUrl(url: string): string | undefined {
     if (isoDate) return isoDate;
   }
 
+  const compactDate = url.match(/[?&][^=]*=(20\d{2})(\d{2})(\d{2})/);
+  if (compactDate) {
+    const isoDate = chinaLocalDateToIso(compactDate[1], compactDate[2], compactDate[3]);
+    if (isoDate) return isoDate;
+  }
+
   return undefined;
 }
 
 function chinaLocalDateToIso(yearValue: string, monthValue: string, dayValue: string): string | undefined {
+  return chinaLocalDateTimeToIso(yearValue, monthValue, dayValue, "00", "00", "00");
+}
+
+function chinaLocalDateTimeToIso(
+  yearValue: string,
+  monthValue: string,
+  dayValue: string,
+  hourValue: string,
+  minuteValue: string,
+  secondValue: string,
+): string | undefined {
   const year = Number(yearValue);
   const month = Number(monthValue);
   const day = Number(dayValue);
-  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return undefined;
+  const hour = Number(hourValue);
+  const minute = Number(minuteValue);
+  const second = Number(secondValue);
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    !Number.isInteger(second)
+  ) {
+    return undefined;
+  }
   if (month < 1 || month > 12 || day < 1 || day > 31) return undefined;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) return undefined;
 
-  const utcDate = new Date(Date.UTC(year, month - 1, day));
-  if (utcDate.getUTCFullYear() !== year || utcDate.getUTCMonth() !== month - 1 || utcDate.getUTCDate() !== day) {
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  if (
+    utcDate.getUTCFullYear() !== year ||
+    utcDate.getUTCMonth() !== month - 1 ||
+    utcDate.getUTCDate() !== day ||
+    utcDate.getUTCHours() !== hour ||
+    utcDate.getUTCMinutes() !== minute ||
+    utcDate.getUTCSeconds() !== second
+  ) {
     return undefined;
   }
 
-  return new Date(`${yearValue}-${monthValue}-${dayValue}T00:00:00+08:00`).toISOString();
+  return new Date(
+    `${yearValue.padStart(4, "0")}-${monthValue.padStart(2, "0")}-${dayValue.padStart(2, "0")}T${hourValue.padStart(2, "0")}:${minuteValue.padStart(2, "0")}:${secondValue.padStart(2, "0")}+08:00`,
+  ).toISOString();
 }
 
 function readString(value: unknown, key: string): string {
@@ -504,6 +761,100 @@ function readString(value: unknown, key: string): string {
   }
   const record = value as Record<string, unknown>;
   return typeof record[key] === "string" ? record[key] : "";
+}
+
+function readNestedString(value: unknown, path: string[]): string {
+  let current = value;
+  for (const key of path) {
+    if (!current || typeof current !== "object") return "";
+    current = (current as Record<string, unknown>)[key];
+  }
+  return typeof current === "string" ? current : "";
+}
+
+const categorySignals: Record<Category, { keywords: string[]; url: RegExp[] }> = {
+  ai: {
+    keywords: ["ai", "artificial intelligence", "openai", "anthropic", "claude", "chatgpt", "大模型", "人工智能", "机器学习"],
+    url: [/\/ai\b/i, /artificial-intelligence/i],
+  },
+  technology: {
+    keywords: ["technology", "tech", "startup", "software", "chip", "semiconductor", "科技", "芯片", "软件", "互联网", "创业"],
+    url: [/\/tech(?:nology)?\b/i, /\/it\b/i],
+  },
+  finance: {
+    keywords: ["market", "stock", "bank", "finance", "economy", "inflation", "财经", "金融", "市场", "经济", "央行", "股票", "公司"],
+    url: [/\/finance\b/i, /\/business\b/i, /\/cj\//i, /\/money\//i],
+  },
+  international: {
+    keywords: ["world", "global", "war", "conflict", "diplomacy", "国际", "全球", "外交", "战争", "冲突", "联合国"],
+    url: [/\/world\b/i, /\/international\b/i, /\/gj\//i],
+  },
+  china: {
+    keywords: ["china", "chinese", "beijing", "中国", "国内", "北京", "全国"],
+    url: [/\/china\b/i, /\/gn\//i],
+  },
+  policy: {
+    keywords: ["policy", "regulation", "government", "election", "law", "政策", "监管", "政府", "选举", "法律", "部门"],
+    url: [/\/politics\b/i, /\/policy\b/i],
+  },
+  society: {
+    keywords: ["society", "city", "education", "health", "社会", "教育", "健康", "城市", "民生"],
+    url: [/\/society\b/i, /\/sh\//i, /\/edu\//i, /\/health\//i],
+  },
+  sports: {
+    keywords: ["nba", "fifa", "fiba", "basketball", "football", "soccer", "sport", "体育", "篮球", "足球", "赛事", "锦标赛"],
+    url: [/\/sports?\b/i, /\/nba\b/i, /\/football\b/i, /\/basketball\b/i],
+  },
+  entertainment: {
+    keywords: ["film", "movie", "tv", "music", "entertainment", "电影", "影视", "娱乐", "音乐", "剧集"],
+    url: [/\/entertainment\b/i, /\/culture\b/i, /\/film\b/i, /\/movie\b/i],
+  },
+  science: {
+    keywords: ["science", "research", "study", "space", "physics", "科学", "研究", "太空", "航天", "行星"],
+    url: [/\/science\b/i, /\/space\b/i],
+  },
+};
+
+const categoryTieBreak: Category[] = [
+  "sports",
+  "ai",
+  "science",
+  "technology",
+  "finance",
+  "international",
+  "policy",
+  "china",
+  "society",
+  "entertainment",
+];
+
+export function inferPrimaryCategory(
+  item: { title: string; summary: string; url: string },
+  section: Pick<SourceSection, "categories" | "primaryCategory">,
+): Category {
+  const scores = new Map<Category, number>();
+  scores.set(section.primaryCategory, 4);
+  for (const category of section.categories) {
+    scores.set(category, (scores.get(category) ?? 0) + 2);
+  }
+
+  const text = normalizeForCategory(`${item.title} ${item.summary}`);
+  const url = item.url.toLowerCase();
+  for (const [category, signals] of Object.entries(categorySignals) as Array<[Category, (typeof categorySignals)[Category]]>) {
+    const keywordHits = signals.keywords.filter((keyword) => text.includes(normalizeForCategory(keyword))).length;
+    const urlHits = signals.url.filter((pattern) => pattern.test(url)).length;
+    scores.set(category, (scores.get(category) ?? 0) + keywordHits * 3 + urlHits * 8);
+  }
+
+  return [...scores.entries()].sort((left, right) => {
+    const scoreDelta = right[1] - left[1];
+    if (scoreDelta !== 0) return scoreDelta;
+    return categoryTieBreak.indexOf(left[0]) - categoryTieBreak.indexOf(right[0]);
+  })[0]?.[0] ?? section.primaryCategory;
+}
+
+function normalizeForCategory(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function hashId(value: string): string {

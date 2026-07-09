@@ -5,8 +5,8 @@ Daily News is a Vite + React + TypeScript news-ranking app with a small Node API
 ## Data Flow
 
 1. `src/config/sources.ts` defines enabled sources, sections, search terms, primary categories, language, region, credibility and paywall hints.
-2. `scripts/newsService.ts` loads local environment variables, fetches Firecrawl news/web results through keyless mode, falls back to direct public source page/feed fetching when Firecrawl returns no live items or hits keyless limits, optionally rewrites English title/summary text through a server-side OpenAI-compatible translation endpoint, and merges checked-in fallback items for category coverage.
-3. `src/lib/dedupe.ts` clusters similar stories by URL and token overlap, then chooses one `primaryCategory` per cluster so category views do not repeat the same story.
+2. `scripts/newsService.ts` loads local environment variables, fetches Firecrawl news/web results through keyless mode, falls back to direct public source page/feed fetching when Firecrawl returns no live items or hits keyless limits, resolves each item's published time from result metadata, article page metadata or URL dates, filters live items outside the default 72-hour freshness window, optionally rewrites English title/summary text through a server-side OpenAI-compatible translation endpoint, and merges checked-in fallback items for category coverage.
+3. `src/lib/dedupe.ts` clusters similar stories by URL and token overlap, then chooses one `primaryCategory` per cluster so category views do not repeat the same story. Source sections provide the initial category, while `scripts/newsService.ts` can correct broad sections using title, summary and URL signals before clustering.
 4. `src/lib/scoring.ts` ranks clusters by public importance, user preference, timeliness, source confidence and content quality. `src/lib/trust.ts` independently assigns low/medium/high trust and decides whether a story is too low quality to show.
 5. `scripts/newsServer.ts` caches the report in memory and exposes `GET /api/news`.
 6. `src/App.tsx` fetches `/api/news`, falls back to `/daily-news.json`, then to the checked-in `firecrawlSnapshotNews`.
