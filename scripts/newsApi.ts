@@ -22,6 +22,7 @@ function serverlessGenerationOptions() {
     limitPerSection: readPositiveInteger("DAILY_NEWS_LIMIT_PER_SECTION", serverlessDefaultLimitPerSection),
     maxSources: readPositiveInteger("DAILY_NEWS_MAX_SOURCES", serverlessDefaultMaxSources),
     repairSummariesWithModel: false,
+    useFirecrawlKeyless: false,
   };
 }
 

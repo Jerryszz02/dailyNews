@@ -17,6 +17,7 @@ export interface NewsGenerationOptions {
   maxSources?: number;
   now?: Date;
   repairSummariesWithModel?: boolean;
+  useFirecrawlKeyless?: boolean;
 }
 
 export interface NewsGenerationResult {
@@ -56,7 +57,10 @@ export async function generateDailyNewsReport(options: NewsGenerationOptions = {
   const maxNewsAgeHours = readPositiveInteger("DAILY_NEWS_MAX_AGE_HOURS", defaultMaxNewsAgeHours);
   const translationConfig = readTranslationConfig();
   const repairSummariesWithModel = options.repairSummariesWithModel ?? true;
-  const fetchedItems = await fetchWithFirecrawlKeyless({ limitPerSection, maxSources, translationConfig, repairSummariesWithModel });
+  const fetchedItems =
+    options.useFirecrawlKeyless === false
+      ? []
+      : await fetchWithFirecrawlKeyless({ limitPerSection, maxSources, translationConfig, repairSummariesWithModel });
   const directItems =
     fetchedItems.length > 0 ? [] : await fetchDirectSources({ limitPerSection, maxSources, translationConfig, repairSummariesWithModel });
   const liveItems = fetchedItems.length > 0 ? fetchedItems : directItems;
