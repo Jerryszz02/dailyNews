@@ -43,7 +43,7 @@ Daily News 采用本地优先的轻量架构：
 | --- | --- | --- | --- |
 | 来源配置 | `src/config/sources.ts` | 定义来源、栏目、查询词、语言、地区、主分类、辅助分类、可信度、付费墙和启用状态 | 新来源必须显式设置 `primaryCategory`；不可靠来源应禁用而不是靠 UI 隐藏 |
 | 类型契约 | `src/types.ts` | 定义来源、新闻项、cluster、评分、可信度和日报报告结构 | 改字段必须同步生成、API、前端和测试 |
-| 生成服务 | `scripts/newsService.ts` | 读取本地 env，抓取 Firecrawl keyless，直接抓公开页面/feed，翻译英文-only 结果，合并 fallback，构建报告 | secrets 只在 Node 侧读取；不要把抓取放进浏览器 |
+| 生成服务 | `scripts/newsService.ts` | 读取本地 env，抓取 Firecrawl keyless，直接抓公开页面/feed，翻译非中文结果，修复重复摘要，合并 fallback，构建报告 | secrets 只在 Node 侧读取；不要把抓取放进浏览器 |
 | 静态生成 | `scripts/generateDailyNews.ts` | 调用共享生成逻辑写入 `public/daily-news.json` | `public/daily-news.json` 是生成产物，不是源数据 |
 | 本地 API | `scripts/newsServer.ts` | 提供 `/api/news`、`/api/health`、`/api/refresh`，生产式服务 `dist/` | 缓存为内存；无数据库；API 未准备好时返回 503 |
 | 报告管线 | `src/lib/newsPipeline.ts` | 过滤启用来源、聚类、排序、过滤极低可信内容、生成 notes | `trust.shouldShow` 是最低质量门槛 |
@@ -73,7 +73,7 @@ src/config/sources.ts
 | Firecrawl keyless 有结果 | 使用 Firecrawl 结果，并合并 `firecrawlSnapshotNews` 保持分类覆盖 |
 | Firecrawl keyless 额度/限速/无实时结果 | 切换到直接公开来源页面/feed 抓取 |
 | 直接抓取无结果 | 读取已生成 `public/daily-news.json`，失败再用 `firecrawlSnapshotNews` |
-| 英文-only 结果且栏目不要求中文 | 有完整 `DAILY_NEWS_TRANSLATION_*` 时尝试翻译，否则跳过 |
+| 非中文结果且栏目不要求中文 | 有 `DAILY_NEWS_TRANSLATION_API_KEY` 时按 DeepSeek Flash 默认配置尝试翻译，否则跳过 |
 | 来源抓取失败 | 记录 warning，继续处理其他来源 |
 
 ### 服务侧
@@ -138,7 +138,7 @@ App mount
 | 静态 JSON 缺失或无效 | 前端使用 `firecrawlSnapshotNews` 构建报告 |
 | Firecrawl keyless 不可用 | 生成服务切换 direct source fetch |
 | Direct fetch 单个来源失败 | 跳过该来源，继续其他来源 |
-| 翻译配置缺失 | 英文-only 且需要中文体验的内容跳过，不泄露密钥 |
+| 翻译 API key 缺失 | 非中文且需要中文体验的内容跳过，不泄露密钥 |
 | 无效新闻缺少标题或 URL | `trust.shouldShow` 应为 false，报告过滤掉 |
 
 ## 实现指引

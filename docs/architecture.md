@@ -5,7 +5,7 @@ Daily News is a Vite + React + TypeScript news-ranking app with a small Node API
 ## Data Flow
 
 1. `src/config/sources.ts` defines enabled sources, sections, search terms, primary categories, language, region, credibility and paywall hints.
-2. `scripts/newsService.ts` loads local environment variables, fetches Firecrawl news/web results through keyless mode, falls back to direct public source page/feed fetching when Firecrawl returns no live items or hits keyless limits, resolves each item's published time from result metadata, article page metadata or URL dates, filters live items outside the default 72-hour freshness window, optionally rewrites English title/summary text through a server-side OpenAI-compatible translation endpoint, and merges checked-in fallback items for category coverage.
+2. `scripts/newsService.ts` loads local environment variables, fetches Firecrawl news/web results through keyless mode, falls back to direct public source page/feed fetching when Firecrawl returns no live items or hits keyless limits, resolves each item's published time from result metadata, article page metadata or URL dates, filters live items outside the default 72-hour freshness window, optionally rewrites non-Chinese title/summary text through a server-side OpenAI-compatible translation endpoint, repairs summaries that are missing or identical to titles, and merges checked-in fallback items for category coverage.
 3. `src/lib/dedupe.ts` clusters similar stories by URL and token overlap, then chooses one `primaryCategory` per cluster so category views do not repeat the same story. Source sections provide the initial category, while `scripts/newsService.ts` can correct broad sections using title, summary and URL signals before clustering.
 4. `src/lib/scoring.ts` ranks clusters by public importance, user preference, timeliness, source confidence and content quality. `src/lib/trust.ts` independently assigns low/medium/high trust and decides whether a story is too low quality to show.
 5. `scripts/newsServer.ts` caches the report in memory and exposes `GET /api/news`.
@@ -27,6 +27,6 @@ Daily News is a Vite + React + TypeScript news-ranking app with a small Node API
 ## Security Boundaries
 
 - Firecrawl runs in keyless mode; the app does not require or read `FIRECRAWL_API_KEY`.
-- `DAILY_NEWS_TRANSLATION_BASE_URL`, `DAILY_NEWS_TRANSLATION_API_KEY`, and `DAILY_NEWS_TRANSLATION_MODEL` are read only by Node scripts and are required only when English-only sources should be rewritten into Chinese.
+- `DAILY_NEWS_TRANSLATION_API_KEY` is read only by Node scripts and is required only when non-Chinese sources should be rewritten into Chinese or duplicate summaries should be repaired. Translation defaults to DeepSeek Flash; `DAILY_NEWS_TRANSLATION_BASE_URL` and `DAILY_NEWS_TRANSLATION_MODEL` are optional server-only overrides.
 - The browser never reads `.env`, `.env.local` or translation credentials.
 - Public static fallback data lives in `public/daily-news.json`; it is generated output, not the editing source of truth.

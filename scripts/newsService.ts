@@ -31,6 +31,21 @@ interface TranslationConfig {
   model: string;
 }
 
+interface NewsText {
+  title: string;
+  summary: string;
+}
+
+interface NewsTextForDisplayOptions extends NewsText {
+  url: string;
+  allowTranslation: boolean;
+  translationConfig?: TranslationConfig;
+}
+
+const defaultTranslationBaseUrl = "https://api.deepseek.com";
+const defaultTranslationModel = "deepseek-v4-flash";
+const maxArticleContextLength = 3_200;
+
 export async function generateDailyNewsReport(options: NewsGenerationOptions = {}): Promise<NewsGenerationResult> {
   loadLocalEnv();
   const limitPerSection = options.limitPerSection ?? readPositiveInteger("DAILY_NEWS_LIMIT_PER_SECTION", defaultLimitPerSection);
@@ -155,21 +170,24 @@ async function fetchWithFirecrawlKeyless(
           const url = readString(result, "url").trim();
           if (!title || !url) continue;
           let summary = readString(result, "description") || title;
-          if (!containsChinese(title) && !containsChinese(summary)) {
-            if (section.requireChinese !== false) continue;
-            if (!options.translationConfig) {
+          const preparedText = await prepareNewsTextForDisplay({
+            title,
+            summary,
+            url,
+            allowTranslation: section.requireChinese === false,
+            translationConfig: options.translationConfig,
+          });
+          if (!preparedText) {
+            if (isNonChineseText({ title, summary }) && section.requireChinese === false && !options.translationConfig) {
               if (!warnedMissingTranslation) {
-                console.warn("Skipped non-Chinese results because DAILY_NEWS_TRANSLATION_* is not fully configured.");
+                console.warn("Skipped non-Chinese results because DAILY_NEWS_TRANSLATION_API_KEY is not configured.");
                 warnedMissingTranslation = true;
               }
-              continue;
             }
-
-            const translated = await translateNewsText({ title, summary }, options.translationConfig);
-            title = translated.title;
-            summary = translated.summary;
-            if (!containsChinese(title) && !containsChinese(summary)) continue;
+            continue;
           }
+          title = preparedText.title;
+          summary = preparedText.summary;
 
           const publishedAt = await resolvePublishedAt(url, extractDate(result));
           if (!publishedAt) continue;
@@ -275,21 +293,24 @@ async function fetchDirectSources(
           if (!title || !url) continue;
           let summary = candidate.summary || title;
 
-          if (!containsChinese(title) && !containsChinese(summary)) {
-            if (section.requireChinese !== false) continue;
-            if (!options.translationConfig) {
+          const preparedText = await prepareNewsTextForDisplay({
+            title,
+            summary,
+            url,
+            allowTranslation: section.requireChinese === false,
+            translationConfig: options.translationConfig,
+          });
+          if (!preparedText) {
+            if (isNonChineseText({ title, summary }) && section.requireChinese === false && !options.translationConfig) {
               if (!warnedMissingTranslation) {
-                console.warn("Skipped direct non-Chinese results because DAILY_NEWS_TRANSLATION_* is not fully configured.");
+                console.warn("Skipped direct non-Chinese results because DAILY_NEWS_TRANSLATION_API_KEY is not configured.");
                 warnedMissingTranslation = true;
               }
-              continue;
             }
-
-            const translated = await translateNewsText({ title, summary }, options.translationConfig);
-            title = translated.title;
-            summary = translated.summary;
-            if (!containsChinese(title) && !containsChinese(summary)) continue;
+            continue;
           }
+          title = preparedText.title;
+          summary = preparedText.summary;
 
           const publishedAt = await resolvePublishedAt(url, candidate.publishedAt);
           if (!publishedAt) continue;
@@ -340,6 +361,86 @@ async function fetchText(url: string): Promise<string> {
   }
 }
 
+export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptions): Promise<NewsText | null> {
+  const nonChinese = isNonChineseText(options);
+  if (nonChinese) {
+    if (!options.allowTranslation || !options.translationConfig) return null;
+
+    try {
+      const articleContext = await readArticleSummaryContext(options.url);
+      const translated = await translateNewsText({ title: options.title, summary: options.summary, articleContext }, options.translationConfig);
+      if (isNonChineseText(translated) || needsSummaryRepair(translated.title, translated.summary)) return null;
+      return translated;
+    } catch (error) {
+      console.warn(`Skipped non-Chinese result after translation failed: ${String(error)}`);
+      return null;
+    }
+  }
+
+  if (!options.translationConfig || !needsSummaryRepair(options.title, options.summary)) {
+    return { title: options.title, summary: options.summary };
+  }
+
+  const articleContext = await readArticleSummaryContext(options.url);
+  try {
+    const enriched = await translateNewsText({ title: options.title, summary: options.summary, articleContext }, options.translationConfig);
+    if (containsChinese(enriched.summary) && !needsSummaryRepair(options.title, enriched.summary)) {
+      return { title: options.title, summary: enriched.summary };
+    }
+  } catch (error) {
+    console.warn(`Kept original summary after enrichment failed: ${String(error)}`);
+  }
+
+  const fallbackSummary = buildSummaryFromArticleContext(options.title, articleContext);
+  if (fallbackSummary) {
+    return { title: options.title, summary: fallbackSummary };
+  }
+
+  return { title: options.title, summary: buildMinimalSummary(options.title) };
+}
+
+function isNonChineseText(text: NewsText): boolean {
+  return !containsChinese(text.title) && !containsChinese(text.summary);
+}
+
+function needsSummaryRepair(title: string, summary: string): boolean {
+  const normalizedTitle = normalizeForComparison(title);
+  const normalizedSummary = normalizeForComparison(summary);
+  return !normalizedSummary || normalizedTitle === normalizedSummary;
+}
+
+function normalizeForComparison(value: string): string {
+  return value.replace(/\s+/g, "").trim().toLowerCase();
+}
+
+function buildSummaryFromArticleContext(title: string, articleContext?: string): string | undefined {
+  if (!articleContext || !containsChinese(articleContext)) return undefined;
+  const cleaned = articleContext
+    .split(/\n+/)
+    .map((line) => cleanText(line))
+    .find((line) => line.length >= 30 && !needsSummaryRepair(title, line));
+  if (!cleaned) return undefined;
+  return cleaned.length > 120 ? `${cleaned.slice(0, 118)}...` : cleaned;
+}
+
+function buildMinimalSummary(title: string): string {
+  return `相关报道聚焦“${title}”，具体背景、影响和后续进展以原文披露为准。`;
+}
+
+async function readArticleSummaryContext(url: string): Promise<string | undefined> {
+  try {
+    return extractArticleSummaryContext(await fetchText(url));
+  } catch {
+    return undefined;
+  }
+}
+
+export function extractArticleSummaryContext(html: string): string | undefined {
+  const values = uniqueValues([...readMetaDescriptions(html), ...readJsonLdText(html), ...readParagraphText(html)]);
+  const context = values.join("\n").slice(0, maxArticleContextLength).trim();
+  return context || undefined;
+}
+
 function readDirectCandidates(html: string, baseUrl: string): Array<{ title: string; url: string; summary: string; publishedAt?: string }> {
   const feedItems = readFeedCandidates(html, baseUrl);
   if (feedItems.length > 0) return feedItems;
@@ -366,15 +467,23 @@ function readHtmlLinkCandidates(html: string, baseUrl: string): Array<{ title: s
   const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   for (const match of html.matchAll(anchorPattern)) {
     const url = resolveCandidateUrl(match[1], baseUrl);
-    const title = cleanText(match[2]);
+    const rawTitle = cleanText(match[2]);
+    const publishedAt = parsePublishedDate(rawTitle);
+    const title = removeTrailingPublishedDate(rawTitle);
     if (!url || !title || title.length < 8) continue;
     if (baseHost && hostnameFromUrl(url) !== baseHost) continue;
     if (!isLikelyArticleUrl(url)) continue;
     if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|zip)(\?|$)/i.test(url)) continue;
     if (url === baseUrl || url.endsWith("#")) continue;
-    candidates.push({ title, url, summary: title, publishedAt: inferPublishedDateFromUrl(url) });
+    candidates.push({ title, url, summary: title, publishedAt });
   }
   return uniqueCandidates(candidates);
+}
+
+function removeTrailingPublishedDate(value: string): string {
+  return value
+    .replace(/\s+20\d{2}[-/.年]\d{1,2}[-/.月]\d{1,2}(?:日)?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?\s*$/, "")
+    .trim();
 }
 
 function isLikelyArticleUrl(url: string): boolean {
@@ -477,6 +586,69 @@ export function extractPublishedDateFromHtml(html: string): string | undefined {
   }
 
   return undefined;
+}
+
+function readMetaDescriptions(html: string): string[] {
+  const values: string[] = [];
+  const metaPattern = /<meta\b[^>]*>/gi;
+  for (const match of html.matchAll(metaPattern)) {
+    const tag = match[0];
+    const key = readAttribute(tag, "property") || readAttribute(tag, "name") || readAttribute(tag, "itemprop");
+    if (!isDescriptionMetaKey(key)) continue;
+    const content = cleanText(readAttribute(tag, "content"));
+    if (content) values.push(content);
+  }
+  return values;
+}
+
+function readJsonLdText(html: string): string[] {
+  const values: string[] = [];
+  const scriptPattern = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  for (const match of html.matchAll(scriptPattern)) {
+    const rawJson = match[1].trim();
+    try {
+      collectJsonTextValues(JSON.parse(rawJson), values);
+    } catch {
+      for (const textMatch of rawJson.matchAll(/"(?:description|articleBody)"\s*:\s*"([^"]{40,})"/gi)) {
+        values.push(cleanText(textMatch[1]));
+      }
+    }
+  }
+  return values.filter(Boolean);
+}
+
+function collectJsonTextValues(value: unknown, values: string[]) {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectJsonTextValues(item, values);
+    return;
+  }
+
+  const record = value as Record<string, unknown>;
+  for (const key of ["description", "articleBody"]) {
+    const text = record[key];
+    if (typeof text === "string" && cleanText(text).length >= 40) {
+      values.push(cleanText(text));
+    }
+  }
+  for (const item of Object.values(record)) collectJsonTextValues(item, values);
+}
+
+function readParagraphText(html: string): string[] {
+  const values: string[] = [];
+  const paragraphPattern = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+  for (const match of html.matchAll(paragraphPattern)) {
+    const text = cleanText(match[1]);
+    if (text.length < 40) continue;
+    if (isBoilerplateParagraph(text)) continue;
+    values.push(text);
+    if (values.join("\n").length >= maxArticleContextLength) break;
+  }
+  return values;
+}
+
+function isBoilerplateParagraph(value: string): boolean {
+  return /责任编辑|版权|Copyright|广告|声明|二维码|分享到|举报/.test(value);
 }
 
 function readMetaDates(html: string): string[] {
@@ -586,6 +758,10 @@ function isDateMetaKey(value: string): boolean {
   return /(^|:|_)(published_time|publishdate|pubdate|datepublished|datecreated|publish_time|pubtime|date|createdate|article_date)$/i.test(
     value.replace(/[-.]/g, "_"),
   );
+}
+
+function isDescriptionMetaKey(value: string): boolean {
+  return /(^|:|_)(description|og_description|twitter_description)$/i.test(value.replace(/[-.]/g, "_"));
 }
 
 function containsChinese(value: string): boolean {
@@ -866,40 +1042,44 @@ function hashId(value: string): string {
   return Math.abs(hash).toString(36);
 }
 
-function readTranslationConfig(): TranslationConfig | undefined {
-  const apiKey = process.env.DAILY_NEWS_TRANSLATION_API_KEY;
-  const baseUrl = process.env.DAILY_NEWS_TRANSLATION_BASE_URL;
-  const model = process.env.DAILY_NEWS_TRANSLATION_MODEL;
-  if (!apiKey || !baseUrl || !model) return undefined;
+export function readTranslationConfig(): TranslationConfig | undefined {
+  const apiKey = process.env.DAILY_NEWS_TRANSLATION_API_KEY?.trim();
+  const baseUrl = process.env.DAILY_NEWS_TRANSLATION_BASE_URL?.trim() || defaultTranslationBaseUrl;
+  const model = process.env.DAILY_NEWS_TRANSLATION_MODEL?.trim() || defaultTranslationModel;
+  if (!apiKey) return undefined;
   return { apiKey, baseUrl, model };
 }
 
-async function translateNewsText(
-  text: { title: string; summary: string },
+export async function translateNewsText(
+  text: { title: string; summary: string; articleContext?: string },
   config: TranslationConfig,
 ): Promise<{ title: string; summary: string }> {
+  const body = {
+    model: config.model,
+    messages: [
+      {
+        role: "system",
+        content:
+          "你是中文新闻编辑。把新闻标题改写为简洁中文，并把摘要写成中文全文概述。保留事实、人物、机构、赛事、地点和数字，不添加素材没有的信息。只输出合法 JSON，格式为 {\"title\":\"中文标题\",\"summary\":\"中文概述\"}。",
+      },
+      {
+        role: "user",
+        content: `请基于以下新闻素材输出 JSON：${JSON.stringify(text)}`,
+      },
+    ],
+    temperature: 0.2,
+    max_tokens: 600,
+    response_format: { type: "json_object" },
+    ...(isDeepSeekConfig(config) ? { thinking: { type: "disabled" } } : {}),
+  };
+
   const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [
-        {
-          role: "system",
-          content:
-            "你是新闻编辑。把英文新闻标题和摘要改写为简洁中文，保留事实、人物、机构、赛事和数字，不添加原文没有的信息。只返回 JSON。",
-        },
-        {
-          role: "user",
-          content: JSON.stringify(text),
-        },
-      ],
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -908,11 +1088,23 @@ async function translateNewsText(
 
   const payload = (await response.json()) as Record<string, unknown>;
   const content = readAssistantContent(payload);
-  const parsed = JSON.parse(content) as Partial<{ title: string; summary: string }>;
+  const parsed = readTranslationJson(content);
   return {
     title: typeof parsed.title === "string" && parsed.title.trim() ? parsed.title.trim() : text.title,
     summary: typeof parsed.summary === "string" && parsed.summary.trim() ? parsed.summary.trim() : text.summary,
   };
+}
+
+function isDeepSeekConfig(config: TranslationConfig): boolean {
+  return config.baseUrl.includes("api.deepseek.com") || config.model.startsWith("deepseek-");
+}
+
+function readTranslationJson(content: string): Partial<{ title: string; summary: string }> {
+  try {
+    return JSON.parse(content) as Partial<{ title: string; summary: string }>;
+  } catch {
+    throw new Error("Translation response was not valid JSON");
+  }
 }
 
 function readAssistantContent(payload: Record<string, unknown>): string {

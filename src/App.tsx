@@ -46,7 +46,7 @@ const preferencesStorageKey = "daily-news-preferences";
 const refreshIntervalMs = 60_000;
 
 export function App() {
-  const [rawItems, setRawItems] = useState<RawNewsItem[]>(firecrawlSnapshotNews);
+  const [rawItems, setRawItems] = useState<RawNewsItem[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>(() => loadStoredPreferences());
   const [activeView, setActiveView] = useState<ActiveView>("preferred");
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,17 +57,30 @@ export function App() {
 
   const refreshNews = useCallback(async () => {
     setLoadState((current) => (current === "ready" ? current : "loading"));
-    try {
-      const report = await loadReport();
-      setRawItems(report.items);
+
+    const apiReport = await readReport("/api/news");
+    if (apiReport) {
+      setRawItems(apiReport.items);
       setLastLoadedAt(new Date().toISOString());
       setLoadError("");
       setLoadState("ready");
-    } catch (error) {
-      setRawItems(firecrawlSnapshotNews);
-      setLoadError(String(error));
-      setLoadState("error");
+      return;
     }
+
+    const staticReport = await readReport("/daily-news.json");
+    if (staticReport) {
+      setRawItems(staticReport.items);
+      setLastLoadedAt(new Date().toISOString());
+      setLoadError("实时接口暂不可用，当前显示静态兜底数据。");
+      setLoadState("ready");
+      return;
+    }
+
+    const report = buildDailyReport(firecrawlSnapshotNews, defaultPreferences);
+    setRawItems(report.items);
+    setLastLoadedAt(new Date().toISOString());
+    setLoadError("实时接口和静态新闻都暂不可用，当前显示本地兜底数据。");
+    setLoadState("error");
   }, []);
 
   useEffect(() => {
@@ -199,10 +212,12 @@ export function App() {
               </ol>
             </section>
 
-            {loadError ? <div className="page-note">实时接口暂不可用，当前显示本地兜底数据。</div> : null}
+            {loadError ? <div className="page-note">{loadError}</div> : null}
 
             <section className="timeline" aria-label="新闻列表">
-              {pageItems.length === 0 ? <div className="empty-state">没有匹配当前筛选的新闻。</div> : null}
+              {pageItems.length === 0 ? (
+                <div className="empty-state">{loadState === "loading" ? "正在加载新闻..." : "没有匹配当前筛选的新闻。"}</div>
+              ) : null}
               {groupedItems.map((group) => (
                 <div className="day-group" key={group.day}>
                   <div className="day-label">{group.day}</div>
@@ -317,16 +332,6 @@ function NewsCard({ item }: { item: RankedNewsItem }) {
       </div>
     </article>
   );
-}
-
-async function loadReport(): Promise<DailyNewsReport> {
-  const apiReport = await readReport("/api/news");
-  if (apiReport) return apiReport;
-
-  const staticReport = await readReport("/daily-news.json");
-  if (staticReport) return staticReport;
-
-  return buildDailyReport(firecrawlSnapshotNews, defaultPreferences);
 }
 
 async function readReport(url: string): Promise<DailyNewsReport | null> {

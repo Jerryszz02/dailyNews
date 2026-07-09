@@ -21,7 +21,7 @@
 | `AGENTS.md` | 不粘贴 Firecrawl key 或 `.env.local` 值；Firecrawl/API key 使用 server-side；API 路由保持 server-only |
 | `README.md` | 翻译密钥只在 Node 服务端读取，前端不接触密钥 |
 | `docs/architecture.md` | 浏览器不读取 `.env`、`.env.local` 或翻译凭据 |
-| `scripts/newsService.ts` | `loadLocalEnv()` 读取 `.env.local` 和 `.env`；翻译配置只有在 `DAILY_NEWS_TRANSLATION_*` 完整时使用 |
+| `scripts/newsService.ts` | `loadLocalEnv()` 读取 `.env.local` 和 `.env`；有 `DAILY_NEWS_TRANSLATION_API_KEY` 时使用 DeepSeek Flash 默认翻译配置 |
 | `scripts/newsServer.ts` | API 响应 `Access-Control-Allow-Origin: *`，本地服务监听 `127.0.0.1` |
 | `src/App.tsx` | 前端只 fetch `/api/news` 和 `/daily-news.json`，外链使用 `target="_blank"` 和 `rel="noreferrer"` |
 | `src/lib/trust.ts` | 社交媒体单点信息降权并标记低可信；缺少标题或 URL 的内容不展示 |
@@ -44,7 +44,7 @@
 | --- | --- |
 | 浏览器 <-> Node API | 浏览器只消费生成后的报告，不直接抓取 Firecrawl 或翻译服务 |
 | Node API <-> 外部新闻来源 | Node 可以访问公开新闻网页/feed；失败应跳过而非泄露内部错误给页面 |
-| Node API <-> 翻译服务 | 只有 Node 读取翻译配置；英文-only 内容没有翻译配置时跳过 |
+| Node API <-> 翻译服务 | 只有 Node 读取翻译配置；非中文内容没有翻译 API key 时跳过 |
 | 生成产物 <-> 源数据 | `public/daily-news.json` 是公开生成产物，不是 secrets 或编辑源 |
 | 社交/低可信来源 <-> UI | 低可信可展示但必须标记；极低质量不展示 |
 
@@ -65,7 +65,7 @@
 - Firecrawl 额度/限速/无结果时直接抓公开来源页面/feed。
 - 直接抓取设置 8 秒超时。
 - 单个来源失败只记录 warning 并继续。
-- 英文-only 内容在没有翻译配置时跳过，以维护中文体验。
+- 非中文内容在没有翻译 API key 时跳过，以维护中文体验。
 
 后续修改应避免：
 
@@ -108,7 +108,7 @@
 | 不可信新闻误导用户 | `trust` 评分、低可信标签、社交单点降权、极低质量过滤 | 可信度规则是启发式，不等于事实核验 |
 | Paywall/验证站点不稳定 | 不可靠来源可禁用；付费墙来源只用公开元数据 | 来源政策变化会导致抓取失败或内容稀疏 |
 | 公开 API 被滥用刷新 | 当前监听本地地址 | 公网部署前必须增加控制 |
-| 生成产物含错误或英文内容 | 中文过滤和翻译配置；`sourceLabel` 兜底 | 外部数据质量不可完全保证 |
+| 生成产物含错误或英文内容 | 中文过滤、DeepSeek 翻译配置和 `sourceLabel` 兜底 | 外部数据质量不可完全保证 |
 
 ## 非目标
 
