@@ -16,6 +16,7 @@ export interface NewsGenerationOptions {
   limitPerSection?: number;
   maxSources?: number;
   now?: Date;
+  repairSummariesWithModel?: boolean;
 }
 
 export interface NewsGenerationResult {
@@ -39,6 +40,7 @@ interface NewsText {
 interface NewsTextForDisplayOptions extends NewsText {
   url: string;
   allowTranslation: boolean;
+  repairSummaryWithModel: boolean;
   translationConfig?: TranslationConfig;
 }
 
@@ -53,9 +55,10 @@ export async function generateDailyNewsReport(options: NewsGenerationOptions = {
   const now = options.now ?? new Date();
   const maxNewsAgeHours = readPositiveInteger("DAILY_NEWS_MAX_AGE_HOURS", defaultMaxNewsAgeHours);
   const translationConfig = readTranslationConfig();
-  const fetchedItems = await fetchWithFirecrawlKeyless({ limitPerSection, maxSources, translationConfig });
+  const repairSummariesWithModel = options.repairSummariesWithModel ?? true;
+  const fetchedItems = await fetchWithFirecrawlKeyless({ limitPerSection, maxSources, translationConfig, repairSummariesWithModel });
   const directItems =
-    fetchedItems.length > 0 ? [] : await fetchDirectSources({ limitPerSection, maxSources, translationConfig });
+    fetchedItems.length > 0 ? [] : await fetchDirectSources({ limitPerSection, maxSources, translationConfig, repairSummariesWithModel });
   const liveItems = fetchedItems.length > 0 ? fetchedItems : directItems;
   const fallbackItems = readGeneratedFallbackItems();
   const recentLiveItems = filterRecentItems(liveItems, now, maxNewsAgeHours);
@@ -128,7 +131,7 @@ export function readPositiveInteger(name: string, fallback: number): number {
 }
 
 async function fetchWithFirecrawlKeyless(
-  options: { limitPerSection: number; maxSources: number; translationConfig?: TranslationConfig },
+  options: { limitPerSection: number; maxSources: number; translationConfig?: TranslationConfig; repairSummariesWithModel: boolean },
 ): Promise<RawNewsItem[]> {
   const app = new Firecrawl({ apiKey: "" });
   const items: RawNewsItem[] = [];
@@ -175,6 +178,7 @@ async function fetchWithFirecrawlKeyless(
             summary,
             url,
             allowTranslation: section.requireChinese === false,
+            repairSummaryWithModel: options.repairSummariesWithModel,
             translationConfig: options.translationConfig,
           });
           if (!preparedText) {
@@ -241,17 +245,17 @@ function selectNewsSources(maxSources: number): NewsSource[] {
 
   const prioritySourceIds = [
     "xinhua",
-    "cnn",
     "cctv",
     "chinanews",
-    "ap",
-    "bbc",
-    "aljazeera",
-    "npr",
     "36kr",
     "tmtpost",
     "jiqizhixin",
     "qbitai",
+    "cnn",
+    "ap",
+    "bbc",
+    "aljazeera",
+    "npr",
     "techcrunch",
   ];
   const selected: NewsSource[] = [];
@@ -273,7 +277,7 @@ function selectNewsSources(maxSources: number): NewsSource[] {
 }
 
 async function fetchDirectSources(
-  options: { limitPerSection: number; maxSources: number; translationConfig?: TranslationConfig },
+  options: { limitPerSection: number; maxSources: number; translationConfig?: TranslationConfig; repairSummariesWithModel: boolean },
 ): Promise<RawNewsItem[]> {
   const items: RawNewsItem[] = [];
   const enabledSources = selectNewsSources(options.maxSources);
@@ -298,6 +302,7 @@ async function fetchDirectSources(
             summary,
             url,
             allowTranslation: section.requireChinese === false,
+            repairSummaryWithModel: options.repairSummariesWithModel,
             translationConfig: options.translationConfig,
           });
           if (!preparedText) {
@@ -377,8 +382,12 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
     }
   }
 
-  if (!options.translationConfig || !needsSummaryRepair(options.title, options.summary)) {
+  if (!needsSummaryRepair(options.title, options.summary)) {
     return { title: options.title, summary: options.summary };
+  }
+
+  if (!options.translationConfig || !options.repairSummaryWithModel) {
+    return { title: options.title, summary: buildMinimalSummary(options.title) };
   }
 
   const articleContext = await readArticleSummaryContext(options.url);

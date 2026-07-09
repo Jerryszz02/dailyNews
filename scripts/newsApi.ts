@@ -5,7 +5,7 @@ import {
 } from "./newsService.js";
 
 const serverlessDefaultLimitPerSection = 3;
-const serverlessDefaultMaxSources = 13;
+const serverlessDefaultMaxSources = 6;
 
 const jsonHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +21,7 @@ function serverlessGenerationOptions() {
   return {
     limitPerSection: readPositiveInteger("DAILY_NEWS_LIMIT_PER_SECTION", serverlessDefaultLimitPerSection),
     maxSources: readPositiveInteger("DAILY_NEWS_MAX_SOURCES", serverlessDefaultMaxSources),
+    repairSummariesWithModel: false,
   };
 }
 

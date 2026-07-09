@@ -173,6 +173,7 @@ describe("translation helpers", () => {
       summary: "League approves major trade",
       url: "https://example.com/news/trade",
       allowTranslation: true,
+      repairSummaryWithModel: true,
       translationConfig: config,
     });
 
@@ -196,6 +197,7 @@ describe("translation helpers", () => {
         summary: "English title",
         url: "https://example.com/news/english",
         allowTranslation: true,
+        repairSummaryWithModel: true,
         translationConfig: config,
       }),
     ).resolves.toBeNull();
@@ -215,6 +217,7 @@ describe("translation helpers", () => {
         summary: "中文标题",
         url: "https://example.com/news/chinese",
         allowTranslation: false,
+        repairSummaryWithModel: true,
         translationConfig: config,
       }),
     ).resolves.toEqual({ title: "中文标题", summary: "相关报道聚焦“中文标题”，具体背景、影响和后续进展以原文披露为准。" });
@@ -234,12 +237,33 @@ describe("translation helpers", () => {
         summary: "中文标题",
         url: "https://example.com/news/chinese",
         allowTranslation: false,
+        repairSummaryWithModel: true,
         translationConfig: config,
       }),
     ).resolves.toEqual({
       title: "中文标题",
       summary: "这是一段中文新闻正文，提供事件背景、关键人物、时间线和后续影响，适合作为页面摘要。",
     });
+  });
+
+  it("uses minimal fallback without network calls when model summary repair is disabled", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      prepareNewsTextForDisplay({
+        title: "中文标题",
+        summary: "中文标题",
+        url: "https://example.com/news/chinese",
+        allowTranslation: false,
+        repairSummaryWithModel: false,
+        translationConfig: { apiKey: "test-key", baseUrl: "https://api.deepseek.com", model: "deepseek-v4-flash" },
+      }),
+    ).resolves.toEqual({
+      title: "中文标题",
+      summary: "相关报道聚焦“中文标题”，具体背景、影响和后续进展以原文披露为准。",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
