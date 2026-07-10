@@ -1,6 +1,7 @@
 import { defaultPreferences } from "../config/preferences.js";
 import { newsSources } from "../config/sources.js";
 import type { DailyNewsReport, RawNewsItem, UserPreferences } from "../types";
+import { applyCandidateQualityGate, buildCurationFields } from "./curation.js";
 import { clusterNews } from "./dedupe.js";
 import { rankNews } from "./scoring.js";
 
@@ -10,18 +11,22 @@ export function buildDailyReport(
   now = new Date(),
 ): DailyNewsReport {
   const enabledSourceIds = new Set(newsSources.filter((source) => source.enabled).map((source) => source.source_id));
-  const filteredItems = rawItems.filter((item) => enabledSourceIds.has(item.sourceId));
-  const clusters = clusterNews(filteredItems);
+  const enabledItems = rawItems.filter((item) => enabledSourceIds.has(item.sourceId));
+  const qualityGate = applyCandidateQualityGate(enabledItems);
+  const clusters = clusterNews(qualityGate.accepted);
   const rankedItems = rankNews(clusters, preferences, now).filter((item) => item.trust.shouldShow);
+  const curation = buildCurationFields(qualityGate.accepted, rankedItems, qualityGate.rejectionReasons, now);
 
   return {
+    version: 2,
     generatedAt: now.toISOString(),
+    ...curation,
     items: rankedItems,
-    sourceCount: new Set(filteredItems.map((item) => item.sourceId)).size,
+    sourceCount: new Set(qualityGate.accepted.map((item) => item.sourceId)).size,
     notes: [
-      "排序由公共重要性、用户偏好、时效性、来源可信度和内容质量共同决定。",
-      "可信度分级独立于排序，低可信内容会保留标记，极低质量内容不展示。",
-      "每条新闻只归入一个最相关板块，辅助标签仅用于解释。",
+      "报告先过滤低质量候选，再按现实事件聚合多来源证据。",
+      "今日必知不受个人偏好影响；偏好只调整兼容新闻流和分类深读顺序。",
+      "事件只归入一个主板块，分类索引引用同一事件，不重复生成卡片。",
       "付费墙来源只使用公开标题、导语和元数据。",
     ],
   };

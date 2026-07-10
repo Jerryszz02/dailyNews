@@ -1,7 +1,7 @@
 import { categoryImportance, highImpactKeywords, scoringWeights } from "../config/scoring.js";
 import { newsSources } from "../config/sources.js";
 import type { Category, NewsCluster, RankedNewsItem, ScoreBreakdown, UserPreferences } from "../types";
-import { normalizeText } from "./text.js";
+import { isInformativeText, normalizeText, textInformationLength } from "./text.js";
 import { assessTrust } from "./trust.js";
 
 const preferencePoints = {
@@ -116,8 +116,8 @@ function scoreSourceConfidence(item: NewsCluster): number {
 }
 
 function scoreContentQuality(item: NewsCluster): number {
-  const hasSummary = item.summary.trim().length >= 60;
-  const summaryDepth = Math.min(30, Math.floor(item.summary.length / 12));
+  const hasSummary = isInformativeText(item.summary);
+  const summaryDepth = Math.min(30, Math.floor(textInformationLength(item.summary) / 12));
   const hasDate = item.publishedAt ? 10 : 0;
   const hasUrl = item.url ? 10 : 0;
   const paywallPenalty = item.mayHavePaywall ? 8 : 0;

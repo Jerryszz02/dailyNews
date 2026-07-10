@@ -43,10 +43,20 @@ export function tokenize(value: string): string[] {
 
 function chunkChinese(value: string): string[] {
   const chunks: string[] = [];
-  for (let index = 0; index < value.length - 1; index += 2) {
+  for (let index = 0; index < value.length - 1; index += 1) {
     chunks.push(value.slice(index, index + 2));
   }
   return chunks;
+}
+
+export function textInformationLength(value: string): number {
+  const compact = value.replace(/\s+/g, "");
+  const hanCount = (compact.match(/[\u3400-\u9fff]/g) ?? []).length;
+  return compact.length + hanCount;
+}
+
+export function isInformativeText(value: string): boolean {
+  return textInformationLength(value.trim()) >= 60;
 }
 
 export function tokenOverlap(left: string, right: string): number {

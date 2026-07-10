@@ -8,13 +8,14 @@ import {
   loadLocalEnv,
   readPositiveInteger,
 } from "./newsService";
+import { passesPublishGate, readBundledReport } from "./reportStore";
 
 const port = readPositiveInteger("PORT", 4173);
 const refreshIntervalMinutes = readPositiveInteger("DAILY_NEWS_REFRESH_INTERVAL_MINUTES", defaultRefreshIntervalMinutes);
 const refreshIntervalMs = refreshIntervalMinutes * 60_000;
 const distDir = resolve(process.cwd(), "dist");
 
-let cachedReport: DailyNewsReport | null = null;
+let cachedReport: DailyNewsReport = readBundledReport();
 let lastError = "";
 let refreshInFlight: Promise<void> | null = null;
 
@@ -24,17 +25,6 @@ const server = createServer((request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
 
   if (request.method === "GET" && url.pathname === "/api/news") {
-    if (!cachedReport) {
-      writeJson(response, 503, {
-        error: "News report is still loading",
-        refresh: {
-          intervalMinutes: refreshIntervalMinutes,
-          lastError: lastError || null,
-        },
-      });
-      return;
-    }
-
     writeJson(response, 200, {
       ...cachedReport,
       refresh: {
@@ -47,16 +37,18 @@ const server = createServer((request, response) => {
 
   if (request.method === "POST" && url.pathname === "/api/refresh") {
     refreshNews()
-      .then(() => writeJson(response, 200, { ok: true, generatedAt: cachedReport?.generatedAt ?? null }))
+      .then(() => writeJson(response, 200, { ok: true, generatedAt: cachedReport.generatedAt }))
       .catch((error: unknown) => writeJson(response, 500, { ok: false, error: String(error) }));
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/api/health") {
-    writeJson(response, cachedReport ? 200 : 503, {
-      ok: Boolean(cachedReport),
-      generatedAt: cachedReport?.generatedAt ?? null,
-      itemCount: cachedReport?.items.length ?? 0,
+    writeJson(response, 200, {
+      ok: true,
+      reportAvailable: true,
+      refreshStatus: lastError ? "degraded" : "healthy",
+      generatedAt: cachedReport.generatedAt,
+      itemCount: cachedReport.items.length,
       lastError: lastError || null,
     });
     return;
@@ -85,8 +77,14 @@ async function refreshNews(): Promise<void> {
 
   refreshInFlight = generateDailyNewsReport()
     .then(({ report, mode, rawItemCount, usedLiveData }) => {
-      if (cachedReport && !usedLiveData) {
+      if (!usedLiveData) {
         lastError = "Live refresh returned no items; kept the previous cache.";
+        console.warn(lastError);
+        return;
+      }
+
+      if (!passesPublishGate(report, cachedReport)) {
+        lastError = "Generated report did not pass the publish gate; kept the previous cache.";
         console.warn(lastError);
         return;
       }
@@ -98,9 +96,6 @@ async function refreshNews(): Promise<void> {
     .catch((error: unknown) => {
       lastError = String(error);
       console.warn(`Refresh failed: ${lastError}`);
-      if (!cachedReport) {
-        throw error;
-      }
     })
     .finally(() => {
       refreshInFlight = null;

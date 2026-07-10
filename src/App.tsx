@@ -1,12 +1,14 @@
 import {
   CalendarDays,
+  CircleAlert,
   Clock3,
-  Flame,
+  Eye,
   Newspaper,
   RefreshCw,
   Search,
   Settings2,
   Star,
+  Target,
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,9 +17,9 @@ import { defaultPreferences } from "./config/preferences";
 import { newsSources } from "./config/sources";
 import { firecrawlSnapshotNews } from "./data/firecrawlSnapshot";
 import { buildDailyReport } from "./lib/newsPipeline";
-import { selectPreferredCategoryItems, sortByHotScoreWithoutPreferences, sortByNewest } from "./lib/newsOrdering";
+import { rankNews } from "./lib/scoring";
 import { normalizeText } from "./lib/text";
-import type { Category, DailyNewsReport, PreferenceStrength, RankedNewsItem, RawNewsItem, UserPreferences } from "./types";
+import type { Category, DailyNewsReport, PreferenceStrength, RawNewsItem, StoryCard, UserPreferences } from "./types";
 
 const categories: { id: Category; label: string }[] = [
   { id: "ai", label: "AI" },
@@ -46,7 +48,7 @@ const preferencesStorageKey = "daily-news-preferences";
 const refreshIntervalMs = 60_000;
 
 export function App() {
-  const [rawItems, setRawItems] = useState<RawNewsItem[]>([]);
+  const [loadedReport, setLoadedReport] = useState<DailyNewsReport | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(() => loadStoredPreferences());
   const [activeView, setActiveView] = useState<ActiveView>("preferred");
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,7 +62,7 @@ export function App() {
 
     const apiReport = await readReport("/api/news");
     if (apiReport) {
-      setRawItems(apiReport.items);
+      setLoadedReport(apiReport);
       setLastLoadedAt(new Date().toISOString());
       setLoadError("");
       setLoadState("ready");
@@ -69,7 +71,7 @@ export function App() {
 
     const staticReport = await readReport("/daily-news.json");
     if (staticReport) {
-      setRawItems(staticReport.items);
+      setLoadedReport(staticReport);
       setLastLoadedAt(new Date().toISOString());
       setLoadError("实时接口暂不可用，当前显示静态兜底数据。");
       setLoadState("ready");
@@ -77,7 +79,7 @@ export function App() {
     }
 
     const report = buildDailyReport(firecrawlSnapshotNews, defaultPreferences);
-    setRawItems(report.items);
+    setLoadedReport(report);
     setLastLoadedAt(new Date().toISOString());
     setLoadError("实时接口和静态新闻都暂不可用，当前显示本地兜底数据。");
     setLoadState("error");
@@ -99,23 +101,27 @@ export function App() {
     setVisibleCount(initialVisibleCount);
   }, [activeView, searchQuery, preferences]);
 
-  const report = useMemo(() => buildDailyReport(rawItems, preferences), [rawItems, preferences]);
-  const visibleItems = useMemo(() => {
-    if (activeView === "settings") {
-      return [];
-    }
-
-    const baseItems =
-      activeView === "preferred"
-        ? selectPreferredCategoryItems(report.items, preferences)
-        : sortByNewest(report.items.filter((item) => item.primaryCategory === activeView));
-
-    return filterBySearch(baseItems, searchQuery);
-  }, [activeView, preferences, report.items, searchQuery]);
-  const pageItems = visibleItems.slice(0, visibleCount);
-  const groupedItems = useMemo(() => groupByDay(pageItems), [pageItems]);
-  const hotItems = sortByHotScoreWithoutPreferences(report.items).slice(0, 5);
-  const canShowMore = visibleItems.length > pageItems.length;
+  const fallbackReport = useMemo(() => buildDailyReport(firecrawlSnapshotNews, defaultPreferences), []);
+  const report = loadedReport ?? fallbackReport;
+  const personalizedOrder = useMemo(
+    () => new Map(rankNews(report.items, preferences).map((item, index) => [item.id, index])),
+    [preferences, report.items],
+  );
+  const categoryStories = useMemo(() => {
+    if (activeView === "preferred" || activeView === "settings") return [];
+    return filterStories(
+      report.stories
+        .filter((story) => story.primaryBeat === activeView)
+        .sort(
+          (left, right) =>
+            (personalizedOrder.get(left.itemId) ?? Number.MAX_SAFE_INTEGER) -
+            (personalizedOrder.get(right.itemId) ?? Number.MAX_SAFE_INTEGER),
+        ),
+      searchQuery,
+    );
+  }, [activeView, personalizedOrder, report.stories, searchQuery]);
+  const pageStories = categoryStories.slice(0, visibleCount);
+  const canShowMore = categoryStories.length > pageStories.length;
 
   return (
     <main className="app-shell">
@@ -125,7 +131,7 @@ export function App() {
           <strong>NEWS</strong>
         </div>
         <nav className="sidebar-nav">
-          <NavButton active={activeView === "preferred"} icon={<Zap size={16} />} label="偏好新闻" onClick={() => setActiveView("preferred")} />
+          <NavButton active={activeView === "preferred"} icon={<Zap size={16} />} label="今日简报" onClick={() => setActiveView("preferred")} />
           {categories.map((category) => (
             <NavButton
               active={activeView === category.id}
@@ -142,9 +148,9 @@ export function App() {
       <section className="workspace">
         <header className="hero-panel">
           <div>
-            <p className="eyebrow">{activeView === "preferred" ? "你的偏好" : activeView === "settings" ? "配置中心" : "分类动态"}</p>
+            <p className="eyebrow">{activeView === "preferred" ? "每日总览" : activeView === "settings" ? "配置中心" : "分类动态"}</p>
             <h1>{viewTitle(activeView)}</h1>
-            <p className="hero-subtitle">多来源抓取 · 时间排序 · 每分钟检查更新</p>
+            <p className="hero-subtitle">事件级聚合 · 多来源证据 · 重要性分层</p>
           </div>
           <div className="status-panel">
             <div>
@@ -168,7 +174,7 @@ export function App() {
             <section className="filters-panel" aria-label="筛选">
               <div className="section-tabs" role="tablist">
                 <button className={activeView === "preferred" ? "active" : ""} type="button" onClick={() => setActiveView("preferred")}>
-                  全部偏好
+                  今日简报
                 </button>
                 {categories.map((category) => (
                   <button
@@ -184,7 +190,7 @@ export function App() {
               <label className="search-box">
                 <Search size={17} />
                 <input
-                  placeholder="搜索标题、摘要、来源..."
+                  placeholder="搜索事件、事实、来源..."
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
@@ -192,53 +198,161 @@ export function App() {
               </label>
             </section>
 
-            <section className="hot-panel" aria-label="当前热点">
-              <div className="panel-title">
-                <Flame size={18} />
-                <h2>当前热点</h2>
-                <span>公共重要性 · 时效 · 来源综合排序</span>
-              </div>
-              <ol className="hot-list">
-                {hotItems.map((item) => (
-                  <li key={item.id}>
-                    <a href={item.url} rel="noreferrer" target="_blank">
-                      {item.title}
-                    </a>
-                    <span>
-                      {formatSourceSummary(item.sourceNames)} · {trustLabel(item.trust?.level ?? "medium")} · {formatNewsAge(item)}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-
             {loadError ? <div className="page-note">{loadError}</div> : null}
 
-            <section className="timeline" aria-label="新闻列表">
-              {pageItems.length === 0 ? (
-                <div className="empty-state">{loadState === "loading" ? "正在加载新闻..." : "没有匹配当前筛选的新闻。"}</div>
-              ) : null}
-              {groupedItems.map((group) => (
-                <div className="day-group" key={group.day}>
-                  <div className="day-label">{group.day}</div>
-                  <div className="timeline-items">
-                    {group.items.map((item) => (
-                      <NewsCard item={item} key={item.id} />
-                    ))}
+            {activeView === "preferred" ? (
+              <BriefingHome preferences={preferences} query={searchQuery} report={report} />
+            ) : (
+              <>
+                <section className="story-section category-story-section" aria-label={`${categoryLabel(activeView)}事件`}>
+                  <div className="story-section-heading">
+                    <div>
+                      <p className="eyebrow">分类深读</p>
+                      <h2>{categoryLabel(activeView)}</h2>
+                    </div>
+                    <span>{categoryStories.length} 个达到质量门槛的事件</span>
                   </div>
-                </div>
-              ))}
-            </section>
+                  {pageStories.length === 0 ? (
+                    <div className="empty-state">{loadState === "loading" ? "正在加载新闻..." : "该栏目暂无达到质量门槛的事件。"}</div>
+                  ) : null}
+                  <div className="story-grid">
+                    {pageStories.map((story) => <EventCard key={story.id} story={story} variant="compact" />)}
+                  </div>
+                </section>
 
-            {canShowMore ? (
-              <button className="show-more" type="button" onClick={() => setVisibleCount((current) => current + visibleStep)}>
-                展开更多 {Math.min(visibleStep, visibleItems.length - pageItems.length)} 条
-              </button>
-            ) : null}
+                {canShowMore ? (
+                  <button className="show-more" type="button" onClick={() => setVisibleCount((current) => current + visibleStep)}>
+                    展开更多 {Math.min(visibleStep, categoryStories.length - pageStories.length)} 个事件
+                  </button>
+                ) : null}
+              </>
+            )}
           </>
         )}
       </section>
     </main>
+  );
+}
+
+function BriefingHome({ report, preferences, query }: { report: DailyNewsReport; preferences: UserPreferences; query: string }) {
+  const itemOrder = new Map(rankNews(report.items, preferences).map((item, index) => [item.id, index]));
+  const topStories = filterStories(report.topStories, query);
+  const importantStories = filterStories(
+    [...report.importantStories].sort(
+      (left, right) => (itemOrder.get(left.itemId) ?? Number.MAX_SAFE_INTEGER) - (itemOrder.get(right.itemId) ?? Number.MAX_SAFE_INTEGER),
+    ),
+    query,
+  );
+  const watchlist = filterStories(report.watchlist, query);
+  const visibleStoryCount = topStories.length + importantStories.length + watchlist.length;
+
+  return (
+    <div className="briefing-home">
+      <section className="briefing-summary" aria-label="日报质量概览">
+        <div>
+          <span>本期事件</span>
+          <strong>{report.quality.eventCount}</strong>
+        </div>
+        <div>
+          <span>覆盖栏目</span>
+          <strong>{report.coverage.coveredBeatCount}/{report.coverage.totalBeatCount}</strong>
+        </div>
+        <div>
+          <span>独立来源</span>
+          <strong>{report.sourceCount}</strong>
+        </div>
+        <p>同一事件只出现一次；未确认线索不会进入核心简报。</p>
+      </section>
+
+      {visibleStoryCount === 0 ? <div className="empty-state">没有匹配当前搜索的事件。</div> : null}
+
+      {topStories.length > 0 ? (
+        <section className="story-section must-know-section" aria-labelledby="must-know-title">
+          <div className="story-section-heading">
+            <div>
+              <p className="eyebrow">先读这些</p>
+              <h2 id="must-know-title">今日必知</h2>
+            </div>
+            <span>{topStories.length} 个高影响事件</span>
+          </div>
+          <ol className="story-pulse">
+            {topStories.map((story, index) => (
+              <li key={story.id}>
+                <span className="pulse-index">{String(index + 1).padStart(2, "0")}</span>
+                <EventCard story={story} variant="lead" />
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
+      {importantStories.length > 0 ? (
+        <section className="story-section" aria-labelledby="important-title">
+          <div className="story-section-heading">
+            <div>
+              <p className="eyebrow">值得掌握</p>
+              <h2 id="important-title">重要进展</h2>
+            </div>
+            <span>偏好只调整本层顺序</span>
+          </div>
+          <div className="story-grid">
+            {importantStories.map((story) => <EventCard key={story.id} story={story} variant="compact" />)}
+          </div>
+        </section>
+      ) : null}
+
+      {watchlist.length > 0 ? (
+        <section className="story-section watch-section" aria-labelledby="watch-title">
+          <div className="story-section-heading">
+            <div>
+              <p className="eyebrow">事实仍在变化</p>
+              <h2 id="watch-title">持续关注</h2>
+            </div>
+            <span>不确定性已明确标记</span>
+          </div>
+          <div className="watch-list">
+            {watchlist.map((story) => <EventCard key={story.id} story={story} variant="watch" />)}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function EventCard({ story, variant }: { story: StoryCard; variant: "lead" | "compact" | "watch" }) {
+  const primaryEvidence = story.evidence[0];
+  const facts = story.keyFacts.filter((fact) => normalizeText(fact) !== normalizeText(story.whatHappened)).slice(0, 2);
+
+  return (
+    <article className={`event-card ${variant}`}>
+      <div className="event-meta">
+        <span className={`event-status ${story.status}`}>{storyStatusLabel(story.status)}</span>
+        <span>{categoryLabel(story.primaryBeat)}</span>
+        <span>{story.evidence.length} 个证据来源</span>
+        <span>{formatStoryAge(story)}</span>
+      </div>
+      <h3>
+        <a href={primaryEvidence?.url} rel="noreferrer" target="_blank">{story.title}</a>
+      </h3>
+      <p className="event-summary">{story.whatHappened}</p>
+      {facts.length > 0 && variant === "lead" ? (
+        <ul className="fact-list">{facts.map((fact) => <li key={fact}>{fact}</li>)}</ul>
+      ) : null}
+      <div className="event-explanation">
+        <Target size={15} />
+        <span>{story.whyItMatters}</span>
+      </div>
+      {variant !== "compact" ? (
+        <div className="event-next">
+          {variant === "watch" ? <CircleAlert size={15} /> : <Eye size={15} />}
+          <span>{story.nextWatch}</span>
+        </div>
+      ) : null}
+      <footer>
+        <span>{story.sourceNames.map(sourceLabel).join(" / ")}</span>
+        {primaryEvidence ? <a href={primaryEvidence.url} rel="noreferrer" target="_blank">查看原文</a> : null}
+      </footer>
+    </article>
   );
 }
 
@@ -303,71 +417,47 @@ function PreferencesPanel({
   );
 }
 
-function NewsCard({ item }: { item: RankedNewsItem }) {
-  const hasPublishedAt = Boolean(item.publishedAt);
-
-  return (
-    <article className="news-card">
-      <div className={`time-cell${hasPublishedAt ? "" : " unknown"}`}>{formatNewsTime(item)}</div>
-      <div className="news-body">
-        <div className="news-meta">
-          <span>{item.sourceNames.map(sourceLabel).join(" / ")}</span>
-          <strong>{item.score_breakdown.final_score}</strong>
-          <span className={`trust-pill ${item.trust?.level ?? "medium"}`}>{trustLabel(item.trust?.level ?? "medium")}</span>
-        </div>
-        <h2>
-          <a href={item.url} rel="noreferrer" target="_blank">
-            {item.title}
-          </a>
-        </h2>
-        <p>{item.summary}</p>
-        <div className="tags">
-          <span className="primary">{categoryLabel(item.primaryCategory)}</span>
-          {item.categories.map((category) => (
-            category === item.primaryCategory ? null : <span key={category}>{categoryLabel(category)}</span>
-          ))}
-        </div>
-        <div className="trust-reason">{(item.trust?.reasons ?? []).join("，")}</div>
-        <div className="reason">{item.score_breakdown.ranking_reason}</div>
-      </div>
-    </article>
-  );
-}
-
 async function readReport(url: string): Promise<DailyNewsReport | null> {
   try {
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) return null;
     const report = (await response.json()) as Partial<DailyNewsReport>;
-    return Array.isArray(report.items) && report.items.length > 0 && typeof report.generatedAt === "string"
-      ? (report as DailyNewsReport)
-      : null;
+    if (!Array.isArray(report.items) || report.items.length === 0 || typeof report.generatedAt !== "string") return null;
+    if (
+      report.version === 2 &&
+      Array.isArray(report.stories) &&
+      Array.isArray(report.topStories) &&
+      Array.isArray(report.importantStories) &&
+      Array.isArray(report.watchlist) &&
+      Array.isArray(report.sections) &&
+      report.coverage &&
+      report.quality
+    ) {
+      return report as DailyNewsReport;
+    }
+    const generatedAt = Date.parse(report.generatedAt);
+    return buildDailyReport(
+      report.items as RawNewsItem[],
+      defaultPreferences,
+      Number.isFinite(generatedAt) ? new Date(generatedAt) : new Date(),
+    );
   } catch {
     return null;
   }
 }
 
-function filterBySearch(items: RankedNewsItem[], query: string): RankedNewsItem[] {
+function filterStories(stories: StoryCard[], query: string): StoryCard[] {
   const normalized = normalizeText(query);
-  if (!normalized) return items;
-  return items.filter((item) =>
+  if (!normalized) return stories;
+  return stories.filter((story) =>
     normalizeText(
-      `${item.title} ${item.summary} ${item.sourceNames.join(" ")} ${item.primaryCategory} ${item.categories.join(" ")} ${trustLabel(item.trust?.level ?? "medium")}`,
+      `${story.title} ${story.whatHappened} ${story.whyItMatters} ${story.sourceNames.join(" ")} ${story.primaryBeat} ${story.eventType}`,
     ).includes(normalized),
   );
 }
 
-function groupByDay(items: RankedNewsItem[]): { day: string; items: RankedNewsItem[] }[] {
-  const groups = new Map<string, RankedNewsItem[]>();
-  for (const item of items) {
-    const day = formatDayShort(item.publishedAt ?? item.extractedAt);
-    groups.set(day, [...(groups.get(day) ?? []), item]);
-  }
-  return Array.from(groups, ([day, groupItems]) => ({ day, items: groupItems }));
-}
-
 function viewTitle(view: ActiveView): string {
-  if (view === "preferred") return "偏好新闻";
+  if (view === "preferred") return "今日简报";
   if (view === "settings") return "偏好设置";
   return `${categoryLabel(view)}动态`;
 }
@@ -376,13 +466,27 @@ function categoryLabel(category: Category): string {
   return categories.find((item) => item.id === category)?.label ?? category;
 }
 
-function sourceLabel(sourceName: string): string {
+export function sourceLabel(sourceName: string): string {
   const sourceLabels: Record<string, string> = {
+    "Al Jazeera": "半岛电视台",
+    Anthropic: "Anthropic 官方动态",
     "Associated Press": "美联社",
+    "Ars Technica": "科技媒体 Ars Technica",
     BBC: "英国广播公司",
     Bloomberg: "彭博社",
     CNBC: "美国消费者新闻与商业频道",
+    CNN: "美国有线电视新闻网",
+    ESPN: "ESPN 体育",
+    "Google AI": "Google AI 官方动态",
+    "Google DeepMind": "Google DeepMind 官方动态",
+    "Hugging Face": "Hugging Face 官方动态",
+    "Meta AI": "Meta AI 官方动态",
+    "Microsoft AI": "Microsoft AI 官方动态",
+    "NVIDIA AI": "NVIDIA AI 官方动态",
+    NPR: "美国国家公共广播电台",
+    OpenAI: "OpenAI 官方动态",
     Reuters: "路透社",
+    "Shams Charania": "沙姆斯·查拉尼亚",
     TechCrunch: "科技媒体 TechCrunch",
     "MIT Technology Review": "麻省理工科技评论",
     "The Guardian": "卫报",
@@ -399,16 +503,16 @@ function sourceLabel(sourceName: string): string {
   return sourceLabels[sourceName] ?? sourceName;
 }
 
-function formatSourceSummary(sourceNames: string[]): string {
-  const labels = sourceNames.map(sourceLabel);
-  if (labels.length <= 1) return labels[0] ?? "来源待确认";
-  return `${labels.length} 个聚合信源`;
+function storyStatusLabel(status: StoryCard["status"]): string {
+  if (status === "confirmed") return "已确认";
+  if (status === "developing") return "发展中";
+  if (status === "disputed") return "存在争议";
+  if (status === "corrected") return "已更正";
+  return "待核验";
 }
 
-function trustLabel(level: RankedNewsItem["trust"]["level"]): string {
-  if (level === "high") return "高可信";
-  if (level === "medium") return "中可信";
-  return "低可信";
+function formatStoryAge(story: StoryCard): string {
+  return formatRelativeTime(story.updatedAt || story.publishedAt || new Date().toISOString());
 }
 
 function formatDay(value: string): string {
@@ -417,28 +521,6 @@ function formatDay(value: string): string {
     month: "long",
     day: "numeric",
   }).format(new Date(value));
-}
-
-function formatDayShort(value: string): string {
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "long",
-    day: "numeric",
-  }).format(new Date(value));
-}
-
-function formatTime(value: string): string {
-  return new Intl.DateTimeFormat("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function formatNewsTime(item: RankedNewsItem): string {
-  return item.publishedAt ? formatTime(item.publishedAt) : "待确认";
-}
-
-function formatNewsAge(item: RankedNewsItem): string {
-  return item.publishedAt ? formatRelativeTime(item.publishedAt) : "发布时间待确认";
 }
 
 function formatRelativeTime(value: string): string {

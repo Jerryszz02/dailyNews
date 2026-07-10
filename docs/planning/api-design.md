@@ -1,234 +1,123 @@
 # Daily News API 设计
 
-## 文档目的
+## 当前边界
 
-记录当前本地 HTTP API 的服务边界、请求方式、响应结构、错误行为和兼容性约束，供后续修改 `scripts/newsServer.ts` 或前端 API 消费时参考。本文仅根据当前仓库可见内容整理；未在仓库中找到证据的内容均不做假设。
+API 只负责读取或刷新已经生成的事件级报告。外部来源抓取不能发生在 `GET /api/news` 请求路径中。当前实现位于 `scripts/newsApi.ts`、`scripts/newsServer.ts` 和三个 `api/*.ts` Vercel 入口。
 
-## 适用范围
-
-适用于 `/api/news`、`/api/health`、`/api/refresh` 和 API 到前端加载链路的改动。
-
-不适用于外部新闻来源 API、Firecrawl 内部接口、翻译服务接口或未来生产网关，因为仓库没有稳定契约证据。
-
-## Plan 或项目证据
-
-| 证据 | API 事实 |
-| --- | --- |
-| `scripts/newsServer.ts` | 定义三个 API 路由、JSON 响应、CORS、no-store、404 和静态文件服务 |
-| `src/App.tsx` | 前端只读取 `GET /api/news`，要求响应有非空 `items` 和字符串 `generatedAt` |
-| `src/types.ts` | `DailyNewsReport` 类型定义了报告基础结构 |
-| `README.md` | 公开说明 `/api/news` 和 `/api/health` |
-| `docs/runbook.md` | smoke check 使用 `curl /api/health` 和 `curl /api/news` |
-| `vite.config.ts` | Vite 开发服务将 `/api` 代理到 `http://127.0.0.1:4173` |
-
-## API 总览
+## Endpoint
 
 | Endpoint | Method | 作用 | 成功状态 |
 | --- | --- | --- | --- |
-| `/api/news` | `GET` | 返回当前缓存日报报告和刷新元数据 | `200` |
-| `/api/health` | `GET` | 返回服务是否已有可用缓存、新闻数量和最近错误 | `200` 或 `503` |
-| `/api/refresh` | `POST` | 手动触发一次刷新并返回最新生成时间 | `200` |
-| `/api/*` 其他路径 | 任意 | API 未定义路径 | `404` |
+| `/api/news` | `GET` | 立即返回 last-known-good V2 报告 | `200` |
+| `/api/health` | `GET` | 报告可用性和最近刷新状态 | `200`；没有任何报告时 `503` |
+| `/api/refresh` | `POST` | 运行一次受保护刷新，质量达标后切换 latest | `200` |
 
-服务默认监听 `127.0.0.1:4173`，可通过 `PORT` 环境变量覆盖。当前证据只说明本地 API，不说明公开生产域名。
+其他 `/api/*` 路径在本地 Node 服务中返回 `404` JSON。
 
-## 通用响应规则
+## 通用规则
 
-| 规则 | 当前行为 |
-| --- | --- |
-| 响应格式 | JSON |
-| `Content-Type` | `application/json; charset=utf-8` |
-| `Cache-Control` | `no-store` |
-| CORS | `Access-Control-Allow-Origin: *` |
-| API 路由外路径 | 在 `npm run serve` 下尝试托管 `dist/` 静态文件，找不到时 fallback 到 `index.html` 或 404 |
-
-`Access-Control-Allow-Origin: *` 适合当前本地原型。若部署公开服务，需要重新评估来源限制和滥用风险。
+- 响应为 UTF-8 JSON。
+- 当前 CORS 为 `Access-Control-Allow-Origin: *`。
+- Serverless 只读响应使用 `s-maxage=60, stale-while-revalidate=300`；本地 Node 服务使用 `no-store`。
+- 公开错误只返回归一化信息，不返回外部响应正文、secret 或 translation 配置。
 
 ## `GET /api/news`
 
-### 目的
-
-返回服务端内存中最新可用的 `DailyNewsReport`，供浏览器首选加载。
-
-### 请求
-
-无请求体。当前没有认证、分页、查询参数或版本参数。
-
-### 成功响应
-
-状态码：`200`
-
-响应结构：
+返回 `DailyNewsReport` V2 与刷新元数据：
 
 ```ts
-DailyNewsReport & {
+interface DailyNewsReportV2 {
+  version: 2;
+  generatedAt: string;
+  window: { from: string; to: string };
+  stories: StoryCard[];
+  topStories: StoryCard[];
+  importantStories: StoryCard[];
+  watchlist: StoryCard[];
+  sections: Array<{ beat: Category; storyIds: string[] }>;
+  coverage: CoverageSummary;
+  quality: PublicQualitySummary;
+  items: RankedNewsItem[];
+  sourceCount: number;
+  notes: string[];
   refresh: {
     intervalMinutes: number;
+    status?: "healthy" | "degraded";
     lastError: string | null;
   };
 }
 ```
 
-核心字段：
+契约：
 
-| 字段 | 含义 |
-| --- | --- |
-| `generatedAt` | 报告生成时间，ISO 字符串 |
-| `items` | 排序后新闻列表，元素为 `RankedNewsItem` |
-| `sourceCount` | 本次报告涉及的来源数量 |
-| `notes` | 面向读者的报告说明 |
-| `refresh.intervalMinutes` | 服务端刷新间隔 |
-| `refresh.lastError` | 最近一次刷新错误；无错误为 `null` |
+- `stories` 是规范事件集合；
+- 三个首页数组互不重复，且成员也来自同一事件模型；
+- 每个 `sections.storyIds` 必须能在 `stories` 中解析；
+- `items` 是迁移期 V1 兼容投影；
+- `coverage` 和 `quality` 只包含可公开聚合，不包含内部抓取错误或凭据。
 
-`RankedNewsItem` 至少包含前端当前依赖的字段：`id`、`title`、`url`、`sourceNames`、`categories`、`primaryCategory`、`summary`、`publishedAt` 或 `extractedAt`、`score_breakdown`、`trust`。
-
-### 未准备好响应
-
-状态码：`503`
-
-```json
-{
-  "error": "News report is still loading",
-  "refresh": {
-    "intervalMinutes": 15,
-    "lastError": null
-  }
-}
-```
-
-`intervalMinutes` 取实际配置；示例中的 `15` 是默认值。
+若没有任何 bundled、memory 或 snapshot 报告，返回 `503`。正常部署和本地启动会先加载 bundled last-known-good，因此不需要等待首次外部刷新。
 
 ## `GET /api/health`
-
-### 目的
-
-给本地维护者检查 API 是否已有可用缓存，以及最近一次刷新是否报错。
-
-### 请求
-
-无请求体。当前没有认证、查询参数或版本参数。
-
-### 响应
-
-缓存存在时状态码为 `200`，缓存不存在时状态码为 `503`。
 
 ```ts
 {
   ok: boolean;
+  reportAvailable: boolean;
+  refreshStatus: "healthy" | "degraded";
   generatedAt: string | null;
   itemCount: number;
-  lastError: string | null;
 }
 ```
 
-字段含义：
-
-| 字段 | 含义 |
-| --- | --- |
-| `ok` | 是否已有可用 `cachedReport` |
-| `generatedAt` | 缓存报告生成时间；无缓存为 `null` |
-| `itemCount` | 当前缓存新闻条数；无缓存为 `0` |
-| `lastError` | 最近刷新错误；无错误为 `null` |
+本地响应还可包含非敏感 `lastError`；刷新失败不会使已有报告变成不可读。
 
 ## `POST /api/refresh`
 
-### 目的
+### 本地
 
-手动触发一次刷新，供维护者在本地 API 运行时立即更新缓存。
+非 production、非 Vercel 环境允许无 token 手动刷新，便于开发。
 
-### 请求
+### Vercel / production
 
-无请求体。当前没有认证、幂等 key、查询参数或版本参数。
+设置 `DAILY_NEWS_REFRESH_TOKEN`，请求头为：
 
-### 成功响应
-
-状态码：`200`
-
-```ts
-{
-  ok: true;
-  generatedAt: string | null;
-}
+```http
+Authorization: Bearer <token>
 ```
 
-`generatedAt` 是刷新后缓存报告的生成时间；若刷新逻辑没有得到缓存，可能为 `null`。
+| 场景 | 状态 |
+| --- | ---: |
+| Vercel 未配置 token | `503` |
+| token 错误或缺失 | `401` |
+| 生成报告未通过发布门槛 | `422` |
+| 刷新内部失败 | `500`，公开响应不含内部错误正文 |
+| 刷新并发布成功 | `200`，返回 `generatedAt` 和 `itemCount` |
 
-### 失败响应
+发布门槛同时检查绝对有效性和相对防回退：事件/核心层/来源不能严重坍缩，之前已覆盖的核心 beat 不能突然没有任何候选。
 
-状态码：`500`
+## 前端兼容
 
-```ts
-{
-  ok: false;
-  error: string;
-}
-```
+加载顺序固定为：
 
-## 认证和授权
+1. `/api/news`；
+2. `/daily-news.json`；
+3. `firecrawlSnapshotNews`。
 
-当前 API 没有认证、授权、用户身份或权限边界。仓库证据显示它面向本地开发和生产式本地运行。
+前端可读取 V1 静态 `items` 并在内存升级为 V2，但新生成的 `public/daily-news.json` 应始终为 V2。删除 `items` 前必须完成独立版本切换和消费者审计。
 
-如果未来公开部署，至少需要确认：
+## 验收
 
-- 是否限制 CORS；
-- 是否保护 `POST /api/refresh`；
-- 是否限制刷新频率；
-- 是否记录访问日志并避免泄露错误细节；
-- 是否需要 API 版本策略。
-
-## 校验规则
-
-当前 API 没有请求参数，因此主要校验在响应消费侧：
-
-- `src/App.tsx` 的 `readReport` 要求 `items` 是非空数组；
-- `src/App.tsx` 的 `readReport` 要求 `generatedAt` 是字符串；
-- 不满足时前端会把该响应视为不可用并继续 fallback。
-
-## 错误和状态码
-
-| 场景 | 状态码 | 响应 |
-| --- | --- | --- |
-| `/api/news` 初始缓存未准备好 | `503` | `error` + `refresh` |
-| `/api/health` 初始缓存未准备好 | `503` | `ok: false` |
-| `/api/refresh` 刷新失败 | `500` | `ok: false` + `error` |
-| 未定义 `/api/*` 路径 | `404` | `{ "error": "Not found" }` |
-| 静态资源不存在且没有 `dist/index.html` | `404` | `{ "error": "Not found" }` |
-
-## 兼容性说明
-
-- 前端加载链路依赖 `/api/news`，但必须继续支持 `/daily-news.json` 和 `firecrawlSnapshotNews` fallback。
-- 新增字段应保持向后兼容；前端不应要求 API 立即存在非必要字段。
-- 删除或重命名 `DailyNewsReport` 字段会影响 `src/App.tsx`、静态 JSON 和测试 fixture。
-- 如果 `/api/news` 允许空 `items`，需要同步修改前端 `readReport` 的有效性判断。
-
-## 非目标
-
-- 不定义 Firecrawl search 请求/响应契约。
-- 不定义翻译服务的 OpenAI-compatible API 细节。
-- 不定义生产负载均衡、CDN、日志系统或监控接口。
-- 不实现用户认证、分页、服务端偏好或历史查询。
-
-## 实现指引
-
-- 改 `scripts/newsServer.ts` 前先确认是否影响 `src/App.tsx` 的 `readReport`。
-- 新增 endpoint 时补充本文件，并在 `docs/runbook.md` 或 smoke check 中加入最小验证命令。
-- 如果 API 改成公开可访问，先更新 [security-privacy.md](security-privacy.md) 中的 CORS、refresh 和错误信息风险。
-- 保持 JSON 响应可被 `curl` 检查，方便本地排障。
-
-## 验收标准
-
-- `npm run api` 启动后，初始刷新完成时 `curl http://127.0.0.1:4173/api/health` 返回 `ok: true`。
-- `curl http://127.0.0.1:4173/api/news` 返回非空 `items` 和字符串 `generatedAt`。
-- `curl -X POST http://127.0.0.1:4173/api/refresh` 能触发刷新并返回 JSON。
-- 未定义 `/api/*` 返回 404 JSON。
-- 前端在 API 失败时仍能 fallback。
+- `GET /api/news` 不调用 `fetch`；
+- 冷启动立即返回非空 V2；
+- health 区分 report availability 和 refresh health；
+- 未配置/错误 refresh token 的状态码分别为 `503`/`401`；
+- 质量失败不替换 last-known-good；
+- API 失败时浏览器继续静态 fallback。
 
 ## 待确认
 
-| 项 | 需要确认的问题 |
-| --- | --- |
-| 生产 API 域名 | 当前只有本地 `127.0.0.1:4173` |
-| API 认证 | 当前无认证；公开部署前必须确认 |
-| CORS 策略 | 当前为 `*`；公开部署是否允许任意来源待确认 |
-| 刷新频率限制 | 当前 `POST /api/refresh` 无频控 |
-| API 版本策略 | 当前没有 `/v1` 或版本字段 |
+- 历史日报只读 endpoint；
+- `items` 兼容字段删除时间；
+- 生产调度器、CORS 白名单和限流策略；
+- 外部持久化供应商与跨实例 latest pointer。

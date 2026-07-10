@@ -10,7 +10,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "serve": "npm run build && tsx scripts/newsServer.ts",
     "test": "vitest run",
-    "generate": "tsx scripts/generateDailyNews.ts"
+    "generate": "tsx scripts/generateDailyNews.ts",
+    "upgrade-report": "tsx scripts/upgradeDailyNewsReport.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.2",

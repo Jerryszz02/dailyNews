@@ -1,5 +1,6 @@
 import { newsSources } from "../config/sources.js";
 import type { NewsCluster, TrustAssessment, TrustLevel } from "../types";
+import { isInformativeText } from "./text.js";
 
 const sourceById = new Map(newsSources.map((source) => [source.source_id, source]));
 
@@ -35,7 +36,7 @@ export function assessTrust(item: NewsCluster): TrustAssessment {
     score -= 8;
     reasons.push("缺少发布时间");
   }
-  if (item.summary.trim().length >= 60) {
+  if (isInformativeText(item.summary)) {
     score += 6;
     reasons.push("摘要信息完整");
   } else {

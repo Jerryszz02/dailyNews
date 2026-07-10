@@ -213,6 +213,32 @@ describe("scoring", () => {
     expect(report.items[0].trust.level).toBe("low");
   });
 
+  it("treats a concise Chinese summary as information-complete", () => {
+    const report = buildDailyReport(
+      [
+        {
+          id: "chinese-summary",
+          title: "监管部门发布新规并明确全国执行时间",
+          url: "https://www.news.cn/politics/chinese-summary.html",
+          sourceId: "xinhua",
+          sourceName: "新华网",
+          language: "zh-CN",
+          region: "china",
+          categories: ["policy", "china"],
+          primaryCategory: "policy",
+          summary: "新规明确适用范围、执行时间和后续监管安排，将影响全国相关市场主体。",
+          publishedAt: now.toISOString(),
+          extractedAt: now.toISOString(),
+        },
+      ],
+      defaultPreferences,
+      now,
+    );
+
+    expect(report.items).toHaveLength(1);
+    expect(report.items[0].trust.reasons).toContain("摘要信息完整");
+  });
+
   it("filters out invalid stories with missing title or url", () => {
     const report = buildDailyReport(
       [
@@ -275,6 +301,42 @@ describe("dedupe", () => {
 
     expect(clusters).toHaveLength(1);
     expect(clusters[0].sourceNames).toEqual(["Reuters", "BBC"]);
+    expect(clusters[0].relatedUrls).toHaveLength(2);
+  });
+
+  it("clusters a breaking event with a differently worded follow-up", () => {
+    const clusters = clusterNews([
+      {
+        id: "fire-main",
+        title: "习近平对福建泉州晋江市一鞋厂火灾事故作出重要指示",
+        url: "https://example.com/fire-main",
+        sourceId: "xinhua",
+        sourceName: "新华网",
+        language: "zh-CN",
+        region: "china",
+        categories: ["policy", "china", "society"],
+        primaryCategory: "policy",
+        summary: "福建泉州晋江市一鞋厂发生火灾并造成人员伤亡，应急管理部派工作组赶赴现场处置。",
+        publishedAt: now.toISOString(),
+        extractedAt: now.toISOString(),
+      },
+      {
+        id: "fire-follow-up",
+        title: "应急管理部派联合工作组赴晋江",
+        url: "https://example.com/fire-follow-up",
+        sourceId: "chinanews",
+        sourceName: "中国新闻网",
+        language: "zh-CN",
+        region: "china",
+        categories: ["china", "society"],
+        primaryCategory: "china",
+        summary: "福建晋江一鞋厂发生火灾并造成人员伤亡，应急管理部和消防救援部门派工作组到现场指导救援处置。",
+        publishedAt: now.toISOString(),
+        extractedAt: now.toISOString(),
+      },
+    ]);
+
+    expect(clusters).toHaveLength(1);
     expect(clusters[0].relatedUrls).toHaveLength(2);
   });
 

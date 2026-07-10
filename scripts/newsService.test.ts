@@ -2,11 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   extractArticleSummaryContext,
   extractPublishedDateFromHtml,
+  generateDailyNewsReport,
   inferPrimaryCategory,
   inferPublishedDateFromUrl,
+  mapWithConcurrency,
+  matchesSourceDomain,
   parsePublishedDate,
   prepareNewsTextForDisplay,
   readTranslationConfig,
+  runWithinDeadline,
   translateNewsText,
 } from "./newsService";
 
@@ -15,8 +19,10 @@ const translationEnvNames = [
   "DAILY_NEWS_TRANSLATION_BASE_URL",
   "DAILY_NEWS_TRANSLATION_MODEL",
 ] as const;
+const maxNewsAgeEnvName = "DAILY_NEWS_MAX_AGE_HOURS";
 
 let originalTranslationEnv: Record<(typeof translationEnvNames)[number], string | undefined>;
+let originalMaxNewsAge: string | undefined;
 
 beforeEach(() => {
   originalTranslationEnv = Object.fromEntries(translationEnvNames.map((name) => [name, process.env[name]])) as Record<
@@ -26,6 +32,8 @@ beforeEach(() => {
   for (const name of translationEnvNames) {
     delete process.env[name];
   }
+  originalMaxNewsAge = process.env[maxNewsAgeEnvName];
+  delete process.env[maxNewsAgeEnvName];
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
 });
 
@@ -37,6 +45,11 @@ afterEach(() => {
     } else {
       process.env[name] = value;
     }
+  }
+  if (originalMaxNewsAge === undefined) {
+    delete process.env[maxNewsAgeEnvName];
+  } else {
+    process.env[maxNewsAgeEnvName] = originalMaxNewsAge;
   }
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -57,6 +70,86 @@ function chatResponse(content: string, status = 200): Response {
     json: async () => ({ choices: [{ message: { content } }] }),
   } as Response;
 }
+
+describe("generateDailyNewsReport", () => {
+  it("uses the checked-in fallback when direct results are all stale", async () => {
+    process.env[maxNewsAgeEnvName] = "72";
+    const fetchMock = vi.fn().mockResolvedValue(
+      htmlResponse('<a href="/2026/07/01/article.html">这是一条用于验证过期新闻降级逻辑的测试标题 2026-07-01</a>'),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateDailyNewsReport({
+      useFirecrawlKeyless: false,
+      maxSources: 1,
+      limitPerSection: 1,
+      now: new Date("2026-07-10T00:00:00.000Z"),
+      repairSummariesWithModel: false,
+    });
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(result.usedLiveData).toBe(false);
+    expect(result.mode).toBe("Firecrawl snapshot");
+    expect(result.rawItemCount).toBeGreaterThan(0);
+    expect(result.report.items.length).toBeGreaterThan(0);
+  });
+
+  it("returns last-known-good when collection reaches its overall deadline", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    const startedAt = Date.now();
+
+    const result = await generateDailyNewsReport({
+      useFirecrawlKeyless: false,
+      maxSources: 6,
+      limitPerSection: 1,
+      collectionBudgetMs: 30,
+      repairSummariesWithModel: false,
+    });
+
+    expect(Date.now() - startedAt).toBeLessThan(500);
+    expect(result.usedLiveData).toBe(false);
+    expect(result.mode).toBe("Firecrawl snapshot");
+    expect(result.report.items.length).toBeGreaterThan(0);
+  });
+});
+
+describe("matchesSourceDomain", () => {
+  it("accepts the configured domain and its subdomains", () => {
+    expect(matchesSourceDomain("https://www.news.cn/politics/article.html", "www.news.cn")).toBe(true);
+    expect(matchesSourceDomain("https://sports.news.cn/2026/07/10/article.html", "www.news.cn")).toBe(true);
+  });
+
+  it("rejects unrelated search results", () => {
+    expect(matchesSourceDomain("https://example.com/news/article.html", "www.news.cn")).toBe(false);
+  });
+});
+
+describe("mapWithConcurrency", () => {
+  it("preserves result order while bounding active work", async () => {
+    let active = 0;
+    let maxActive = 0;
+    const result = await mapWithConcurrency([1, 2, 3, 4, 5], 2, async (value) => {
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await Promise.resolve();
+      active -= 1;
+      return value * 2;
+    });
+
+    expect(result).toEqual([2, 4, 6, 8, 10]);
+    expect(maxActive).toBe(2);
+  });
+});
+
+describe("runWithinDeadline", () => {
+  it("returns completed work before the deadline", async () => {
+    await expect(runWithinDeadline(async () => "ok", Date.now() + 1_000)).resolves.toBe("ok");
+  });
+
+  it("rejects work after the collection deadline", async () => {
+    await expect(runWithinDeadline(async () => "late", Date.now() - 1)).rejects.toThrow("Collection deadline reached");
+  });
+});
 
 describe("inferPublishedDateFromUrl", () => {
   it("reads slash-separated article dates", () => {

@@ -1,6 +1,6 @@
 # Daily News
 
-Daily News 是一个新闻日报原型：从可配置精选来源获取新闻，按公共重要性、用户偏好、时效性、来源可信度和内容质量排序，并在网页中展示密集时间线、当前热点、分类筛选、可信度标签和偏好新闻。
+Daily News 是一个事件级新闻日报：从可配置精选来源发现候选，把不同媒体对同一事件的报道合并为证据链，再按公共影响、事实状态和来源多样性输出“今日必知、重要进展、持续关注和分类深读”。
 
 公开仓库：<https://github.com/Jerryszz02/dailyNews>
 
@@ -35,10 +35,18 @@ npm run serve
 
 `npm run generate` 会写入 `public/daily-news.json`，前端在 API 不可用时会加载这个文件。生成逻辑在 `scripts/generateDailyNews.ts`，实时 API 复用 `scripts/newsService.ts`：
 
-- 默认不需要 Firecrawl API key：优先通过 Firecrawl keyless 搜索 `src/config/sources.ts` 中启用的来源。
-- Firecrawl keyless 没有返回实时结果或触发限速：切到直接公开来源页面/feed 抓取。
+- 默认不需要 Firecrawl API key：优先通过 Firecrawl keyless 搜索覆盖调度器选中的来源。
+- Firecrawl 最多使用整轮前 8 秒；候选不足时继续并发直连公开来源页面/feed，并合并两路结果。
 - 没有实时结果：使用已生成的 `public/daily-news.json`，再兜底到 `src/data/firecrawlSnapshot.ts`。
-- 实时 API 启动时生成一次缓存，之后按间隔刷新；`POST /api/refresh` 可手动触发。
+- 整轮采集默认 30 秒截止；新报告未通过绝对/相对质量门槛时保留 last-known-good。
+- `GET /api/news` 只读已经发布的报告，不在用户请求内抓取外部来源。
+- 静态报告先写临时文件并通过质量门槛，再原子替换 `public/daily-news.json`。
+
+只把已有静态报告离线升级为 V2，不访问新闻源：
+
+```bash
+npm run upgrade-report
+```
 
 本地配置示例：
 
@@ -53,6 +61,10 @@ npm run generate
 DAILY_NEWS_MAX_SOURCES=
 DAILY_NEWS_LIMIT_PER_SECTION=5
 DAILY_NEWS_REFRESH_INTERVAL_MINUTES=15
+DAILY_NEWS_COLLECTION_BUDGET_MS=30000
+DAILY_NEWS_SOURCE_CONCURRENCY=6
+DAILY_NEWS_MAX_AGE_HOURS=72
+DAILY_NEWS_REFRESH_TOKEN=
 DAILY_NEWS_TRANSLATION_API_KEY=YOUR-DEEPSEEK-API-KEY
 DAILY_NEWS_TRANSLATION_BASE_URL=
 DAILY_NEWS_TRANSLATION_MODEL=
@@ -70,7 +82,7 @@ curl http://127.0.0.1:4173/api/news
 curl http://127.0.0.1:4173/api/health
 ```
 
-`GET /api/news` 返回 `DailyNewsReport`，包含 `generatedAt`、`items`、`sourceCount` 和 `notes`。每条新闻包含唯一主分类 `primaryCategory` 和独立可信度 `trust`。Firecrawl 使用 keyless 模式；翻译密钥只在 Node 服务端读取，前端不接触密钥。
+`GET /api/news` 返回 `DailyNewsReport` V2，包含完整 `stories`、`topStories`、`importantStories`、`watchlist`、`sections`、`coverage`、`quality`，并保留旧 `items` 兼容字段。生产环境的 `POST /api/refresh` 需要 `DAILY_NEWS_REFRESH_TOKEN`；未配置时端点不可用。翻译与刷新密钥只在 Node 服务端读取，前端不接触密钥。
 
 ## 中文化边界
 
@@ -85,8 +97,11 @@ curl http://127.0.0.1:4173/api/health
 - `src/lib/scoring.ts`：可解释排序评分。
 - `src/lib/trust.ts`：独立低/中/高可信度评估。
 - `src/lib/dedupe.ts`：同一事件聚类去重，并确定唯一主分类。
+- `src/lib/curation.ts`：候选质量门槛、事件证据、事实状态、公共影响分层和集合级选择。
+- `src/lib/sourceCoverage.ts`：按栏目缺口、来源角色、地区和健康状态选择来源。
 - `scripts/newsService.ts`：Firecrawl 抓取、直接来源抓取、翻译、兜底合并和报告生成共享逻辑。
 - `scripts/newsServer.ts`：实时 API 与生产静态资源服务。
+- `scripts/reportStore.ts`：last-known-good 读取、V1→V2 迁移和发布质量门槛。
 - `scripts/generateDailyNews.ts`：报告生成入口。
 - `public/daily-news.json`：前端加载的生成结果。
 - `src/App.tsx`：页面结构、分类切换、来源名显示映射。
