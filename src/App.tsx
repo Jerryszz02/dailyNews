@@ -1,17 +1,12 @@
 import {
   CalendarDays,
-  CircleAlert,
   Clock3,
-  Eye,
-  Newspaper,
   RefreshCw,
   Search,
   Settings2,
   Star,
-  Target,
-  Zap,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { defaultPreferences } from "./config/preferences";
 import { newsSources } from "./config/sources";
@@ -41,6 +36,7 @@ const strengthOptions: { value: PreferenceStrength; label: string }[] = [
 
 type ActiveView = "preferred" | "settings" | Category;
 type LoadState = "idle" | "loading" | "ready" | "error";
+type EventVariant = "lead" | "brief" | "compact" | "watch";
 
 const initialVisibleCount = 18;
 const visibleStep = 18;
@@ -56,6 +52,8 @@ export function App() {
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const refreshNews = useCallback(async () => {
     setLoadState((current) => (current === "ready" ? current : "loading"));
@@ -101,6 +99,10 @@ export function App() {
     setVisibleCount(initialVisibleCount);
   }, [activeView, searchQuery, preferences]);
 
+  useEffect(() => {
+    if (mobileSearchOpen) searchInputRef.current?.focus();
+  }, [mobileSearchOpen]);
+
   const fallbackReport = useMemo(() => buildDailyReport(firecrawlSnapshotNews, defaultPreferences), []);
   const report = loadedReport ?? fallbackReport;
   const personalizedOrder = useMemo(
@@ -122,119 +124,159 @@ export function App() {
   }, [activeView, personalizedOrder, report.stories, searchQuery]);
   const pageStories = categoryStories.slice(0, visibleCount);
   const canShowMore = categoryStories.length > pageStories.length;
+  const selectView = (view: ActiveView) => {
+    setActiveView(view);
+    setMobileSearchOpen(false);
+  };
 
   return (
     <main className="app-shell">
-      <aside className="sidebar" aria-label="主导航">
-        <div className="brand">
-          <span>AI</span>
-          <strong>NEWS</strong>
-        </div>
-        <nav className="sidebar-nav">
-          <NavButton active={activeView === "preferred"} icon={<Zap size={16} />} label="今日简报" onClick={() => setActiveView("preferred")} />
-          {categories.map((category) => (
-            <NavButton
-              active={activeView === category.id}
-              icon={<Newspaper size={16} />}
-              key={category.id}
-              label={category.label}
-              onClick={() => setActiveView(category.id)}
+      <header className="topbar">
+        <div className="topbar-main">
+          <button className="brand" type="button" onClick={() => selectView("preferred")} aria-label="返回今日简报">
+            <span>AI</span>
+            <strong>NEWS</strong>
+          </button>
+
+          <div className="topbar-date">
+            <CalendarDays size={16} strokeWidth={1.8} />
+            <span>{formatDay(report.generatedAt)}</span>
+          </div>
+
+          <label className={`search-box topbar-search ${mobileSearchOpen ? "open" : ""}`}>
+            <Search size={17} strokeWidth={1.8} />
+            <input
+              aria-label="搜索新闻"
+              placeholder="搜索事件、事实或来源"
+              ref={searchInputRef}
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
             />
+          </label>
+
+          <div className="topbar-actions">
+            <button
+              aria-expanded={mobileSearchOpen}
+              aria-label={mobileSearchOpen ? "收起搜索" : "展开搜索"}
+              className="icon-button mobile-search-toggle"
+              onClick={() => setMobileSearchOpen((current) => !current)}
+              type="button"
+            >
+              <Search size={18} strokeWidth={1.8} />
+            </button>
+            <button
+              aria-label="刷新新闻"
+              className="icon-button"
+              disabled={loadState === "loading"}
+              onClick={() => void refreshNews()}
+              title="刷新新闻"
+              type="button"
+            >
+              <RefreshCw className={loadState === "loading" ? "spin" : ""} size={18} strokeWidth={1.8} />
+            </button>
+            <button
+              aria-current={activeView === "settings" ? "page" : undefined}
+              aria-label="偏好设置"
+              className={`settings-button ${activeView === "settings" ? "active" : ""}`}
+              onClick={() => selectView("settings")}
+              type="button"
+            >
+              <Settings2 size={18} strokeWidth={1.8} />
+              <span>设置</span>
+            </button>
+          </div>
+        </div>
+
+        <nav className="category-nav" aria-label="分类导航">
+          <button
+            aria-current={activeView === "preferred" ? "page" : undefined}
+            className={activeView === "preferred" ? "active" : ""}
+            type="button"
+            onClick={() => selectView("preferred")}
+          >
+            今日简报
+          </button>
+          {categories.map((category) => (
+            <button
+              aria-current={activeView === category.id ? "page" : undefined}
+              className={activeView === category.id ? "active" : ""}
+              key={category.id}
+              type="button"
+              onClick={() => selectView(category.id)}
+            >
+              {category.label}
+            </button>
           ))}
-          <NavButton active={activeView === "settings"} icon={<Settings2 size={16} />} label="设置" onClick={() => setActiveView("settings")} />
         </nav>
-      </aside>
+      </header>
 
       <section className="workspace">
-        <header className="hero-panel">
+        <header className="page-intro">
           <div>
-            <p className="eyebrow">{activeView === "preferred" ? "每日总览" : activeView === "settings" ? "配置中心" : "分类动态"}</p>
             <h1>{viewTitle(activeView)}</h1>
-            <p className="hero-subtitle">事件级聚合 · 多来源证据 · 重要性分层</p>
+            <p>{viewDescription(activeView)}</p>
           </div>
-          <div className="status-panel">
-            <div>
-              <CalendarDays size={16} />
-              <span>{formatDay(report.generatedAt)}</span>
-            </div>
-            <div>
-              <Clock3 size={16} />
-              <span>{lastLoadedAt ? formatRelativeTime(lastLoadedAt) : "等待加载"}</span>
-            </div>
-            <button className="icon-button" disabled={loadState === "loading"} onClick={() => void refreshNews()} title="刷新新闻" type="button">
-              <RefreshCw className={loadState === "loading" ? "spin" : ""} size={17} />
-            </button>
+          <div className="update-status">
+            <Clock3 size={15} strokeWidth={1.8} />
+            <span>{lastLoadedAt ? `更新于${formatRelativeTime(lastLoadedAt)}` : "正在读取最新报告"}</span>
           </div>
         </header>
 
+        {loadError ? <div className="page-note" role="status">{loadError}</div> : null}
+
         {activeView === "settings" ? (
           <PreferencesPanel preferences={preferences} setPreferences={setPreferences} />
+        ) : loadState === "loading" && !loadedReport ? (
+          <NewsSkeleton />
         ) : (
-          <>
-            <section className="filters-panel" aria-label="筛选">
-              <div className="section-tabs" role="tablist">
-                <button className={activeView === "preferred" ? "active" : ""} type="button" onClick={() => setActiveView("preferred")}>
-                  今日简报
-                </button>
-                {categories.map((category) => (
-                  <button
-                    className={activeView === category.id ? "active" : ""}
-                    key={category.id}
-                    type="button"
-                    onClick={() => setActiveView(category.id)}
-                  >
-                    {category.label}
-                  </button>
-                ))}
-              </div>
-              <label className="search-box">
-                <Search size={17} />
-                <input
-                  placeholder="搜索事件、事实、来源..."
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                />
-              </label>
-            </section>
-
-            {loadError ? <div className="page-note">{loadError}</div> : null}
-
-            {activeView === "preferred" ? (
-              <BriefingHome preferences={preferences} query={searchQuery} report={report} />
-            ) : (
-              <>
-                <section className="story-section category-story-section" aria-label={`${categoryLabel(activeView)}事件`}>
-                  <div className="story-section-heading">
-                    <div>
-                      <p className="eyebrow">分类深读</p>
-                      <h2>{categoryLabel(activeView)}</h2>
-                    </div>
-                    <span>{categoryStories.length} 个达到质量门槛的事件</span>
-                  </div>
-                  {pageStories.length === 0 ? (
-                    <div className="empty-state">{loadState === "loading" ? "正在加载新闻..." : "该栏目暂无达到质量门槛的事件。"}</div>
-                  ) : null}
-                  <div className="story-grid">
+          activeView === "preferred" ? (
+            <BriefingHome onClearSearch={() => setSearchQuery("")} preferences={preferences} query={searchQuery} report={report} />
+          ) : (
+            <>
+              <section className="story-section category-story-section" aria-label={`${categoryLabel(activeView)}事件`}>
+                <div className="section-heading">
+                  <h2>全部事件</h2>
+                  <p>{categoryStories.length} 个达到质量门槛的事件</p>
+                </div>
+                {pageStories.length === 0 ? (
+                  <EmptyState
+                    action={searchQuery ? "清除搜索" : undefined}
+                    message={searchQuery ? "没有事件匹配当前搜索条件。" : "该栏目暂时没有达到质量门槛的事件。"}
+                    onAction={searchQuery ? () => setSearchQuery("") : undefined}
+                    title={searchQuery ? "没有搜索结果" : "暂无合格事件"}
+                  />
+                ) : (
+                  <div className="story-list">
                     {pageStories.map((story) => <EventCard key={story.id} story={story} variant="compact" />)}
                   </div>
-                </section>
+                )}
+              </section>
 
-                {canShowMore ? (
-                  <button className="show-more" type="button" onClick={() => setVisibleCount((current) => current + visibleStep)}>
-                    展开更多 {Math.min(visibleStep, categoryStories.length - pageStories.length)} 个事件
-                  </button>
-                ) : null}
-              </>
-            )}
-          </>
+              {canShowMore ? (
+                <button className="show-more" type="button" onClick={() => setVisibleCount((current) => current + visibleStep)}>
+                  再看 {Math.min(visibleStep, categoryStories.length - pageStories.length)} 个事件
+                </button>
+              ) : null}
+            </>
+          )
         )}
       </section>
     </main>
   );
 }
 
-function BriefingHome({ report, preferences, query }: { report: DailyNewsReport; preferences: UserPreferences; query: string }) {
+function BriefingHome({
+  report,
+  preferences,
+  query,
+  onClearSearch,
+}: {
+  report: DailyNewsReport;
+  preferences: UserPreferences;
+  query: string;
+  onClearSearch: () => void;
+}) {
   const itemOrder = new Map(rankNews(report.items, preferences).map((item, index) => [item.id, index]));
   const topStories = filterStories(report.topStories, query);
   const importantStories = filterStories(
@@ -245,57 +287,67 @@ function BriefingHome({ report, preferences, query }: { report: DailyNewsReport;
   );
   const watchlist = filterStories(report.watchlist, query);
   const visibleStoryCount = topStories.length + importantStories.length + watchlist.length;
+  const leadStory = topStories[0];
+  const supportingStories = topStories.slice(1);
 
   return (
     <div className="briefing-home">
       <section className="briefing-summary" aria-label="日报质量概览">
-        <div>
-          <span>本期事件</span>
-          <strong>{report.quality.eventCount}</strong>
-        </div>
-        <div>
-          <span>覆盖栏目</span>
-          <strong>{report.coverage.coveredBeatCount}/{report.coverage.totalBeatCount}</strong>
-        </div>
-        <div>
-          <span>独立来源</span>
-          <strong>{report.sourceCount}</strong>
-        </div>
-        <p>同一事件只出现一次；未确认线索不会进入核心简报。</p>
+        <dl>
+          <div>
+            <dt>本期事件</dt>
+            <dd>{report.quality.eventCount}</dd>
+          </div>
+          <div>
+            <dt>覆盖栏目</dt>
+            <dd>{report.coverage.coveredBeatCount}/{report.coverage.totalBeatCount}</dd>
+          </div>
+          <div>
+            <dt>独立来源</dt>
+            <dd>{report.sourceCount}</dd>
+          </div>
+        </dl>
+        <p>事件已去重，未确认线索不会进入核心简报。</p>
       </section>
 
-      {visibleStoryCount === 0 ? <div className="empty-state">没有匹配当前搜索的事件。</div> : null}
+      {visibleStoryCount === 0 ? (
+        <EmptyState
+          action={query ? "清除搜索" : undefined}
+          message={query ? "试试更短的关键词，或清除搜索查看完整简报。" : "当前报告没有达到展示门槛的事件。"}
+          onAction={query ? onClearSearch : undefined}
+          title={query ? "没有搜索结果" : "暂无合格事件"}
+        />
+      ) : null}
 
       {topStories.length > 0 ? (
         <section className="story-section must-know-section" aria-labelledby="must-know-title">
-          <div className="story-section-heading">
-            <div>
-              <p className="eyebrow">先读这些</p>
-              <h2 id="must-know-title">今日必知</h2>
-            </div>
-            <span>{topStories.length} 个高影响事件</span>
+          <div className="section-heading">
+            <h2 id="must-know-title">今日必知</h2>
+            <p>{topStories.length} 个高影响事件</p>
           </div>
-          <ol className="story-pulse">
-            {topStories.map((story, index) => (
-              <li key={story.id}>
-                <span className="pulse-index">{String(index + 1).padStart(2, "0")}</span>
-                <EventCard story={story} variant="lead" />
-              </li>
-            ))}
-          </ol>
+          <div className={`must-know-layout ${supportingStories.length === 0 ? "single" : ""}`}>
+            {leadStory ? <EventCard story={leadStory} variant="lead" /> : null}
+            {supportingStories.length > 0 ? (
+              <ol className="briefing-list" start={2}>
+                {supportingStories.map((story, index) => (
+                  <li key={story.id}>
+                    <span className="story-rank">{index + 2}</span>
+                    <EventCard story={story} variant="brief" />
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </div>
         </section>
       ) : null}
 
       {importantStories.length > 0 ? (
         <section className="story-section" aria-labelledby="important-title">
-          <div className="story-section-heading">
-            <div>
-              <p className="eyebrow">值得掌握</p>
-              <h2 id="important-title">重要进展</h2>
-            </div>
-            <span>偏好只调整本层顺序</span>
+          <div className="section-heading">
+            <h2 id="important-title">重要进展</h2>
+            <p>按照你的偏好调整顺序</p>
           </div>
-          <div className="story-grid">
+          <div className="story-list">
             {importantStories.map((story) => <EventCard key={story.id} story={story} variant="compact" />)}
           </div>
         </section>
@@ -303,14 +355,11 @@ function BriefingHome({ report, preferences, query }: { report: DailyNewsReport;
 
       {watchlist.length > 0 ? (
         <section className="story-section watch-section" aria-labelledby="watch-title">
-          <div className="story-section-heading">
-            <div>
-              <p className="eyebrow">事实仍在变化</p>
-              <h2 id="watch-title">持续关注</h2>
-            </div>
-            <span>不确定性已明确标记</span>
+          <div className="section-heading">
+            <h2 id="watch-title">持续关注</h2>
+            <p>事实仍在变化</p>
           </div>
-          <div className="watch-list">
+          <div className="story-list">
             {watchlist.map((story) => <EventCard key={story.id} story={story} variant="watch" />)}
           </div>
         </section>
@@ -319,49 +368,74 @@ function BriefingHome({ report, preferences, query }: { report: DailyNewsReport;
   );
 }
 
-function EventCard({ story, variant }: { story: StoryCard; variant: "lead" | "compact" | "watch" }) {
+function EventCard({ story, variant }: { story: StoryCard; variant: EventVariant }) {
   const primaryEvidence = story.evidence[0];
   const facts = story.keyFacts.filter((fact) => normalizeText(fact) !== normalizeText(story.whatHappened)).slice(0, 2);
+  const hasDetails = facts.length > 0 || Boolean(story.nextWatch);
 
   return (
     <article className={`event-card ${variant}`}>
       <div className="event-meta">
         <span className={`event-status ${story.status}`}>{storyStatusLabel(story.status)}</span>
         <span>{categoryLabel(story.primaryBeat)}</span>
-        <span>{story.evidence.length} 个证据来源</span>
         <span>{formatStoryAge(story)}</span>
       </div>
       <h3>
         <a href={primaryEvidence?.url} rel="noreferrer" target="_blank">{story.title}</a>
       </h3>
       <p className="event-summary">{story.whatHappened}</p>
-      {facts.length > 0 && variant === "lead" ? (
-        <ul className="fact-list">{facts.map((fact) => <li key={fact}>{fact}</li>)}</ul>
-      ) : null}
       <div className="event-explanation">
-        <Target size={15} />
+        <strong>为什么重要</strong>
         <span>{story.whyItMatters}</span>
       </div>
-      {variant !== "compact" ? (
-        <div className="event-next">
-          {variant === "watch" ? <CircleAlert size={15} /> : <Eye size={15} />}
-          <span>{story.nextWatch}</span>
-        </div>
+      {hasDetails ? (
+        <details className="event-details">
+          <summary>查看详情</summary>
+          {facts.length > 0 ? <ul className="fact-list">{facts.map((fact) => <li key={fact}>{fact}</li>)}</ul> : null}
+          {story.nextWatch ? <p><strong>后续关注：</strong>{story.nextWatch}</p> : null}
+        </details>
       ) : null}
       <footer>
-        <span>{story.sourceNames.map(sourceLabel).join(" / ")}</span>
+        <span>{story.evidence.length} 个来源：{story.sourceNames.map(sourceLabel).join(" / ")}</span>
         {primaryEvidence ? <a href={primaryEvidence.url} rel="noreferrer" target="_blank">查看原文</a> : null}
       </footer>
     </article>
   );
 }
 
-function NavButton({ active, icon, label, onClick }: { active: boolean; icon: React.ReactNode; label: string; onClick: () => void }) {
+function NewsSkeleton() {
   return (
-    <button className={active ? "active" : ""} type="button" onClick={onClick}>
-      {icon}
-      <span>{label}</span>
-    </button>
+    <section className="loading-state" aria-label="正在加载新闻" aria-live="polite">
+      <div className="skeleton-summary" />
+      <div className="skeleton-heading" />
+      {[0, 1, 2].map((item) => (
+        <div className="skeleton-story" key={item}>
+          <span />
+          <strong />
+          <p />
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function EmptyState({
+  title,
+  message,
+  action,
+  onAction,
+}: {
+  title: string;
+  message: string;
+  action?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <div className="empty-state" role="status">
+      <h2>{title}</h2>
+      <p>{message}</p>
+      {action && onAction ? <button type="button" onClick={onAction}>{action}</button> : null}
+    </div>
   );
 }
 
@@ -460,6 +534,12 @@ function viewTitle(view: ActiveView): string {
   if (view === "preferred") return "今日简报";
   if (view === "settings") return "偏好设置";
   return `${categoryLabel(view)}动态`;
+}
+
+function viewDescription(view: ActiveView): string {
+  if (view === "preferred") return "先读高影响事件，再浏览重要进展与持续关注。";
+  if (view === "settings") return "偏好只影响重要进展和分类页的顺序。";
+  return `查看${categoryLabel(view)}栏目中达到质量门槛的事件。`;
 }
 
 function categoryLabel(category: Category): string {

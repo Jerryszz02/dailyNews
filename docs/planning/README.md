@@ -8,10 +8,10 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 请求 | 在现有项目文档基础上，规划新闻来源与选题系统的完整重构 |
+| 请求 | 在现有事件级新闻系统基础上，完成编辑部式极简前端重设计 |
 | 更新时间 | 2026-07-10 |
 | 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews` |
-| 工作模式 | 核心实现已落地；运营验证与生产持久化待完成 |
+| 工作模式 | 核心事件管线已落地；前端信息层级重设计进入实现与验证 |
 
 ## 项目概览
 
@@ -26,7 +26,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | 来源配置 | 定义新闻来源、栏目、查询词、主分类、语言、地区、可信度、付费墙提示和启用状态 | `src/config/sources.ts` |
 | 报告生成 | 覆盖调度、Firecrawl/直连候选、质量门槛、事件证据、公共影响分层、30 秒预算和 fallback | `src/lib/sourceCoverage.ts`, `src/lib/curation.ts`, `scripts/newsService.ts` |
 | API 与静态服务 | 启动即读取 last-known-good，读请求不抓取；刷新通过相对质量门槛才切换 latest | `scripts/reportStore.ts`, `scripts/newsApi.ts`, `scripts/newsServer.ts` |
-| 前端体验 | 优先读取 V2 API，再读静态 V2/V1 自动升级，展示三个首页层级和统一事件分类引用 | `src/App.tsx` |
+| 前端体验 | 优先读取 V2 API，再读静态 V2/V1 自动升级；以单一顶部分类导航、紧凑状态概览和渐进披露的新闻流展示三个首页层级 | `src/App.tsx`, `src/styles.css` |
 
 ## 已检查的项目证据
 
@@ -86,6 +86,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 5. 修改 `/api/*` 路由或响应字段前读 [api-design.md](api-design.md)。
 6. 涉及 `.env.local`、翻译密钥、Firecrawl、外部抓取或浏览器数据边界时先读 [security-privacy.md](security-privacy.md)。
 7. 实现完成后按 [test-plan.md](test-plan.md) 验证 golden dataset、API 兼容和浏览器体验。
+8. 修改页面布局、响应式、加载/空/错误状态或新闻卡片层级前，先读 [technical-design.md](technical-design.md) 的“编辑部式极简前端”章节。
 
 ## 待确认
 
