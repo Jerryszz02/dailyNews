@@ -3,10 +3,11 @@ import { Firecrawl } from "firecrawl";
 import { defaultPreferences } from "../src/config/preferences.js";
 import { newsSources } from "../src/config/sources.js";
 import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot.js";
+import { clusterNews } from "../src/lib/dedupe.js";
 import { buildDailyReport } from "../src/lib/newsPipeline.js";
-import { selectSourcesForCoverage } from "../src/lib/sourceCoverage.js";
+import { coverageBeatOrder, selectSourcesForCoverage } from "../src/lib/sourceCoverage.js";
 import { hostnameFromUrl } from "../src/lib/text.js";
-import type { Category, DailyNewsReport, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
+import type { Category, DailyNewsReport, NewsSource, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
 
 export const defaultLimitPerSection = 5;
 export const defaultMaxSources = newsSources.filter((source) => source.enabled).length;
@@ -14,6 +15,8 @@ export const defaultRefreshIntervalMinutes = 15;
 export const defaultMaxNewsAgeHours = 72;
 export const defaultSourceConcurrency = 6;
 export const defaultCollectionBudgetMs = 30_000;
+export const defaultMaxTranslatedEvents = 15;
+export const defaultMaxArticlePageRequests = 30;
 
 export interface NewsGenerationOptions {
   limitPerSection?: number;
@@ -29,6 +32,21 @@ export interface NewsGenerationResult {
   mode: "Firecrawl keyless" | "Direct source fetch" | "Hybrid live fetch" | "Firecrawl snapshot";
   rawItemCount: number;
   usedLiveData: boolean;
+  metrics: NewsGenerationMetrics;
+}
+
+export interface NewsGenerationMetrics {
+  selectedSourceCount: number;
+  selectedSectionCount: number;
+  searchRequestCount: number;
+  sourcePageRequestCount: number;
+  articlePageRequestCount: number;
+  translatedUniqueEventCount: number;
+  duplicateTranslationCount: number;
+  collectedCandidateCount: number;
+  recentCandidateCount: number;
+  preparedCandidateCount: number;
+  usedFallback: boolean;
 }
 
 interface TranslationConfig {
@@ -48,6 +66,13 @@ interface NewsTextForDisplayOptions extends NewsText {
   repairSummaryWithModel: boolean;
   translationConfig?: TranslationConfig;
   deadlineAt?: number;
+  context?: CollectionContext;
+}
+
+interface CollectionContext {
+  metrics: NewsGenerationMetrics;
+  htmlCache: Map<string, string>;
+  translationCache: Map<string, NewsText>;
 }
 
 const defaultTranslationBaseUrl = "https://api.deepseek.com";
@@ -64,14 +89,15 @@ export async function generateDailyNewsReport(options: NewsGenerationOptions = {
   const deadlineAt = Date.now() + collectionBudgetMs;
   const translationConfig = readTranslationConfig();
   const repairSummariesWithModel = options.repairSummariesWithModel ?? true;
+  const selectedSources = selectSourcesForCoverage(newsSources, maxSources);
+  const context = createCollectionContext(selectedSources);
   const fetchedItems =
     options.useFirecrawlKeyless === false
       ? []
       : await fetchWithFirecrawlKeyless({
           limitPerSection,
-          maxSources,
-          translationConfig,
-          repairSummariesWithModel,
+          sources: selectedSources,
+          context,
           deadlineAt: Math.min(deadlineAt, Date.now() + Math.min(8_000, Math.floor(collectionBudgetMs / 3))),
         });
   const recentFetchedItems = filterRecentItems(fetchedItems, now, maxNewsAgeHours);
@@ -79,12 +105,27 @@ export async function generateDailyNewsReport(options: NewsGenerationOptions = {
   const directItems =
     recentFetchedItems.length >= minimumLiveItems || Date.now() >= deadlineAt
       ? []
-      : await fetchDirectSources({ limitPerSection, maxSources, translationConfig, repairSummariesWithModel, deadlineAt });
+      : await fetchDirectSources({
+          limitPerSection,
+          sources: selectedSources,
+          context,
+          deadlineAt: Math.max(Date.now() + 1, deadlineAt - (translationConfig ? 8_000 : 2_000)),
+        });
   const recentDirectItems = filterRecentItems(directItems, now, maxNewsAgeHours);
   const combinedLiveItems = uniqueItemsByUrl([...recentFetchedItems, ...recentDirectItems]);
-  const liveItems = combinedLiveItems.length >= minimumLiveItems ? combinedLiveItems : [];
+  context.metrics.collectedCandidateCount = fetchedItems.length + directItems.length;
+  context.metrics.recentCandidateCount = combinedLiveItems.length;
+  const preparedLiveItems = await prepareCollectedItemsForReport(combinedLiveItems, {
+    translationConfig,
+    repairSummariesWithModel,
+    deadlineAt,
+    context,
+  });
+  const liveItems = preparedLiveItems.length >= minimumLiveItems ? preparedLiveItems : [];
+  context.metrics.preparedCandidateCount = preparedLiveItems.length;
   const fallbackItems = readGeneratedFallbackItems();
   const usedLiveData = liveItems.length > 0;
+  context.metrics.usedFallback = !usedLiveData;
   const rawItems = usedLiveData ? liveItems : fallbackItems;
   const report = buildDailyReport(rawItems, defaultPreferences, now);
 
@@ -99,6 +140,27 @@ export async function generateDailyNewsReport(options: NewsGenerationOptions = {
           : "Direct source fetch",
     rawItemCount: rawItems.length,
     usedLiveData,
+    metrics: context.metrics,
+  };
+}
+
+function createCollectionContext(sources: NewsSource[]): CollectionContext {
+  return {
+    metrics: {
+      selectedSourceCount: sources.length,
+      selectedSectionCount: sources.reduce((count, source) => count + source.sections.length, 0),
+      searchRequestCount: 0,
+      sourcePageRequestCount: 0,
+      articlePageRequestCount: 0,
+      translatedUniqueEventCount: 0,
+      duplicateTranslationCount: 0,
+      collectedCandidateCount: 0,
+      recentCandidateCount: 0,
+      preparedCandidateCount: 0,
+      usedFallback: false,
+    },
+    htmlCache: new Map(),
+    translationCache: new Map(),
   };
 }
 
@@ -120,6 +182,96 @@ function filterRecentItems(items: RawNewsItem[], now: Date, maxAgeHours: number)
     const ageMs = now.getTime() - publishedAt;
     return ageMs >= 0 && ageMs <= maxAgeMs;
   });
+}
+
+async function prepareCollectedItemsForReport(
+  items: RawNewsItem[],
+  options: {
+    translationConfig?: TranslationConfig;
+    repairSummariesWithModel: boolean;
+    deadlineAt: number;
+    context: CollectionContext;
+  },
+): Promise<RawNewsItem[]> {
+  const candidates = uniqueItemsByUrl(items).filter(passesCheapCandidateGate);
+  const chineseItems = candidates.filter((item) => !isNonChineseText(item));
+  const englishRepresentatives = selectEnglishEventRepresentatives(
+    candidates.filter(isNonChineseText),
+    defaultMaxTranslatedEvents,
+  );
+  const enrichmentUrls = new Set(selectChineseEnrichmentUrls(chineseItems));
+  const selectedItems = [...chineseItems, ...englishRepresentatives].sort(
+    (left, right) => Date.parse(right.publishedAt ?? "") - Date.parse(left.publishedAt ?? ""),
+  );
+
+  const prepared = await mapWithConcurrency(selectedItems, 4, async (item) => {
+    if (Date.now() >= options.deadlineAt) return null;
+
+    if (isNonChineseText(item)) {
+      const translated = await prepareNewsTextForDisplay({
+        title: item.title,
+        summary: item.summary,
+        url: item.url,
+        allowTranslation: true,
+        repairSummaryWithModel: options.repairSummariesWithModel,
+        translationConfig: options.translationConfig,
+        deadlineAt: options.deadlineAt,
+        context: options.context,
+      });
+      return translated ? { ...item, ...translated, language: "zh-CN" } : null;
+    }
+
+    if (!needsSummaryRepair(item.title, item.summary)) return item;
+    const cachedHtml = options.context.htmlCache.get(item.url);
+    const articleContext = cachedHtml
+      ? extractArticleSummaryContext(cachedHtml)
+      : enrichmentUrls.has(item.url)
+        ? await readArticleSummaryContext(item.url, options.deadlineAt, options.context)
+        : undefined;
+    return {
+      ...item,
+      summary: buildSummaryFromArticleContext(item.title, articleContext) ?? buildMinimalSummary(item.title),
+    };
+  });
+
+  return prepared.filter((item): item is RawNewsItem => item !== null);
+}
+
+export function selectChineseEnrichmentUrls(items: RawNewsItem[]): string[] {
+  const selected: string[] = [];
+  for (const beat of coverageBeatOrder) {
+    const candidate = sortCandidatesByNewest(
+      items.filter((item) => item.primaryCategory === beat && needsSummaryRepair(item.title, item.summary)),
+    )[0];
+    if (candidate) selected.push(candidate.url);
+  }
+  return selected;
+}
+
+function passesCheapCandidateGate(item: RawNewsItem): boolean {
+  if (!item.title.trim() || !item.url.trim() || !/^https?:\/\//i.test(item.url)) return false;
+  if (!item.publishedAt || !Number.isFinite(Date.parse(item.publishedAt))) return false;
+  return !/(广告|推广|优惠|折扣|导购|sponsored|advertorial)/i.test(`${item.title} ${item.summary}`);
+}
+
+export function selectEnglishEventRepresentatives(items: RawNewsItem[], limit = defaultMaxTranslatedEvents): RawNewsItem[] {
+  const representatives = clusterNews(items)
+    .map((cluster) => items.find((item) => item.url === cluster.url))
+    .filter((item): item is RawNewsItem => Boolean(item))
+    .sort((left, right) => Date.parse(right.publishedAt ?? "") - Date.parse(left.publishedAt ?? ""));
+  const selected: RawNewsItem[] = [];
+
+  for (const beat of coverageBeatOrder) {
+    const candidate = representatives.find((item) => item.primaryCategory === beat && !selected.includes(item));
+    if (candidate) selected.push(candidate);
+    if (selected.length >= limit) return selected;
+  }
+
+  for (const candidate of representatives) {
+    if (!selected.includes(candidate)) selected.push(candidate);
+    if (selected.length >= limit) break;
+  }
+  return selected;
 }
 
 function readGeneratedFallbackItems(): RawNewsItem[] {
@@ -170,18 +322,15 @@ export function readPositiveInteger(name: string, fallback: number): number {
 async function fetchWithFirecrawlKeyless(
   options: {
     limitPerSection: number;
-    maxSources: number;
-    translationConfig?: TranslationConfig;
-    repairSummariesWithModel: boolean;
+    sources: NewsSource[];
+    context: CollectionContext;
     deadlineAt: number;
   },
 ): Promise<RawNewsItem[]> {
   const app = new Firecrawl({ apiKey: "" });
   const items: RawNewsItem[] = [];
-  const enabledSources = selectSourcesForCoverage(newsSources, options.maxSources);
-  let warnedMissingTranslation = false;
 
-  for (const source of enabledSources) {
+  for (const source of options.sources) {
     for (const section of source.sections) {
       if (Date.now() >= options.deadlineAt) return items;
       try {
@@ -190,6 +339,7 @@ async function fetchWithFirecrawlKeyless(
         const webResults: unknown[] = [];
 
         for (const query of buildQueries(source.name, section)) {
+          options.context.metrics.searchRequestCount += 1;
           let results = await runWithinDeadline(
             () =>
               app.search(query, {
@@ -201,6 +351,7 @@ async function fetchWithFirecrawlKeyless(
           );
           let searchResults = readSearchResults(results, section.searchSources ?? ["news"]);
           if (searchResults.length === 0 && domain) {
+            options.context.metrics.searchRequestCount += 1;
             results = await runWithinDeadline(
               () =>
                 app.search(query, {
@@ -220,33 +371,13 @@ async function fetchWithFirecrawlKeyless(
           }
         }
 
-        for (const result of webResults) {
-          let title = readString(result, "title").trim();
+        for (const result of webResults.slice(0, options.limitPerSection * 2)) {
+          const title = readString(result, "title").trim();
           const url = readString(result, "url").trim();
           if (!title || !url) continue;
-          let summary = readString(result, "description") || title;
-          const preparedText = await prepareNewsTextForDisplay({
-            title,
-            summary,
-            url,
-            allowTranslation: section.requireChinese === false,
-            repairSummaryWithModel: options.repairSummariesWithModel,
-            translationConfig: options.translationConfig,
-            deadlineAt: options.deadlineAt,
-          });
-          if (!preparedText) {
-            if (isNonChineseText({ title, summary }) && section.requireChinese === false && !options.translationConfig) {
-              if (!warnedMissingTranslation) {
-                console.warn("Skipped non-Chinese results because DAILY_NEWS_TRANSLATION_API_KEY is not configured.");
-                warnedMissingTranslation = true;
-              }
-            }
-            continue;
-          }
-          title = preparedText.title;
-          summary = preparedText.summary;
+          const summary = readString(result, "description") || title;
 
-          const publishedAt = await resolvePublishedAt(url, extractDate(result), options.deadlineAt);
+          const publishedAt = await resolvePublishedAt(url, extractDate(result), options.deadlineAt, options.context);
           if (!publishedAt) continue;
           const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
           const categories = uniqueValues([primaryCategory, ...section.categories]);
@@ -307,55 +438,31 @@ export function matchesSourceDomain(url: string, sourceDomain: string): boolean 
 async function fetchDirectSources(
   options: {
     limitPerSection: number;
-    maxSources: number;
-    translationConfig?: TranslationConfig;
-    repairSummariesWithModel: boolean;
+    sources: NewsSource[];
+    context: CollectionContext;
     deadlineAt: number;
   },
 ): Promise<RawNewsItem[]> {
-  const enabledSources = selectSourcesForCoverage(newsSources, options.maxSources);
   const concurrency = readPositiveInteger("DAILY_NEWS_SOURCE_CONCURRENCY", defaultSourceConcurrency);
-  let warnedMissingTranslation = false;
 
-  const sourceItems = await mapWithConcurrency(enabledSources, concurrency, async (source) => {
+  const sourceItems = await mapWithConcurrency(options.sources, concurrency, async (source) => {
     const items: RawNewsItem[] = [];
     for (const section of source.sections) {
       if (Date.now() >= options.deadlineAt) break;
       try {
-        const html = await fetchText(section.url, options.deadlineAt);
-        const candidates = readDirectCandidates(html, section.url).slice(0, options.limitPerSection * 2);
+        const html = await fetchText(section.url, options.deadlineAt, options.context, "source");
+        const candidates = sortCandidatesByNewest(readDirectCandidates(html, section.url)).slice(0, options.limitPerSection * 2);
         let accepted = 0;
 
         for (const candidate of candidates) {
           if (Date.now() >= options.deadlineAt) break;
           if (accepted >= options.limitPerSection) break;
-          let title = candidate.title.trim();
+          const title = candidate.title.trim();
           const url = candidate.url.trim();
           if (!title || !url) continue;
-          let summary = candidate.summary || title;
+          const summary = candidate.summary || title;
 
-          const preparedText = await prepareNewsTextForDisplay({
-            title,
-            summary,
-            url,
-            allowTranslation: section.requireChinese === false,
-            repairSummaryWithModel: options.repairSummariesWithModel,
-            translationConfig: options.translationConfig,
-            deadlineAt: options.deadlineAt,
-          });
-          if (!preparedText) {
-            if (isNonChineseText({ title, summary }) && section.requireChinese === false && !options.translationConfig) {
-              if (!warnedMissingTranslation) {
-                console.warn("Skipped direct non-Chinese results because DAILY_NEWS_TRANSLATION_API_KEY is not configured.");
-                warnedMissingTranslation = true;
-              }
-            }
-            continue;
-          }
-          title = preparedText.title;
-          summary = preparedText.summary;
-
-          const publishedAt = await resolvePublishedAt(url, candidate.publishedAt, options.deadlineAt);
+          const publishedAt = await resolvePublishedAt(url, candidate.publishedAt, options.deadlineAt, options.context);
           if (!publishedAt) continue;
           const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
           const categories = uniqueValues([primaryCategory, ...section.categories]);
@@ -385,6 +492,16 @@ async function fetchDirectSources(
   });
 
   return sourceItems.flat();
+}
+
+export function sortCandidatesByNewest<T extends { url: string; publishedAt?: string }>(candidates: T[]): T[] {
+  return [...candidates].sort((left, right) => candidateTime(right) - candidateTime(left));
+}
+
+function candidateTime(candidate: { url: string; publishedAt?: string }): number {
+  const value = candidate.publishedAt ?? inferPublishedDateFromUrl(candidate.url);
+  const timestamp = Date.parse(value ?? "");
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 export async function mapWithConcurrency<T, R>(
@@ -427,7 +544,24 @@ export async function runWithinDeadline<T>(task: () => Promise<T>, deadlineAt: n
   }
 }
 
-async function fetchText(url: string, deadlineAt?: number): Promise<string> {
+async function fetchText(
+  url: string,
+  deadlineAt?: number,
+  context?: CollectionContext,
+  kind: "source" | "article" = "article",
+): Promise<string> {
+  const cached = context?.htmlCache.get(url);
+  if (cached !== undefined) return cached;
+
+  if (context) {
+    if (kind === "source") context.metrics.sourcePageRequestCount += 1;
+    else {
+      if (context.metrics.articlePageRequestCount >= defaultMaxArticlePageRequests) {
+        throw new CollectionDeadlineError("Article request budget reached");
+      }
+      context.metrics.articlePageRequestCount += 1;
+    }
+  }
   const controller = new AbortController();
   const timeoutMs = Math.min(8_000, deadlineAt ? Math.max(1, deadlineAt - Date.now()) : 8_000);
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -444,7 +578,9 @@ async function fetchText(url: string, deadlineAt?: number): Promise<string> {
       deadlineAt ?? Date.now() + 8_000,
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.text();
+    const html = await response.text();
+    context?.htmlCache.set(url, html);
+    return html;
   } finally {
     clearTimeout(timeout);
   }
@@ -456,12 +592,20 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
     if (!options.allowTranslation || !options.translationConfig) return null;
 
     try {
-      const articleContext = await readArticleSummaryContext(options.url, options.deadlineAt);
+      const translationKey = `${options.url}\n${options.title}\n${options.summary}`;
+      const cachedTranslation = options.context?.translationCache.get(translationKey);
+      if (cachedTranslation) {
+        options.context!.metrics.duplicateTranslationCount += 1;
+        return cachedTranslation;
+      }
+      const articleContext = await readArticleSummaryContext(options.url, options.deadlineAt, options.context);
+      options.context && (options.context.metrics.translatedUniqueEventCount += 1);
       const translated = await runWithinDeadline(
         () => translateNewsText({ title: options.title, summary: options.summary, articleContext }, options.translationConfig!),
         options.deadlineAt ?? Date.now() + 15_000,
       );
       if (isNonChineseText(translated) || needsSummaryRepair(translated.title, translated.summary)) return null;
+      options.context?.translationCache.set(translationKey, translated);
       return translated;
     } catch (error) {
       console.warn(`Skipped non-Chinese result after translation failed: ${String(error)}`);
@@ -477,8 +621,9 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
     return { title: options.title, summary: buildMinimalSummary(options.title) };
   }
 
-  const articleContext = await readArticleSummaryContext(options.url, options.deadlineAt);
+  const articleContext = await readArticleSummaryContext(options.url, options.deadlineAt, options.context);
   try {
+    options.context && (options.context.metrics.translatedUniqueEventCount += 1);
     const enriched = await runWithinDeadline(
       () => translateNewsText({ title: options.title, summary: options.summary, articleContext }, options.translationConfig!),
       options.deadlineAt ?? Date.now() + 15_000,
@@ -499,7 +644,7 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
 }
 
 function isNonChineseText(text: NewsText): boolean {
-  return !containsChinese(text.title) && !containsChinese(text.summary);
+  return !containsChinese(text.title) || !containsChinese(text.summary);
 }
 
 function needsSummaryRepair(title: string, summary: string): boolean {
@@ -523,12 +668,16 @@ function buildSummaryFromArticleContext(title: string, articleContext?: string):
 }
 
 function buildMinimalSummary(title: string): string {
-  return `相关报道聚焦“${title}”，具体背景、影响和后续进展以原文披露为准。`;
+  return `“${title}”已有新的公开信息，详细事实、影响范围和后续进展以来源页面为准。`;
 }
 
-async function readArticleSummaryContext(url: string, deadlineAt?: number): Promise<string | undefined> {
+async function readArticleSummaryContext(
+  url: string,
+  deadlineAt?: number,
+  context?: CollectionContext,
+): Promise<string | undefined> {
   try {
-    return extractArticleSummaryContext(await fetchText(url, deadlineAt));
+    return extractArticleSummaryContext(await fetchText(url, deadlineAt, context, "article"));
   } catch {
     return undefined;
   }
@@ -560,23 +709,44 @@ function readFeedCandidates(html: string, baseUrl: string): Array<{ title: strin
   return uniqueCandidates(candidates);
 }
 
-function readHtmlLinkCandidates(html: string, baseUrl: string): Array<{ title: string; url: string; summary: string; publishedAt?: string }> {
+export function readHtmlLinkCandidates(html: string, baseUrl: string): Array<{ title: string; url: string; summary: string; publishedAt?: string }> {
   const baseHost = hostnameFromUrl(baseUrl);
   const candidates: Array<{ title: string; url: string; summary: string; publishedAt?: string }> = [];
   const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   for (const match of html.matchAll(anchorPattern)) {
     const url = resolveCandidateUrl(match[1], baseUrl);
     const rawTitle = cleanText(match[2]);
-    const publishedAt = parsePublishedDate(rawTitle);
+    const nearbyHtml = html.slice(Math.max(0, (match.index ?? 0) - 700), (match.index ?? 0) + match[0].length + 700);
+    const publishedAt = parsePublishedDate(rawTitle) || readNearbyPublishedDate(nearbyHtml);
     const title = removeTrailingPublishedDate(rawTitle);
     if (!url || !title || title.length < 8) continue;
-    if (baseHost && hostnameFromUrl(url) !== baseHost) continue;
+    if (baseHost && !isSameSiteHost(hostnameFromUrl(url), baseHost)) continue;
     if (!isLikelyArticleUrl(url)) continue;
     if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|zip)(\?|$)/i.test(url)) continue;
     if (url === baseUrl || url.endsWith("#")) continue;
     candidates.push({ title, url, summary: title, publishedAt });
   }
   return uniqueCandidates(candidates);
+}
+
+function readNearbyPublishedDate(html: string): string | undefined {
+  const visibleDate = parsePublishedDate(html);
+  if (visibleDate) return visibleDate;
+  const assetDate = html.match(/\b(20\d{2})[/-](\d{1,2})[/-](\d{1,2})[/-]\d{4,}/);
+  return assetDate ? chinaLocalDateToIso(assetDate[1], assetDate[2], assetDate[3]) : undefined;
+}
+
+function isSameSiteHost(candidateHost: string, baseHost: string): boolean {
+  if (!candidateHost || !baseHost) return false;
+  if (candidateHost === baseHost) return true;
+  return siteRoot(candidateHost) === siteRoot(baseHost);
+}
+
+function siteRoot(host: string): string {
+  const parts = host.replace(/^www\./, "").split(".");
+  const publicSuffix = parts.slice(-2).join(".");
+  const suffixLength = /^(com|net|org|gov|edu)\.cn$/.test(publicSuffix) ? 3 : 2;
+  return parts.slice(-suffixLength).join(".");
 }
 
 function removeTrailingPublishedDate(value: string): string {
@@ -589,7 +759,7 @@ function isLikelyArticleUrl(url: string): boolean {
   const path = new URL(url).pathname.toLowerCase();
   return (
     /\/(20\d{2}|n1|n2|article|articles|news|gn|gj|cj|sh|politics|finance|companies|tech|world)\b/.test(path) ||
-    /\/20\d{6,8}\//.test(path) ||
+    /\/20\d{4,8}\//.test(path) ||
     /\/\d{6,}\.(html|shtml)$/.test(path) ||
     /\/[a-f0-9]{20,}\/c\.html$/.test(path)
   );
@@ -652,19 +822,30 @@ function uniqueValues<T>(items: T[]): T[] {
   return Array.from(new Set(items));
 }
 
-async function resolvePublishedAt(url: string, candidateDate?: string, deadlineAt?: number): Promise<string | undefined> {
+async function resolvePublishedAt(
+  url: string,
+  candidateDate?: string,
+  deadlineAt?: number,
+  context?: CollectionContext,
+): Promise<string | undefined> {
   const parsedCandidate = parsePublishedDate(candidateDate);
   if (parsedCandidate) return parsedCandidate;
 
-  const articleDate = await readArticlePublishedAt(url, deadlineAt);
-  if (articleDate) return articleDate;
+  const urlDate = inferPublishedDateFromUrl(url);
+  if (urlDate) return urlDate;
 
-  return inferPublishedDateFromUrl(url);
+  const articleDate = await readArticlePublishedAt(url, deadlineAt, context);
+  if (articleDate) return articleDate;
+  return undefined;
 }
 
-async function readArticlePublishedAt(url: string, deadlineAt?: number): Promise<string | undefined> {
+async function readArticlePublishedAt(
+  url: string,
+  deadlineAt?: number,
+  context?: CollectionContext,
+): Promise<string | undefined> {
   try {
-    const html = await fetchText(url, deadlineAt);
+    const html = await fetchText(url, deadlineAt, context, "article");
     return extractPublishedDateFromHtml(html);
   } catch {
     return undefined;
@@ -959,6 +1140,7 @@ export function inferPublishedDateFromUrl(url: string): string | undefined {
   }
 
   const patterns = [
+    /\/t(20\d{2})(\d{2})(\d{2})_/,
     /\/(20\d{2})\/(\d{2})\/(\d{2})(?:\/|$)/,
     /\/(20\d{2})\/(\d{2})-(\d{2})(?:\/|$)/,
     /\/(20\d{2})\/(\d{2})(\d{2})(?:\/|[-_.])/,
@@ -1105,8 +1287,9 @@ const categoryTieBreak: Category[] = [
 
 export function inferPrimaryCategory(
   item: { title: string; summary: string; url: string },
-  section: Pick<SourceSection, "categories" | "primaryCategory">,
+  section: Pick<SourceSection, "categories" | "primaryCategory" | "lockPrimaryCategory">,
 ): Category {
+  if (section.lockPrimaryCategory) return section.primaryCategory;
   const scores = new Map<Category, number>();
   scores.set(section.primaryCategory, 4);
   for (const category of section.categories) {

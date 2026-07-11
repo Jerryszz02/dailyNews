@@ -1,9 +1,16 @@
 import { scoringWeights } from "../config/scoring";
-import type { RankedNewsItem, UserPreferences } from "../types";
+import type { RankedNewsItem, StoryCard, UserPreferences } from "../types";
 import { normalizeText } from "./text";
 
 export function sortByNewest(items: RankedNewsItem[]): RankedNewsItem[] {
   return [...items].sort(compareNewest);
+}
+
+export function sortStoriesByNewest(stories: StoryCard[]): StoryCard[] {
+  return [...stories].sort((left, right) => {
+    const timeDelta = storyTime(right) - storyTime(left);
+    return timeDelta !== 0 ? timeDelta : left.id.localeCompare(right.id);
+  });
 }
 
 export function sortByHotScoreWithoutPreferences(items: RankedNewsItem[]): RankedNewsItem[] {
@@ -46,5 +53,10 @@ function compareNewest(left: RankedNewsItem, right: RankedNewsItem): number {
 
 function itemTime(item: RankedNewsItem): number {
   const value = Date.parse(item.publishedAt ?? item.extractedAt);
+  return Number.isNaN(value) ? 0 : value;
+}
+
+function storyTime(story: StoryCard): number {
+  const value = Date.parse(story.publishedAt ?? story.updatedAt);
   return Number.isNaN(value) ? 0 : value;
 }

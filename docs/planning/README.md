@@ -9,7 +9,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 请求 | 在现有事件级新闻系统基础上，完成编辑部式极简前端重设计 |
-| 更新时间 | 2026-07-10 |
+| 更新时间 | 2026-07-11 |
 | 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews` |
 | 工作模式 | 核心事件管线已落地；前端信息层级重设计进入实现与验证 |
 
@@ -24,7 +24,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | 链路 | 作用 | 主要入口 |
 | --- | --- | --- |
 | 来源配置 | 定义新闻来源、栏目、查询词、主分类、语言、地区、可信度、付费墙提示和启用状态 | `src/config/sources.ts` |
-| 报告生成 | 覆盖调度、Firecrawl/直连候选、质量门槛、事件证据、公共影响分层、30 秒预算和 fallback | `src/lib/sourceCoverage.ts`, `src/lib/curation.ts`, `scripts/newsService.ts` |
+| 报告生成 | 覆盖调度、按调用方选择 Firecrawl/直连 profile、质量门槛、事件证据、公共影响分层、30 秒预算和 fallback | `src/lib/sourceCoverage.ts`, `src/lib/curation.ts`, `src/lib/reportAcceptance.ts`, `scripts/newsService.ts` |
 | API 与静态服务 | 启动即读取 last-known-good，读请求不抓取；刷新通过相对质量门槛才切换 latest | `scripts/reportStore.ts`, `scripts/newsApi.ts`, `scripts/newsServer.ts` |
 | 前端体验 | 优先读取 V2 API，再读静态 V2/V1 自动升级；以单一顶部分类导航、紧凑状态概览和渐进披露的新闻流展示三个首页层级 | `src/App.tsx`, `src/styles.css` |
 
@@ -51,7 +51,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | `scripts/newsApi.ts`, `scripts/reportStore.ts` | Serverless 只读 API、刷新鉴权、last-known-good 和发布门槛 |
 | `scripts/newsServer.ts` | API 路由、刷新缓存、静态文件服务和健康检查 |
 | `public/daily-news.json` | 当前报告的来源、分类和摘要质量基线；仅用于审计，不作为编辑源 |
-| `src/lib/scoring.test.ts`, `src/lib/newsOrdering.test.ts` | 已有自动化验证覆盖点 |
+| `src/lib/*.test.ts`, `scripts/*.test.ts`, `src/App.test.ts` | 事件选题、覆盖、量化门槛、排序、API、存储、采集和 UI shell 自动化验证 |
 | Google News、Reuters、AP 官方原则 | 用于约束显著性、权威性、新鲜度、独立性、准确性和来源归因，不代表引入外部付费 API |
 
 ## 已生成文档
@@ -93,7 +93,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | 项 | 为什么无法从当前仓库确定 |
 | --- | --- |
 | 目标用户和正式使用场景 | 仓库说明为“原型”，没有产品 brief、访谈、运营目标或正式用户角色文档 |
-| 生产发布流程 | 仓库有 Vercel 入口与配置，但本轮未执行部署、CI 或灰度发布 |
+| 生产发布流程 | 仓库有 Vercel Serverless 入口与配置，但没有 CI、自动调度、灰度或回滚流水线 |
 | 数据更新 SLA | 仓库说明了默认 15 分钟服务端刷新和前端每分钟检查，但没有业务级新鲜度目标 |
 | 来源准入和禁用审批流程 | `src/config/sources.ts` 有启用状态和可信度字段，但没有谁能批准新增/禁用来源的流程 |
 | 真实访问量、性能目标和监控 | 没有生产监控、日志聚合、告警或性能预算证据 |
@@ -108,7 +108,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | 建议 | 原因 |
 | --- | --- |
 | 确认 Daily News 的目标读者和主要使用频率 | 当前只能从 UI 和 README 推断是个人/原型新闻日报，无法确定正式产品定位 |
-| 确认是否计划部署到公开服务器 | API CORS 当前为 `*`，且服务假设本地运行；公开部署会改变安全和运维要求 |
+| 确认公开 API 的 CORS、限流和调度策略 | Vercel 入口已存在且 CORS 为 `*`，但仓库没有限流或自动调度配置 |
 | 确认新增来源的评估标准 | 代码有 `credibility`、`enabled`、`mayHavePaywall`，但没有来源准入流程 |
-| 确认翻译服务是否固定使用本地 OpenAI-compatible 服务 | README 只给出可选变量，不能确定供应商、模型和成本边界 |
+| 确认 DeepSeek 翻译的长期供应商与预算 | 当前默认是 DeepSeek Flash，但长期成本、配额和替代策略未固化 |
 | 确认是否需要保存历史日报 | 当前没有数据库或历史归档机制；如果需要，会影响数据设计和发布计划 |

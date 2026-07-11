@@ -14,6 +14,7 @@ import type {
   StoryStatus,
 } from "../types";
 import { hostnameFromUrl, normalizeText, tokenize } from "./text.js";
+import { sortStoriesByNewest } from "./newsOrdering.js";
 
 const allBeats: Category[] = [
   "ai",
@@ -83,6 +84,7 @@ export function buildCurationFields(
 ): CurationFields {
   const stories = rankedItems.map((item) => toStoryCard(item, rawItems, now));
   const formalStories = stories.filter((story) => story.tier !== "noise");
+  const visibleStories = includeCoverageFloor(stories, formalStories);
   const topStories = selectDiverse(
     formalStories.filter((story) => story.tier === "must_know" && story.status === "confirmed"),
     10,
@@ -107,25 +109,25 @@ export function buildCurationFields(
     ),
     8,
   );
-  const sections = buildSections(formalStories);
-  const singleSourceCount = formalStories.filter((story) => story.evidence.length === 1).length;
+  const sections = buildSections(visibleStories);
+  const singleSourceCount = visibleStories.filter((story) => story.evidence.length === 1).length;
 
   return {
     window: reportWindow(rawItems, now),
-    stories: formalStories,
+    stories: visibleStories,
     topStories,
     importantStories,
     watchlist,
     sections,
-    coverage: buildCoverage(rawItems, formalStories, sections),
+    coverage: buildCoverage(rawItems, visibleStories, sections),
     quality: {
       candidateCount: rawItems.length + sumValues(rejectionReasons),
       acceptedCandidateCount: rawItems.length,
       rejectedCandidateCount: sumValues(rejectionReasons),
       eventCount: stories.length,
-      selectedEventCount: formalStories.length,
+      selectedEventCount: visibleStories.length,
       duplicateEventRate: ratio(rawItems.length - stories.length, rawItems.length),
-      singleSourceShare: ratio(singleSourceCount, formalStories.length),
+      singleSourceShare: ratio(singleSourceCount, visibleStories.length),
       rejectionReasons,
     },
   };
@@ -338,10 +340,20 @@ function selectDiverse(stories: StoryCard[], limit: number): StoryCard[] {
   return selected;
 }
 
+function includeCoverageFloor(stories: StoryCard[], formalStories: StoryCard[]): StoryCard[] {
+  const visible = [...formalStories];
+  for (const beat of allBeats) {
+    if (visible.some((story) => story.primaryBeat === beat)) continue;
+    const newestCandidate = sortStoriesByNewest(stories.filter((story) => story.primaryBeat === beat))[0];
+    if (newestCandidate) visible.push(newestCandidate);
+  }
+  return visible;
+}
+
 function buildSections(stories: StoryCard[]): StorySection[] {
   return allBeats.map((beat) => ({
     beat,
-    storyIds: stories.filter((story) => story.primaryBeat === beat).map((story) => story.id),
+    storyIds: sortStoriesByNewest(stories.filter((story) => story.primaryBeat === beat)).map((story) => story.id),
   }));
 }
 

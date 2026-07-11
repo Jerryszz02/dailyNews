@@ -81,11 +81,8 @@ export function passesPublishGate(report: DailyNewsReport, previous: DailyNewsRe
     report.quality.rejectedCandidateCount < report.quality.candidateCount;
   if (!passesAbsoluteGate || !previous) return passesAbsoluteGate;
 
-  const previousCoreCount = previous.topStories.length + previous.importantStories.length;
-  const currentCoreCount = report.topStories.length + report.importantStories.length;
-  if (report.quality.selectedEventCount < Math.max(10, Math.floor(previous.quality.selectedEventCount * 0.6))) return false;
-  if (currentCoreCount < Math.max(5, Math.floor(previousCoreCount * 0.5))) return false;
-  if (report.sourceCount < Math.max(3, Math.floor(previous.sourceCount * 0.5))) return false;
+  if (report.quality.selectedEventCount < 10) return false;
+  if (report.sourceCount < 3) return false;
 
   const protectedBeats = new Set(["china", "international", "policy", "finance", "technology", "ai"]);
   const currentCoverage = new Map(report.coverage.beats.map((beat) => [beat.beat, beat]));

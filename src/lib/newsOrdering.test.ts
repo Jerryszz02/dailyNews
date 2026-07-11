@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defaultPreferences } from "../config/preferences";
-import type { Category, RankedNewsItem } from "../types";
-import { selectPreferredCategoryItems, sortByHotScoreWithoutPreferences, sortByNewest } from "./newsOrdering";
+import type { Category, RankedNewsItem, StoryCard } from "../types";
+import { selectPreferredCategoryItems, sortByHotScoreWithoutPreferences, sortByNewest, sortStoriesByNewest } from "./newsOrdering";
 
 function item(
   id: string,
@@ -50,6 +50,37 @@ describe("news ordering", () => {
     const newer = item("newer", ["finance"], "2026-06-29T11:00:00.000Z", { final_score: 10 });
 
     expect(sortByNewest([older, newer]).map((news) => news.id)).toEqual(["newer", "older"]);
+  });
+
+  it("sorts category stories by newest published time with stable id ties", () => {
+    const story = (id: string, publishedAt: string): StoryCard => ({
+      id,
+      itemId: id,
+      title: id,
+      whatHappened: `${id} 摘要`,
+      whyItMatters: "测试",
+      keyFacts: [],
+      nextWatch: "测试",
+      primaryBeat: "science",
+      scope: "global",
+      eventType: "research",
+      entities: [],
+      status: "confirmed",
+      tier: "important",
+      publishedAt,
+      updatedAt: publishedAt,
+      sourceNames: ["测试来源"],
+      evidence: [],
+      importance: { publicImpact: 50, urgency: 50, sourceSignificance: 50, evidenceStrength: 50, total: 50 },
+    });
+
+    expect(
+      sortStoriesByNewest([
+        story("older", "2026-07-10T08:00:00.000Z"),
+        story("z-tie", "2026-07-10T10:00:00.000Z"),
+        story("a-tie", "2026-07-10T10:00:00.000Z"),
+      ]).map((entry) => entry.id),
+    ).toEqual(["a-tie", "z-tie", "older"]);
   });
 
   it("selects preferred categories and then sorts them by time", () => {

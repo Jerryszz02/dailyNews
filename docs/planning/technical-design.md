@@ -9,7 +9,7 @@
 ```text
 src/config/sources.ts
   -> src/lib/sourceCoverage.ts
-  -> Firecrawl keyless（最多 8 秒）+ 有限并发 direct fetch
+  -> 调用方选择采集 profile：本地可 Firecrawl keyless + direct；固定生成/Serverless 为 direct-only
   -> 72 小时新鲜度与 30 秒整轮截止
   -> src/lib/curation.ts 质量门槛
   -> src/lib/dedupe.ts 事件聚类
@@ -58,9 +58,10 @@ src/config/sources.ts
 ### 抓取与可靠性
 
 - 整轮默认预算为 `DAILY_NEWS_COLLECTION_BUDGET_MS=30000`。
-- Firecrawl 最多使用前 8 秒；候选少于 `max(8, maxSources)` 时继续直连并合并。
+- 本地后台刷新默认选择全部启用来源，可先用 Firecrawl keyless（最多前 8 秒），候选少于 `max(8, maxSources)` 时继续直连并合并。
+- `npm run generate`、`npm run verify-news` 和 Vercel refresh 固定选择 10 个来源、每分区 3 条、关闭 Firecrawl 与模型摘要修复，并执行 `reportAcceptance` 量化门槛。
 - 直连来源并发默认 `DAILY_NEWS_SOURCE_CONCURRENCY=6`；单请求最长 8 秒且受整轮 deadline 约束。
-- 新报告若丢失已覆盖核心 beat 的全部候选，或事件/核心层/来源数量严重回退，不能替换 last-known-good。
+- 固定 profile 若未达到 10/10 主分类覆盖、中文/新鲜度/时间顺序或请求/翻译预算，不能发布；`reportStore` 还会拒绝绝对无效、事件少于 10、来源少于 3 或丢失既有核心 beat 候选的报告。
 - `GET /api/news` 不允许触发外部抓取。
 
 ### 安全

@@ -11,8 +11,9 @@ function section(
   searchTerms: string[],
   searchSources: SearchSourceType[] = newsOnly,
   requireChinese = true,
+  lockPrimaryCategory = false,
 ): SourceSection {
-  return { label, url, primaryCategory, categories, searchTerms, searchSources, requireChinese };
+  return { label, url, primaryCategory, categories, searchTerms, searchSources, requireChinese, lockPrimaryCategory };
 }
 
 export const newsSources: NewsSource[] = [
@@ -59,7 +60,6 @@ export const newsSources: NewsSource[] = [
       section("新闻", "https://news.cctv.com/", "china", ["china", "policy", "society"], ["央视网 新闻", "央视网 国内 国际"]),
       section("国际", "https://news.cctv.com/world/", "international", ["international", "policy"], ["央视网 国际", "央视网 世界 新闻"]),
       section("体育", "https://sports.cctv.com/", "sports", ["sports", "china"], ["央视网 体育", "央视网 足球 篮球"]),
-      section("文娱", "https://ent.cctv.com/", "entertainment", ["entertainment", "china"], ["央视网 文娱", "央视网 影视 娱乐"]),
     ],
   },
   {
@@ -72,12 +72,7 @@ export const newsSources: NewsSource[] = [
     credibility: 80,
     mayHavePaywall: false,
     enabled: true,
-    sections: [
-      section("即时", "https://www.chinanews.com.cn/", "china", ["china", "international", "society"], ["中国新闻网 即时新闻", "中新网 中国 国际 社会"]),
-      section("国际", "https://www.chinanews.com.cn/gj/", "international", ["international", "policy"], ["中国新闻网 国际", "中新网 国际 世界"]),
-      section("体育", "https://www.chinanews.com.cn/ty/", "sports", ["sports", "china"], ["中国新闻网 体育", "中新网 体育 足球 篮球"]),
-      section("文娱", "https://www.chinanews.com.cn/yl/", "entertainment", ["entertainment", "china"], ["中国新闻网 文娱", "中新网 影视 娱乐"]),
-    ],
+    sections: [section("即时", "https://www.chinanews.com.cn/", "china", ["china", "international", "society"], ["中国新闻网 即时新闻", "中新网 中国 国际 社会"])],
   },
   {
     source_id: "china-daily",
@@ -188,6 +183,54 @@ export const newsSources: NewsSource[] = [
     sections: [section("AI", "https://www.qbitai.com/", "ai", ["ai", "technology"], ["量子位 AI", "量子位 大模型 人工智能"])],
   },
   {
+    source_id: "gov-policy",
+    name: "中国政府网",
+    countryOrRegion: "china",
+    language: "zh-CN",
+    mediaType: "official",
+    defaultWeight: 0.95,
+    credibility: 92,
+    mayHavePaywall: false,
+    enabled: true,
+    sections: [section("最新政策", "https://www.gov.cn/zhengce/", "policy", ["policy", "china"], ["中国政府网 最新政策", "国务院 政策 文件 解读"], newsOnly, true, true)],
+  },
+  {
+    source_id: "mem",
+    name: "应急管理部",
+    countryOrRegion: "china",
+    language: "zh-CN",
+    mediaType: "official",
+    defaultWeight: 0.9,
+    credibility: 90,
+    mayHavePaywall: false,
+    enabled: true,
+    sections: [section("应急要闻", "https://www.mem.gov.cn/", "society", ["society", "china", "policy"], ["应急管理部 灾害事故", "应急管理部 应急要闻 公共安全"], newsOnly, true, true)],
+  },
+  {
+    source_id: "sciencenet",
+    name: "科学网",
+    countryOrRegion: "china",
+    language: "zh-CN",
+    mediaType: "public",
+    defaultWeight: 0.82,
+    credibility: 82,
+    mayHavePaywall: false,
+    enabled: true,
+    sections: [section("科学要闻", "https://news.sciencenet.cn/indexyaowen.aspx", "science", ["science", "technology", "china"], ["科学网 科学 要闻", "中国科学报 科研 发现"], newsOnly, true, true)],
+  },
+  {
+    source_id: "un-news-zh",
+    name: "联合国新闻中文网",
+    countryOrRegion: "global",
+    language: "zh-CN",
+    mediaType: "official",
+    defaultWeight: 0.9,
+    credibility: 90,
+    mayHavePaywall: false,
+    enabled: true,
+    sections: [section("全球新闻", "https://news.un.org/feed/subscribe/zh/news/all/rss.xml", "international", ["international", "policy", "society"], ["联合国新闻 中文 国际", "联合国 全球 人道 新闻"], newsOnly, true, true)],
+  },
+  {
     source_id: "nba",
     name: "NBA官网",
     countryOrRegion: "us",
@@ -256,7 +299,7 @@ export const newsSources: NewsSource[] = [
     defaultWeight: 0.72,
     credibility: 72,
     mayHavePaywall: false,
-    enabled: true,
+    enabled: false,
     sections: [section("NBA", "https://sports.yahoo.com/nba/", "sports", ["sports"], ["Yahoo Sports NBA latest news", "Yahoo Sports NBA trades"], newsOnly, false)],
   },
   {
@@ -268,7 +311,7 @@ export const newsSources: NewsSource[] = [
     defaultWeight: 0.72,
     credibility: 72,
     mayHavePaywall: false,
-    enabled: true,
+    enabled: false,
     sections: [section("NBA", "https://www.cbssports.com/nba/", "sports", ["sports"], ["CBS Sports NBA latest news", "CBS Sports NBA rumors injuries"], newsOnly, false)],
   },
   {
@@ -616,7 +659,7 @@ export const newsSources: NewsSource[] = [
     defaultWeight: 0.6,
     credibility: 62,
     mayHavePaywall: false,
-    enabled: true,
+    enabled: false,
     sections: [section("X", "https://x.com/OpenAI", "ai", ["ai", "technology"], ["site:x.com/OpenAI OpenAI latest", "OpenAI X latest"], webAndNews, false)],
   },
   {
@@ -628,7 +671,7 @@ export const newsSources: NewsSource[] = [
     defaultWeight: 0.6,
     credibility: 62,
     mayHavePaywall: false,
-    enabled: true,
+    enabled: false,
     sections: [section("X", "https://x.com/AnthropicAI", "ai", ["ai", "technology"], ["site:x.com/AnthropicAI Claude latest", "Anthropic X latest"], webAndNews, false)],
   },
   {
@@ -640,7 +683,7 @@ export const newsSources: NewsSource[] = [
     defaultWeight: 0.55,
     credibility: 55,
     mayHavePaywall: false,
-    enabled: true,
+    enabled: false,
     sections: [section("X", "https://x.com/sama", "ai", ["ai", "technology"], ["site:x.com/sama OpenAI AI", "Sam Altman AI latest"], webAndNews, false)],
   },
   {
@@ -652,7 +695,7 @@ export const newsSources: NewsSource[] = [
     defaultWeight: 0.52,
     credibility: 54,
     mayHavePaywall: false,
-    enabled: true,
+    enabled: false,
     sections: [section("X", "https://x.com/gdb", "ai", ["ai", "technology"], ["site:x.com/gdb OpenAI AI", "Greg Brockman AI latest"], webAndNews, false)],
   },
   {
@@ -664,7 +707,7 @@ export const newsSources: NewsSource[] = [
     defaultWeight: 0.58,
     credibility: 60,
     mayHavePaywall: false,
-    enabled: true,
+    enabled: false,
     sections: [section("X", "https://x.com/GoogleDeepMind", "ai", ["ai", "technology", "science"], ["site:x.com/GoogleDeepMind AI", "Google DeepMind X latest"], webAndNews, false)],
   },
   {
@@ -676,7 +719,7 @@ export const newsSources: NewsSource[] = [
     defaultWeight: 0.5,
     credibility: 52,
     mayHavePaywall: false,
-    enabled: true,
+    enabled: false,
     sections: [section("X", "https://x.com/karpathy", "ai", ["ai", "technology"], ["site:x.com/karpathy AI", "Andrej Karpathy AI latest"], webAndNews, false)],
   },
 ];

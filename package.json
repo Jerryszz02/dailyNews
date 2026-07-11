@@ -11,6 +11,7 @@
     "serve": "npm run build && tsx scripts/newsServer.ts",
     "test": "vitest run",
     "generate": "tsx scripts/generateDailyNews.ts",
+    "verify-news": "tsx scripts/verifyDailyNews.ts",
     "upgrade-report": "tsx scripts/upgradeDailyNewsReport.ts"
   },
   "dependencies": {

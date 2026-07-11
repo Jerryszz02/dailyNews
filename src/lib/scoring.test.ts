@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { defaultPreferences } from "../config/preferences";
 import type { NewsCluster, RawNewsItem } from "../types";
 import { clusterNews } from "./dedupe";
-import { buildDailyReport } from "./newsPipeline";
+import { allocateClusterPrimaryCategories, buildDailyReport } from "./newsPipeline";
 import { scoreNewsItem } from "./scoring";
 
 const now = new Date("2026-06-29T12:00:00.000Z");
@@ -265,6 +265,88 @@ describe("scoring", () => {
 });
 
 describe("dedupe", () => {
+  it("does not merge unrelated stories that share the conservative summary template", () => {
+    const topics = [
+      ["政策", "国务院公布新的行政服务办法"],
+      ["社会", "沿海地区启动防汛应急响应"],
+      ["财经", "多家银行调整部分服务安排"],
+      ["科技", "国产芯片企业发布新产品"],
+      ["科学", "科研团队完成深海观测任务"],
+      ["体育", "篮球联赛公布总决赛赛程"],
+      ["娱乐", "动画电影发布首支预告片"],
+    ] as const;
+    const clusters = clusterNews(
+      topics.map(([label, title], index) => ({
+        id: `template-${index}`,
+        title,
+        url: `https://example.com/template-${index}`,
+        sourceId: "xinhua",
+        sourceName: "新华网",
+        language: "zh-CN" as const,
+        region: "china" as const,
+        categories: [(["policy", "society", "finance", "technology", "science", "sports", "entertainment"] as const)[index]],
+        primaryCategory: (["policy", "society", "finance", "technology", "science", "sports", "entertainment"] as const)[index],
+        summary: `“${title}”已有新的公开信息，详细事实、影响范围和后续进展以来源页面为准。`,
+        publishedAt: now.toISOString(),
+        extractedAt: now.toISOString(),
+      })),
+    );
+
+    expect(clusters).toHaveLength(topics.length);
+  });
+
+  it("allocates a conflicted event to an uncovered voted category without duplicating it", () => {
+    const clusters = clusterNews([
+      {
+        id: "china-general",
+        title: "国内综合新闻",
+        url: "https://example.com/china-general",
+        sourceId: "xinhua",
+        sourceName: "新华网",
+        language: "zh-CN",
+        region: "china",
+        categories: ["china"],
+        primaryCategory: "china",
+        summary: "国内综合新闻包含明确事实和后续安排。",
+        publishedAt: now.toISOString(),
+        extractedAt: now.toISOString(),
+      },
+      {
+        id: "emergency",
+        title: "国家防总部署重点地区防汛救灾工作",
+        url: "https://example.com/emergency",
+        sourceId: "mem",
+        sourceName: "应急管理部",
+        language: "zh-CN",
+        region: "china",
+        categories: ["society", "china", "policy"],
+        primaryCategory: "society",
+        summary: "应急管理部门部署重点地区防汛救灾和公共安全工作。",
+        publishedAt: now.toISOString(),
+        extractedAt: now.toISOString(),
+      },
+      {
+        id: "emergency-confirmation",
+        title: "重点地区防汛救灾工作持续推进",
+        url: "https://example.com/emergency-confirmation",
+        sourceId: "xinhua",
+        sourceName: "新华网",
+        language: "zh-CN",
+        region: "china",
+        categories: ["china", "society"],
+        primaryCategory: "china",
+        summary: "国家防总持续调度重点地区防汛救灾和应急处置工作。",
+        publishedAt: now.toISOString(),
+        extractedAt: now.toISOString(),
+      },
+    ]);
+    const allocated = allocateClusterPrimaryCategories(clusters);
+
+    expect(allocated).toHaveLength(clusters.length);
+    expect(allocated.filter((cluster) => cluster.primaryCategory === "society")).toHaveLength(1);
+    expect(allocated.filter((cluster) => cluster.primaryCategory === "china").length).toBeGreaterThanOrEqual(1);
+  });
+
   it("clusters the same event from multiple sources", () => {
     const items: RawNewsItem[] = [
       {
@@ -359,5 +441,26 @@ describe("dedupe", () => {
     ]);
 
     expect(clusters[0].primaryCategory).toBe("sports");
+  });
+
+  it("keeps a unanimous vertical primary category despite auxiliary keyword hits", () => {
+    const clusters = clusterNews([
+      {
+        id: "emergency",
+        title: "应急管理部发布全国防汛政策通知",
+        url: "https://www.mem.gov.cn/xw/bndt/202607/t20260710_1.shtml",
+        sourceId: "mem",
+        sourceName: "应急管理部",
+        language: "zh-CN",
+        region: "china",
+        categories: ["society", "china", "policy"],
+        primaryCategory: "society",
+        summary: "通知部署全国多地防汛救灾、公共安全和应急响应工作。",
+        publishedAt: now.toISOString(),
+        extractedAt: now.toISOString(),
+      },
+    ]);
+
+    expect(clusters[0].primaryCategory).toBe("society");
   });
 });

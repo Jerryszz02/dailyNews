@@ -3,10 +3,11 @@ import {
   generateDailyNewsReport,
   readPositiveInteger,
 } from "./newsService.js";
+import { verifyDailyNewsReport } from "../src/lib/reportAcceptance.js";
 import { InMemoryNewsReportStore, readBundledReport } from "./reportStore.js";
 
 const serverlessDefaultLimitPerSection = 3;
-const serverlessDefaultMaxSources = 6;
+export const serverlessDefaultMaxSources = 10;
 
 const jsonHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -78,7 +79,16 @@ export async function handleRefreshRequest(request: Request): Promise<Response> 
   if (!isRefreshAuthorized(request)) return jsonResponse(401, { ok: false, error: "Unauthorized" });
 
   try {
-    const { report } = await generateDailyNewsReport(serverlessGenerationOptions());
+    const { report, metrics } = await generateDailyNewsReport(serverlessGenerationOptions());
+    const acceptance = verifyDailyNewsReport(report, metrics);
+    if (acceptance.status !== "PASS") {
+      lastRefreshError = "quantitative_gate_failed";
+      return jsonResponse(422, {
+        ok: false,
+        error: "Generated report did not pass the quantitative acceptance gate",
+        failures: acceptance.failures,
+      });
+    }
     if (!reportStore.publish(report)) {
       lastRefreshError = "quality_gate_failed";
       return jsonResponse(422, { ok: false, error: "Generated report did not pass the publish gate" });

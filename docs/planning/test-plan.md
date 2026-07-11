@@ -14,7 +14,7 @@
 
 | 证据 | 测试事实 |
 | --- | --- |
-| `package.json` | 可运行 `npm test`、`npm run build`、`npm run generate`、`npm run api`、`npm run dev`、`npm run serve` |
+| `package.json` | 可运行 `npm test`、`npm run build`、`npm run generate`、`npm run verify-news`、`npm run upgrade-report`、`npm run api`、`npm run dev`、`npm run serve` |
 | `README.md` | 推荐 `npm test`、`npm run build`，页面改动需人工检查 |
 | `docs/runbook.md` | smoke check 包含 `/api/health` 和 `/api/news` |
 | `src/lib/scoring.test.ts` | 覆盖排序、偏好影响、可信度、低质量过滤和去重 |
@@ -27,7 +27,7 @@
 | --- | --- |
 | 排序、去重、可信度、分类逻辑 | `npm test` |
 | TypeScript 类型、前端组件、构建路径 | `npm run build` |
-| 来源配置、生成逻辑、fallback 数据 | `npm run generate`，必要时检查 `public/daily-news.json` |
+| 来源配置、生成逻辑、fallback 数据 | 先用 `npm run verify-news` 做不落盘量化验收；需要发布静态报告时再运行 `npm run generate` |
 | API 路由、刷新缓存、服务端 env | `npm run api` 后 curl `/api/health`、`/api/news`、必要时 `POST /api/refresh` |
 | UI 布局、中文文案、移动端 | `npm run dev` 后浏览器人工检查 |
 | 生产式本地服务 | `npm run serve` 后检查页面和 API |
@@ -181,10 +181,10 @@ http://127.0.0.1:5173/
 
 ## 性能和数据质量检查
 
-当前实现已有 30 秒整轮硬截止、来源并发上限、V2 `coverage`/`quality` 摘要和相对发布门槛，但仍没有生产监控 dashboard。可做的检查：
+当前实现已有 30 秒整轮硬截止、来源并发上限、V2 `coverage`/`quality` 摘要、量化验收和发布门槛，但仍没有生产监控 dashboard。可做的检查：
 
 - `npm run generate` 不应因单个来源失败而整体失败；
-- API 刷新时日志应能说明使用 `Firecrawl keyless`、`Direct source fetch` 或 `Firecrawl snapshot`；
+- 本地 API 刷新日志应能说明使用 `Firecrawl keyless`、`Hybrid live fetch`、`Direct source fetch` 或 fallback；固定生成与 Vercel refresh 应为 direct-only；
 - 报告 `sourceCount` 应合理反映启用来源覆盖；
 - 新闻 URL 不应重复；
 - `items` 中不应缺少 `trust` 或 `primaryCategory`。
@@ -239,7 +239,7 @@ Golden dataset 不包含 secret、登录后正文或付费墙全文。
 
 ### Shadow 验收
 
-V2 已在本地代码和静态报告中成为默认结构，但本轮未部署生产。公开生产切换前至少连续 7 天保留 V1/V2 或前后版本对照，人工比较：
+V2 已是代码、静态报告和 Vercel API 入口的默认结构，但尚无连续 shadow 证据。扩大正式使用前至少连续 7 天保留前后版本对照，人工比较：
 
 - V2 是否遗漏 V1 中的高价值事件；
 - V2 新增事件中有多少属于 noise；
@@ -252,7 +252,7 @@ Shadow 未达到量化门槛时，不进入默认切换阶段。
 ## 非目标
 
 - 不要求端到端自动化浏览器测试，当前仓库没有 Playwright/Cypress 配置。
-- 不要求生产压测，当前仓库没有生产部署证据。
+- 不要求生产压测；仓库有 Vercel 入口，但没有流量、监控或压测证据。
 - 不验证外部新闻事实真伪，只验证项目的排序、可信度标签和展示规则。
 - 不要求每次文档-only 改动运行完整构建。
 
@@ -280,6 +280,6 @@ Shadow 未达到量化门槛时，不进入默认切换阶段。
 | --- | --- |
 | 是否需要浏览器自动化测试 | 当前只有人工 UI 检查建议，没有 E2E 配置 |
 | 是否需要 CI | 仓库证据未显示 GitHub Actions 或其他 CI 配置 |
-| 性能预算 | 未定义页面加载、API 刷新或生成耗时目标 |
-| 数据质量门槛 | 未定义每次生成必须覆盖多少来源、多少分类或多少新闻 |
-| 生产验收流程 | 当前只有本地命令，没有发布前 checklist |
+| 性能预算 | 生成已有 30 秒硬预算和推荐 P95 目标；页面加载与 API 读取 P95 尚无真实基准或监控 |
+| 人工内容质量门槛 | 自动门槛已要求 10/10 分类、中文、新鲜度、时间顺序和成本预算；人工价值精确率仍需 golden dataset 校准 |
+| 生产验收流程 | 已有本地量化命令和 Vercel 入口，但没有 CI、shadow、灰度与回滚 checklist |

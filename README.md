@@ -33,12 +33,12 @@ npm run serve
 
 ## 数据生成
 
-`npm run generate` 会写入 `public/daily-news.json`，前端在 API 不可用时会加载这个文件。生成逻辑在 `scripts/generateDailyNews.ts`，实时 API 复用 `scripts/newsService.ts`：
+`npm run generate` 会写入 `public/daily-news.json`，前端在 API 不可用时会加载这个文件。生成逻辑在 `scripts/generateDailyNews.ts`，实时 API 复用 `scripts/newsService.ts`。当前有两种采集 profile：
 
-- 默认不需要 Firecrawl API key：优先通过 Firecrawl keyless 搜索覆盖调度器选中的来源。
-- Firecrawl 最多使用整轮前 8 秒；候选不足时继续并发直连公开来源页面/feed，并合并两路结果。
+- `npm run generate`、`npm run verify-news` 和 Vercel `POST /api/refresh` 固定选择 10 个覆盖感知来源、每个分区最多 3 条候选，并只直连公开来源页面/feed，不调用 Firecrawl。
+- 本地 `npm run api` / `npm run serve` 的后台刷新默认选择全部启用来源，先尝试 Firecrawl keyless（无需 API key，最多占整轮前 8 秒），候选不足时再并发直连并合并两路结果。
 - 没有实时结果：使用已生成的 `public/daily-news.json`，再兜底到 `src/data/firecrawlSnapshot.ts`。
-- 整轮采集默认 30 秒截止；新报告未通过绝对/相对质量门槛时保留 last-known-good。
+- 整轮采集默认 30 秒截止；固定生成 profile 还必须通过 10/10 分类覆盖、中文化、新鲜度、时间倒序和请求/翻译预算验收。新报告未通过量化或发布门槛时保留 last-known-good。
 - `GET /api/news` 只读已经发布的报告，不在用户请求内抓取外部来源。
 - 静态报告先写临时文件并通过质量门槛，再原子替换 `public/daily-news.json`。
 
@@ -71,7 +71,7 @@ DAILY_NEWS_TRANSLATION_MODEL=
 PORT=4173
 ```
 
-默认抓取所有启用来源；只有需要人工限制来源数时才设置 `DAILY_NEWS_MAX_SOURCES`。默认值是 `DAILY_NEWS_LIMIT_PER_SECTION=5`、`DAILY_NEWS_REFRESH_INTERVAL_MINUTES=15`、`PORT=4173`。
+上述来源数和每分区条数只影响本地后台刷新；固定生成与 Vercel refresh profile 会覆盖为 10 个来源、每分区 3 条。默认值是 `DAILY_NEWS_LIMIT_PER_SECTION=5`、`DAILY_NEWS_REFRESH_INTERVAL_MINUTES=15`、`DAILY_NEWS_COLLECTION_BUDGET_MS=30000`、`DAILY_NEWS_SOURCE_CONCURRENCY=6`、`DAILY_NEWS_MAX_AGE_HOURS=72`、`PORT=4173`。
 
 `DAILY_NEWS_TRANSLATION_API_KEY` 是可选 secret；配置后默认使用 DeepSeek Flash（`https://api.deepseek.com` + `deepseek-v4-flash`）把非中文新闻改写为中文标题和摘要，并在摘要缺失或等于标题时生成中文概述。`DAILY_NEWS_TRANSLATION_BASE_URL` 和 `DAILY_NEWS_TRANSLATION_MODEL` 只在需要覆盖默认 DeepSeek 配置时填写。生产部署到 Vercel 时只在项目环境变量里配置 secret，不提交 `.env.local`。
 

@@ -66,9 +66,14 @@ function isSameStory(cluster: NewsCluster, item: RawNewsItem): boolean {
   if (!cluster.categories.some((category) => item.categories.includes(category))) return false;
 
   const titleOverlap = tokenOverlap(cluster.title, item.title);
-  const combinedOverlap = tokenOverlap(`${cluster.title} ${cluster.summary}`, `${item.title} ${item.summary}`);
+  const summariesAreInformative = !isTemplateSummary(cluster.summary) && !isTemplateSummary(item.summary);
+  const combinedOverlap = summariesAreInformative
+    ? tokenOverlap(`${cluster.title} ${cluster.summary}`, `${item.title} ${item.summary}`)
+    : 0;
   const sharedTerms = significantSharedTerms(cluster.title, item.title);
-  const sharedContextTerms = significantSharedTerms(`${cluster.title} ${cluster.summary}`, `${item.title} ${item.summary}`);
+  const sharedContextTerms = summariesAreInformative
+    ? significantSharedTerms(`${cluster.title} ${cluster.summary}`, `${item.title} ${item.summary}`)
+    : 0;
   const cjkOverlap = longestCommonTextRatio(cluster.title, item.title);
   return (
     titleOverlap >= 0.52 ||
@@ -76,6 +81,13 @@ function isSameStory(cluster: NewsCluster, item: RawNewsItem): boolean {
     cjkOverlap >= 0.28 ||
     (titleOverlap >= 0.34 && sharedTerms >= 3) ||
     (combinedOverlap >= 0.2 && sharedContextTerms >= 12)
+  );
+}
+
+function isTemplateSummary(value: string): boolean {
+  return (
+    /已有新的公开信息，详细事实、影响范围和后续进展以来源页面为准/.test(value) ||
+    /相关报道聚焦.+具体背景.+以原文披露为准/.test(value)
   );
 }
 
@@ -137,6 +149,9 @@ function unique<T>(items: T[]): T[] {
 }
 
 function choosePrimaryCategory(item: NewsCluster): Category {
+  const primaryVotes = unique(item.primaryCategoryVotes);
+  if (primaryVotes.length === 1) return primaryVotes[0];
+
   const scores = new Map<Category, number>();
   for (const category of item.categories) {
     scores.set(category, 1);

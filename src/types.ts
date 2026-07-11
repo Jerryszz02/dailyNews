@@ -46,6 +46,7 @@ export interface SourceSection {
   searchTerms?: string[];
   searchSources?: SearchSourceType[];
   requireChinese?: boolean;
+  lockPrimaryCategory?: boolean;
 }
 
 export type SearchSourceType = "web" | "news";

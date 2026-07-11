@@ -141,4 +141,29 @@ describe("event-level curation", () => {
     expect(report.stories).toHaveLength(1);
     expect(report.stories[0].tier).toBe("special_interest");
   });
+
+  it("keeps one qualified noise event as a category coverage floor without promoting it to the core briefing", () => {
+    const report = buildDailyReport(
+      [
+        candidate({
+          id: "entertainment-preview",
+          title: "社区活动公布观众喜爱影片排名评论",
+          url: "https://content.mtime.com/article/1",
+          sourceId: "x-shams",
+          sourceName: "社交线索",
+          categories: ["entertainment"],
+          primaryCategory: "entertainment",
+          summary: "单一社交账号盘点社区活动的观众喜爱影片排名，内容仅涉及当地观影活动。",
+          publishedAt: "2026-07-07T09:00:00.000Z",
+        }),
+      ],
+      defaultPreferences,
+      now,
+    );
+
+    expect(report.stories).toHaveLength(1);
+    expect(report.stories[0].tier).toBe("noise");
+    expect(report.importantStories).toHaveLength(0);
+    expect(report.sections.find((section) => section.beat === "entertainment")?.storyIds).toEqual([report.stories[0].id]);
+  });
 });

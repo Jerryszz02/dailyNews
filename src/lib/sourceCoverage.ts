@@ -65,7 +65,7 @@ export function selectSourcesForCoverage(
 }
 
 export function sourceBeats(source: NewsSource): Category[] {
-  return Array.from(new Set(source.sections.flatMap((section) => [section.primaryCategory, ...section.categories])));
+  return Array.from(new Set(source.sections.map((section) => section.primaryCategory)));
 }
 
 function coverageScore(
@@ -84,6 +84,7 @@ function coverageScore(
   const regionScore = coveredRegions.has(source.countryOrRegion) ? 0 : 18;
   const acceptedRateScore = Math.round((health?.acceptedRate ?? 0.5) * 20);
   const failurePenalty = Math.min(60, (health?.consecutiveFailures ?? 0) * 15);
+  const collectionCostScore = source.language.startsWith("zh") ? 30 : -10;
 
   return (
     uncoveredBeatScore +
@@ -91,6 +92,7 @@ function coverageScore(
     mediaRoleScore[source.mediaType] +
     source.credibility +
     Math.round(source.defaultWeight * 10) +
+    collectionCostScore +
     acceptedRateScore -
     failurePenalty
   );

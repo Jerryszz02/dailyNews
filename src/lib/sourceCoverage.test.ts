@@ -3,22 +3,25 @@ import { newsSources } from "../config/sources";
 import { coverageBeatOrder, selectSourcesForCoverage, sourceBeats } from "./sourceCoverage";
 
 describe("source coverage scheduling", () => {
-  it("covers every configured beat within the serverless six-source budget", () => {
-    const selected = selectSourcesForCoverage(newsSources, 6, { now: new Date("2026-07-10T00:00:00.000Z") });
+  it("covers every configured beat using primary sections within the serverless source budget", () => {
+    const selected = selectSourcesForCoverage(newsSources, 10, { now: new Date("2026-07-10T00:00:00.000Z") });
     const covered = new Set(selected.flatMap(sourceBeats));
 
-    expect(selected).toHaveLength(6);
+    expect(selected).toHaveLength(10);
     expect(coverageBeatOrder.every((beat) => covered.has(beat))).toBe(true);
+    expect(selected.reduce((count, source) => count + source.sections.length, 0)).toBeLessThanOrEqual(20);
+    expect(selected.filter((source) => !source.language.startsWith("zh")).length).toBeLessThanOrEqual(2);
   });
 
-  it("does not leave finance dependent on a single source", () => {
-    const selected = selectSourcesForCoverage(newsSources, 6);
-    const financeSources = selected.filter((source) => sourceBeats(source).includes("finance"));
-    expect(financeSources.length).toBeGreaterThanOrEqual(2);
+  it("does not count auxiliary tags as primary coverage", () => {
+    const xinhua = newsSources.find((source) => source.source_id === "xinhua");
+    expect(xinhua).toBeDefined();
+    expect(sourceBeats(xinhua!)).toEqual(["china", "international", "sports", "science"]);
+    expect(sourceBeats(xinhua!)).not.toContain("policy");
   });
 
   it("skips a source while its circuit is open", () => {
-    const selected = selectSourcesForCoverage(newsSources, 6, {
+    const selected = selectSourcesForCoverage(newsSources, 10, {
       now: new Date("2026-07-10T00:00:00.000Z"),
       health: [
         {
@@ -33,8 +36,8 @@ describe("source coverage scheduling", () => {
   });
 
   it("is deterministic for the same inputs", () => {
-    const left = selectSourcesForCoverage(newsSources, 6).map((source) => source.source_id);
-    const right = selectSourcesForCoverage(newsSources, 6).map((source) => source.source_id);
+    const left = selectSourcesForCoverage(newsSources, 10).map((source) => source.source_id);
+    const right = selectSourcesForCoverage(newsSources, 10).map((source) => source.source_id);
     expect(left).toEqual(right);
   });
 });

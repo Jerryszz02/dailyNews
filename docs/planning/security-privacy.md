@@ -34,7 +34,7 @@
 | `DAILY_NEWS_TRANSLATION_BASE_URL` | 配置 | 可指向本地或云端 OpenAI-compatible 服务；不包含密钥时可公开说明 |
 | `DAILY_NEWS_TRANSLATION_MODEL` | 配置 | 模型名不是 secret，但可能暴露供应商选择 |
 | `.env.local`, `.env` | 本地配置 | 不应提交或写入文档正文 |
-| Firecrawl key | 当前项目不要求 | 代码使用 keyless；若未来引入 key，必须只留在 server-side |
+| Firecrawl key | 当前项目不要求 | 本地可用 keyless；固定生成和 Vercel refresh 禁用 Firecrawl；若未来引入 key，必须只留在 server-side |
 | 新闻标题、摘要、来源、URL | 公开内容 | 可写入 `public/daily-news.json`，但要避免夹带 private token 或非公开内容 |
 | 用户偏好 | 本地浏览器数据 | 存在 `localStorage`，不上传到服务端 |
 
@@ -61,8 +61,8 @@
 
 当前抓取策略：
 
-- Firecrawl 使用 keyless search。
-- Firecrawl 额度/限速/无结果时直接抓公开来源页面/feed。
+- 本地后台刷新可使用 Firecrawl keyless search；额度/限速/无结果时继续抓公开来源页面/feed。
+- `npm run generate`、`npm run verify-news` 和 Vercel refresh 使用固定 direct-only profile，不调用 Firecrawl。
 - 直接抓取设置 8 秒超时。
 - 单个来源失败只记录 warning 并继续。
 - 非中文内容在没有翻译 API key 时跳过，以维护中文体验。
@@ -77,17 +77,17 @@
 
 ## API 安全边界
 
-当前证据显示 API 面向本地运行：
+当前同时存在本地 Node API 与 Vercel Serverless API：
 
 | 项 | 当前状态 | 风险 |
 | --- | --- | --- |
-| 监听地址 | `127.0.0.1` | 本机可访问，默认不暴露公网 |
-| CORS | `*` | 若公开部署，任意站点可读 API |
-| `POST /api/refresh` | 无认证、无频控 | 若公开部署，可能被滥用触发外部抓取 |
-| 错误信息 | `lastError` 和 refresh failure 会返回字符串 | 若公开部署，可能暴露内部错误细节 |
-| 缓存 | 内存 | 重启后丢失，不涉及持久化泄露 |
+| 本地监听 | `127.0.0.1` | 默认仅本机可访问；本地 refresh 允许无 token |
+| CORS | 本地和 Serverless 均为 `*` | 任意站点可读取公开报告，仍需确认是否收紧 |
+| Vercel `POST /api/refresh` | 必须配置 `DAILY_NEWS_REFRESH_TOKEN`；错误 token 返回 `401` | 尚无频控，token 仍需安全保管 |
+| 错误信息 | Serverless 返回归一化错误；本地可返回 `lastError` | 本地错误可能包含外部失败细节，不应直接公网暴露本地服务 |
+| 缓存 | bundled JSON + 进程内 latest | Serverless 跨实例不共享 latest，重启回到 bundled report |
 
-公开部署前必须重新设计 CORS、认证/刷新权限、频率限制、日志和错误信息。
+Vercel refresh 已有 bearer token 与归一化错误；正式公开运维仍需确认 CORS、频率限制、日志和跨实例存储。
 
 ## 隐私约束
 
@@ -107,7 +107,7 @@
 | secret 泄露到浏览器 | secret 只在 Node 脚本读取；文档禁止粘贴真实值 | 未来改前端抓取时可能破坏边界 |
 | 不可信新闻误导用户 | `trust` 评分、低可信标签、社交单点降权、极低质量过滤 | 可信度规则是启发式，不等于事实核验 |
 | Paywall/验证站点不稳定 | 不可靠来源可禁用；付费墙来源只用公开元数据 | 来源政策变化会导致抓取失败或内容稀疏 |
-| 公开 API 被滥用刷新 | 当前监听本地地址 | 公网部署前必须增加控制 |
+| 公开 API 被滥用刷新 | Vercel refresh 需要 bearer token | 尚无频控，token 泄露后仍可能被滥用 |
 | 生成产物含错误或英文内容 | 中文过滤、DeepSeek 翻译配置和 `sourceLabel` 兜底 | 外部数据质量不可完全保证 |
 
 ## 非目标
@@ -121,7 +121,7 @@
 
 - 涉及 secrets 的改动先确认运行位置是 Node 还是浏览器。
 - 涉及外部来源的改动先确认是否公开可访问、是否 paywall、是否需要中文翻译。
-- 涉及 API 的改动先确认是否仍只用于本地；若要公开部署，先更新 API 与安全文档。
+- 涉及 API 的改动同时检查本地 Node 与 Vercel Serverless 行为，不能只验证其中一种。
 - 涉及保存数据的改动先确认是否会把用户偏好、密钥或非公开来源内容写入公开文件。
 
 ## 验收标准
@@ -136,8 +136,8 @@
 
 | 项 | 需要确认的问题 |
 | --- | --- |
-| 是否计划公开部署 | 决定是否需要认证、CORS 限制和 refresh 频控 |
-| 翻译服务供应商 | 决定密钥管理、日志、成本和数据发送边界 |
+| 公开 API CORS 与 refresh 频控 | Vercel 入口与鉴权已存在，但是否限制读取来源、增加限流仍未确定 |
+| 翻译服务长期供应商 | 当前默认 DeepSeek Flash；长期密钥管理、日志、成本和替代策略待确认 |
 | 日志保留策略 | 当前只有 console warning/log，没有集中日志证据 |
 | 来源准入政策 | 决定哪些来源可启用、禁用或仅使用公开元数据 |
 | 是否允许分析用户行为 | 当前没有遥测；若新增必须单独设计和告知 |

@@ -12,6 +12,7 @@ import { defaultPreferences } from "./config/preferences";
 import { newsSources } from "./config/sources";
 import { firecrawlSnapshotNews } from "./data/firecrawlSnapshot";
 import { buildDailyReport } from "./lib/newsPipeline";
+import { sortStoriesByNewest } from "./lib/newsOrdering";
 import { rankNews } from "./lib/scoring";
 import { normalizeText } from "./lib/text";
 import type { Category, DailyNewsReport, PreferenceStrength, RawNewsItem, StoryCard, UserPreferences } from "./types";
@@ -105,23 +106,13 @@ export function App() {
 
   const fallbackReport = useMemo(() => buildDailyReport(firecrawlSnapshotNews, defaultPreferences), []);
   const report = loadedReport ?? fallbackReport;
-  const personalizedOrder = useMemo(
-    () => new Map(rankNews(report.items, preferences).map((item, index) => [item.id, index])),
-    [preferences, report.items],
-  );
   const categoryStories = useMemo(() => {
     if (activeView === "preferred" || activeView === "settings") return [];
     return filterStories(
-      report.stories
-        .filter((story) => story.primaryBeat === activeView)
-        .sort(
-          (left, right) =>
-            (personalizedOrder.get(left.itemId) ?? Number.MAX_SAFE_INTEGER) -
-            (personalizedOrder.get(right.itemId) ?? Number.MAX_SAFE_INTEGER),
-        ),
+      sortStoriesByNewest(report.stories.filter((story) => story.primaryBeat === activeView)),
       searchQuery,
     );
-  }, [activeView, personalizedOrder, report.stories, searchQuery]);
+  }, [activeView, report.stories, searchQuery]);
   const pageStories = categoryStories.slice(0, visibleCount);
   const canShowMore = categoryStories.length > pageStories.length;
   const selectView = (view: ActiveView) => {

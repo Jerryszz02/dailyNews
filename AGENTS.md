@@ -4,9 +4,9 @@
 
 - This is a Vite + React + TypeScript news-ranking prototype.
 - The app prefers `GET /api/news`, falls back to `public/daily-news.json`, then falls back to `src/data/firecrawlSnapshot.ts`.
-- `scripts/newsServer.ts` provides the local API and in-memory refresh cache. Firecrawl runs keyless; `DAILY_NEWS_TRANSLATION_*` values remain server-only for live browser use.
+- `scripts/newsServer.ts` provides the local API, in-memory last-known-good report and scheduled refresh. Its default local refresh can use Firecrawl keyless before direct fetch; static generation and Vercel refresh use a fixed 10-source direct-only profile.
 - `scripts/generateDailyNews.ts` writes `public/daily-news.json` through shared logic in `scripts/newsService.ts`.
-- `scripts/newsService.ts` tries Firecrawl first, then direct public source page/feed fetching, then generated/static fallback data.
+- `scripts/newsService.ts` supports optional Firecrawl keyless, direct public source page/feed fetching, translation and generated/static fallback data; callers select the runtime profile.
 
 ## Commands
 

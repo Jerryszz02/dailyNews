@@ -51,4 +51,19 @@ describe("last-known-good report store", () => {
 
     expect(passesPublishGate(regressed, current)).toBe(false);
   });
+
+  it("allows a compact event report to replace a larger article-era report when coverage is preserved", () => {
+    const current = readBundledReport();
+    const compact = {
+      ...current,
+      sourceCount: 10,
+      quality: { ...current.quality, selectedEventCount: 10 },
+      coverage: {
+        ...current.coverage,
+        beats: current.coverage.beats.map((beat) => ({ ...beat, candidateCount: Math.max(1, beat.candidateCount) })),
+      },
+    };
+
+    expect(passesPublishGate(compact, current)).toBe(true);
+  });
 });
