@@ -1,6 +1,6 @@
-import { scoringWeights } from "../config/scoring";
+import { scoringWeights } from "../config/scoring.js";
 import type { RankedNewsItem, StoryCard, UserPreferences } from "../types";
-import { normalizeText } from "./text";
+import { normalizeText } from "./text.js";
 
 export function sortByNewest(items: RankedNewsItem[]): RankedNewsItem[] {
   return [...items].sort(compareNewest);

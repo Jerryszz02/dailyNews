@@ -1,5 +1,5 @@
 import type { Category, DailyNewsReport } from "../types";
-import { coverageBeatOrder } from "./sourceCoverage";
+import { coverageBeatOrder } from "./sourceCoverage.js";
 
 export interface AcceptanceMetrics {
   selectedSourceCount: number;
