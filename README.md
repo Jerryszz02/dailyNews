@@ -36,12 +36,12 @@ npm run serve
 `npm run generate` 会写入 `public/daily-news.json`，前端在 API 不可用时会加载这个文件。生成逻辑在 `scripts/generateDailyNews.ts`，实时 API 复用 `scripts/newsService.ts`：
 
 - 默认不需要 Firecrawl API key：优先通过 Firecrawl keyless 搜索覆盖调度器选中的来源。
-- 默认 16 秒采集预算下，Firecrawl 使用整轮前约 5.3 秒（绝对上限 8 秒）；候选不足时继续并发直连公开来源页面/feed，并合并两路结果。
+- 默认 12 秒采集预算下，Firecrawl 使用整轮前约 4 秒（绝对上限 8 秒）；候选不足时继续并发直连公开来源页面/feed，并合并两路结果。
 - 没有实时结果：保留 last-known-good 的原始 `reportId/generatedAt`，不会把旧新闻重盖成当前时间；静态 `npm run generate` 会报错并保留原文件。
-- 采集阶段默认 16 秒截止，整轮刷新目标为 30 秒；新报告未通过绝对/相对质量门槛时保留 last-known-good。
+- 采集阶段默认 12 秒截止，为持久读取重试和原子发布保留余量，整轮刷新目标为 30 秒；新报告未通过绝对/相对质量门槛时保留 last-known-good。
 - `GET /api/news` 只读已经发布的报告，不在用户请求内抓取外部来源。
 - 静态报告先写临时文件并通过质量门槛，再原子替换 `public/daily-news.json`。
-- 生产每 15 分钟由 Supabase Cron 调用受保护 `/api/cron`；每轮最多 10 源，正常健康状态下持久化公平轮转保证 49 个启用来源滚动 90 分钟全覆盖；连续失败源熔断后单独按半开重试验收。
+- 生产每 15 分钟由 Supabase Cron 调用受保护 `/api/cron`；每轮最多 11 源，为常规 10-source cohort 额外保留 1 个半开恢复槽；正常健康状态下持久化公平轮转保证 49 个启用来源滚动 90 分钟全覆盖。
 - Supabase 保存来源状态、近 72 小时候选、刷新租约/运行和不可变报告；发布 snapshot 与 latest pointer 在一个 RPC 事务中完成。
 
 只把已有静态报告离线升级为 V2，不访问新闻源：
@@ -63,7 +63,7 @@ npm run generate
 DAILY_NEWS_MAX_SOURCES=11
 DAILY_NEWS_LIMIT_PER_SECTION=5
 DAILY_NEWS_REFRESH_INTERVAL_MINUTES=15
-DAILY_NEWS_COLLECTION_BUDGET_MS=16000
+DAILY_NEWS_COLLECTION_BUDGET_MS=12000
 DAILY_NEWS_SOURCE_CONCURRENCY=8
 DAILY_NEWS_MAX_AGE_HOURS=72
 SUPABASE_URL=

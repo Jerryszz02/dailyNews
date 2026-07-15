@@ -1,13 +1,59 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { newsSources } from "../src/config/sources";
 import { selectSourcesForCoverage } from "../src/lib/sourceCoverage";
 import type { RawNewsItem } from "../src/types";
 import { InMemoryNewsStore } from "./inMemoryNewsStore";
 import { defaultServerlessMaxSources, hashReportContent, runNewsRefresh } from "./newsRefresh";
-import type { NewsCollectionResult } from "./newsService";
+import type { NewsCollectionOptions, NewsCollectionResult } from "./newsService";
 import { expandLegacyItems, readBundledReport } from "./reportStore";
 
 describe("durable news refresh", () => {
+  it.each([
+    ["the production default", undefined, 12_000],
+    ["an explicit override", 9_000, 9_000],
+  ])("forwards %s collection budget while keeping the eleven-source recovery slot", async (_label, override, expected) => {
+    const initial = readBundledReport();
+    const now = new Date("2026-07-15T23:45:00.000Z");
+    const store = new InMemoryNewsStore(initial, () => now);
+    const sources = newsSources.filter((source) => source.enabled).slice(0, 11);
+    const collect = vi.fn(async (_options: NewsCollectionOptions): Promise<NewsCollectionResult> => ({
+      items: [],
+      mode: "No live data",
+      sourceOutcomes: sources.map((source) => ({
+        sourceId: source.source_id,
+        status: "empty",
+        discoveredCount: 0,
+        errorCode: null,
+      })),
+    }));
+    const originalBudget = process.env.DAILY_NEWS_COLLECTION_BUDGET_MS;
+    delete process.env.DAILY_NEWS_COLLECTION_BUDGET_MS;
+
+    try {
+      await runNewsRefresh(
+        {
+          trigger: "cron",
+          scheduledAt: now,
+          idempotencyKey: `refresh:collection-budget:${expected}`,
+          ...(override === undefined ? {} : { collectionBudgetMs: override }),
+        },
+        { store, now: () => now, sources, collect },
+      );
+    } finally {
+      if (originalBudget === undefined) {
+        delete process.env.DAILY_NEWS_COLLECTION_BUDGET_MS;
+      } else {
+        process.env.DAILY_NEWS_COLLECTION_BUDGET_MS = originalBudget;
+      }
+    }
+
+    expect(collect).toHaveBeenCalledOnce();
+    expect(collect.mock.calls[0]?.[0]).toMatchObject({
+      maxSources: 11,
+      collectionBudgetMs: expected,
+    });
+  });
+
   it("publishes changed live candidates from the rolling pool", async () => {
     const initial = readBundledReport();
     const now = new Date("2026-07-13T08:00:00.000Z");

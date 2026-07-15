@@ -181,7 +181,7 @@ http://127.0.0.1:5173/
 
 ## 性能和数据质量检查
 
-当前实现已有 16 秒采集硬截止、30 秒整轮目标、来源并发上限、V2 `coverage`/`quality` 摘要和相对发布门槛，但仍没有生产监控 dashboard。可做的检查：
+当前实现已有 12 秒采集硬截止、30 秒整轮目标、来源并发上限、V2 `coverage`/`quality` 摘要和相对发布门槛，但仍没有生产监控 dashboard。可做的检查：
 
 - `npm run generate` 不应因单个来源失败而整体失败；
 - API 刷新时日志应能说明使用 `Firecrawl keyless`、`Direct source fetch` 或 `Firecrawl snapshot`；

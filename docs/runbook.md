@@ -50,7 +50,7 @@ npx supabase db push --dry-run
 DAILY_NEWS_MAX_SOURCES=11
 DAILY_NEWS_LIMIT_PER_SECTION=5
 DAILY_NEWS_REFRESH_INTERVAL_MINUTES=15
-DAILY_NEWS_COLLECTION_BUDGET_MS=16000
+DAILY_NEWS_COLLECTION_BUDGET_MS=12000
 DAILY_NEWS_SOURCE_CONCURRENCY=8
 DAILY_NEWS_MAX_AGE_HOURS=72
 SUPABASE_URL=
@@ -67,7 +67,7 @@ Keep `.env` and `.env.local` local. Do not commit or paste their values.
 
 Production defaults to eleven due sources per run: the normal ten-source cohort plus one recovery slot for a circuit that becomes half-open. Persistent `next_due_at` rotation covers all healthy, enabled sources within 90 minutes at the 15-minute cadence. A source opened by the three-failure circuit breaker is excluded from that window and retried after the configured two-interval cooldown.
 
-`DAILY_NEWS_COLLECTION_BUDGET_MS` is the hard wall-clock deadline for one collection round. Production defaults to 16 seconds so cold start, persistence and publication retain margin inside the 30-second refresh target. With that default, Firecrawl gets about the first 5.3 seconds and never more than 8 seconds; direct source work uses bounded concurrency from `DAILY_NEWS_SOURCE_CONCURRENCY`. Sources that have not started before the deadline remain due for the next slot instead of being recorded as failed.
+`DAILY_NEWS_COLLECTION_BUDGET_MS` is the hard wall-clock deadline for one collection round. Production defaults to 12 seconds so persistent read retries and atomic publication retain margin inside the 30-second refresh target. With that default, Firecrawl gets about the first 4 seconds and never more than 8 seconds; direct source work uses bounded concurrency from `DAILY_NEWS_SOURCE_CONCURRENCY`. Sources that have not started before the deadline remain due for the next slot instead of being recorded as failed.
 
 Set `DAILY_NEWS_REFRESH_TOKEN` on Vercel before enabling `POST /api/refresh`. Send it as `Authorization: Bearer <token>`. Do not put the token in browser code.
 

@@ -9,8 +9,8 @@
 ```text
 src/config/sources.ts
   -> src/lib/sourceCoverage.ts
-  -> Firecrawl keyless（默认约 5.3 秒，最多 8 秒）+ 有限并发 direct fetch
-  -> 72 小时候选池、16 秒采集截止与 30 秒整轮目标
+  -> Firecrawl keyless（默认约 4 秒，最多 8 秒）+ 有限并发 direct fetch
+  -> 72 小时候选池、12 秒采集截止与 30 秒整轮目标
   -> src/lib/curation.ts 质量门槛
   -> src/lib/dedupe.ts 事件聚类
   -> evidence / status / public impact / tier / diversity
@@ -94,8 +94,8 @@ Phase 2 新增职责：
 
 ### 抓取与可靠性
 
-- 采集阶段默认预算为 `DAILY_NEWS_COLLECTION_BUDGET_MS=16000`，为只读重试、冷启动、持久化、聚类和发布预留时间，使整轮目标保持在 30 秒内。
-- 默认预算下 Firecrawl 使用前约 5.3 秒且绝不超过 8 秒；候选少于 `max(8, maxSources)` 时继续直连并合并。
+- 采集阶段默认预算为 `DAILY_NEWS_COLLECTION_BUDGET_MS=12000`，为只读重试、冷启动、持久化、聚类和发布预留时间，使整轮目标保持在 30 秒内。
+- 默认预算下 Firecrawl 使用前约 4 秒且绝不超过 8 秒；候选少于 `max(8, maxSources)` 时继续直连并合并。
 - 直连来源并发默认 `DAILY_NEWS_SOURCE_CONCURRENCY=8`；单请求最长 8 秒且受整轮 deadline 约束。
 - deadline 前尚未真正发起请求的来源不写入 `source_state`，保留 due 状态并在下个时槽继续优先，不能误计失败或触发熔断。
 - 新报告若丢失已覆盖核心 beat 的全部候选，或事件/核心层/来源数量严重回退，不能替换 last-known-good。
