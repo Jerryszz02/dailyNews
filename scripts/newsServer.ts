@@ -1,56 +1,37 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, resolve } from "node:path";
-import type { DailyNewsReport } from "../src/types";
-import {
-  defaultRefreshIntervalMinutes,
-  generateDailyNewsReport,
-  loadLocalEnv,
-  readPositiveInteger,
-} from "./newsService";
-import { passesPublishGate, readBundledReport } from "./reportStore";
+import { createNewsApiHandlers } from "./newsApi";
+import { runNewsRefresh } from "./newsRefresh";
+import { defaultRefreshIntervalMinutes, loadLocalEnv, readPositiveInteger } from "./newsService";
+import { getDefaultNewsStore } from "./newsStoreFactory";
 
+loadLocalEnv();
 const port = readPositiveInteger("PORT", 4173);
 const refreshIntervalMinutes = readPositiveInteger("DAILY_NEWS_REFRESH_INTERVAL_MINUTES", defaultRefreshIntervalMinutes);
 const refreshIntervalMs = refreshIntervalMinutes * 60_000;
 const distDir = resolve(process.cwd(), "dist");
-
-let cachedReport: DailyNewsReport = readBundledReport();
-let lastError = "";
+const store = getDefaultNewsStore();
+if (!store) throw new Error("Local news store is not configured");
+const localStore = store;
+const api = createNewsApiHandlers({ store: localStore });
 let refreshInFlight: Promise<void> | null = null;
-
-loadLocalEnv();
 
 const server = createServer((request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
 
   if (request.method === "GET" && url.pathname === "/api/news") {
-    writeJson(response, 200, {
-      ...cachedReport,
-      refresh: {
-        intervalMinutes: refreshIntervalMinutes,
-        lastError: lastError || null,
-      },
-    });
+    void writeWebResponse(response, api.handleNewsRequest(toWebRequest(request, url)));
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/refresh") {
-    refreshNews()
-      .then(() => writeJson(response, 200, { ok: true, generatedAt: cachedReport.generatedAt }))
-      .catch((error: unknown) => writeJson(response, 500, { ok: false, error: String(error) }));
+    void writeWebResponse(response, api.handleRefreshRequest(toWebRequest(request, url)));
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/api/health") {
-    writeJson(response, 200, {
-      ok: true,
-      reportAvailable: true,
-      refreshStatus: lastError ? "degraded" : "healthy",
-      generatedAt: cachedReport.generatedAt,
-      itemCount: cachedReport.items.length,
-      lastError: lastError || null,
-    });
+    void writeWebResponse(response, api.handleHealthRequest(toWebRequest(request, url)));
     return;
   }
 
@@ -75,33 +56,36 @@ async function refreshNews(): Promise<void> {
     return refreshInFlight;
   }
 
-  refreshInFlight = generateDailyNewsReport()
-    .then(({ report, mode, rawItemCount, usedLiveData }) => {
-      if (!usedLiveData) {
-        lastError = "Live refresh returned no items; kept the previous cache.";
-        console.warn(lastError);
-        return;
-      }
-
-      if (!passesPublishGate(report, cachedReport)) {
-        lastError = "Generated report did not pass the publish gate; kept the previous cache.";
-        console.warn(lastError);
-        return;
-      }
-
-      cachedReport = report;
-      lastError = "";
-      console.log(`Refreshed ${report.items.length} ranked items from ${report.sourceCount} sources using ${mode} (${rawItemCount} raw items).`);
-    })
-    .catch((error: unknown) => {
-      lastError = String(error);
-      console.warn(`Refresh failed: ${lastError}`);
+  refreshInFlight = runNewsRefresh({ trigger: "local" }, { store: localStore })
+    .then((result) => {
+      console.log(
+        `Refresh ${result.status}: ${result.discoveredCount} live candidates, ${result.candidateCount} rolling candidates, ${result.selectedSourceIds.length} sources.`,
+      );
     })
     .finally(() => {
       refreshInFlight = null;
     });
 
   return refreshInFlight;
+}
+
+function toWebRequest(request: IncomingMessage, url: URL): Request {
+  const headers = new Headers();
+  for (const [name, value] of Object.entries(request.headers)) {
+    if (Array.isArray(value)) value.forEach((item) => headers.append(name, item));
+    else if (value !== undefined) headers.set(name, value);
+  }
+  return new Request(url, { method: request.method, headers });
+}
+
+async function writeWebResponse(response: ServerResponse, pending: Promise<Response>) {
+  try {
+    const result = await pending;
+    response.writeHead(result.status, Object.fromEntries(result.headers.entries()));
+    response.end(await result.text());
+  } catch {
+    writeJson(response, 500, { error: "Internal server error" });
+  }
 }
 
 function writeJson(response: ServerResponse, statusCode: number, value: unknown) {

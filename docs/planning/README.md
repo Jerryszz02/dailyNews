@@ -8,16 +8,16 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 请求 | 在现有项目文档基础上，规划新闻来源与选题系统的完整重构 |
-| 更新时间 | 2026-07-10 |
+| 请求 | 以 Supabase 实现生产持久化、15 分钟调度与可验证的实时更新闭环 |
+| 更新时间 | 2026-07-13 |
 | 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews` |
-| 工作模式 | 核心实现已落地；运营验证与生产持久化待完成 |
+| 工作模式 | Supabase Phase 2 已部署；上线门收尾与 24 小时/7 天连续运行验证进行中 |
 
 ## 项目概览
 
 Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配置化来源发现候选，经过质量门槛、事件聚类、证据状态、公共影响分级和集合级多样性选择，在网页中展示今日必知、重要进展、持续关注、分类深读、搜索和偏好设置。
 
-事件级核心管线、V2 API/UI、last-known-good 和 30 秒采集预算已实现。继续开发前先读 [news-curation-refactor-plan.md](news-curation-refactor-plan.md) 的实施状态；7–14 天 golden dataset、连续 7 天 shadow、外部生产存储和历史日报仍未完成。
+事件级核心管线、V2 API/UI、last-known-good、16 秒采集预算、30 秒整轮目标和 Supabase 持久化已实现并部署。生产使用 Supabase 保存来源状态、72 小时候选池、刷新运行、租约和不可变报告，并已启用 15 分钟 Supabase Cron；前四次 24 小时 burn-in 暴露并修复了调度丢槽/耗时、4 毫秒到期边界、deadline cadence 缺口与 `PGRST303` 读恢复问题。第五次窗口运行中又在实际发生前识别出“10 个健康 cohort + 1 个半开来源”争用旧上限；默认每轮容量提升到 11，真实 11/11 canary 在 27.854 秒内通过。为只验证同一最终 deployment，第五次窗口被取代，第六次 24 小时窗口从 `2026-07-15T15:45:33.605Z` 起算，通过后再进入 7 天 soak，尚不能宣布运行门最终完成。
 
 项目由四条主要链路组成：
 
@@ -27,6 +27,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | 报告生成 | 覆盖调度、Firecrawl/直连候选、质量门槛、事件证据、公共影响分层、30 秒预算和 fallback | `src/lib/sourceCoverage.ts`, `src/lib/curation.ts`, `scripts/newsService.ts` |
 | API 与静态服务 | 启动即读取 last-known-good，读请求不抓取；刷新通过相对质量门槛才切换 latest | `scripts/reportStore.ts`, `scripts/newsApi.ts`, `scripts/newsServer.ts` |
 | 前端体验 | 优先读取 V2 API，再读静态 V2/V1 自动升级，展示三个首页层级和统一事件分类引用 | `src/App.tsx` |
+| Phase 2 持久更新 | Supabase 候选池/租约/不可变快照、受保护 cron、公平来源轮转和 durable freshness | [database-design.md](database-design.md), [release-plan.md](release-plan.md) |
 
 ## 已检查的项目证据
 
@@ -65,6 +66,8 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | [api-design.md](api-design.md) | 固化当前本地 HTTP API 的请求、响应、错误和兼容性约束 |
 | [security-privacy.md](security-privacy.md) | 记录 secrets、外部抓取、浏览器边界、公开数据和剩余风险 |
 | [test-plan.md](test-plan.md) | 定义行为、API、生成、前端和人工验证方式 |
+| [release-plan.md](release-plan.md) | 定义 Supabase migration、bootstrap、部署、调度、灰度、回滚和连续运行验收 |
+| [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md) | 保存本次生产 deployment、数据库、刷新、API smoke 与运行门待观察证据 |
 
 ## 已跳过目录文档
 
@@ -73,7 +76,6 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | `project-brief.md` | 项目背景和目标可由本索引与 `prd.md` 覆盖，单独成篇会重复 README |
 | `architecture.md` | 仓库已有 `docs/architecture.md`，planning 只在 `technical-design.md` 中记录需要实现者遵守的约束 |
 | `user-flow.md` | 用户流程已合并进 `prd.md`，当前 UI 流程不需要独立维护文档 |
-| `release-plan.md` | V1/V2 shadow、feature flag 和回滚已合并进重构计划；生产存储与发布窗口确认后再拆出独立发布文档 |
 | `operations-runbook.md` | 仓库已有 `docs/runbook.md`，planning 不重复维护命令清单 |
 | `decision-log.md` | 可见决策数量少，已在 `technical-design.md` 和 `security-privacy.md` 中记录关键取舍 |
 
@@ -85,21 +87,20 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 4. 修改数据生成、排序、去重、可信度或 fallback 前读 [technical-design.md](technical-design.md)。
 5. 修改 `/api/*` 路由或响应字段前读 [api-design.md](api-design.md)。
 6. 涉及 `.env.local`、翻译密钥、Firecrawl、外部抓取或浏览器数据边界时先读 [security-privacy.md](security-privacy.md)。
-7. 实现完成后按 [test-plan.md](test-plan.md) 验证 golden dataset、API 兼容和浏览器体验。
+7. 实现完成后按 [test-plan.md](test-plan.md) 验证数据库事务、跨实例、来源轮转、freshness、API/UI 和内容质量。
+8. 生产变更严格按 [release-plan.md](release-plan.md) 先迁移和 bootstrap，再配环境、部署、启用 cron、24 小时 burn-in 和 7 天 soak。
 
 ## 待确认
 
 | 项 | 为什么无法从当前仓库确定 |
 | --- | --- |
 | 目标用户和正式使用场景 | 仓库说明为“原型”，没有产品 brief、访谈、运营目标或正式用户角色文档 |
-| 生产发布流程 | 仓库有 Vercel 入口与配置，但本轮未执行部署、CI 或灰度发布 |
-| 数据更新 SLA | 仓库说明了默认 15 分钟服务端刷新和前端每分钟检查，但没有业务级新鲜度目标 |
+| Supabase 区域、配额和维护责任 | 生产资源与 secret scope 已验证可用；项目区域、长期配额和轮换责任仍需运营确认 |
 | 来源准入和禁用审批流程 | `src/config/sources.ts` 有启用状态和可信度字段，但没有谁能批准新增/禁用来源的流程 |
-| 真实访问量、性能目标和监控 | 没有生产监控、日志聚合、告警或性能预算证据 |
-| 长期数据保留策略 | 没有数据库；`public/daily-news.json` 和内存缓存之外没有持久化证据 |
+| 真实访问量与告警渠道 | 中国到 iad1 的 Phase 0 样本已把 latest read 校准为 P95 ≤750ms、P99 ≤1s；通知渠道仍需结合账号配置 |
+| 长期数据保留策略 | Supabase 已保存候选、运行和不可变快照；长期保留期限与清理策略仍待确认 |
 | 首页最终事件数量 | 当前按质量门槛自然变化，不为达到建议区间回填低价值事件；阈值仍需 golden dataset 校准 |
 | 最终 beat/栏目 | 建议把主题、地理范围和事件类型拆轴；具体一级栏目仍需确认 |
-| 生产持久存储 | 事件持续更新和 last-known-good 需要持久状态，但供应商和成本边界未确认 |
 | 模型使用边界 | 建议只用于结构化提取、翻译和事实约束摘要，供应商与预算待确认 |
 
 ## 人工检查建议
@@ -107,7 +108,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | 建议 | 原因 |
 | --- | --- |
 | 确认 Daily News 的目标读者和主要使用频率 | 当前只能从 UI 和 README 推断是个人/原型新闻日报，无法确定正式产品定位 |
-| 确认是否计划部署到公开服务器 | API CORS 当前为 `*`，且服务假设本地运行；公开部署会改变安全和运维要求 |
+| 确认 Supabase 项目与 secret 的维护人 | 生产已经公开部署；需要明确 migration、Vault、Vercel env 和轮换责任 |
 | 确认新增来源的评估标准 | 代码有 `credibility`、`enabled`、`mayHavePaywall`，但没有来源准入流程 |
 | 确认翻译服务是否固定使用本地 OpenAI-compatible 服务 | README 只给出可选变量，不能确定供应商、模型和成本边界 |
 | 确认是否需要保存历史日报 | 当前没有数据库或历史归档机制；如果需要，会影响数据设计和发布计划 |

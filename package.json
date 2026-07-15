@@ -10,23 +10,44 @@
     "preview": "vite preview --host 127.0.0.1",
     "serve": "npm run build && tsx scripts/newsServer.ts",
     "test": "vitest run",
+    "test:integration": "vitest run scripts/newsStore.contract.test.ts scripts/supabaseNewsStore.test.ts scripts/newsRefresh.test.ts scripts/newsApi.test.ts src/lib/sourceCoverage.test.ts src/lib/freshness.test.ts src/lib/contentFreshness.test.ts",
+    "test:db": "supabase test db",
+    "bootstrap:supabase": "tsx scripts/bootstrapSupabase.ts",
     "generate": "tsx scripts/generateDailyNews.ts",
     "upgrade-report": "tsx scripts/upgradeDailyNewsReport.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.110.2",
     "@vitejs/plugin-react": "^5.1.2",
     "firecrawl": "^4.6.0",
     "lucide-react": "^0.561.0",
-    "vite": "^7.3.0",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1"
+    "react-dom": "^19.2.1",
+    "vite": "^7.3.0"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^5.9.3",
+    "supabase": "2.109.1",
     "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.16"
-  }
+  },
+  "description": "Daily News 是一个事件级新闻日报：从可配置精选来源发现候选，把不同媒体对同一事件的报道合并为证据链，再按公共影响、事实状态和来源多样性输出“今日必知、重要进展、持续关注和分类深读”。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jerryszz02/dailyNews.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Jerryszz02/dailyNews/issues"
+  },
+  "homepage": "https://github.com/Jerryszz02/dailyNews#readme"
 }

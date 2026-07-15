@@ -29,6 +29,8 @@ const allBeats: Category[] = [
 ];
 
 const sourceById = new Map(newsSources.map((source) => [source.source_id, source]));
+export const freshCoreWindowMinutes = 120;
+export const currentCoreWindowMinutes = 24 * 60;
 
 const beatImpactBase: Record<Category, number> = {
   ai: 46,
@@ -83,9 +85,16 @@ export function buildCurationFields(
 ): CurationFields {
   const stories = rankedItems.map((item) => toStoryCard(item, rawItems, now));
   const formalStories = stories.filter((story) => story.tier !== "noise");
+  const corePublisherCounts = new Map<string, number>();
   const topStories = selectDiverse(
     formalStories.filter((story) => story.tier === "must_know" && story.status === "confirmed"),
     10,
+    now,
+    [
+      { maxAgeMinutes: freshCoreWindowMinutes, slots: 3 },
+      { maxAgeMinutes: currentCoreWindowMinutes, slots: 5 },
+    ],
+    corePublisherCounts,
   );
   const topIds = new Set(topStories.map((story) => story.id));
   const importantStories = selectDiverse(
@@ -96,6 +105,12 @@ export function buildCurationFields(
         (story.tier === "must_know" || story.tier === "important"),
     ),
     30,
+    now,
+    [
+      { maxAgeMinutes: freshCoreWindowMinutes, slots: 3 },
+      { maxAgeMinutes: currentCoreWindowMinutes, slots: 15 },
+    ],
+    corePublisherCounts,
   );
   const selectedIds = new Set([...topStories, ...importantStories].map((story) => story.id));
   const watchlist = selectDiverse(
@@ -106,9 +121,21 @@ export function buildCurationFields(
         (story.status === "unverified" || story.importance.total >= 35),
     ),
     8,
+    now,
+    [
+      { maxAgeMinutes: freshCoreWindowMinutes, slots: 8 },
+      { maxAgeMinutes: currentCoreWindowMinutes, slots: 8 },
+    ],
   );
   const sections = buildSections(formalStories);
-  const singleSourceCount = formalStories.filter((story) => story.evidence.length === 1).length;
+  const singleSourceCount = formalStories.filter((story) => independentSourceCount(story) <= 1).length;
+  const coreStories = [...topStories, ...importantStories];
+  const publisherCounts = new Map<string, number>();
+  for (const story of coreStories) {
+    const publisher = story.evidence[0]?.sourceId ?? "unknown";
+    publisherCounts.set(publisher, (publisherCounts.get(publisher) ?? 0) + 1);
+  }
+  const weaklySourcedCoreCount = coreStories.filter(isWeaklySourcedCore).length;
 
   return {
     window: reportWindow(rawItems, now),
@@ -126,6 +153,9 @@ export function buildCurationFields(
       selectedEventCount: formalStories.length,
       duplicateEventRate: ratio(rawItems.length - stories.length, rawItems.length),
       singleSourceShare: ratio(singleSourceCount, formalStories.length),
+      singleIndependentSourceEventShare: ratio(singleSourceCount, formalStories.length),
+      maxPrimaryPublisherShare: ratio(Math.max(0, ...publisherCounts.values()), coreStories.length),
+      weaklySourcedCoreShare: ratio(weaklySourcedCoreCount, coreStories.length),
       rejectionReasons,
     },
   };
@@ -319,23 +349,89 @@ function stableEventId(item: RankedNewsItem, entities: string[]): string {
   return `event-${(hash >>> 0).toString(36)}`;
 }
 
-function selectDiverse(stories: StoryCard[], limit: number): StoryCard[] {
-  const selected: StoryCard[] = [];
-  const beatCounts = new Map<Category, number>();
-  const sourceCounts = new Map<string, number>();
-  const ordered = [...stories].sort((left, right) => right.importance.total - left.importance.total);
+interface FreshnessStage {
+  maxAgeMinutes: number;
+  slots: number;
+}
 
-  for (const story of ordered) {
+function selectDiverse(
+  stories: StoryCard[],
+  limit: number,
+  now: Date,
+  freshnessStages: FreshnessStage[] = [],
+  sourceCounts = new Map<string, number>(),
+): StoryCard[] {
+  const selected: StoryCard[] = [];
+  const selectedIds = new Set<string>();
+  const beatCounts = new Map<Category, number>();
+  const ordered = [...stories].sort((left, right) => {
+    const importanceDelta = right.importance.total - left.importance.total;
+    if (importanceDelta !== 0) return importanceDelta;
+    return storyActivityTimestamp(right) - storyActivityTimestamp(left);
+  });
+
+  const trySelect = (story: StoryCard): boolean => {
+    if (selectedIds.has(story.id)) return false;
     const primarySource = story.evidence[0]?.sourceId ?? "unknown";
-    if ((beatCounts.get(story.primaryBeat) ?? 0) >= 3) continue;
-    if ((sourceCounts.get(primarySource) ?? 0) >= 3) continue;
+    if ((beatCounts.get(story.primaryBeat) ?? 0) >= 3) return false;
+    if ((sourceCounts.get(primarySource) ?? 0) >= 3) return false;
     selected.push(story);
+    selectedIds.add(story.id);
     beatCounts.set(story.primaryBeat, (beatCounts.get(story.primaryBeat) ?? 0) + 1);
     sourceCounts.set(primarySource, (sourceCounts.get(primarySource) ?? 0) + 1);
+    return true;
+  };
+
+  for (const stage of freshnessStages) {
+    for (const story of ordered) {
+      if (selected.length >= Math.min(limit, stage.slots)) break;
+      if (!isStoryActiveWithin(story, now, stage.maxAgeMinutes)) continue;
+      trySelect(story);
+    }
+  }
+
+  for (const story of ordered) {
     if (selected.length >= limit) break;
+    trySelect(story);
   }
 
   return selected;
+}
+
+export function storyActivityTimestamp(story: Pick<StoryCard, "publishedAt" | "updatedAt" | "evidence">): number {
+  const timestamps = [
+    story.updatedAt,
+    story.publishedAt,
+    ...story.evidence.map((evidence) => evidence.publishedAt),
+  ]
+    .map((value) => Date.parse(value ?? ""))
+    .filter(Number.isFinite);
+  return timestamps.length > 0 ? Math.max(...timestamps) : Number.NEGATIVE_INFINITY;
+}
+
+export function isStoryActiveWithin(
+  story: Pick<StoryCard, "publishedAt" | "updatedAt" | "evidence">,
+  now: Date,
+  maxAgeMinutes: number,
+): boolean {
+  const activityAt = storyActivityTimestamp(story);
+  const ageMs = now.getTime() - activityAt;
+  return Number.isFinite(activityAt) && ageMs >= 0 && ageMs <= maxAgeMinutes * 60_000;
+}
+
+export function orderStoriesByActivity(stories: StoryCard[]): StoryCard[] {
+  return [...stories].sort((left, right) => storyActivityTimestamp(right) - storyActivityTimestamp(left));
+}
+
+function independentSourceCount(story: StoryCard): number {
+  return new Set(story.evidence.map((evidence) => evidence.independenceGroup)).size;
+}
+
+function isWeaklySourcedCore(story: StoryCard): boolean {
+  if (independentSourceCount(story) >= 2) return false;
+  return !story.evidence.some(
+    (evidence) => evidence.role === "original" && (sourceById.get(evidence.sourceId)?.credibility ?? 0) >= 80,
+  );
 }
 
 function buildSections(stories: StoryCard[]): StorySection[] {

@@ -185,12 +185,29 @@ export interface PublicQualitySummary {
   selectedEventCount: number;
   duplicateEventRate: number;
   singleSourceShare: number;
+  singleIndependentSourceEventShare: number;
+  maxPrimaryPublisherShare: number;
+  weaklySourcedCoreShare: number;
   rejectionReasons: Record<string, number>;
 }
 
 export interface StorySection {
   beat: Category;
   storyIds: string[];
+}
+
+export type ReportRefreshStatus = "fresh" | "stale" | "degraded" | "unavailable";
+
+export interface ReportRefreshMetadata {
+  reportId?: string | null;
+  intervalMinutes?: number;
+  status?: ReportRefreshStatus;
+  dataAsOf?: string | null;
+  newestContentAt?: string | null;
+  lastAttemptAt?: string | null;
+  lastSuccessAt?: string | null;
+  staleAfterMinutes?: number;
+  lastError?: string | null;
 }
 
 export interface DailyNewsReport {
@@ -207,4 +224,21 @@ export interface DailyNewsReport {
   items: RankedNewsItem[];
   sourceCount: number;
   notes: string[];
+  refresh?: ReportRefreshMetadata;
 }
+
+export interface WebReportRankingMetadata {
+  categories: Category[];
+  mayHavePaywall?: boolean;
+}
+
+export type WebDailyNewsReport = Omit<
+  DailyNewsReport,
+  "items" | "topStories" | "importantStories" | "watchlist"
+> & {
+  webView: 1;
+  topStoryIds: string[];
+  importantStoryIds: string[];
+  watchlistIds: string[];
+  rankingMetadata: Record<string, WebReportRankingMetadata>;
+};

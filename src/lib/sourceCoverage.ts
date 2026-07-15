@@ -17,13 +17,20 @@ export interface SourceHealthState {
   sourceId: string;
   consecutiveFailures: number;
   acceptedRate?: number;
-  circuitOpenUntil?: string;
+  circuitOpenUntil?: string | null;
+  lastAttemptAt?: string | null;
+  lastSuccessAt?: string | null;
+  nextDueAt?: string | null;
+  intervalMinutes?: number;
 }
 
 export interface CoverageSelectionOptions {
   health?: SourceHealthState[];
   now?: Date;
+  defaultIntervalMinutes?: number;
 }
+
+export const defaultSourceIntervalMinutes = 90;
 
 const mediaRoleScore: Record<MediaType, number> = {
   wire: 28,
@@ -43,15 +50,26 @@ export function selectSourcesForCoverage(
   const now = options.now ?? new Date();
   const healthById = new Map((options.health ?? []).map((state) => [state.sourceId, state]));
   const available = sources.filter((source) => source.enabled && !isCircuitOpen(healthById.get(source.source_id), now));
-  if (maxSources >= available.length) return available;
+  const defaultIntervalMinutes = positiveNumber(options.defaultIntervalMinutes) ?? defaultSourceIntervalMinutes;
+  const candidates =
+    options.health === undefined
+      ? available
+      : available.filter((source) => sourceDueAt(healthById.get(source.source_id), defaultIntervalMinutes) <= now.getTime());
+  if (options.health === undefined && maxSources >= candidates.length) return candidates;
 
   const selected: NewsSource[] = [];
   const beatCounts = new Map<Category, number>();
   const coveredRegions = new Set<string>();
 
-  while (selected.length < maxSources) {
-    const candidate = available
-      .filter((source) => !selected.includes(source))
+  while (selected.length < Math.min(maxSources, candidates.length)) {
+    const remaining = candidates.filter((source) => !selected.includes(source));
+    const earliestDueAt = Math.min(
+      ...remaining.map((source) => sourceDueAt(healthById.get(source.source_id), defaultIntervalMinutes)),
+    );
+    const candidate = remaining
+      .filter(
+        (source) => sourceDueAt(healthById.get(source.source_id), defaultIntervalMinutes) === earliestDueAt,
+      )
       .map((source) => ({ source, score: coverageScore(source, beatCounts, coveredRegions, healthById.get(source.source_id)) }))
       .sort((left, right) => right.score - left.score || left.source.source_id.localeCompare(right.source.source_id))[0]?.source;
     if (!candidate) break;
@@ -100,4 +118,27 @@ function isCircuitOpen(state: SourceHealthState | undefined, now: Date): boolean
   if (!state?.circuitOpenUntil) return false;
   const until = Date.parse(state.circuitOpenUntil);
   return Number.isFinite(until) && until > now.getTime();
+}
+
+function sourceDueAt(state: SourceHealthState | undefined, defaultIntervalMinutes: number): number {
+  if (!state) return Number.NEGATIVE_INFINITY;
+
+  const explicitNextDueAt = parseDate(state.nextDueAt);
+  if (explicitNextDueAt !== undefined) return explicitNextDueAt;
+
+  const lastAttemptAt = parseDate(state.lastAttemptAt);
+  if (lastAttemptAt === undefined) return Number.NEGATIVE_INFINITY;
+
+  const intervalMinutes = positiveNumber(state.intervalMinutes) ?? defaultIntervalMinutes;
+  return lastAttemptAt + intervalMinutes * 60_000;
+}
+
+function parseDate(value: string | null | undefined): number | undefined {
+  if (!value) return undefined;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+}
+
+function positiveNumber(value: number | undefined): number | undefined {
+  return value !== undefined && Number.isFinite(value) && value > 0 ? value : undefined;
 }

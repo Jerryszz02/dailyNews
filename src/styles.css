@@ -146,37 +146,133 @@ h1 {
 }
 
 .status-panel {
-  align-items: center;
   color: #526577;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 10px;
-  justify-content: flex-end;
+  justify-items: end;
+  width: min(620px, 55vw);
 }
 
-.status-panel div {
-  align-items: center;
-  display: flex;
-  gap: 6px;
+.freshness-grid {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  width: 100%;
+}
+
+.freshness-grid > div {
+  background: #f7fafc;
+  border: 1px solid #d7e4eb;
+  border-radius: 7px;
+  min-width: 0;
+  padding: 8px 9px;
+}
+
+.freshness-grid dt {
+  color: #708191;
+  font-size: 10px;
+  font-weight: 800;
+  margin-bottom: 3px;
+}
+
+.freshness-grid dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.freshness-grid time,
+.freshness-grid dd > span {
+  color: #243847;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.icon-button {
+.freshness-grid small {
+  align-items: center;
+  color: #758695;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 10px;
+  gap: 4px;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.inferred-badge {
+  background: #fff5da;
+  border: 1px solid #ead39b;
+  border-radius: 999px;
+  color: #76510d;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+}
+
+.reload-button {
   align-items: center;
   background: #f5fafc;
   border: 1px solid #cddde7;
   border-radius: 8px;
   color: #1f657a;
   cursor: pointer;
-  display: inline-flex;
-  height: 34px;
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 7px;
   justify-content: center;
-  width: 38px;
+  min-height: 34px;
+  padding: 0 12px;
 }
 
-.icon-button:disabled {
+.reload-button:disabled {
   cursor: progress;
   opacity: 0.7;
+}
+
+.freshness-banner {
+  align-items: flex-start;
+  background: #fff7e8;
+  border: 1px solid #e5c37c;
+  border-radius: 8px;
+  color: #76510d;
+  display: flex;
+  gap: 10px;
+  margin: 0 auto 12px;
+  max-width: 1280px;
+  padding: 12px 14px;
+}
+
+.freshness-banner.degraded {
+  background: #fff1ef;
+  border-color: #e6a39a;
+  color: #8a3026;
+}
+
+.freshness-banner.unavailable {
+  background: #f2f4f7;
+  border-color: #cbd3dc;
+  color: #495866;
+}
+
+.freshness-banner svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.freshness-banner strong {
+  display: block;
+  font-size: 13px;
+}
+
+.freshness-banner p {
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 3px 0 0;
 }
 
 .spin {
@@ -578,6 +674,51 @@ select {
   max-width: 1280px;
 }
 
+.latest-updates {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.28fr) 1fr;
+  gap: 24px;
+  padding: 22px 24px;
+  border: 1px solid #d7e2ea;
+  border-radius: 10px;
+  background: #f8fbfd;
+}
+
+.latest-updates h2 {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+}
+
+.latest-updates ol {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.latest-updates li {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.latest-updates time {
+  color: #72818f;
+  font-variant-numeric: tabular-nums;
+}
+
+.latest-updates a {
+  color: #17202a;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.latest-updates a:hover {
+  color: #087b98;
+}
+
 .briefing-summary {
   align-items: center;
   background: #143f4b;
@@ -883,7 +1024,8 @@ select {
   }
 
   .status-panel {
-    justify-content: flex-start;
+    justify-items: start;
+    width: 100%;
   }
 
   .briefing-summary {
@@ -897,12 +1039,34 @@ select {
 }
 
 @media (max-width: 640px) {
+  .latest-updates {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .latest-updates li {
+    grid-template-columns: 68px minmax(0, 1fr);
+  }
+
+  .latest-updates .event-status {
+    grid-column: 2;
+    justify-self: start;
+  }
+
   .workspace {
     padding: 14px;
   }
 
   .hero-panel {
     padding: 16px;
+  }
+
+  .freshness-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reload-button {
+    width: 100%;
   }
 
   h1 {

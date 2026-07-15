@@ -1,7 +1,5 @@
 import {
-  CalendarDays,
   CircleAlert,
-  Clock3,
   Eye,
   Newspaper,
   RefreshCw,
@@ -11,15 +9,25 @@ import {
   Target,
   Zap,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { defaultPreferences } from "./config/preferences";
 import { newsSources } from "./config/sources";
 import { firecrawlSnapshotNews } from "./data/firecrawlSnapshot";
 import { buildDailyReport } from "./lib/newsPipeline";
+import { orderStoriesByActivity, storyActivityTimestamp } from "./lib/curation";
 import { rankNews } from "./lib/scoring";
 import { normalizeText } from "./lib/text";
-import type { Category, DailyNewsReport, PreferenceStrength, RawNewsItem, StoryCard, UserPreferences } from "./types";
+import { hydrateWebDailyNewsReport, isWebDailyNewsReport } from "./lib/webReport";
+import type {
+  Category,
+  DailyNewsReport,
+  PreferenceStrength,
+  RawNewsItem,
+  ReportRefreshStatus,
+  StoryCard,
+  UserPreferences,
+} from "./types";
 
 const categories: { id: Category; label: string }[] = [
   { id: "ai", label: "AI" },
@@ -45,7 +53,27 @@ type LoadState = "idle" | "loading" | "ready" | "error";
 const initialVisibleCount = 18;
 const visibleStep = 18;
 const preferencesStorageKey = "daily-news-preferences";
-const refreshIntervalMs = 60_000;
+const refreshIntervalMs = 30_000;
+const reportCacheWindowMs = 30_000;
+const reportRequestTimeoutMs = 8_000;
+const defaultStaleAfterMinutes = 30;
+const snapshotFallbackReport = buildDailyReport(
+  firecrawlSnapshotNews,
+  defaultPreferences,
+  snapshotReferenceDate(firecrawlSnapshotNews),
+);
+
+export interface ReportFreshnessView {
+  status: ReportRefreshStatus;
+  reportGeneratedAt: string | null;
+  newestContentAt: string | null;
+  lastSuccessAt: string | null;
+  pageCheckedAt: string | null;
+  staleAfterMinutes: number;
+  newestContentWasInferred: boolean;
+  lastSuccessWasInferred: boolean;
+  statusWasInferred: boolean;
+}
 
 export function App() {
   const [loadedReport, setLoadedReport] = useState<DailyNewsReport | null>(null);
@@ -54,35 +82,54 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
   const [loadState, setLoadState] = useState<LoadState>("idle");
-  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
+  const [pageCheckedAt, setPageCheckedAt] = useState<string | null>(null);
   const [loadError, setLoadError] = useState("");
+  const refreshInFlight = useRef(false);
+  const loadedReportRef = useRef<DailyNewsReport | null>(null);
 
-  const refreshNews = useCallback(async () => {
-    setLoadState((current) => (current === "ready" ? current : "loading"));
+  const refreshNews = useCallback(async (bypassCache = false) => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    setLoadState("loading");
 
-    const apiReport = await readReport("/api/news");
-    if (apiReport) {
-      setLoadedReport(apiReport);
-      setLastLoadedAt(new Date().toISOString());
-      setLoadError("");
-      setLoadState("ready");
-      return;
+    try {
+      const apiReport = await readReport(reportApiUrl(Date.now(), bypassCache));
+      if (apiReport) {
+        if (shouldReplaceReport(loadedReportRef.current, apiReport)) {
+          loadedReportRef.current = apiReport;
+          setLoadedReport(apiReport);
+        }
+        setPageCheckedAt(new Date().toISOString());
+        setLoadError("");
+        setLoadState("ready");
+        return;
+      }
+
+      if (loadedReportRef.current) {
+        setPageCheckedAt(new Date().toISOString());
+        setLoadError("实时接口暂不可用，继续显示最近成功读取的报告。");
+        setLoadState("error");
+        return;
+      }
+
+      const staticReport = await readReport("/daily-news.json");
+      if (staticReport) {
+        loadedReportRef.current = staticReport;
+        setLoadedReport(staticReport);
+        setPageCheckedAt(new Date().toISOString());
+        setLoadError("实时接口暂不可用，当前显示静态兜底数据。");
+        setLoadState("ready");
+        return;
+      }
+
+      loadedReportRef.current = snapshotFallbackReport;
+      setLoadedReport(snapshotFallbackReport);
+      setPageCheckedAt(new Date().toISOString());
+      setLoadError("实时接口和静态新闻都暂不可用，当前显示本地兜底数据。");
+      setLoadState("error");
+    } finally {
+      refreshInFlight.current = false;
     }
-
-    const staticReport = await readReport("/daily-news.json");
-    if (staticReport) {
-      setLoadedReport(staticReport);
-      setLastLoadedAt(new Date().toISOString());
-      setLoadError("实时接口暂不可用，当前显示静态兜底数据。");
-      setLoadState("ready");
-      return;
-    }
-
-    const report = buildDailyReport(firecrawlSnapshotNews, defaultPreferences);
-    setLoadedReport(report);
-    setLastLoadedAt(new Date().toISOString());
-    setLoadError("实时接口和静态新闻都暂不可用，当前显示本地兜底数据。");
-    setLoadState("error");
   }, []);
 
   useEffect(() => {
@@ -101,8 +148,10 @@ export function App() {
     setVisibleCount(initialVisibleCount);
   }, [activeView, searchQuery, preferences]);
 
-  const fallbackReport = useMemo(() => buildDailyReport(firecrawlSnapshotNews, defaultPreferences), []);
+  const fallbackReport = snapshotFallbackReport;
   const report = loadedReport ?? fallbackReport;
+  const freshness = resolveReportFreshness(report, pageCheckedAt);
+  const freshnessStatus = loadError ? "degraded" : freshness.status;
   const personalizedOrder = useMemo(
     () => new Map(rankNews(report.items, preferences).map((item, index) => [item.id, index])),
     [preferences, report.items],
@@ -153,19 +202,26 @@ export function App() {
             <p className="hero-subtitle">事件级聚合 · 多来源证据 · 重要性分层</p>
           </div>
           <div className="status-panel">
-            <div>
-              <CalendarDays size={16} />
-              <span>{formatDay(report.generatedAt)}</span>
-            </div>
-            <div>
-              <Clock3 size={16} />
-              <span>{lastLoadedAt ? formatRelativeTime(lastLoadedAt) : "等待加载"}</span>
-            </div>
-            <button className="icon-button" disabled={loadState === "loading"} onClick={() => void refreshNews()} title="刷新新闻" type="button">
+            <dl className="freshness-grid">
+              <FreshnessTime label="报告生成" value={freshness.reportGeneratedAt} />
+              <FreshnessTime label="最新新闻" value={freshness.newestContentAt} wasInferred={freshness.newestContentWasInferred} />
+              <FreshnessTime label="上次成功检查" value={freshness.lastSuccessAt} wasInferred={freshness.lastSuccessWasInferred} />
+              <FreshnessTime label="页面检查" value={freshness.pageCheckedAt} />
+            </dl>
+            <button
+              className="reload-button"
+              disabled={loadState === "loading"}
+              onClick={() => void refreshNews(true)}
+              title="只重新读取已生成的报告，不会从浏览器触发新闻采集"
+              type="button"
+            >
               <RefreshCw className={loadState === "loading" ? "spin" : ""} size={17} />
+              <span>{loadState === "loading" ? "正在加载报告" : "重新加载报告"}</span>
             </button>
           </div>
         </header>
+
+        <FreshnessBanner freshness={freshness} status={freshnessStatus} />
 
         {activeView === "settings" ? (
           <PreferencesPanel preferences={preferences} setPreferences={setPreferences} />
@@ -234,6 +290,55 @@ export function App() {
   );
 }
 
+function FreshnessTime({ label, value, wasInferred = false }: { label: string; value: string | null; wasInferred?: boolean }) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd>
+        {value ? (
+          <>
+            <time dateTime={value} title={formatFullDateTime(value)}>{formatCompactDateTime(value)}</time>
+            <small>
+              {formatRelativeTime(value)}
+              {wasInferred ? <span className="inferred-badge">旧报告推算</span> : null}
+            </small>
+          </>
+        ) : (
+          <>
+            <span>时间未知</span>
+            <small>缺少时间信息</small>
+          </>
+        )}
+      </dd>
+    </div>
+  );
+}
+
+function FreshnessBanner({ freshness, status }: { freshness: ReportFreshnessView; status: ReportRefreshStatus }) {
+  if (status === "fresh") return null;
+
+  const heading = status === "stale" ? "当前报告已过期" : status === "degraded" ? "实时更新服务异常" : "暂时无法确认报告状态";
+  const message =
+    status === "stale"
+      ? `当前报告内容时间已超过 ${freshness.staleAfterMinutes} 分钟，页面继续保留最后一份可用报告。`
+      : status === "degraded"
+        ? "页面正在显示最后一份可用报告，重新加载页面不会触发新闻采集。"
+        : "目前没有足够的刷新元数据，请稍后重新加载报告。";
+
+  return (
+    <section className={`freshness-banner ${status}`} role="status">
+      <CircleAlert aria-hidden="true" size={20} />
+      <div>
+        <strong>{heading}</strong>
+        <p>
+          {message}
+          {freshness.statusWasInferred ? " 状态由旧报告时间推算。" : ""}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function BriefingHome({ report, preferences, query }: { report: DailyNewsReport; preferences: UserPreferences; query: string }) {
   const itemOrder = new Map(rankNews(report.items, preferences).map((item, index) => [item.id, index]));
   const topStories = filterStories(report.topStories, query);
@@ -244,6 +349,7 @@ function BriefingHome({ report, preferences, query }: { report: DailyNewsReport;
     query,
   );
   const watchlist = filterStories(report.watchlist, query);
+  const recentStories = orderStoriesByActivity([...topStories, ...importantStories, ...watchlist]).slice(0, 3);
   const visibleStoryCount = topStories.length + importantStories.length + watchlist.length;
 
   return (
@@ -265,6 +371,28 @@ function BriefingHome({ report, preferences, query }: { report: DailyNewsReport;
       </section>
 
       {visibleStoryCount === 0 ? <div className="empty-state">没有匹配当前搜索的事件。</div> : null}
+
+      {recentStories.length > 0 ? (
+        <section className="latest-updates" aria-labelledby="latest-updates-title">
+          <div>
+            <p className="eyebrow">按最新证据时间</p>
+            <h2 id="latest-updates-title">实时更新</h2>
+          </div>
+          <ol>
+            {recentStories.map((story) => {
+              const activityAt = storyActivityTimestamp(story);
+              const activityAtValue = Number.isFinite(activityAt) ? new Date(activityAt).toISOString() : null;
+              return (
+                <li key={story.id}>
+                  <time dateTime={activityAtValue ?? undefined}>{activityAtValue ? formatCompactDateTime(activityAtValue) : "时间未知"}</time>
+                  <a href={`#story-${story.id}`}>{story.title}</a>
+                  <span className={`event-status ${story.status}`}>{storyStatusLabel(story.status)}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ) : null}
 
       {topStories.length > 0 ? (
         <section className="story-section must-know-section" aria-labelledby="must-know-title">
@@ -324,7 +452,7 @@ function EventCard({ story, variant }: { story: StoryCard; variant: "lead" | "co
   const facts = story.keyFacts.filter((fact) => normalizeText(fact) !== normalizeText(story.whatHappened)).slice(0, 2);
 
   return (
-    <article className={`event-card ${variant}`}>
+    <article className={`event-card ${variant}`} id={`story-${story.id}`}>
       <div className="event-meta">
         <span className={`event-status ${story.status}`}>{storyStatusLabel(story.status)}</span>
         <span>{categoryLabel(story.primaryBeat)}</span>
@@ -417,33 +545,129 @@ function PreferencesPanel({
   );
 }
 
-async function readReport(url: string): Promise<DailyNewsReport | null> {
+export async function readReport(url: string, timeoutMs = reportRequestTimeoutMs): Promise<DailyNewsReport | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) return null;
-    const report = (await response.json()) as Partial<DailyNewsReport>;
-    if (!Array.isArray(report.items) || report.items.length === 0 || typeof report.generatedAt !== "string") return null;
+    const report = (await response.json()) as unknown;
+    if (isWebDailyNewsReport(report)) return hydrateWebDailyNewsReport(report);
+    if (!report || typeof report !== "object") return null;
+    const candidate = report as Partial<DailyNewsReport>;
+    if (!Array.isArray(candidate.items) || candidate.items.length === 0 || typeof candidate.generatedAt !== "string") return null;
+    const generatedAt = Date.parse(candidate.generatedAt);
+    if (!Number.isFinite(generatedAt)) return null;
     if (
-      report.version === 2 &&
-      Array.isArray(report.stories) &&
-      Array.isArray(report.topStories) &&
-      Array.isArray(report.importantStories) &&
-      Array.isArray(report.watchlist) &&
-      Array.isArray(report.sections) &&
-      report.coverage &&
-      report.quality
+      candidate.version === 2 &&
+      Array.isArray(candidate.stories) &&
+      Array.isArray(candidate.topStories) &&
+      Array.isArray(candidate.importantStories) &&
+      Array.isArray(candidate.watchlist) &&
+      Array.isArray(candidate.sections) &&
+      candidate.coverage &&
+      candidate.quality
     ) {
-      return report as DailyNewsReport;
+      return candidate as DailyNewsReport;
     }
-    const generatedAt = Date.parse(report.generatedAt);
-    return buildDailyReport(
-      report.items as RawNewsItem[],
+    const upgradedReport = buildDailyReport(
+      candidate.items as RawNewsItem[],
       defaultPreferences,
-      Number.isFinite(generatedAt) ? new Date(generatedAt) : new Date(),
+      new Date(generatedAt),
     );
+    upgradedReport.refresh = candidate.refresh;
+    return upgradedReport;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
+}
+
+export function shouldReplaceReport(current: DailyNewsReport | null, candidate: DailyNewsReport): boolean {
+  if (!current) return true;
+  return reportDataTimestamp(candidate) >= reportDataTimestamp(current);
+}
+
+function reportDataTimestamp(report: Pick<DailyNewsReport, "generatedAt" | "refresh">): number {
+  return Date.parse(validTimestamp(report.refresh?.dataAsOf) ?? report.generatedAt);
+}
+
+export function reportApiUrl(nowMs: number, bypassCache = false): string {
+  if (bypassCache) return "/api/news?view=web&reload=1";
+  return `/api/news?view=web&window=${Math.floor(nowMs / reportCacheWindowMs)}`;
+}
+
+export function resolveReportFreshness(
+  report: Pick<DailyNewsReport, "generatedAt" | "items" | "refresh">,
+  pageCheckedAt: string | null,
+  nowMs = Date.now(),
+): ReportFreshnessView {
+  const reportGeneratedAt = validTimestamp(report.generatedAt);
+  const explicitNewestContentAt = validTimestamp(report.refresh?.newestContentAt);
+  const newestContentAt = explicitNewestContentAt ?? newestPublishedAt(report.items);
+  const dataAsOf = validTimestamp(report.refresh?.dataAsOf) ?? reportGeneratedAt;
+  const explicitLastSuccessAt = validTimestamp(report.refresh?.lastSuccessAt);
+  const lastSuccessAt = explicitLastSuccessAt ?? reportGeneratedAt;
+  const configuredStaleAfterMinutes = report.refresh?.staleAfterMinutes;
+  const staleAfterMinutes =
+    typeof configuredStaleAfterMinutes === "number" && Number.isFinite(configuredStaleAfterMinutes) && configuredStaleAfterMinutes > 0
+      ? configuredStaleAfterMinutes
+      : defaultStaleAfterMinutes;
+  const inferredStatus = inferRefreshStatus(dataAsOf, staleAfterMinutes, nowMs);
+  const explicitStatus = isReportRefreshStatus(report.refresh?.status) ? report.refresh.status : null;
+  const explicitFreshIsStale = explicitStatus === "fresh" && inferredStatus === "stale";
+
+  return {
+    status: explicitFreshIsStale ? "stale" : (explicitStatus ?? inferredStatus),
+    reportGeneratedAt,
+    newestContentAt,
+    lastSuccessAt,
+    pageCheckedAt: validTimestamp(pageCheckedAt),
+    staleAfterMinutes,
+    newestContentWasInferred: !explicitNewestContentAt && Boolean(newestContentAt),
+    lastSuccessWasInferred: !explicitLastSuccessAt && Boolean(lastSuccessAt),
+    statusWasInferred: !explicitStatus || explicitFreshIsStale,
+  };
+}
+
+function newestPublishedAt(items: DailyNewsReport["items"]): string | null {
+  let newest: string | null = null;
+  let newestMs = Number.NEGATIVE_INFINITY;
+
+  for (const item of items) {
+    const publishedAt = validTimestamp(item.publishedAt);
+    if (!publishedAt) continue;
+    const publishedAtMs = Date.parse(publishedAt);
+    if (publishedAtMs > newestMs) {
+      newest = publishedAt;
+      newestMs = publishedAtMs;
+    }
+  }
+
+  return newest;
+}
+
+function inferRefreshStatus(dataAsOf: string | null, staleAfterMinutes: number, nowMs: number): ReportRefreshStatus {
+  if (!dataAsOf) return "unavailable";
+  return nowMs - Date.parse(dataAsOf) > staleAfterMinutes * 60_000 ? "stale" : "fresh";
+}
+
+function isReportRefreshStatus(value: unknown): value is ReportRefreshStatus {
+  return value === "fresh" || value === "stale" || value === "degraded" || value === "unavailable";
+}
+
+function validTimestamp(value: unknown): string | null {
+  return typeof value === "string" && Number.isFinite(Date.parse(value)) ? value : null;
+}
+
+function snapshotReferenceDate(items: RawNewsItem[]): Date {
+  const timestamps = items
+    .flatMap((item) => [item.extractedAt, item.publishedAt])
+    .map((value) => Date.parse(value ?? ""))
+    .filter(Number.isFinite);
+  return new Date(timestamps.length > 0 ? Math.max(...timestamps) : 0);
 }
 
 function filterStories(stories: StoryCard[], query: string): StoryCard[] {
@@ -515,17 +739,30 @@ function formatStoryAge(story: StoryCard): string {
   return formatRelativeTime(story.updatedAt || story.publishedAt || new Date().toISOString());
 }
 
-function formatDay(value: string): string {
+function formatCompactDateTime(value: string): string {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "时间未知";
   return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "long",
+    month: "numeric",
     day: "numeric",
-  }).format(new Date(value));
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(timestamp);
 }
 
-function formatRelativeTime(value: string): string {
-  const ageMs = Date.now() - Date.parse(value);
-  if (!Number.isFinite(ageMs)) return "刚刚";
+function formatFullDateTime(value: string): string {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "时间未知";
+  return new Intl.DateTimeFormat("zh-CN", {
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(timestamp);
+}
+
+export function formatRelativeTime(value: string, nowMs = Date.now()): string {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "时间未知";
+  const ageMs = nowMs - timestamp;
   const minutes = Math.max(0, Math.round(ageMs / 60_000));
   if (minutes < 1) return "刚刚";
   if (minutes < 60) return `${minutes}分钟前`;

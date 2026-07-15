@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { defaultPreferences } from "../src/config/preferences.js";
 import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot.js";
 import { buildDailyReport } from "../src/lib/newsPipeline.js";
+import { freshCoreWindowMinutes, isStoryActiveWithin } from "../src/lib/curation.js";
 import type { DailyNewsReport, RankedNewsItem, RawNewsItem } from "../src/types";
 
 export interface NewsReportStore {
@@ -27,21 +28,21 @@ export class InMemoryNewsReportStore implements NewsReportStore {
   }
 }
 
-export function readBundledReport(): DailyNewsReport {
-  const filePath = new URL("../public/daily-news.json", import.meta.url);
-  if (!existsSync(filePath)) return buildDailyReport(firecrawlSnapshotNews, defaultPreferences);
+export function readBundledReport(filePath: URL | string = new URL("../public/daily-news.json", import.meta.url)): DailyNewsReport {
+  if (!existsSync(filePath)) return buildSnapshotReport();
 
   try {
     const stored = JSON.parse(readFileSync(filePath, "utf8")) as Partial<DailyNewsReport>;
     if (isV2Report(stored)) return stored;
     if (Array.isArray(stored.items) && stored.items.length > 0) {
-      return buildDailyReport(expandLegacyItems(stored.items), defaultPreferences, reportDate(stored.generatedAt));
+      const items = expandLegacyItems(stored.items);
+      return buildDailyReport(items, defaultPreferences, reportDate(stored.generatedAt, items));
     }
   } catch {
     // Fall through to the checked-in TypeScript snapshot.
   }
 
-  return buildDailyReport(firecrawlSnapshotNews, defaultPreferences);
+  return buildSnapshotReport();
 }
 
 export function expandLegacyItems(items: RankedNewsItem[] | RawNewsItem[]): RawNewsItem[] {
@@ -78,7 +79,8 @@ export function passesPublishGate(report: DailyNewsReport, previous: DailyNewsRe
     report.sourceCount > 0 &&
     selectedCount > 0 &&
     report.quality.acceptedCandidateCount > 0 &&
-    report.quality.rejectedCandidateCount < report.quality.candidateCount;
+    report.quality.rejectedCandidateCount < report.quality.candidateCount &&
+    selectsFreshCoreWhenAvailable(report);
   if (!passesAbsoluteGate || !previous) return passesAbsoluteGate;
 
   const previousCoreCount = previous.topStories.length + previous.importantStories.length;
@@ -95,10 +97,25 @@ export function passesPublishGate(report: DailyNewsReport, previous: DailyNewsRe
   });
 }
 
+function selectsFreshCoreWhenAvailable(report: DailyNewsReport): boolean {
+  const generatedAt = new Date(report.generatedAt);
+  if (!Number.isFinite(generatedAt.getTime())) return false;
+  const freshCoreCandidates = report.stories.filter(
+    (story) =>
+      story.status === "confirmed" &&
+      (story.tier === "must_know" || story.tier === "important") &&
+      isStoryActiveWithin(story, generatedAt, freshCoreWindowMinutes),
+  );
+  if (freshCoreCandidates.length === 0) return true;
+  const selectedIds = new Set([...report.topStories, ...report.importantStories].map((story) => story.id));
+  return freshCoreCandidates.some((story) => selectedIds.has(story.id));
+}
+
 function isV2Report(value: Partial<DailyNewsReport>): value is DailyNewsReport {
   return (
     value.version === 2 &&
     typeof value.generatedAt === "string" &&
+    Number.isFinite(Date.parse(value.generatedAt)) &&
     Array.isArray(value.items) &&
     Array.isArray(value.stories) &&
     Array.isArray(value.topStories) &&
@@ -110,7 +127,19 @@ function isV2Report(value: Partial<DailyNewsReport>): value is DailyNewsReport {
   );
 }
 
-function reportDate(value: string | undefined): Date {
+function reportDate(value: string | undefined, items: RawNewsItem[]): Date {
   const timestamp = Date.parse(value ?? "");
-  return Number.isFinite(timestamp) ? new Date(timestamp) : new Date();
+  return Number.isFinite(timestamp) ? new Date(timestamp) : snapshotReferenceDate(items);
+}
+
+function buildSnapshotReport(): DailyNewsReport {
+  return buildDailyReport(firecrawlSnapshotNews, defaultPreferences, snapshotReferenceDate(firecrawlSnapshotNews));
+}
+
+function snapshotReferenceDate(items: RawNewsItem[]): Date {
+  const timestamps = items
+    .flatMap((item) => [item.publishedAt, item.extractedAt])
+    .map((value) => Date.parse(value ?? ""))
+    .filter(Number.isFinite);
+  return new Date(timestamps.length > 0 ? Math.max(...timestamps) : 0);
 }

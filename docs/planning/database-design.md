@@ -4,9 +4,9 @@
 
 定义新闻来源与选题重构所需的逻辑持久状态，使采集任务、事件聚类、持续更新、last-known-good 报告和质量审计不再依赖单个进程内存。
 
-本文定义逻辑实体、生命周期和一致性要求，不锁定数据库供应商。生产存储供应商、连接方式和成本边界均为 `待确认`。
+本文定义逻辑实体、生命周期和一致性要求，并选定 Supabase 托管 PostgreSQL 作为 Phase 2 的生产持久层。数据库结构只通过 `supabase/migrations/` 迁移文件维护；服务端使用 Supabase secret key，浏览器不直连这些表。
 
-当前实现状态：`scripts/reportStore.ts` 已实现 bundled JSON + 内存 latest pointer、V1→V2 升级和发布质量门槛；`DailyNewsReportV2` 已把事件与 evidence 持久化在静态报告中。候选、来源健康、运行历史和多版本报告尚未接入外部数据库，因此本文其余实体仍是下一阶段逻辑设计，不应当作已部署表结构。
+实施前基线：`scripts/reportStore.ts` 只有 bundled JSON + 单进程内存 latest pointer，Serverless 实例之间不能共享刷新结果；`DailyNewsReportV2` 只把事件与 evidence 保存在静态报告中。目标状态是由 Supabase 持久化来源调度、候选、刷新运行、不可变报告和 runtime pointer，API 冷启动也能读取同一个 last-known-good。
 
 ## 适用范围
 
@@ -29,11 +29,12 @@
 - 不保存付费墙正文、登录后内容或完整转载文章。
 - 不保存 secret、Cookie、请求头或翻译服务凭据。
 - 不引入用户身份数据。
-- 不在规划阶段决定 PostgreSQL、SQLite、KV、Blob 或其他供应商。
+- 不开放 Supabase Auth、用户表或浏览器端数据库访问；本阶段所有数据库操作均为服务端运行时操作。
+- 不把 Supabase 当作全文新闻归档、内容管理后台或用户行为数据库。
 
 ## 逻辑实体
 
-### `source_state`
+### `daily_news.source_state`
 
 记录来源配置的运行状态，不复制代码中的完整来源定义。
 
@@ -42,13 +43,14 @@
 | `source_id` | 对应来源注册表的稳定 ID |
 | `last_attempt_at` | 最近一次采集尝试 |
 | `last_success_at` | 最近一次成功 |
+| `next_due_at` | 持久化公平轮转游标；到期来源优先被下一轮选择 |
 | `consecutive_failures` | 连续失败次数 |
 | `circuit_open_until` | 熔断截止时间 |
 | `latency_ms_p50/p95` | 滚动延迟指标 |
 | `accepted_rate` | 候选通过质量门槛的比例 |
 | `last_error_code` | 归一化错误类型，不保存敏感错误正文 |
 
-### `article_candidate`
+### `daily_news.article_candidate`
 
 保存公开文章的最小可审计元数据。
 
@@ -97,23 +99,23 @@
 | `conflicts_with_claims` | 冲突事实 ID |
 | `added_at` | 加入事件时间 |
 
-### `selection_run`
+### `daily_news.refresh_run`
 
 记录一次选题运行及其可复现输入输出。
 
 | 字段 | 含义 |
 | --- | --- |
 | `run_id` | 运行 ID |
-| `pipeline_version` | V1/V2 或具体版本 |
+| `trigger` / `pipeline_version` | cron/manual/local 与具体管线版本 |
 | `window_from/to` | 候选时间窗口 |
 | `started_at/finished_at` | 耗时 |
 | `input_candidate_count` / `event_count` | 规模 |
 | `filter_counts` | 各拒绝原因数量 |
 | `quality_metrics` | 覆盖、重复、来源集中度等 |
-| `status` | passed/rejected/failed |
+| `status` | running/published/rejected/failed |
 | `rejection_reasons` | 未发布原因 |
 
-### `report_snapshot`
+### `daily_news.report_snapshot`
 
 保存不可变的日报版本。
 
@@ -129,14 +131,30 @@
 
 报告必须先写入并验证完整，再通过原子操作切换 latest。失败运行不能覆盖上次成功报告。
 
+### `daily_news.runtime_state`
+
+单行运行时状态，承担跨实例协调和 latest pointer。
+
+| 字段 | 含义 |
+| --- | --- |
+| `singleton_id` | 固定主键，防止出现多个 active runtime |
+| `latest_report_id` | 当前 last-known-good，不得指向未完成快照 |
+| `last_attempt_at` / `last_success_at` | 持久化健康语义，不依赖函数进程 |
+| `active_run_id` / `lease_expires_at` | 刷新租约；并发或重复调度只能有一个拥有者 |
+| `last_error_code` | 归一化最近错误，不保存敏感正文 |
+
+数据库函数负责三项原子操作：`daily_news_try_start_refresh` 获取带过期时间的租约，`daily_news_publish_refresh` 在同一事务写入快照并切换 latest，`daily_news_fail_refresh` 结束失败运行但保留旧 latest。函数只授权服务端角色执行。
+
 ## 索引和约束
 
-- `article_candidate(canonical_url, source_id)` 唯一；
-- `article_candidate(published_at)` 支持时间窗口扫描；
+- `daily_news.article_candidate(canonical_url, source_id)` 唯一；
+- `daily_news.article_candidate(published_at)` 支持 72 小时窗口扫描；
 - `story_event(last_updated_at, status)` 支持持续事件更新；
 - `story_event(primary_beat, importance_tier)` 支持选题和覆盖检查；
 - `story_evidence(event_id)` 和 `story_evidence(candidate_id)` 支持双向追溯；
-- `report_snapshot(generated_at)` 支持回滚和历史报告；
+- `daily_news.source_state(next_due_at, last_attempt_at)` 支持公平轮转；
+- `daily_news.report_snapshot(generated_at)` 支持回滚和历史报告；
+- `daily_news.runtime_state` 只允许一行；
 - latest report 切换必须具备原子性；
 - 删除候选前必须保证已发布报告仍保留必要的来源 URL 和归因信息。
 
@@ -167,29 +185,35 @@
 
 ## 迁移和回滚
 
-1. Phase 0–2 使用 shadow store，不改变 V1 报告；
-2. 从现有 `public/daily-news.json` 导入一份只读基准 snapshot，不把它伪装为候选源数据；
-3. V2 事件和报告使用独立 schema/version；
-4. V2 API 通过兼容 `items` 字段服务旧前端；
-5. 回滚只需把 latest pointer 切回最后一个 V1/兼容报告，并停止 V2 调度；
-6. 删除 V1 结构前必须确认观察期内无消费者依赖。
+1. 在 `supabase/migrations/` 新增可重复审查的 SQL；先执行本地 reset/lint，再对目标项目执行 `db push --dry-run` 和 `db push`；
+2. 从现有 `public/daily-news.json` 导入一份基准 snapshot，但保留它真实的 `generatedAt`，不把旧内容伪装成新候选；
+3. 先以 shadow 模式写 Supabase，验证跨实例读取和原子发布，再让 `/api/news` 优先读取 Supabase；
+4. 通过兼容 `items` 字段服务现有前端；失败时仍可退回 bundled last-known-good，但响应必须标记 stale/degraded；
+5. 回滚时先停调度，再把 latest pointer 切回上一成功报告或恢复 bundled-first 读取；迁移只前向修复，不在生产执行破坏性 down migration；
+6. 所有远端 schema 变更必须回写迁移文件，禁止 Dashboard 手工改表后不留版本记录。
 
 ## 验收标准
 
-- API 冷启动可读取 last-known-good 报告；
+- 两个独立进程/Serverless 实例读取到同一个 `latest_report_id`；新报告发布后冷实例在 60 秒内可见；
 - 同一候选重复采集不会产生重复记录；
-- 同一事件可跨刷新追加 evidence；
-- 质量失败的运行不会替换 latest；
+- 同一事件可跨刷新追加 evidence，候选聚合窗口为最近 72 小时；
+- 并发刷新最多一个取得有效租约，重复调度不产生双重发布；
+- 质量失败、无合格实时候选或数据库写入失败都不会替换 latest，也不会改写 `last_success_at`；
+- 快照 payload 与 latest pointer 在一个事务内切换，不允许读到半写入报告；
+- 所有 enabled 且未熔断的健康来源在 15 分钟调度下滚动 90 分钟内都至少尝试一次；连续 3 次失败的来源熔断两个 interval，截止后自动半开重试；
+- 正常运行时报告年龄 P95 不高于 20 分钟，超过 30 分钟必须标记 stale；
+- `GET /api/news` 通过 30 秒 Vercel 时间桶缓存读取 latest，生产小流量 P95 不高于 750 ms、P99 不高于 1 秒；
 - 任一已发布事件可追溯到具体来源 URL；
 - 报告可回滚到上一成功版本；
+- 所有表启用 RLS，anon/authenticated 无策略即不可访问；只有服务端 secret key 可执行持久化操作；
 - 保留数据不含 secret、Cookie、完整付费墙正文或用户身份信息。
 
 ## 待确认
 
 | 项 | 影响 |
 | --- | --- |
-| 生产存储供应商 | Serverless 兼容、成本、事务和运维 |
+| Supabase 生产项目与区域 | 需要项目 ref、数据库连接权限和运行环境变量；不得在文档或日志记录真实 secret |
 | 是否需要用户可见历史日报 | 报告保留期和 API/UI 范围 |
 | 是否保存短期正文片段 | 摘要可复现性、版权和存储成本 |
 | 事件人工纠错入口 | 聚类纠错和审计流程 |
-| 数据迁移工具 | 取决于最终供应商和是否保留 V1 历史 |
+| 历史事件表何时从 JSON payload 拆表 | 当前实时更新只要求候选、运行和快照；独立事件/evidence 表可在确有查询需求时迁移 |

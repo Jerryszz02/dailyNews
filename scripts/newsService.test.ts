@@ -1,5 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { NewsSource } from "../src/types";
+
+const firecrawlSearchMock = vi.hoisted(() => vi.fn());
+
+vi.mock("firecrawl", () => ({
+  Firecrawl: class {
+    search(...args: unknown[]) {
+      return firecrawlSearchMock(...args);
+    }
+  },
+}));
+
 import {
+  collectNewsCandidates,
+  defaultSourceConcurrency,
   extractArticleSummaryContext,
   extractPublishedDateFromHtml,
   generateDailyNewsReport,
@@ -13,6 +27,7 @@ import {
   runWithinDeadline,
   translateNewsText,
 } from "./newsService";
+import { readBundledReport } from "./reportStore";
 
 const translationEnvNames = [
   "DAILY_NEWS_TRANSLATION_API_KEY",
@@ -25,6 +40,7 @@ let originalTranslationEnv: Record<(typeof translationEnvNames)[number], string 
 let originalMaxNewsAge: string | undefined;
 
 beforeEach(() => {
+  firecrawlSearchMock.mockReset();
   originalTranslationEnv = Object.fromEntries(translationEnvNames.map((name) => [name, process.env[name]])) as Record<
     (typeof translationEnvNames)[number],
     string | undefined
@@ -71,6 +87,29 @@ function chatResponse(content: string, status = 200): Response {
   } as Response;
 }
 
+function testSource(sourceId: string, name: string): NewsSource {
+  return {
+    source_id: sourceId,
+    name,
+    countryOrRegion: "china",
+    language: "zh-CN",
+    mediaType: "public",
+    defaultWeight: 1,
+    credibility: 80,
+    mayHavePaywall: false,
+    enabled: true,
+    sections: [
+      {
+        label: "新闻",
+        url: `https://${sourceId}.example.com/news`,
+        categories: ["china"],
+        primaryCategory: "china",
+        searchTerms: [`${name} 新闻`],
+      },
+    ],
+  };
+}
+
 describe("generateDailyNewsReport", () => {
   it("uses the checked-in fallback when direct results are all stale", async () => {
     process.env[maxNewsAgeEnvName] = "72";
@@ -92,6 +131,7 @@ describe("generateDailyNewsReport", () => {
     expect(result.mode).toBe("Firecrawl snapshot");
     expect(result.rawItemCount).toBeGreaterThan(0);
     expect(result.report.items.length).toBeGreaterThan(0);
+    expect(result.report.generatedAt).toBe(readBundledReport().generatedAt);
   });
 
   it("returns last-known-good when collection reaches its overall deadline", async () => {
@@ -110,6 +150,107 @@ describe("generateDailyNewsReport", () => {
     expect(result.usedLiveData).toBe(false);
     expect(result.mode).toBe("Firecrawl snapshot");
     expect(result.report.items.length).toBeGreaterThan(0);
+  });
+});
+
+describe("collectNewsCandidates source outcomes", () => {
+  it("preserves keyless success, empty, and failed outcomes when enough global items skip direct fetch", async () => {
+    const sources = [testSource("success", "成功源"), testSource("empty", "空结果源"), testSource("failed", "失败源")];
+    const fetchedItems = Array.from({ length: 8 }, (_, index) => ({
+      title: `实时新闻标题 ${index + 1}`,
+      description: `实时新闻摘要 ${index + 1}，包含明确事实和后续安排。`,
+      url: `https://success.example.com/news/article-${index + 1}`,
+      publishedDate: "2026-07-13T07:00:00.000Z",
+    }));
+    firecrawlSearchMock.mockImplementation((query: string) => {
+      if (query.includes("成功源")) return Promise.resolve({ news: fetchedItems });
+      if (query.includes("空结果源")) return Promise.resolve({ news: [] });
+      return Promise.reject(new Error("HTTP 429"));
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await collectNewsCandidates({
+      sources,
+      limitPerSection: 8,
+      now: new Date("2026-07-13T08:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toHaveLength(8);
+    expect(result.sourceOutcomes).toEqual([
+      { sourceId: "success", status: "success", discoveredCount: 8, errorCode: null },
+      { sourceId: "empty", status: "empty", discoveredCount: 0, errorCode: null },
+      { sourceId: "failed", status: "failed", discoveredCount: 0, errorCode: "source_rate_limited" },
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("marks a source failed only when both keyless and direct attempts fail", async () => {
+    const sources = [testSource("empty", "空结果源"), testSource("failed", "双路失败源"), testSource("recovered", "直连恢复源")];
+    firecrawlSearchMock.mockImplementation((query: string) => {
+      if (query.includes("空结果源")) return Promise.resolve({ news: [] });
+      return Promise.reject(new Error("HTTP 503"));
+    });
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("empty.example.com")) return Promise.resolve(htmlResponse("<html><body>暂无新闻</body></html>"));
+      if (url.includes("failed.example.com")) {
+        return Promise.resolve({ ok: false, status: 503, text: async () => "" } as Response);
+      }
+      return Promise.resolve(htmlResponse(`
+        <rss><channel><item>
+          <title>直连恢复新闻标题</title>
+          <link>https://recovered.example.com/news/article-1</link>
+          <description>直连恢复新闻摘要，包含具体机构、时间和后续安排。</description>
+          <pubDate>2026-07-13T07:30:00.000Z</pubDate>
+        </item></channel></rss>
+      `));
+    }));
+
+    const result = await collectNewsCandidates({
+      sources,
+      limitPerSection: 1,
+      now: new Date("2026-07-13T08:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.sourceOutcomes).toEqual([
+      { sourceId: "empty", status: "empty", discoveredCount: 0, errorCode: null },
+      { sourceId: "failed", status: "failed", discoveredCount: 0, errorCode: "source_server_error" },
+      { sourceId: "recovered", status: "success", discoveredCount: 1, errorCode: null },
+    ]);
+  });
+
+  it("keeps sources queued past the deadline eligible for the next refresh", async () => {
+    vi.useFakeTimers();
+    try {
+      const sources = Array.from({ length: 8 }, (_, index) => testSource(`source-${index + 1}`, `来源 ${index + 1}`));
+      vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+
+      const resultPromise = collectNewsCandidates({
+        sources,
+        useFirecrawlKeyless: false,
+        limitPerSection: 1,
+        collectionBudgetMs: 30,
+        repairSummariesWithModel: false,
+      });
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result.sourceOutcomes).toEqual(
+        sources.map((source) => ({
+          sourceId: source.source_id,
+          status: "skipped",
+          discoveredCount: 0,
+          errorCode: "collection_deadline",
+        })),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -138,6 +279,37 @@ describe("mapWithConcurrency", () => {
 
     expect(result).toEqual([2, 4, 6, 8, 10]);
     expect(maxActive).toBe(2);
+  });
+
+  it("starts eight of ten tasks before releasing the default concurrency barrier", async () => {
+    const values = Array.from({ length: 10 }, (_, index) => index + 1);
+    const started: number[] = [];
+    let active = 0;
+    let completed = 0;
+    let maxActive = 0;
+    let release: () => void = () => undefined;
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const resultPromise = mapWithConcurrency(values, defaultSourceConcurrency, async (value) => {
+      started.push(value);
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await barrier;
+      active -= 1;
+      completed += 1;
+      return value;
+    });
+
+    expect(defaultSourceConcurrency).toBe(8);
+    expect(started).toEqual(values.slice(0, 8));
+    expect(completed).toBe(0);
+
+    release();
+    await expect(resultPromise).resolves.toEqual(values);
+    expect(maxActive).toBe(8);
+    expect(completed).toBe(10);
   });
 });
 
@@ -339,8 +511,12 @@ describe("translation helpers", () => {
     });
   });
 
-  it("uses minimal fallback without network calls when model summary repair is disabled", async () => {
-    const fetchMock = vi.fn();
+  it("extracts a factual article summary without calling the model when repair is disabled", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      htmlResponse(
+        '<meta property="og:description" content="这是一段来自公开文章页面的中文事实摘要，说明事件背景、参与机构、发生时间以及后续安排。">',
+      ),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
@@ -354,9 +530,10 @@ describe("translation helpers", () => {
       }),
     ).resolves.toEqual({
       title: "中文标题",
-      summary: "相关报道聚焦“中文标题”，具体背景、影响和后续进展以原文披露为准。",
+      summary: "这是一段来自公开文章页面的中文事实摘要，说明事件背景、参与机构、发生时间以及后续安排。",
     });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("https://example.com/news/chinese", expect.any(Object));
   });
 });
 
