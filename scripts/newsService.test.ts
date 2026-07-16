@@ -281,8 +281,8 @@ describe("mapWithConcurrency", () => {
     expect(maxActive).toBe(2);
   });
 
-  it("starts eight of ten tasks before releasing the default concurrency barrier", async () => {
-    const values = Array.from({ length: 10 }, (_, index) => index + 1);
+  it("starts all eleven selected sources before releasing the default concurrency barrier", async () => {
+    const values = Array.from({ length: 11 }, (_, index) => index + 1);
     const started: number[] = [];
     let active = 0;
     let completed = 0;
@@ -302,14 +302,14 @@ describe("mapWithConcurrency", () => {
       return value;
     });
 
-    expect(defaultSourceConcurrency).toBe(8);
-    expect(started).toEqual(values.slice(0, 8));
+    expect(defaultSourceConcurrency).toBe(11);
+    expect(started).toEqual(values);
     expect(completed).toBe(0);
 
     release();
     await expect(resultPromise).resolves.toEqual(values);
-    expect(maxActive).toBe(8);
-    expect(completed).toBe(10);
+    expect(maxActive).toBe(11);
+    expect(completed).toBe(11);
   });
 });
 

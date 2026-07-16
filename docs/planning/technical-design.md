@@ -96,7 +96,7 @@ Phase 2 新增职责：
 
 - 采集阶段默认预算为 `DAILY_NEWS_COLLECTION_BUDGET_MS=12000`，为只读重试、冷启动、持久化、聚类和发布预留时间，使整轮目标保持在 30 秒内。
 - 默认预算下 Firecrawl 使用前约 4 秒且绝不超过 8 秒；候选少于 `max(8, maxSources)` 时继续直连并合并。
-- 直连来源并发默认 `DAILY_NEWS_SOURCE_CONCURRENCY=8`；单请求最长 8 秒且受整轮 deadline 约束。
+- 直连来源并发默认 `DAILY_NEWS_SOURCE_CONCURRENCY=11`，与单轮最大来源数一致，确保所有 selected source 在 12 秒 deadline 内都有 worker；单请求最长 8 秒且受整轮 deadline 约束。
 - deadline 前尚未真正发起请求的来源不写入 `source_state`，保留 due 状态并在下个时槽继续优先，不能误计失败或触发熔断。
 - 新报告若丢失已覆盖核心 beat 的全部候选，或事件/核心层/来源数量严重回退，不能替换 last-known-good。
 - `GET /api/news` 不允许触发外部抓取。

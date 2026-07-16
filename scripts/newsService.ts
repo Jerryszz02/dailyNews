@@ -12,7 +12,7 @@ export const defaultLimitPerSection = 5;
 export const defaultMaxSources = newsSources.filter((source) => source.enabled).length;
 export const defaultRefreshIntervalMinutes = 15;
 export const defaultMaxNewsAgeHours = 72;
-export const defaultSourceConcurrency = 8;
+export const defaultSourceConcurrency = 11;
 export const defaultCollectionBudgetMs = 12_000;
 
 export interface NewsGenerationOptions {

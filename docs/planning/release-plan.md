@@ -80,7 +80,7 @@
 
 每次发布至少记录：commit/deployment、migration version、bootstrap report ID、两轮手动 run ID、cron 首次成功时间、冷实例可见耗时、回滚演练结果、24 小时与 7 天指标。记录只保存标识和聚合指标，不保存 secret 或外部完整响应。
 
-本次生产执行与未关闭的门禁证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。发布门已通过，但前四次 24 小时 burn-in 分别因调度丢槽/耗时、4 毫秒到期边界、deadline cadence 缺口与 `PGRST303` 读请求未恢复而失败。第五次窗口中识别出 10-source 上限无法同时容纳正常 cohort 与半开恢复；默认提升到 11 后，真实 11/11 canary 在 27.854 秒内通过，49/49 来源 rolling 覆盖且 backlog=0。第五次窗口被容量修复部署取代，第六次窗口又被相同 `main@1da2f89` 的新 production deployment 切换打断；固定 `dpl_GFixDDM6FS1MHrohLLjce72p8X3w` 的第七次窗口随后因第 5 个大于 30 秒的轮次使完整 P95 不可恢复而失败。采集预算降至 12 秒的修复部署并通过真实四层 canary 后，才能从新基线启动第八次 24 小时窗口；逐槽硬门通过后才能进入 7 天 soak。
+本次生产执行与未关闭的门禁证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。发布门已通过，但前四次 24 小时 burn-in 分别因调度丢槽/耗时、4 毫秒到期边界、deadline cadence 缺口与 `PGRST303` 读请求未恢复而失败。第五次窗口中识别出 10-source 上限无法同时容纳正常 cohort 与半开恢复；第五次被容量部署取代，第六次又被同 commit production deployment 切换打断，第七次因完整 P95 不可恢复而失败。采集预算降至 12 秒后，第八次窗口性能恢复，但 00:15 的健康来源 skipped 造成约 105 分钟 cadence 缺口并判定失败。默认并发从 8 提升到 11 的新 deployment 通过真实四层 canary 后，才能从新基线启动第九次 24 小时窗口；逐槽硬门通过后才能进入 7 天 soak。
 
 ## 待确认
 

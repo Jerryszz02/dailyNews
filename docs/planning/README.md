@@ -17,7 +17,7 @@
 
 Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配置化来源发现候选，经过质量门槛、事件聚类、证据状态、公共影响分级和集合级多样性选择，在网页中展示今日必知、重要进展、持续关注、分类深读、搜索和偏好设置。
 
-事件级核心管线、V2 API/UI、last-known-good、30 秒整轮目标和 Supabase 持久化已实现。生产使用 Supabase 保存来源状态、72 小时候选池、刷新运行、租约和不可变报告，并已启用 15 分钟 Supabase Cron；前四次 24 小时 burn-in 暴露并修复了调度丢槽/耗时、4 毫秒到期边界、deadline cadence 缺口与 `PGRST303` 读恢复问题。第五次窗口运行中又识别出“10 个健康 cohort + 1 个半开来源”争用旧上限，默认容量提升到 11；第六次被相同 commit 的 production deployment 切换打断。固定 `dpl_GFixDDM6FS1MHrohLLjce72p8X3w` 的第七次窗口在 22:45 出现第 5 个大于 30 秒的轮次后，完整 P95 已不可恢复并判定失败。采集预算已从 16 秒降至 12 秒，真实 11-source canary 为 11/11 outcomes、0 skipped；第八次 24 小时窗口必须等待新 deployment 的真实四层 canary 后重新起算，通过后再进入 7 天 soak，尚不能宣布运行门最终完成。
+事件级核心管线、V2 API/UI、last-known-good、30 秒整轮目标和 Supabase 持久化已实现。生产使用 Supabase 保存来源状态、72 小时候选池、刷新运行、租约和不可变报告，并已启用 15 分钟 Supabase Cron；前四次 24 小时 burn-in 暴露并修复了调度丢槽/耗时、4 毫秒到期边界、deadline cadence 缺口与 `PGRST303` 读恢复问题。第五次窗口识别出半开恢复容量，第六次被同 commit production deployment 切换打断，第七次因完整 P95 不可恢复而失败。采集预算从 16 秒降至 12 秒后性能恢复，但第八次窗口 00:15 的 10-source cohort 在并发 8 下仍有 1 个来源 skipped，形成 105 分钟健康 cadence 缺口并判定失败。默认并发已提升到 11，exact cohort canary 为 10/10 outcomes、0 skipped；第九次 24 小时窗口必须等待新 deployment 的真实四层 canary 后重新起算，通过后再进入 7 天 soak，尚不能宣布运行门最终完成。
 
 项目由四条主要链路组成：
 
