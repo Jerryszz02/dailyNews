@@ -252,6 +252,52 @@ describe("collectNewsCandidates source outcomes", () => {
       vi.useRealTimers();
     }
   });
+
+  it("prioritizes newer date-encoded article links before applying the per-section limit", async () => {
+    const source = testSource("ordered", "按日期排序源");
+    source.sections[0].url = "https://ordered.example.com/";
+    const olderLinks = Array.from(
+      { length: 10 },
+      (_, index) =>
+        `<a href="/gn/2026/07-17/${10661000 + index}.shtml">旧新闻标题 ${index + 1}，用于占据首页前部候选位置</a>`,
+    ).join("");
+    const currentUrl = "https://ordered.example.com/cj/2026/07-18/10661953.shtml";
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(
+          htmlResponse(
+            `${olderLinks}<a href="${currentUrl}">年中盘点：中国民营经济韧性强活力足</a>`,
+          ),
+        );
+      }
+      return Promise.resolve(
+        htmlResponse(`
+          <meta property="article:published_time" content="2026-07-18T12:38:00+08:00">
+          <meta property="og:description" content="最新公开文章包含具体时间、主体、事实进展和后续安排，可用于验证首页后部的新链接不会被旧链接挤出。">
+        `),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-07-18T06:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.sourceOutcomes).toEqual([
+      { sourceId: "ordered", status: "success", discoveredCount: 1, errorCode: null },
+    ]);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      url: currentUrl,
+      publishedAt: "2026-07-18T04:38:00.000Z",
+    });
+  });
 });
 
 describe("matchesSourceDomain", () => {

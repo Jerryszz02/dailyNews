@@ -781,7 +781,19 @@ function readHtmlLinkCandidates(html: string, baseUrl: string): Array<{ title: s
     if (url === baseUrl || url.endsWith("#")) continue;
     candidates.push({ title, url, summary: title, publishedAt });
   }
-  return uniqueCandidates(candidates);
+  return uniqueCandidates(candidates)
+    .map((candidate, index) => ({
+      candidate,
+      index,
+      recency: directCandidateRecency(candidate),
+    }))
+    .sort((left, right) => right.recency - left.recency || left.index - right.index)
+    .map(({ candidate }) => candidate);
+}
+
+function directCandidateRecency(candidate: { url: string; publishedAt?: string }): number {
+  const timestamp = Date.parse(candidate.publishedAt ?? inferPublishedDateFromUrl(candidate.url) ?? "");
+  return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
 }
 
 function removeTrailingPublishedDate(value: string): string {

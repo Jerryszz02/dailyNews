@@ -80,7 +80,7 @@
 
 每次发布至少记录：commit/deployment、migration version、bootstrap report ID、两轮手动 run ID、cron 首次成功时间、冷实例可见耗时、回滚演练结果、24 小时与 7 天指标。记录只保存标识和聚合指标，不保存 secret 或外部完整响应。
 
-本次生产执行与未关闭的门禁证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。发布门已通过，但前四次 24 小时 burn-in 分别因调度丢槽/耗时、4 毫秒到期边界、deadline cadence 缺口与 `PGRST303` 读请求未恢复而失败。第五次窗口中识别出 10-source 上限无法同时容纳正常 cohort 与半开恢复；第五次被容量部署取代，第六次又被同 commit production deployment 切换打断，第七次因完整 P95 不可恢复而失败。采集预算降至 12 秒后，第八次窗口性能恢复，但 00:15 的健康来源 skipped 造成约 105 分钟 cadence 缺口并判定失败。默认并发从 8 提升到 11 的新 deployment 通过真实四层 canary 后，才能从新基线启动第九次 24 小时窗口；逐槽硬门通过后才能进入 7 天 soak。
+本次生产执行与未关闭的门禁证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。前八次 24 小时窗口分别因调度、来源 cadence、读恢复、容量、deployment 连续性或 P95 硬门失败/被取代。第九次窗口只保存了前 30/96 个严格槽的完整 Cron、pg_net、durable 与 runtime 证据；其余 66 个槽没有在 pg_net 的 6 小时 TTL 内落盘，不能判定通过。`2026-07-18` 公开门进一步确认 report 停止推进、实际内容活动超过 120 分钟，即使 Cron 的 lastSuccessAt 仍更新也不能视为实时。根因是直连 HTML 候选在解析时间前按 DOM 顺序截断，首页后部的新链接被旧链接挤出。最小修复在截断前按页面时间或 URL 日期稳定降序排序，已通过 unit 137/137、integration 64/64、build 1711 modules、真实两来源与 11 来源只读 canary。修复完成单次生产部署后，必须以新的自然 Cron 四层闭环重新建立第十次窗口；完整 24 小时通过后才能进入 7 天 soak。
 
 ## 待确认
 

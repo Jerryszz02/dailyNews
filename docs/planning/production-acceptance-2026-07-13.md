@@ -2,18 +2,18 @@
 
 ## 当前结论
 
-状态：**前四次 24 小时 burn-in 均未通过；第五次窗口被半开容量修复部署取代；第六次窗口又被同一 commit 的新 production deployment 切换打断；第七次窗口因完整 P95 已不可恢复而失败；第八次窗口在首个有源严格槽因 1 个健康来源 skipped 形成 105 分钟 cadence 缺口而失败，第九次窗口等待并发 11 修复部署后重新起算**。
+状态：**前八次 24 小时 burn-in 均未通过或被后续部署取代；第九次窗口只保存了前 30/96 个严格槽的完整 pg_net 证据，剩余 66 个槽在 6 小时 TTL 过期前没有落盘，因此不能判定通过。`2026-07-18` 公开门又确认报告停止推进并触发真实内容新鲜度硬失败；已定位直连 HTML 候选在截断前未按时间排序，最小修复已通过本地与真实来源验证，等待单次生产部署后重新建立第十次窗口**。
 
-Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 分钟 Supabase Cron 已部署。第八次 production deployment `dpl_4nAPHWn6LxkvfQ3Ksqn6PhFCZ3mR` 来自 `main@8528fb5`，包含 12 秒采集预算、并发 8、有界只读重试、deadline 来源公平、首页活动时间门、核心媒体共享配额、compact 网页响应与分层 Vercel 边缘缓存。`2026-07-13T11:31:22Z` 起的首次 24 小时窗口暴露了 Supabase 瞬时只读失败导致的丢槽、来源 cadence 和单轮耗时问题；`2026-07-15T09:45:31.765Z` 起的第二次窗口在首个严格窗口内时槽暴露了 4 毫秒到期边界漏选；从 `11:30:18.775Z` 起的第三次窗口又在 `12:00Z` 因两个健康来源 deadline skipped 违反 C4。默认直连并发从 6 提升到 8 后，来源恢复门通过，第四次窗口从 `13:00:18.723Z` 起算；但 13:30 Cron 的 Supabase `readState` 收到单次 `PGRST303`，HTTP 500 且未创建 durable run，窗口在第二槽失败。只读重试补充该网关 claim 解析错误后来源 cadence 恢复，第五次窗口从 14:30 起算；随后又在 15:45 前识别出“10 个健康 cohort + 1 个半开来源”必然争用旧 10-source 上限。默认上限提升为 11 并通过真实 11-source canary 后，第六次窗口从 15:45 起算；但 Vercel 随后为相同 `main@1da2f89` 又创建 production deployment 并在首个严格槽前接管 alias。第七次固定 deployment 连续运行到 22:45 后出现第 5 个大于 30 秒的严格槽，最终 96 槽 P95 已数学上不可恢复；采集预算降至 12 秒后，第八次窗口前三个严格槽 P95/max 降至 27.110 秒，但 00:15 的 10-source cohort 在并发 8 下仍有第 10 个来源未在 deadline 前启动，形成不可擦除的 105 分钟健康 cadence 缺口。默认并发提升到 11 的最小修复已完成本地验证，必须在新 deployment 上重新计时。24 小时与随后 7 天 soak 完成前，仍不能把本记录解释为“实时更新最终验收完成”。
+Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 分钟 Supabase Cron 已部署。当前 production deployment `dpl_DFgdwpoPUfPe8UGnJVGLexDGhRKY` 来自 `main@094fb36`，包含 12 秒采集预算、并发 11、有界只读重试、deadline 来源公平、首页活动时间门、核心媒体共享配额、compact 网页响应与分层 Vercel 边缘缓存。前八次窗口依次暴露并修复调度丢槽、到期边界、deadline cadence、Supabase 瞬时读失败、半开容量和 P95 问题。第九次窗口前 30 个严格槽的调度与来源证据均通过，但后续 66 个理论槽没有在 pg_net 的 6 小时 TTL 内保存完整响应证据，不能用后来的 durable 或公开 API 状态倒推替代。`2026-07-18` 的公开检查进一步证明“Cron/lastSuccessAt 推进”不等于“新内容发布”：latest report 停在 04:15Z，实际候选与首页活动超过 120 分钟，`/api/health` 返回 503 stale。24 小时与随后 7 天 soak 完成前，仍不能把本记录解释为“实时更新最终验收完成”。
 
 ## 发布标识
 
 | 项 | 值 |
 | --- | --- |
-| 最终 Git commit | `1da2f89`（`Add Supabase-backed scheduled news refresh`）；本机 `main` 与 `origin/main` 已 0/0 对齐，最终 deployment 的应用代码与该 commit 一致 |
+| 当前生产 Git commit | `094fb36`（`Ensure every selected source starts`）；本机 `main` 与 `origin/main` 已 0/0 对齐，production deployment metadata 与该 commit 一致 |
 | migration | `20260713090000_daily_news_store.sql`、`20260713101500_runtime_hardening.sql`；local/remote list 一致且无 pending dry-run |
 | bootstrap report | `ec5f550b-69ee-4324-bac7-143ef5d2e86b`，保留原始 `dataAsOf=2026-07-09T15:39:06.365Z` |
-| production deployment | 当前 `dpl_GFixDDM6FS1MHrohLLjce72p8X3w`；构建日志确认来自 `main@1da2f89`，正式 alias 已指向它；此前最终代码 deployment 为 `dpl_9WxU6pYDF6uz73jugnADiENW2Nfc` |
+| production deployment | 当前 `dpl_DFgdwpoPUfPe8UGnJVGLexDGhRKY`；READY production，正式 alias 已精确指向它；上一版本为 `dpl_4nAPHWn6LxkvfQ3Ksqn6PhFCZ3mR` |
 | production alias | `https://daily-news-tau-taupe.vercel.app` |
 | cron job | `jobid=2`，`daily-news-refresh`，`*/15 * * * *`，active；重装后首个时槽 `2026-07-13T10:45:00Z` 已闭环 |
 
@@ -23,8 +23,8 @@ Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 
 
 | 检查 | 结果 |
 | --- | --- |
-| `npm test` | 半开容量回归补强后通过：14 个文件、134 个测试 |
-| `npm run test:integration` | 通过：7 个文件、62 个测试 |
+| `npm test` | 通过：14 个文件、137 个测试 |
+| `npm run test:integration` | 通过：7 个文件、64 个测试 |
 | `npm run build` | 通过：TypeScript 与 Vite production build，1711 modules |
 | `git diff --check` | 通过 |
 | 远端 pgTAP | 通过：plan 72、passed 72、failed 0；事务回滚后生产状态不变 |
@@ -250,30 +250,92 @@ Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 
 
 三个严格槽的 Cron、pg_net、durable 与 snapshot/runtime 均为 3/3 闭环（published 2、unchanged/completed 1），失败、缺槽、重复、running、非 JSON body、网络错误和原子链接错配均为 0；21 planned、20 attempted、skipped 1、missing 0，run P95/max 为 27.110 秒，最大成功完成间隔 15.390 分钟。性能修复有效，但 00:15 的 `people` 从 22:45:01.544Z 到 00:30:01.665Z 才再次真实 attempted，间隔约 105.002 分钟。它在 00:15 仍为健康且已 due，skipped 不推进状态；即使 00:30 按 oldest-due 优先补跑并恢复当前 rolling 46/46，也不能抹掉 00:15 至 00:30 的 C4 覆盖缺口，因此第八次窗口在 00:15 失败。
 
-根因是 12 秒预算缩短后，直连默认并发 8 仍小于单轮最多 11 个 selected sources；00:15 cohort 的前 8 个 worker 没有足够早释放第二批，导致排在第 10 位的 `people` 未开始。生产没有 `DAILY_NEWS_SOURCE_CONCURRENCY` override。最小修复把默认并发从 8 提升至 11，使所有 selected sources 一开始即获得 worker，保持 12 秒预算、maxSources 11、单请求上限、熔断与质量门不变。exact 00:15 cohort 的不写数据库 canary 在 12.010 秒内产生 10/10 outcomes、0 skipped、23 个候选；barrier 回归证明 11/11 任务在释放前全部启动。完整 unit 136/136、integration 64/64、build 1711 modules 与 `git diff --check` 均通过；必须部署并以真实自然 Cron canary 验证后才能建立第九次窗口基线。
+根因是 12 秒预算缩短后，直连默认并发 8 仍小于单轮最多 11 个 selected sources；00:15 cohort 的前 8 个 worker 没有足够早释放第二批，导致排在第 10 位的 `people` 未开始。生产没有 `DAILY_NEWS_SOURCE_CONCURRENCY` override。最小修复把默认并发从 8 提升至 11，使所有 selected sources 一开始即获得 worker，保持 12 秒预算、maxSources 11、单请求上限、熔断与质量门不变。exact 00:15 cohort 的不写数据库 canary 在 12.010 秒内产生 10/10 outcomes、0 skipped、23 个候选；barrier 回归证明 11/11 任务在释放前全部启动。完整 unit 136/136、integration 64/64、build 1711 modules 与 `git diff --check` 均通过；修复随后完成部署，并由 00:45 自然 Cron canary 建立第九次窗口基线。
 
-## 内容与首页证据
+## 第九次 24 小时 burn-in（未通过：证据不完整）
 
-- 当前 report `10937f2d-b4c7-4b11-a257-e93f5aa0fd73` 共 243 个事件、25 个来源；top/important/watch 为 10/18/8，核心 28 条全部为 confirmed，`dataAsOf=2026-07-16T00:30:01.665Z`。
-- 候选池最新活动为 `2026-07-16T00:01:08Z`、首页最新活动为 `2026-07-15T23:21:00Z`，00:31 审计时约 30.58/70.71 分钟，均低于 120 分钟发布门；report 年龄约 1.69 分钟。
+窗口固定为 `2026-07-16T00:45:30.446Z` 至 `2026-07-17T00:45:30.446Z`。生产 alias 已明确绑定 READY production deployment `dpl_DFgdwpoPUfPe8UGnJVGLexDGhRKY`，Vercel metadata 确认 commit `094fb36328770293952d3718264244eaac9e78fe`；00:45 自然 Cron 的 durable 完成时间是起点基线，首个严格槽为 01:00Z。这只表示重新计时，不表示 24 小时已通过。
+
+| 时槽 | Cron / pg_net | Durable | 来源 planned/attempted/skipped/missing | 耗时 | 结果 |
+| --- | --- | --- | --- | ---: | --- |
+| 00:45 基线 | run 250 succeeded / response 252 HTTP 200 published | `28fe6768-d4d2-42b1-ad87-50f41ff3b604` published | 10/10/0/0 | 25.987s | report `175cb675-cdd8-4f55-b827-d7c84a714471`；并发 11 首个自然生产 canary |
+| 01:00 | run 251 succeeded / response 253 HTTP 200 published | `831e76e0-3f36-48a2-9240-956309c37831` published | 10/10/0/0 | 26.216s | 发现/采用 4/4；report `10754128-394e-4957-9faa-3a9f97fae8d7` |
+| 01:15 | run 252 succeeded / response 254 HTTP 200 published | `55b780e1-1311-4e60-8c83-40104153a2ef` published | 7/7/0/0 | 26.081s | 发现/采用 11/11；report `ef7aa86e-1019-48d9-a5b8-15217e019bf6` |
+| 01:30 | run 253 succeeded / response 255 HTTP 200 unchanged | `74d230e9-a18a-4e87-bc02-d94eaf09731a` completed | 0/0/0/0 | 3.642s | 无健康来源到期；runtime 正确保留 01:15 report |
+| 01:45 | run 254 succeeded / response 256 HTTP 200 published | `ce954fc5-c6e9-4cc4-b8db-8f84415006a3` published | 9/9/0/0 | 25.570s | 发现/采用 20/20；report `1cc149b2-5da1-491d-af1e-7bc286120437` |
+| 02:00 | run 255 succeeded / response 257 HTTP 200 published | `027b0637-fcfa-4148-a75c-e209f5896d3a` published | 10/10/0/0 | 25.138s | `people` 正常再尝试；report `f2b97ef1-245f-467a-956d-9b06076d1c60` |
+| 02:15 | run 256 succeeded / response 258 HTTP 200 published | `6d2a8e5c-d244-4482-bc95-0fb38ccb37d6` published | 11/11/0/0 | 25.698s | 自然满载；`npr` 半开 timeout 后按 C5 重开；report `1fd92604-407f-4fe0-a403-2ef3332ad7d5` |
+| 02:30 | run 257 succeeded / response 259 HTTP 200 published | `30399d8b-2423-415a-a639-57552b747f28` published | 10/10/0/0 | 25.422s | 发现/采用 4/4；report `38efbd6a-1c79-493f-890e-fcbb4375c3ef` |
+| 02:45 | run 258 succeeded / response 260 HTTP 200 published | `d07eaed8-7f30-415c-ab1e-9046b79ec5d7` published | 8/8/0/0 | 25.454s | `the-paper` 半开 access denied 后按 C5 重开；report `b668012e-eab8-4d52-930d-3f1cad0b39b9` |
+| 03:00 | run 259 succeeded / response 261 HTTP 200 unchanged | `6908617e-c6d7-4391-a5bd-e9f13dc5e154` completed | 0/0/0/0 | 3.656s | 无健康来源到期；runtime 正确保留 02:45 report |
+| 03:15 | run 260 succeeded / response 262 HTTP 200 published | `afef1752-2178-4466-8bb6-6a5f3849a3f7` published | 9/9/0/0 | 25.622s | 发现/采用 18/18；report `73048a3a-47e5-4908-ad82-b7d5dc7984c3` |
+| 03:30 | run 261 succeeded / response 263 HTTP 200 published | `2ba666d9-6dce-4658-87a1-9796d1dc8617` published | 11/11/0/0 | 26.187s | `openai` 半开成功并清空 circuit；report `f096ba61-a250-4661-a5b0-ec4bf6313076` |
+| 03:45 | run 262 succeeded / response 264 HTTP 200 published | `9ad2f762-a65f-4656-9ccf-dcf5f1d49bd6` published | 10/10/0/0 | 24.951s | 发现/采用 5/5；report `7ceff71d-04b1-4e72-8889-9a017ef5dacb` |
+| 04:00 | run 263 succeeded / response 265 HTTP 200 published | `c6cc49d2-4228-4471-a4d7-c447c70a612d` published | 10/10/0/0 | 25.874s | 发现/采用 5/5；report `29503e48-3906-4530-9b7b-9e93aa7912ca` |
+| 04:15 | run 264 succeeded / response 266 HTTP 200 published | `8f5d3c81-3faa-4b69-903a-d6d257008d37` published | 7/7/0/0 | 25.667s | 发现/采用 11/11；report `7c602aa1-ef83-413e-b2e8-e0af929b50ca` |
+| 04:30 | run 265 succeeded / response 267 HTTP 200 unchanged | `a00ab3fd-357a-4d22-8f1a-9094283d0ab0` completed | 0/0/0/0 | 3.090s | 无健康来源到期；无 snapshot，runtime 正确保留 04:15 report |
+| 04:45 | run 266 succeeded / response 268 HTTP 200 published | `68063b3d-a9f9-4103-a719-334201e43ff9` published | 9/9/0/0 | 25.571s | 发现/采用 17/17；report `5f824d22-3e96-46ce-9de5-ade7fe209a50` |
+| 05:00 | run 267 succeeded / response 269 HTTP 200 published | `9fed52e5-2949-483b-a58a-df242f6fcfa7` published | 11/11/0/0 | 24.212s | `openai` 一次 access denied，未熔断；report `3b71a794-0ce6-4f7f-b341-d71490d288ab` |
+| 05:15 | run 268 succeeded / response 270 HTTP 200 published | `d5f10755-9a9b-4c27-b6bf-d452a390fadf` published | 11/11/0/0 | 24.949s | `npr` 真实半开成功并清空 circuit；report `c2e3a51d-00d4-4a90-a9a5-f8756b120f60` |
+| 05:30 | run 269 succeeded / response 271 HTTP 200 published | `221ec416-dafe-4577-bbbf-4513521c023a` published | 10/10/0/0 | 24.898s | 发现/采用 5/5；report `b1955cd5-b99e-44cf-82fa-5912819460ac` |
+| 05:45 | run 270 succeeded / response 272 HTTP 200 published | `addaccea-5ea7-43f7-a7ab-b9fdc9727c4c` published | 8/8/0/0 | 24.927s | `the-paper` 真实半开成功并清空 circuit；发现/采用 9/9；report `546a025e-ac4b-413c-9a69-2a3a0e92193a` |
+| 06:00 | run 271 succeeded / response 273 HTTP 200 unchanged | `76746a73-1517-40e5-949e-825fd3877281` completed | 0/0/0/0 | 3.106s | 无健康来源到期；无 snapshot，runtime 正确保留 05:45 report |
+| 06:15 | run 272 succeeded / response 274 HTTP 200 published | `97db2759-2c6b-4d50-af87-8c93e3101dca` published | 9/9/0/0 | 23.253s | 发现/采用 22/22；内容活动推进到 05:51；report `854a2819-399c-41c8-985f-2f8018dcc9b8` |
+| 06:30 | run 273 succeeded / response 275 HTTP 200 published | `680b4a19-6595-4dcf-ae49-eacde470f259` published | 11/11/0/0 | 25.375s | 自然满载 11 源全部启动；发现/采用 15/15；report `2e1c330b-8371-4b98-945e-f59ee264119c` |
+| 06:45 | run 274 succeeded / response 276 HTTP 200 published | `600fc3a0-c53b-481d-90f9-2c42c6760300` published | 11/11/0/0 | 24.486s | 第二个自然满载 11 源全部启动；发现/采用 12/12；report `ab828efb-9329-4b73-ba34-9a721703c0bd` |
+| 07:00 | run 275 succeeded / response 277 HTTP 200 published | `15ddde0e-8fcb-4daa-8669-e2b01c07c693` published | 10/10/0/0 | 24.283s | 发现/采用 4/4；report `129dcbcf-f7a9-4e7f-8912-f43b6b037e12` |
+| 07:15 | run 276 succeeded / response 278 HTTP 200 published | `6a8d1d1f-1458-416e-8d3e-bc39c27514c5` published | 8/8/0/0 | 23.942s | 发现/采用 10/10；内容活动推进到 06:34:35；report `68f0ddde-651d-418c-8678-de09ef9c08c5` |
+| 07:30 | run 277 succeeded / response 279 HTTP 200 unchanged | `f5742bc7-2b28-4659-8721-35edf120c4b8` completed | 0/0/0/0 | 3.014s | 无健康来源到期；无 snapshot，runtime 时间推进并正确保留 07:15 report |
+| 07:45 | run 278 succeeded / response 280 HTTP 200 published | `198409fe-57cb-4a7a-919e-3c63a0b23559` published | 9/9/0/0 | 24.952s | `aljazeera`/`cnbc` 均真实 attempted 且成功；发现/采用 16/16；report `7c368a9f-f452-4e1f-9e1e-9b33da6a42af` |
+| 08:00 | run 279 succeeded / response 281 HTTP 200 published | `0a3efe3a-5fbb-4f56-8b9e-af3c97262e9f` published | 11/11/0/0 | 24.655s | `openai` 第三次 access denied 后按 C5 熔断至 11:00；发现/采用 6/6；report `9e329c76-e405-420d-b21b-c7a2ac0a0b96` |
+| 08:15 | run 280 succeeded / response 282 HTTP 200 published | `99fcde52-a014-4576-b455-1585c68b81d2` published | 11/11/0/0 | 24.306s | `npr` 第二次 timeout 未达熔断阈值；`hugging-face` 首次 timeout；发现/采用 6/6；report `a44365a3-86f2-4e3c-ba7a-d16e8be46240` |
+
+基线的 Cron、pg_net、durable、snapshot 与 runtime latest 五层标识完全一致；pg_net body 的 9 个键精确符合 refresh response 白名单，unexpected/missing 均为 0，网络错误、失败、重复、running 和原子链接错配均为 0。10 个 planned 来源全部真实 attempted，planned-not-attempted 与 attempted-not-planned 均为空，10 条 `source_state.last_run_id` 均指向本 run，发现/采用 11/11。该自然槽只有 10 个来源到期，因此它验证 selected 10/10 全部启动；11-source 满载仍由部署前不写数据库的真实 11/11 canary 与 barrier 回归承担，不能把本槽夸大为 11-source 自然碰撞。
+
+截至 08:15Z，理论/实际严格槽为 30/30；Cron、durable 与逐槽保存的 pg_net 证据均覆盖 30/30，durable 25 published、5 completed，失败、缺槽、重复、running、非 JSON body、网络错误和原子链接错配均为 0。241 planned 全部真实 attempted，skipped/missing=0；nearest-rank P95 为 26.187 秒、max 为 26.216 秒，>30 秒样本 0，含基线的最大成功完成间隔 15.374 分钟。由于 `pg_net.ttl=6 hours`，08:16 在线表只保留最近 24 条响应；24/24 均为 HTTP 200、9 键精确白名单且与 durable 匹配，最早六条按预期自然过期而不是缺槽。五次 unchanged 都没有创建无意义 snapshot；08:15 runtime、snapshot 与 report 已原子推进到同一目标。
+
+### 第九次窗口最终结论
+
+第九次窗口要求 96 个严格槽逐槽同时具备 Cron、pg_net HTTP/body、durable run 和 snapshot/runtime latest 证据。当前可核验材料只覆盖 01:00Z 至 08:15Z 的 30/96 个槽；08:30Z 至次日 00:45Z 的 66 个槽没有在 pg_net 的 6 小时 TTL 内保存聚合证据，且当时的任务记录没有实际查询输出或独立落盘。后续只查 Cron 或 durable 不能重建已经过期的 HTTP/body 白名单证据，因此该窗口结论是“验收证据不完整、不能判通过”，不是把 30 个已通过槽外推为 96 个槽，也不是把后续旧 deployment 数据拼接到新窗口。
+
+02:15 是并发 11 修复后的首个自然满载生产槽，11 个 planned 来源全部真实 attempted，planned-not-attempted、attempted-not-planned、skipped 和 missing 均为空；它补齐了此前只由 canary 与 barrier 回归承担的满载生产证明。`npr` 在 circuit 到期后明确进入 planned/attempted 集合，本次再次 `source_timeout`，`lastAttemptAt=02:15:02.049Z`、`lastRunId` 指向本 run、连续失败升至 5，circuit 正确重开至 05:15:02.049Z，符合 C5。05:15 的后续自然满载槽再次把 `npr` 纳入 planned/attempted 且没有 skipped；本次成功后 `lastAttemptAt=lastSuccessAt=05:15:01.549Z`，连续失败、错误与 circuit 全部清空，next due 推进到 06:45，证明半开恢复路径完整闭环。
+
+`the-paper` 在 02:45 明确进入 planned/attempted 集合且未 skipped，本次再次 `source_access_denied`，连续失败升至 4，circuit 正确重开至 05:45:01.480Z；05:45 到期后再次进入 planned/attempted 集合且成功，`lastAttemptAt=lastSuccessAt=05:45:01.453Z`、`lastRunId` 指向本 run，连续失败、错误与 circuit 全部清空，next due 推进到 07:15。`openai` 在 03:30 同样真实半开 attempted，本次成功后 `lastAttemptAt=lastSuccessAt=03:30:01.385Z`，连续失败、circuit 与错误状态全部清空，next due 推进到 05:00。两者均符合 C5。
+
+08:18 审计为 enabled 49、healthy 48、circuit-open 1、half-open 0；本窗口 49/49 enabled 来源均已真实 attempted，健康来源 rolling attempted/succeeded=48/48 与 45/48，missing attempted ID 为空，eligible backlog=0。`openai` 在 08:00 的 11-source 满载槽中真实 attempted，第三次 `source_access_denied` 后 `lastRunId` 指向本 run、circuit 按 C5 正确打开至 11:00:01.551Z；当前按规则排除健康分母。`npr` 在 08:15 同样真实 attempted，第二次 `source_timeout` 后未达三次阈值、circuit 为空、next due 推进到 09:45；`hugging-face` 本轮首次 timeout，circuit 为空且同样等待 09:45。`the-paper` 仍为一次 access denied 并等待 08:45。当前无 due backlog；08:45 必须验证 `the-paper` 真实 attempted，09:45 继续核对 `npr`/`hugging-face`，11:00 必须验证 `openai` 真实半开。
+
+公开页面在未触发手动 refresh 的前提下，于 00:45:48Z 自动收敛到新 deployment 的首个报告。08:21Z 审计中 health/full/compact/reload 均为 200 且同步 08:15 report，invalid query 为 400，缓存契约全部通过；report 年龄约 5.99 分钟，候选/首页最新活动年龄均约 58.17 分钟，按实际内容字段独立计算且不以 generatedAt 代替；重复为 0，核心 25/25 confirmed，`maxPrimaryPublisherShare=0.12`，10/10 分类覆盖。
+
+### 2026-07-18 公开新鲜度硬失败与最小修复
+
+`2026-07-18T06:00Z` 左右，生产 Cron 的 `lastAttemptAt/lastSuccessAt` 已推进到 06:00Z，但 latest report 仍为 `a1ffbfb0-fe0f-4f22-8e8a-5a8251d3d695`、`dataAsOf=2026-07-18T04:15:01.590Z`；`/api/health` 返回 503 stale。full、compact 与 reload 均指向同一冻结报告且没有 CDN HIT，排除了浏览器刷新和边缘缓存。报告候选与首页最新实际活动停在 `2026-07-18T02:55:00Z`，检查时已超过 120 分钟硬门；这证明 generatedAt/lastSuccessAt 不能掩盖旧内容。
+
+直接抽样显示中国新闻网公开首页已有 `2026-07-18T04:38:00Z` 的文章，但旧采集器仍只采用 DOM 前部的 7 月 17 日链接。根因是 `readHtmlLinkCandidates` 保留 DOM 顺序，而直连采集在解析文章时间前先执行每栏目候选截断；首页后部带日期的新链接因此被旧 hero 链接挤出，来源仍会错误地报告 success。最小修复在截断前按页面时间或 URL 日期降序排列候选，无法推断日期的链接保持原有稳定顺序，不改变 12 秒预算、并发 11、来源上限、重试、熔断或质量门。
+
+修复后回归测试覆盖“10 个旧链接位于 1 个新链接之前”的精确场景；完整 unit 137/137、integration 64/64、build 1711 modules 和 `git diff --check` 通过。真实两来源只读 canary 中，央视/中新网分别为 success 7/5，中新网最新候选为 `2026-07-18T04:38:00Z`；真实 11 来源只读 canary 在 4.181 秒内产生 11/11 outcomes、0 skipped、0 missing、42 个候选。修复尚未计入任何旧窗口；必须完成单次生产部署，并由部署后的自然 Cron 四层闭环建立第十次 24 小时窗口。
+
+## 历史内容与首页证据（第九次窗口截至 08:21Z）
+
+- 当前 report `a44365a3-86f2-4e3c-ba7a-d16e8be46240` 共 212 个事件、24 个来源；top/important/watch 为 10/15/8，核心 25 条全部为 confirmed，`dataAsOf=2026-07-16T08:15:01.654Z`。
+- 候选池与首页最新活动均为 `2026-07-16T07:22:51Z`，08:21 审计时约 58.17 分钟，低于 120 分钟发布门；report 年龄约 5.99 分钟。
 - “实时更新”继续按 evidence/published/updated 的最大活动时间排序；developing 只进入持续关注，不伪装成核心已确认新闻。
 - 标题、摘要、标题摘要组合的精确重复均为 0；三个首页层无交叉引用或资格违规。
-- 全量 trust 为 high 33、medium 210、low 0，`shouldShow=false` 项 0；全量 243 条均有证据。
-- 核心媒体最高占比为 3/28=`0.107`，与报告声明一致，满足核心至少 15 条时不高于 0.2；共享每媒体最多 3 条的绝对上限也满足。全量证据来源 25 个，10/10 分类均有覆盖。
+- 全量 trust 为 high 29、medium 183、low 0，`shouldShow=false` 项 0；全量 212 条均有证据。
+- 核心媒体最高占比为 3/25=`0.12`，与报告声明一致，满足核心至少 15 条时不高于 0.2；共享每媒体最多 3 条的绝对上限也满足。全量 321 条证据覆盖 24 个来源，10/10 分类均有覆盖。
 
 ## 生产 API smoke
 
 | 检查 | 结果 |
 | --- | --- |
 | 首页 | 200；正式 alias 已指向新 deployment |
-| 完整 `GET /api/news` | 200；当前响应含 243 个 `items`、243 个 `stories` 和完整分区对象，保持 V2/legacy 兼容 |
-| compact `view=web&window` | 200；243 个 stories、10/18/8 个分区 ID、243 条 ranking metadata，不含 legacy items；30 秒窗口使用共享缓存 |
+| 完整 `GET /api/news` | 200；当前响应含 212 个 `items`、212 个 `stories` 和完整分区对象，保持 V2/legacy 兼容 |
+| compact `view=web&window` | 200；212 个 stories、10/15/8 个分区 ID、212 条 ranking metadata，不含 legacy items；30 秒窗口使用共享缓存 |
 | compact `view=web&reload=1` | 200；与 full/compact 的 report ID、dataAsOf、story count 同步；不含 items，浏览器 `Cache-Control: no-store` |
 | 非法 cache query | 400 + `no-store`；非规范前导零 window 在读取 durable storage 前拒绝 |
-| `GET /api/health` | 第八次窗口 00:30 发布后返回 200 fresh、Supabase、`lastError=null`，与 full/compact/reload 指向同一 00:30 report；健康响应不掩盖 00:15 的来源 cadence 失败；跨过 30 分钟时仍会如实返回 503 stale |
+| `GET /api/health` | 08:15 发布后返回 200 fresh、Supabase、`lastError=null`，与 full/compact/reload 指向同一 08:15 report；跨过 30 分钟时仍会如实返回 503 stale |
 | 未授权 `GET /api/cron` | 401 |
 | 未授权 `POST /api/refresh` | 401 |
-| 正确 Cron Bearer | 200，并持续产生上表 durable run/report；00:30 最新发布仍四层闭环，但不能掩盖第八窗口 C4 失败 |
+| 正确 Cron Bearer | 200，并持续产生上表 durable run/report；基线与 30 个严格槽均为自然 Cron，未使用手动 refresh |
 | 冷实例收敛 | 新部署冷读后 8.5 秒内连续三次读到相同 Supabase report，低于 60 秒门槛 |
 | latest read 性能 | 发布门历史压测：完整约 75 KB gzip 响应 P95 `988.0 ms`、P99 `1619.9 ms`，未过门；改用约 32.9 KB compact 后，固定窗口 100 请求、并发 5、错误 0：P50 `377.1 ms`、P95 `671.8 ms`、P99 `961.5 ms`，通过 P95 ≤750 ms、P99 ≤1 s |
 | 浏览器 | 1720px 与 390×844 均无横向溢出；compact 水合出完整事件、实时更新与四个时间字段；慢 reload 在 8 秒后释放按钮；11:27 已打开页面在 11:30:31 发布后于 11:31:22 看到新 report，观测上限 51 秒 |
@@ -283,7 +345,8 @@ Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 
 ## 尚未关闭的验收项
 
 - 独立 staging 与真实数据库 20 候选并发 upsert、10 lease 竞争、发布 failpoint 仍是后续 migration 的硬化缺口；当前生产 pgTAP、fencing、同槽 duplicate 与回滚已覆盖主链路。
-- 第八次窗口已在 00:15 因健康来源 cadence 缺口判定失败；第九次窗口只能从并发 11 新 deployment 的真实四层 canary 完成时间重新起算。
+- 第八次窗口已在 00:15 因健康来源 cadence 缺口判定失败；第九次窗口只有前 30/96 个严格槽保存了完整四层证据，剩余 66 个槽的 pg_net 证据已过期且未独立落盘，因此不能判通过。
+- `2026-07-18` 公开门确认 latest report 冻结、实际内容活动超过 120 分钟；直连 HTML 候选排序修复必须部署并重新起算第十次窗口。
 - 完成 7 天 soak：调度成功率、报告年龄 P95、来源 cadence、source-to-site 延迟与内容质量抽样。
 
-发布门与内容/API 门仍通过，但第八次连续 24 小时 burn-in 已因来源 cadence 硬门失败；当前等待并发 11 新 deployment 与真实 Cron canary，尚无新的连续窗口起点。当前 Codex 任务保持每小时检查，新 24 小时窗口通过后才调整为每日检查并进入 7 天 soak。任何内容、性能、权限或调度硬门失败都先停止新增调度或回到 last-known-good，再按 [release-plan.md](release-plan.md) 重验。
+发布门曾通过，但当前内容新鲜度门失败；第九次窗口因不可恢复的证据缺口不能判通过。当前 Codex 任务保持每小时检查，候选排序修复部署后必须从新的自然 Cron 基线重新开始第十次 24 小时窗口；只有完整窗口通过后才调整为每日检查并进入 7 天 soak。任何内容、性能、权限或调度硬门失败都先停止新增调度或回到 last-known-good，再按 [release-plan.md](release-plan.md) 重验。
