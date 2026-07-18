@@ -2,18 +2,18 @@
 
 ## 当前结论
 
-状态：**前八次 24 小时 burn-in 均未通过或被后续部署取代；第九次窗口只保存了前 30/96 个严格槽的完整 pg_net 证据，剩余 66 个槽在 6 小时 TTL 过期前没有落盘，因此不能判定通过。`2026-07-18` 公开门又确认报告停止推进并触发真实内容新鲜度硬失败；已定位直连 HTML 候选在截断前未按时间排序，最小修复已通过本地与真实来源验证，等待单次生产部署后重新建立第十次窗口**。
+状态：**前八次 24 小时 burn-in 均未通过或被后续部署取代；第九次窗口只保存了前 30/96 个严格槽的完整 pg_net 证据，剩余 66 个槽在 6 小时 TTL 过期前没有落盘，因此不能判定通过。`2026-07-18` 第一版直连排序修复仍在同日/无日期 HTML 与逆序 feed 上触发 stale 硬失败；第二版有界精确时间探测、共享请求闸门和 deadline 语义修复已发布，并在 09:15 自然槽恢复公开内容/API 门。用户明确授权生产只读 Supabase 验收后，09:45 自然槽完成四层与公开内容门闭环；但 10:00 首个严格槽中 Anthropic 连续第二槽 `planned→skipped`，健康来源真实 cadence 达到 108.104 分钟，第十次窗口已按硬门判失败。针对 HTML anchor 日期遗漏、陈旧候选过晚过滤与 self-link 重复抓取的最小修复已在本地和真实不写库 canary 通过，等待唯一生产部署后重新起算**。
 
-Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 分钟 Supabase Cron 已部署。当前 production deployment `dpl_DFgdwpoPUfPe8UGnJVGLexDGhRKY` 来自 `main@094fb36`，包含 12 秒采集预算、并发 11、有界只读重试、deadline 来源公平、首页活动时间门、核心媒体共享配额、compact 网页响应与分层 Vercel 边缘缓存。前八次窗口依次暴露并修复调度丢槽、到期边界、deadline cadence、Supabase 瞬时读失败、半开容量和 P95 问题。第九次窗口前 30 个严格槽的调度与来源证据均通过，但后续 66 个理论槽没有在 pg_net 的 6 小时 TTL 内保存完整响应证据，不能用后来的 durable 或公开 API 状态倒推替代。`2026-07-18` 的公开检查进一步证明“Cron/lastSuccessAt 推进”不等于“新内容发布”：latest report 停在 04:15Z，实际候选与首页活动超过 120 分钟，`/api/health` 返回 503 stale。24 小时与随后 7 天 soak 完成前，仍不能把本记录解释为“实时更新最终验收完成”。
+Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 分钟 Supabase Cron 已部署。当前 production deployment `dpl_2rrwW4zspHmJCk77T1kBcwzAP8Cy` 来自 `main@2493b40`，包含 12 秒采集预算、来源并发与全部直连 HTTP 共享上限 11、有界精确文章时间探测、feed 补日期后重排、有界只读重试、deadline 来源公平、首页活动时间门、核心媒体共享配额、compact 网页响应与分层 Vercel 边缘缓存。前八次窗口依次暴露并修复调度丢槽、到期边界、deadline cadence、Supabase 瞬时读失败、半开容量和 P95 问题。第九次窗口前 30 个严格槽的调度与来源证据均通过，但后续 66 个理论槽没有在 pg_net 的 6 小时 TTL 内保存完整响应证据，不能用后来的 durable 或公开 API 状态倒推替代。`2026-07-18` 的公开检查进一步证明“Cron/lastSuccessAt 推进”不等于“新内容发布”：第一版修复后实际候选与首页活动再次超过 120 分钟，`/api/health` 返回 503 stale。24 小时与随后 7 天 soak 完成前，仍不能把本记录解释为“实时更新最终验收完成”。
 
 ## 发布标识
 
 | 项 | 值 |
 | --- | --- |
-| 当前生产 Git commit | `094fb36`（`Ensure every selected source starts`）；本机 `main` 与 `origin/main` 已 0/0 对齐，production deployment metadata 与该 commit 一致 |
+| 当前生产 Git commit | `2493b40`（`Fix fresh direct-source selection`）；本机 `main` 与 `origin/main` 已 0/0 对齐，production build log 与该 commit 一致 |
 | migration | `20260713090000_daily_news_store.sql`、`20260713101500_runtime_hardening.sql`；local/remote list 一致且无 pending dry-run |
 | bootstrap report | `ec5f550b-69ee-4324-bac7-143ef5d2e86b`，保留原始 `dataAsOf=2026-07-09T15:39:06.365Z` |
-| production deployment | 当前 `dpl_DFgdwpoPUfPe8UGnJVGLexDGhRKY`；READY production，正式 alias 已精确指向它；上一版本为 `dpl_4nAPHWn6LxkvfQ3Ksqn6PhFCZ3mR` |
+| production deployment | 当前 `dpl_2rrwW4zspHmJCk77T1kBcwzAP8Cy`；`2026-07-18T08:55:05Z` 创建并 READY，正式 alias 已精确指向它；上一版本为 `dpl_HWLN9zVgrm2ndESTSZdkHrRNgTPE` |
 | production alias | `https://daily-news-tau-taupe.vercel.app` |
 | cron job | `jobid=2`，`daily-news-refresh`，`*/15 * * * *`，active；重装后首个时槽 `2026-07-13T10:45:00Z` 已闭环 |
 
@@ -312,7 +312,71 @@ Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 
 
 直接抽样显示中国新闻网公开首页已有 `2026-07-18T04:38:00Z` 的文章，但旧采集器仍只采用 DOM 前部的 7 月 17 日链接。根因是 `readHtmlLinkCandidates` 保留 DOM 顺序，而直连采集在解析文章时间前先执行每栏目候选截断；首页后部带日期的新链接因此被旧 hero 链接挤出，来源仍会错误地报告 success。最小修复在截断前按页面时间或 URL 日期降序排列候选，无法推断日期的链接保持原有稳定顺序，不改变 12 秒预算、并发 11、来源上限、重试、熔断或质量门。
 
-修复后回归测试覆盖“10 个旧链接位于 1 个新链接之前”的精确场景；完整 unit 137/137、integration 64/64、build 1711 modules 和 `git diff --check` 通过。真实两来源只读 canary 中，央视/中新网分别为 success 7/5，中新网最新候选为 `2026-07-18T04:38:00Z`；真实 11 来源只读 canary 在 4.181 秒内产生 11/11 outcomes、0 skipped、0 missing、42 个候选。修复尚未计入任何旧窗口；必须完成单次生产部署，并由部署后的自然 Cron 四层闭环建立第十次 24 小时窗口。
+修复后回归测试覆盖“10 个旧链接位于 1 个新链接之前”的精确场景；完整 unit 137/137、integration 64/64、build 1711 modules 和 `git diff --check` 通过。真实两来源只读 canary 中，央视/中新网分别为 success 7/5，中新网最新候选为 `2026-07-18T04:38:00Z`；真实 11 来源只读 canary 在 4.181 秒内产生 11/11 outcomes、0 skipped、0 missing、42 个候选。commit `d77fe48` 只触发一个 Git integration production deployment `dpl_HWLN9zVgrm2ndESTSZdkHrRNgTPE`，READY/alias 时间晚于 06:15 自然槽；06:15 报告仍来自旧代码，只作为边界快照。首个可命中新 deployment 的理论槽是 06:30Z，必须由该槽之后的自然 Cron 四层闭环建立第十次 24 小时窗口。
+
+`2026-07-18 06:30Z` 新 deployment 候选基线的公开侧通过：Vercel runtime 日志显示 `/api/cron` HTTP 200，health 在运行完成后推进到 report `f9b56c8e-d59f-490a-a5c4-e0cee75a739b`、`dataAsOf=2026-07-18T06:30:01.595Z`；full/compact/reload 原子一致，候选与首页最新实际活动均为 `06:03:13Z`、年龄约 28.86 分钟，精确标题/摘要/组合/tier 重复均为 0，top/important/watch=8/10/8，核心 18/18 confirmed，`maxPrimaryPublisherShare=0.167`，非法 query 为 400/no-store。但同一 Cron 日志含 `人民网 要闻: collection_deadline` 警告；公开 report 无法证明该源最终由 direct fetch 成功、还是 durable source outcome 为 skipped。当前本机环境没有 Supabase 查询或受保护 refresh 凭据，且未在缺少用户明确授权时拉取生产环境值，所以尚未核对 `cron.job_run_details`、pg_net body 9 键、durable run planned/attempted/skipped/missing 与 runtime latest 四层。06:30 只能称为“公开候选基线”，不能正式启动第十次 24 小时计时。
+
+`2026-07-18 06:45Z` 第二个公开候选槽同样完成发布：health 推进到 report `12c5a74b-537e-40f2-a766-28ca392fbfbd`、`dataAsOf=2026-07-18T06:45:01.756Z`，Vercel 日志中 `/api/cron` 为 HTTP 200；full/compact 同步为 152 stories，full 另含 153 个 legacy items。候选与首页最新实际活动仍为 `06:03:13Z`，06:46 审计年龄约 43.06 分钟；精确标题/摘要/组合/tier 重复 0，核心 18/18 confirmed，`maxPrimaryPublisherShare=0.167`。本槽日志包含 NPR direct abort 与新华 Firecrawl 阶段 `collection_deadline`，但两类阶段日志均可能被同源后续 direct outcome 覆盖，不能据此推断最终 skipped。报告仍只有中新网历史证据，最新为 `2026-07-17T13:27:00Z`，且本槽没有中新网三个受限栏目的特征日志，说明尚未证明该源在新代码下被自然选中。06:45 同样只能作为公开持续性证据，不能替代四层数据库门。
+
+`2026-07-18 07:00Z` 自然槽继续由同一 deployment 响应：Vercel runtime 日志记录 `/api/cron` HTTP 200，公开 health 的 `lastAttemptAt` 与 `lastSuccessAt` 分别推进到 `07:00:03.502607Z` 和 `07:00:21.664844Z`、`lastError=null`，但 latest 仍保留 06:45 report，说明本轮完成后没有发布新报告。07:03 公开门中 health/full/compact/reload 原子一致，152 stories、top/important/watch=8/10/8、核心 18/18 confirmed，精确标题/摘要/组合/tier 重复 0，`maxPrimaryPublisherShare=0.167`；候选与首页实际活动仍为 `06:03:13Z`，年龄约 60.34 分钟，继续低于 120 分钟。日志含 The Verge 的 Firecrawl 阶段 `collection_deadline`，但公开面不能确认最终 durable source outcome，也不能判断 skipped 是否错误推进状态。因此 07:00 仍是公开连续性证据，而不是第十次窗口的正式四层槽。
+
+`2026-07-18 07:15Z` 自然槽发布 report `7e5adc07-d1af-4cd3-a4e8-ddfcc6715052`、`dataAsOf=2026-07-18T07:15:01.755Z`；Vercel runtime 日志中的 `/api/cron` 为 HTTP 200，alias 仍绑定同一 READY production deployment。07:19 公开门中 health/full/compact/reload 原子一致，仍为 152 stories、top/important/watch=8/10/8、核心 18/18 confirmed，精确标题/摘要/组合/tier 重复 0，`maxPrimaryPublisherShare=0.167`；候选与首页实际活动仍为 `06:03:13Z`，年龄约 75.96 分钟，低于 120 分钟。日志没有来源级 `collection_deadline`，但有澎湃新闻 direct HTTP 403、翻译与摘要增强 deadline fallback，且没有命中中新网特征日志。公开面仍不能确认这类来源 outcome、状态推进、Cron/pg_net/durable/snapshot 四层链接，因此 07:15 也不能作为正式第十次窗口基线。
+
+### 第一版排序修复后的再次 stale 与第二版修复
+
+第一版只用标题时间或 URL 日期在截断前做粗排序；同一天 URL 都退化到本地午夜、无日期 URL 都是同一最低优先级，feed 仍保留上游顺序。`08:00Z` 虽发布 report `9af56021-403f-4542-ae51-666ad885c8d7`，155 个 stories 的最新实际活动仍停在 `06:03:13Z`；08:15 自然 Cron 返回 HTTP 500，08:30 health 继续为 503 `stale_candidate_pool`。08:27 检查时内容年龄约 143.9 分钟，full/compact/reload 仍原子同步且非法 query 400/no-store，排除浏览器/CDN；报告 247 个去重 evidence 候选中 06:00Z 后仅 1 个，最新时间由 Guardian 的长寿命聚合事件单点托底。中新网报告证据最新只到 03:12Z，未采用公开页面已有的更新文章。
+
+第二版保持 12 秒预算、来源上限和质量门不变，作以下有界修复：
+
+- HTML 在最新粗日期桶内均匀选择最多 `2 × limitPerSection` 个候选，抓取文章 metadata 后按精确时间重排；文章 HTML 同时复用为摘要上下文；
+- feed 先按自带时间排序，同时有界抽样缺日期项，补出文章时间后再次重排；
+- 来源 listing、候选 metadata 和 dated-feed 正文共用一个全局 HTTP 闸门，生产默认峰值不超过 11；
+- metadata、正文、翻译或摘要在 deadline 到期时统一上抛 `collection_deadline`；没有已采用候选的来源保持 skipped，不把超时伪装成 empty 并推进状态；Keyless 路径采用同一语义。
+
+回归覆盖 10 个同日 HTML 候选、无日期 HTML、逆序 feed、feed 缺日期后二次排序、文章页单次复用、HTML metadata deadline、dated-feed 正文 deadline、Keyless 后处理 deadline，以及 5 个 dated feed 与 6 个 HTML 来源混合时全局 HTTP 峰值不超过 11。最终发布门为 unit 145/145、integration 64/64、build 1711 modules、`git diff --check` 全部通过。真实公开 canary 不写数据库、不使用翻译：两来源在 1.074 秒内 2/2 success、12 个候选、最新 `07:01Z`；11 个中文来源在 7.743 秒内产生 11/11 outcomes、missing 0、52 个候选、最新 `08:10Z`，7 success/4 empty、0 failed/skipped。
+
+commit `2493b40` 只触发一份 Git integration production deployment `dpl_2rrwW4zspHmJCk77T1kBcwzAP8Cy`；构建日志确认 main commit、1711 modules 和 READY，正式 alias 已精确切换。切换后、首个自然 Cron 前的 08:56Z 公开基线仍读取上一报告，因此 health 503 stale 是预期 last-known-good 行为，不可当作新代码失败或通过。首个可命中新 deployment 的自然槽是 09:00Z；公开门通过也仍不能替代需用户授权才能读取的 Cron、pg_net、durable 与 runtime 四层证据。
+
+09:00 自然 Cron 的公开状态在约 3 秒内从 `lastAttemptAt=09:00:02.580Z` 推进到 `lastSuccessAt=09:00:05.667Z`，无新错误但保留旧 report，因此只记为公开 `completed/unchanged` 候选槽；内容仍 stale 且 health 503，没有用空轮洗新鲜度。09:15 自然槽随后发布 report `92e5981b-3a10-4ee7-ba43-efa4121205a9`、`dataAsOf=09:15:01.709Z`，health 恢复 200 fresh/Supabase/`lastError=null`。full、compact、reload 原子一致为 160 stories；09:16 检查时实际最新活动为 `09:00:02Z`、年龄 16.36 分钟，标题/摘要/组合/tier 重复均为 0，top/important/watch=8/9/8，核心 17/17 confirmed，`maxPrimaryPublisherShare=0.176`，261 条证据、23 个来源、10/10 primary beats，invalid query 为 400/no-store。
+
+09:15 runtime 日志仍出现央视、Al Jazeera、中新网、财新、CNBC、BBC 体育与 Ars Technica 等阶段性 `collection_deadline`；其中单条 warning 无法说明同源另一阶段是否成功，也不能证明 skipped 是否未推进状态。该槽发生在生产只读查询授权之前，只作为公开恢复证据，不倒推为第十次 burn-in 的正式四层槽。
+
+### 第十次 24 小时 burn-in（未通过：健康来源 cadence 缺口）
+
+用户已明确授权：可将 Vercel production env 临时拉到权限为 `600` 的随机文件，仅用于只读 Supabase 查询，禁止输出凭据，完成后立即删除。连接烟测确认客户端链路使用 TLS，数据库事务为 `READ ONLY`；所有临时 env、客户端依赖和连接信息均在单次命令结束时删除，文档只保存公开标识与非敏感聚合结果。没有新增审计 RPC、没有修改生产 schema，也没有调用任何写入入口。
+
+第十次窗口固定为 `2026-07-18T09:45:26.886Z` 至 `2026-07-19T09:45:26.886Z`。09:45 自然槽是起点基线；严格理论槽从 10:00 开始，每 15 分钟一个，共 96 个，最后一个为次日 09:45。每槽结束后 1–3 分钟内必须保存 Cron、pg_net 9 键 body 摘要、durable 来源集合、snapshot/runtime 原子链接和 source state 快照；不能再依赖每小时回看，因为 `source_state` 只有当前值，后续槽会覆盖 skipped/失败当时是否推进的证据。
+
+09:45 基线四层与公开门如下：
+
+| 层 | 基线结果 |
+| --- | --- |
+| Cron | jobid 2、`*/15 * * * *`、active；run 478 在 `09:45:00.230Z` 启动并 `succeeded`，只证明 pg_net 入队 |
+| pg_net HTTP | response 480、HTTP 200、JSON、无 timeout/network error；body 精确 9 键，`published`、run/report/count 均与 durable 匹配 |
+| durable run | run `6a133972-7f15-42b3-af64-7698d1760c68`，`published`，约 22.760 秒；11 planned、10 attempted、1 skipped、0 missing，集合异常均为空，skipped 未推进 state |
+| snapshot/runtime | report `7c9765b9-7551-4b40-be84-4c18d5f90142`；runtime、snapshot、durable run 和 published report 四向链接一致，runtime/lease singleton 均为 1 |
+| 来源即时状态 | enabled 49、healthy 47、circuit-open 2、half-open due 0；健康 rolling attempted/succeeded 46/47 与 45/47，eligible backlog 1；下一严格槽必须优先消化该 skipped backlog |
+| 公开内容/API | health 200 fresh Supabase、full/合法 compact/reload 原子一致 165 stories；候选与首页最新活动 `09:00:02Z`、检查年龄约 49.76 分钟；标题/摘要/组合/tier 重复 0，top/important/watch=9/9/8，核心 18/18 confirmed，`maxPrimaryPublisherShare=0.167`，invalid query 400/no-store |
+
+09:45 attempted 来源中 9 个是 success/empty，`npr` 为第三次 `source_timeout` 并按 C5 熔断至 `12:45:01.470Z`；此前 `openai` 已熔断至 `11:00:01.677Z`。两者按规则排除当前健康分母。1 个 skipped 来源保持 due，未写 `last_run_id`/`last_attempt_at`；10:00 必须验证它进入 planned/attempted 集合、backlog 清零或按同一规则继续保持 due。
+
+10:00 首个严格槽的调度、HTTP、持久 run 与公开报告本身全部成功，但来源 cadence 硬门失败：
+
+| 层 | 10:00 结果 |
+| --- | --- |
+| Cron | run 479 在 `10:00:00.202Z` 启动并 `succeeded`；理论/实际严格槽 1/1 |
+| pg_net HTTP | response 481、HTTP 200、JSON、无 network error；body 精确 9 键且为 `published` |
+| durable run | run `25665294-9cf0-47b4-a362-3dc56eb59725`，约 22.217 秒；11 planned、10 attempted、1 skipped、0 missing，发现/采用 4/4，集合异常为空 |
+| snapshot/runtime | report `30b65b11-04f1-4b25-b016-2f755fa8d87f`；durable、report、snapshot、runtime 原子链接一致，失败/重复/running/链接错配均为 0 |
+| 来源即时状态 | Anthropic 再次 planned，但未进入 attempted，仍为 skipped 且 state 未推进；enabled 49、healthy 47、circuit-open 2，健康 rolling attempted/succeeded 46/47 与 45/47，eligible backlog 仍只有 Anthropic |
+| 窗口性能 | 含 09:45 基线，最大成功间隔 14.989 分钟，run P95/max 22.760 秒，`>30s` 样本 0 |
+| 公开内容/API | health 200 fresh Supabase、full/compact/reload 原子一致 168 stories；候选与首页活动 `09:17:00Z`、检查年龄约 45.845 分钟；重复 0，top/important/watch=9/9/8，核心 18/18 confirmed，`maxPrimaryPublisherShare=0.167`，invalid 400/no-store |
+
+Anthropic 最近一次真实 attempt/success 是 `08:15:01.441Z`；10:03 审计时已经过去 108.104 分钟，超过 90 分钟健康 cadence 门。它无失败、无 circuit、`nextDueAt=09:45`，09:45 与 10:00 两个槽均被调度选中却都在 collection deadline 前没有形成 outcome。与第八次窗口采用同一判定标准：`planned` 不能替代 `attempted`，后续成功也不能倒填已经发生的 cadence 缺口，因此第十次窗口在首个严格槽即不可恢复地失败，后续旧 deployment 槽只作诊断，不得拼接。
+
+生产日志证明 Anthropic 的 source worker 确实进入 keyless/direct 链路，问题不是 planner 漏选或并发 worker 未启动。精确单源探针进一步定位到直连 HTML 链路：列表页已有 anchor 内 `<time>` 日期，但旧解析只从清洗后的标题读取日期，导致所有候选被当作无日期文章；列表 self-link 还因尾斜杠差异被重复抓取，陈旧候选则要到翻译与正文处理之后才过滤。在 12 秒整轮预算内，这些无效探测把正确应为 `empty` 的 Anthropic 变成 `skipped`。
+
+最小修复保持 12 秒采集预算、maxSources 11、直连并发 11、读重试、单请求上限、keyless 和质量门不变，只做三点：读取 HTML anchor 内 `<time>` 日期；在正文/翻译前淘汰无日期、未来或超过 72 小时的候选；比较列表 self-link 时忽略尾斜杠。回归测试精确覆盖 self-link、过期 `<time>` 和新鲜 `<time>` 候选；完整 unit 146/146、integration 64/64、build 1711 modules 与 `git diff --check` 均通过。真实 Anthropic 单源不写库 canary 在 10.822 秒内完成为 `empty`；10:00 精确 11-source cohort 在 12.002 秒内产生 11/11 outcomes、0 skipped、0 missing，Anthropic 同样为 `empty`。该修复尚未写入本段所述旧 production deployment；部署后必须从首个完整自然 Cron 重新建立窗口。
 
 ## 历史内容与首页证据（第九次窗口截至 08:21Z）
 
@@ -323,19 +387,19 @@ Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 
 - 全量 trust 为 high 29、medium 183、low 0，`shouldShow=false` 项 0；全量 212 条均有证据。
 - 核心媒体最高占比为 3/25=`0.12`，与报告声明一致，满足核心至少 15 条时不高于 0.2；共享每媒体最多 3 条的绝对上限也满足。全量 321 条证据覆盖 24 个来源，10/10 分类均有覆盖。
 
-## 生产 API smoke
+## 生产 API smoke（当前公开侧与历史运维证据）
 
 | 检查 | 结果 |
 | --- | --- |
 | 首页 | 200；正式 alias 已指向新 deployment |
-| 完整 `GET /api/news` | 200；当前响应含 212 个 `items`、212 个 `stories` 和完整分区对象，保持 V2/legacy 兼容 |
-| compact `view=web&window` | 200；212 个 stories、10/15/8 个分区 ID、212 条 ranking metadata，不含 legacy items；30 秒窗口使用共享缓存 |
+| 完整 `GET /api/news` | 10:00 report 为 200；含 168 个 `stories` 和完整分区对象，保持 V2/legacy 兼容 |
+| compact `view=web&window` | 10:00 report 为 200；168 个 stories、9/9/8 个分区 ID、168 条 ranking metadata，不含 legacy items；30 秒窗口使用共享缓存 |
 | compact `view=web&reload=1` | 200；与 full/compact 的 report ID、dataAsOf、story count 同步；不含 items，浏览器 `Cache-Control: no-store` |
 | 非法 cache query | 400 + `no-store`；非规范前导零 window 在读取 durable storage 前拒绝 |
-| `GET /api/health` | 08:15 发布后返回 200 fresh、Supabase、`lastError=null`，与 full/compact/reload 指向同一 08:15 report；跨过 30 分钟时仍会如实返回 503 stale |
+| `GET /api/health` | 10:00 严格槽返回 200 fresh、Supabase、`lastError=null`；full/compact/reload 原子指向同一 report `30b65b11-04f1-4b25-b016-2f755fa8d87f`；发布前旧内容阶段如实返回 503 stale |
 | 未授权 `GET /api/cron` | 401 |
 | 未授权 `POST /api/refresh` | 401 |
-| 正确 Cron Bearer | 200，并持续产生上表 durable run/report；基线与 30 个严格槽均为自然 Cron，未使用手动 refresh |
+| 正确 Cron Bearer | 新 deployment 的 09:00 槽公开完成但 unchanged，09:15 槽发布并恢复 fresh；09:45 授权后基线已完成 Cron/pg_net/durable/snapshot-runtime 四层闭环 |
 | 冷实例收敛 | 新部署冷读后 8.5 秒内连续三次读到相同 Supabase report，低于 60 秒门槛 |
 | latest read 性能 | 发布门历史压测：完整约 75 KB gzip 响应 P95 `988.0 ms`、P99 `1619.9 ms`，未过门；改用约 32.9 KB compact 后，固定窗口 100 请求、并发 5、错误 0：P50 `377.1 ms`、P95 `671.8 ms`、P99 `961.5 ms`，通过 P95 ≤750 ms、P99 ≤1 s |
 | 浏览器 | 1720px 与 390×844 均无横向溢出；compact 水合出完整事件、实时更新与四个时间字段；慢 reload 在 8 秒后释放按钮；11:27 已打开页面在 11:30:31 发布后于 11:31:22 看到新 report，观测上限 51 秒 |
@@ -346,7 +410,7 @@ Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 
 
 - 独立 staging 与真实数据库 20 候选并发 upsert、10 lease 竞争、发布 failpoint 仍是后续 migration 的硬化缺口；当前生产 pgTAP、fencing、同槽 duplicate 与回滚已覆盖主链路。
 - 第八次窗口已在 00:15 因健康来源 cadence 缺口判定失败；第九次窗口只有前 30/96 个严格槽保存了完整四层证据，剩余 66 个槽的 pg_net 证据已过期且未独立落盘，因此不能判通过。
-- `2026-07-18` 公开门确认 latest report 冻结、实际内容活动超过 120 分钟；直连 HTML 候选排序修复必须部署并重新起算第十次窗口。
+- 第十次窗口在 10:00 首个严格槽因 Anthropic 连续 `planned→skipped` 形成 108.104 分钟健康 cadence 缺口，已判失败；后续旧 deployment 数据不得拼接。最小修复通过测试与精确 cohort canary 后，必须部署并重新建立完整连续窗口。
 - 完成 7 天 soak：调度成功率、报告年龄 P95、来源 cadence、source-to-site 延迟与内容质量抽样。
 
-发布门曾通过，但当前内容新鲜度门失败；第九次窗口因不可恢复的证据缺口不能判通过。当前 Codex 任务保持每小时检查，候选排序修复部署后必须从新的自然 Cron 基线重新开始第十次 24 小时窗口；只有完整窗口通过后才调整为每日检查并进入 7 天 soak。任何内容、性能、权限或调度硬门失败都先停止新增调度或回到 last-known-good，再按 [release-plan.md](release-plan.md) 重验。
+发布门曾通过，但第九次窗口因不可恢复的证据缺口不能判通过，第十次窗口又在首个严格槽触发健康来源 cadence 硬失败。当前最小修复必须先作为唯一生产 deployment 发布，再从首个完整自然 Cron 重新建立窗口，并按 15 分钟保存四层与来源 state 证据；只有完整 24 小时窗口通过后才调整为每日检查并进入 7 天 soak。任何内容、性能、权限或调度硬门失败都先停止新增调度或回到 last-known-good，再按 [release-plan.md](release-plan.md) 重验。

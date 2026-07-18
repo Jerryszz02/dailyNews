@@ -17,7 +17,7 @@
 
 Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配置化来源发现候选，经过质量门槛、事件聚类、证据状态、公共影响分级和集合级多样性选择，在网页中展示今日必知、重要进展、持续关注、分类深读、搜索和偏好设置。
 
-事件级核心管线、V2 API/UI、last-known-good、30 秒整轮目标和 Supabase 持久化已实现，生产 Supabase Cron 每 15 分钟运行。前八次 burn-in 暴露并修复了调度丢槽、到期边界、deadline cadence、瞬时读失败、半开容量和 P95 问题。第九次窗口前 30/96 个严格槽通过，但其余 66 个槽没有在 pg_net 的 6 小时 TTL 内保存完整证据，不能判定通过。`2026-07-18` 公开门又确认 latest report 冻结且实际内容活动超过 120 分钟；根因是直连 HTML 采集在按时间排序前截断 DOM 候选，使首页后部的新链接被旧链接挤出。最小排序修复已通过 unit 137/137、integration 64/64、build 1711 modules、真实两来源与 11 来源只读 canary，等待单次生产部署后从自然 Cron 重新建立第十次 24 小时窗口。完整 24 小时与随后 7 天 soak 通过前，仍不能宣布运行门完成。
+事件级核心管线、V2 API/UI、last-known-good、30 秒整轮目标和 Supabase 持久化已实现，生产 Supabase Cron 每 15 分钟运行。前八次 burn-in 暴露并修复了调度丢槽、到期边界、deadline cadence、瞬时读失败、半开容量和 P95 问题。第九次窗口前 30/96 个严格槽通过，但其余 66 个槽没有在 pg_net 的 6 小时 TTL 内保存完整证据，不能判定通过。`2026-07-18` 第一版直连排序修复仍在同日/无日期 HTML 与逆序 feed 上触发 stale；第二版用有界文章 metadata 探测、feed 补日期后重排、全局 HTTP 闸门和严格 deadline 语义修复，已通过 unit 145/145、integration 64/64、build 1711 modules、真实两来源与 11 来源只读 canary，并发布为 production deployment `dpl_2rrwW4zspHmJCk77T1kBcwzAP8Cy`。用户授权生产只读查询后，09:45 自然槽完成四层与公开内容门闭环，但 10:00 首个严格槽中 Anthropic 再次 `planned→skipped`，健康来源实际 cadence 达到 108.104 分钟，因此第十次窗口当场判失败。最小修复改为读取 HTML anchor 内的 `<time>` 日期、在正文/翻译前淘汰过期候选，并消除尾斜杠 self-link 重复抓取；本地 unit 146/146、integration 64/64、build 1711 modules、`git diff --check` 和精确 11-source 不写库 canary 均通过，等待唯一生产部署后重新起算。完整 24 小时与随后 7 天 soak 通过前，仍不能宣布运行门完成。
 
 项目由四条主要链路组成：
 
@@ -111,4 +111,4 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | 确认 Supabase 项目与 secret 的维护人 | 生产已经公开部署；需要明确 migration、Vault、Vercel env 和轮换责任 |
 | 确认新增来源的评估标准 | 代码有 `credibility`、`enabled`、`mayHavePaywall`，但没有来源准入流程 |
 | 确认翻译服务是否固定使用本地 OpenAI-compatible 服务 | README 只给出可选变量，不能确定供应商、模型和成本边界 |
-| 确认是否需要保存历史日报 | 当前没有数据库或历史归档机制；如果需要，会影响数据设计和发布计划 |
+| 确认是否需要保存长期历史日报 | 已有 Supabase 不可变报告快照；长期保留期限和查询入口仍待确认，并会影响清理策略与产品设计 |

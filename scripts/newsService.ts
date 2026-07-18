@@ -133,6 +133,8 @@ export async function collectNewsCandidates(options: NewsCollectionOptions = {})
           translationConfig,
           repairSummariesWithModel,
           deadlineAt,
+          now,
+          maxNewsAgeHours,
         });
   const recentDirectItems = filterRecentItems(directResult.items, now, maxNewsAgeHours);
   const combinedLiveItems = uniqueItemsByUrl([...recentFetchedItems, ...recentDirectItems]);
@@ -203,14 +205,15 @@ function uniqueItemsByUrl(items: RawNewsItem[]): RawNewsItem[] {
 }
 
 function filterRecentItems(items: RawNewsItem[], now: Date, maxAgeHours: number): RawNewsItem[] {
-  const maxAgeMs = maxAgeHours * 3_600_000;
-  return items.filter((item) => {
-    if (!item.publishedAt) return false;
-    const publishedAt = Date.parse(item.publishedAt);
-    if (!Number.isFinite(publishedAt)) return false;
-    const ageMs = now.getTime() - publishedAt;
-    return ageMs >= 0 && ageMs <= maxAgeMs;
-  });
+  return items.filter((item) => isRecentPublishedAt(item.publishedAt, now, maxAgeHours));
+}
+
+function isRecentPublishedAt(publishedAt: string | undefined, now: Date, maxAgeHours: number): boolean {
+  if (!publishedAt) return false;
+  const publishedAtMs = Date.parse(publishedAt);
+  if (!Number.isFinite(publishedAtMs)) return false;
+  const ageMs = now.getTime() - publishedAtMs;
+  return ageMs >= 0 && ageMs <= maxAgeHours * 3_600_000;
 }
 
 function readGeneratedFallbackReport(): DailyNewsReport {
@@ -486,6 +489,8 @@ async function fetchDirectSources(
     translationConfig?: TranslationConfig;
     repairSummariesWithModel: boolean;
     deadlineAt: number;
+    now: Date;
+    maxNewsAgeHours: number;
   },
 ): Promise<{ items: RawNewsItem[]; outcomes: NewsCollectionSourceOutcome[] }> {
   const enabledSources = options.sources;
@@ -515,6 +520,8 @@ async function fetchDirectSources(
         for (const candidate of candidates) {
           if (Date.now() >= options.deadlineAt) break;
           if (accepted >= options.limitPerSection) break;
+          const publishedAt = candidate.publishedAt;
+          if (!isRecentPublishedAt(publishedAt, options.now, options.maxNewsAgeHours)) continue;
           let title = candidate.title.trim();
           const url = candidate.url.trim();
           if (!title || !url) continue;
@@ -546,8 +553,6 @@ async function fetchDirectSources(
           title = preparedText.title;
           summary = preparedText.summary;
 
-          const publishedAt = candidate.publishedAt;
-          if (!publishedAt) continue;
           const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
           const categories = uniqueValues([primaryCategory, ...section.categories]);
 
@@ -844,8 +849,8 @@ async function prioritizeDirectCandidates(
   }
 
   const selected = selectHtmlCandidatesForProbing(candidates, probeLimit);
-  const resolved = await mapWithConcurrency(selected, 3, (candidate) =>
-    resolveDirectCandidate(candidate, deadlineAt, fetchGate),
+  const resolved = await mapWithConcurrency(selected, 3, async (candidate) =>
+    candidate.publishedAt ? candidate : resolveDirectCandidate(candidate, deadlineAt, fetchGate),
   );
   return sortDirectCandidatesByRecency(resolved);
 }
@@ -946,13 +951,15 @@ function readHtmlLinkCandidates(html: string, baseUrl: string): DirectCandidate[
   for (const match of html.matchAll(anchorPattern)) {
     const url = resolveCandidateUrl(match[1], baseUrl);
     const rawTitle = cleanText(match[2]);
-    const publishedAt = parsePublishedDate(rawTitle);
+    const publishedAt =
+      readTimeTagDates(match[2]).map((value) => parsePublishedDate(value)).find(Boolean) ??
+      parsePublishedDate(rawTitle);
     const title = removeTrailingPublishedDate(rawTitle);
     if (!url || !title || title.length < 8) continue;
     if (baseHost && hostnameFromUrl(url) !== baseHost) continue;
     if (!isLikelyArticleUrl(url)) continue;
     if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|zip)(\?|$)/i.test(url)) continue;
-    if (url === baseUrl || url.endsWith("#")) continue;
+    if (url.replace(/\/+$/, "") === baseUrl.replace(/\/+$/, "") || url.endsWith("#")) continue;
     candidates.push({ title, url, summary: title, publishedAt, kind: "html" });
   }
   return uniqueCandidates(candidates)

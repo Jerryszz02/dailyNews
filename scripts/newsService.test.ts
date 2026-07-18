@@ -500,6 +500,52 @@ describe("collectNewsCandidates source outcomes", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
+  it("uses anchor time dates and skips stale or self-linked HTML candidates before probing", async () => {
+    const source = testSource("anchor-time", "锚点时间源");
+    source.sections[0].url = "https://anchor-time.example.com/news";
+    const freshUrl = "https://anchor-time.example.com/news/fresh-story";
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url !== source.sections[0].url) {
+        throw new Error(`Unexpected article probe: ${url}`);
+      }
+      return Promise.resolve(htmlResponse(`
+        <a href="/news/">新闻列表首页导航链接，不能作为文章重复探测</a>
+        <a href="/news/stale-story">
+          <time datetime="2026-07-01T09:00:00.000Z">2026-07-01</time>
+          已经过期的新闻标题，不能进入翻译或正文探测
+        </a>
+        <a href="/news/fresh-story">
+          <time datetime="2026-07-18T09:00:00.000Z">2026-07-18</time>
+          最新新闻标题，直接使用列表中的可靠时间
+        </a>
+      `));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 3,
+      now: new Date("2026-07-18T10:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.sourceOutcomes).toEqual([
+      { sourceId: "anchor-time", status: "success", discoveredCount: 1, errorCode: null },
+    ]);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      url: freshUrl,
+      publishedAt: "2026-07-18T09:00:00.000Z",
+    });
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
+      source.sections[0].url,
+      freshUrl,
+    ]);
+  });
+
   it("resolves exact article times before truncating HTML links without dates", async () => {
     const source = testSource("undated", "无日期排序源");
     source.sections[0].url = "https://undated.example.com/";

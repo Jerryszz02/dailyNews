@@ -59,7 +59,7 @@
 
 ### 4. 24 小时 burn-in
 
-保持 bundled fallback 和上一快照可回滚。每个周期记录 run、已选来源、发现/采用数量、report ID、年龄和错误码。通过标准：最大成功间隔不超过 30 分钟、49 源轮转达标、无双发布/候选丢失/secret 泄漏。
+保持 bundled fallback 和上一快照可回滚。每个自然槽结束 1–3 分钟内记录 Cron、pg_net 9 键响应摘要、durable run 的 planned/attempted/skipped/missing、snapshot/runtime 原子链接、source state 即时快照，以及公开 report ID、实际内容年龄和错误码。burn-in 期间监控必须按 15 分钟运行，不能只做每小时抽样；`pg_net` 响应有 6 小时 TTL，`source_state` 也会被后续槽覆盖。通过标准：96 个严格槽四层完整、最大成功间隔不超过 30 分钟、49 源轮转达标、无双发布/候选丢失/secret 泄漏。
 
 ### 5. 7 天生产 soak
 
@@ -80,7 +80,7 @@
 
 每次发布至少记录：commit/deployment、migration version、bootstrap report ID、两轮手动 run ID、cron 首次成功时间、冷实例可见耗时、回滚演练结果、24 小时与 7 天指标。记录只保存标识和聚合指标，不保存 secret 或外部完整响应。
 
-本次生产执行与未关闭的门禁证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。前八次 24 小时窗口分别因调度、来源 cadence、读恢复、容量、deployment 连续性或 P95 硬门失败/被取代。第九次窗口只保存了前 30/96 个严格槽的完整 Cron、pg_net、durable 与 runtime 证据；其余 66 个槽没有在 pg_net 的 6 小时 TTL 内落盘，不能判定通过。`2026-07-18` 公开门进一步确认 report 停止推进、实际内容活动超过 120 分钟，即使 Cron 的 lastSuccessAt 仍更新也不能视为实时。根因是直连 HTML 候选在解析时间前按 DOM 顺序截断，首页后部的新链接被旧链接挤出。最小修复在截断前按页面时间或 URL 日期稳定降序排序，已通过 unit 137/137、integration 64/64、build 1711 modules、真实两来源与 11 来源只读 canary。修复完成单次生产部署后，必须以新的自然 Cron 四层闭环重新建立第十次窗口；完整 24 小时通过后才能进入 7 天 soak。
+本次生产执行与未关闭的门禁证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。前八次 24 小时窗口分别因调度、来源 cadence、读恢复、容量、deployment 连续性或 P95 硬门失败/被取代。第九次窗口只保存了前 30/96 个严格槽的完整 Cron、pg_net、durable 与 runtime 证据；其余 66 个槽没有在 pg_net 的 6 小时 TTL 内落盘，不能判定通过。`2026-07-18` 第一版直连排序修复仍在同日/无日期 HTML 与逆序 feed 上触发 stale 硬失败。第二版用有界文章 metadata 探测、feed 补日期后重排、全局 HTTP 闸门和严格 deadline 语义修复，已通过 unit 145/145、integration 64/64、build 1711 modules、真实两来源与 11 来源只读 canary，并发布为 production deployment `dpl_2rrwW4zspHmJCk77T1kBcwzAP8Cy`。用户授权生产只读查询后，09:45 自然槽完成四层与公开内容门闭环，但 10:00 首个严格槽中 Anthropic 连续第二槽 `planned→skipped`，健康来源真实尝试间隔达到 108.104 分钟，第十次窗口按 cadence 硬门判失败。针对 HTML anchor 日期遗漏、陈旧候选过晚过滤和 self-link 重复抓取的最小修复已通过 unit 146/146、integration 64/64、build 1711 modules、diff-check 与精确 11-source 不写库 canary；必须部署为唯一 production version，并从其首个完整自然 Cron 重新建立连续窗口。只有完整 24 小时通过后才能进入 7 天 soak。
 
 ## 待确认
 
