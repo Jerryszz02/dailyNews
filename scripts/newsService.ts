@@ -65,6 +65,19 @@ interface NewsTextForDisplayOptions extends NewsText {
   repairSummaryWithModel: boolean;
   translationConfig?: TranslationConfig;
   deadlineAt?: number;
+  articleContext?: string | null;
+  fetchGate?: AsyncTaskGate;
+}
+
+interface DirectCandidate extends NewsText {
+  url: string;
+  publishedAt?: string;
+  kind: "feed" | "html";
+  articleContext?: string | null;
+}
+
+interface AsyncTaskGate {
+  run<T>(task: () => Promise<T>): Promise<T>;
 }
 
 const defaultTranslationBaseUrl = "https://api.deepseek.com";
@@ -427,14 +440,14 @@ async function fetchWithFirecrawlKeyless(
       status:
         sourceItems.length > 0
           ? "success"
-          : successfulSearches > 0
-            ? "empty"
-            : attemptedSearches === 0 || lastErrorCode === "collection_deadline"
+          : attemptedSearches === 0 || lastErrorCode === "collection_deadline"
               ? "skipped"
-              : "failed",
+              : successfulSearches > 0
+                ? "empty"
+                : "failed",
       discoveredCount: sourceItems.length,
       errorCode:
-        sourceItems.length > 0 || successfulSearches > 0
+        sourceItems.length > 0 || (successfulSearches > 0 && lastErrorCode !== "collection_deadline")
           ? null
           : (lastErrorCode ?? (attemptedSearches > 0 ? "source_unavailable" : "collection_deadline")),
     });
@@ -477,6 +490,7 @@ async function fetchDirectSources(
 ): Promise<{ items: RawNewsItem[]; outcomes: NewsCollectionSourceOutcome[] }> {
   const enabledSources = options.sources;
   const concurrency = readPositiveInteger("DAILY_NEWS_SOURCE_CONCURRENCY", defaultSourceConcurrency);
+  const fetchGate = createAsyncTaskGate(concurrency);
   let warnedMissingTranslation = false;
 
   const sourceItems = await mapWithConcurrency(enabledSources, concurrency, async (source) => {
@@ -488,9 +502,14 @@ async function fetchDirectSources(
       if (Date.now() >= options.deadlineAt) break;
       try {
         attemptedSections += 1;
-        const html = await fetchText(section.url, options.deadlineAt);
+        const html = await fetchGate.run(() => fetchText(section.url, options.deadlineAt));
         successfulSections += 1;
-        const candidates = readDirectCandidates(html, section.url).slice(0, options.limitPerSection * 2);
+        const candidates = await prioritizeDirectCandidates(
+          readDirectCandidates(html, section.url),
+          options.limitPerSection,
+          options.deadlineAt,
+          fetchGate,
+        );
         let accepted = 0;
 
         for (const candidate of candidates) {
@@ -509,7 +528,12 @@ async function fetchDirectSources(
             repairSummaryWithModel: options.repairSummariesWithModel,
             translationConfig: options.translationConfig,
             deadlineAt: options.deadlineAt,
+            articleContext: candidate.articleContext,
+            fetchGate,
           });
+          if (Date.now() >= options.deadlineAt) {
+            throw new CollectionDeadlineError("Collection deadline reached");
+          }
           if (!preparedText) {
             if (isNonChineseText({ title, summary }) && section.requireChinese === false && !options.translationConfig) {
               if (!warnedMissingTranslation) {
@@ -522,7 +546,7 @@ async function fetchDirectSources(
           title = preparedText.title;
           summary = preparedText.summary;
 
-          const publishedAt = await resolvePublishedAt(url, candidate.publishedAt, options.deadlineAt);
+          const publishedAt = candidate.publishedAt;
           if (!publishedAt) continue;
           const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
           const categories = uniqueValues([primaryCategory, ...section.categories]);
@@ -554,14 +578,16 @@ async function fetchDirectSources(
       outcome: {
         sourceId: source.source_id,
         status:
-          successfulSections > 0
-            ? (items.length > 0 ? "success" as const : "empty" as const)
-            : attemptedSections === 0 || lastErrorCode === "collection_deadline"
+          items.length > 0
+            ? "success" as const
+            : lastErrorCode === "collection_deadline" || attemptedSections === 0
               ? "skipped" as const
-              : "failed" as const,
+              : successfulSections > 0
+                ? "empty" as const
+                : "failed" as const,
         discoveredCount: items.length,
         errorCode:
-          successfulSections > 0
+          items.length > 0 || (successfulSections > 0 && lastErrorCode !== "collection_deadline")
             ? null
             : (lastErrorCode ?? (attemptedSections > 0 ? "source_unavailable" : "collection_deadline")),
       },
@@ -613,6 +639,35 @@ export async function mapWithConcurrency<T, R>(
   return results;
 }
 
+function createAsyncTaskGate(concurrency: number): AsyncTaskGate {
+  const limit = Math.max(1, Math.floor(concurrency));
+  const pending: Array<() => void> = [];
+  let active = 0;
+
+  const releaseNext = () => {
+    if (active >= limit) return;
+    const resolve = pending.shift();
+    if (!resolve) return;
+    active += 1;
+    resolve();
+  };
+
+  return {
+    async run<T>(task: () => Promise<T>): Promise<T> {
+      await new Promise<void>((resolve) => {
+        pending.push(resolve);
+        releaseNext();
+      });
+      try {
+        return await task();
+      } finally {
+        active -= 1;
+        releaseNext();
+      }
+    },
+  };
+}
+
 class CollectionDeadlineError extends Error {}
 
 export async function runWithinDeadline<T>(task: () => Promise<T>, deadlineAt: number): Promise<T> {
@@ -660,7 +715,10 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
     if (!options.allowTranslation || !options.translationConfig) return null;
 
     try {
-      const articleContext = await readArticleSummaryContext(options.url, options.deadlineAt);
+      const articleContext =
+        options.articleContext === undefined
+          ? await readArticleSummaryContext(options.url, options.deadlineAt, options.fetchGate)
+          : (options.articleContext ?? undefined);
       const translated = await runWithinDeadline(
         () => translateNewsText({ title: options.title, summary: options.summary, articleContext }, options.translationConfig!),
         options.deadlineAt ?? Date.now() + 15_000,
@@ -668,6 +726,7 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
       if (isNonChineseText(translated) || needsSummaryRepair(translated.title, translated.summary)) return null;
       return translated;
     } catch (error) {
+      rethrowCollectionDeadline(error, options.deadlineAt);
       console.warn(`Skipped non-Chinese result after translation failed: ${String(error)}`);
       return null;
     }
@@ -677,7 +736,10 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
     return { title: options.title, summary: options.summary };
   }
 
-  const articleContext = await readArticleSummaryContext(options.url, options.deadlineAt);
+  const articleContext =
+    options.articleContext === undefined
+      ? await readArticleSummaryContext(options.url, options.deadlineAt, options.fetchGate)
+      : (options.articleContext ?? undefined);
   if (!options.translationConfig || !options.repairSummaryWithModel) {
     const fallbackSummary = buildSummaryFromArticleContext(options.title, articleContext);
     return { title: options.title, summary: fallbackSummary ?? buildMinimalSummary(options.title) };
@@ -692,6 +754,7 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
       return { title: options.title, summary: enriched.summary };
     }
   } catch (error) {
+    rethrowCollectionDeadline(error, options.deadlineAt);
     console.warn(`Kept original summary after enrichment failed: ${String(error)}`);
   }
 
@@ -731,11 +794,25 @@ function buildMinimalSummary(title: string): string {
   return `相关报道聚焦“${title}”，具体背景、影响和后续进展以原文披露为准。`;
 }
 
-async function readArticleSummaryContext(url: string, deadlineAt?: number): Promise<string | undefined> {
+async function readArticleSummaryContext(
+  url: string,
+  deadlineAt?: number,
+  fetchGate?: AsyncTaskGate,
+): Promise<string | undefined> {
   try {
-    return extractArticleSummaryContext(await fetchText(url, deadlineAt));
-  } catch {
+    const html = fetchGate
+      ? await fetchGate.run(() => fetchText(url, deadlineAt))
+      : await fetchText(url, deadlineAt);
+    return extractArticleSummaryContext(html);
+  } catch (error) {
+    rethrowCollectionDeadline(error, deadlineAt);
     return undefined;
+  }
+}
+
+function rethrowCollectionDeadline(error: unknown, deadlineAt?: number): void {
+  if (error instanceof CollectionDeadlineError || (deadlineAt !== undefined && Date.now() >= deadlineAt)) {
+    throw new CollectionDeadlineError("Collection deadline reached");
   }
 }
 
@@ -745,29 +822,126 @@ export function extractArticleSummaryContext(html: string): string | undefined {
   return context || undefined;
 }
 
-function readDirectCandidates(html: string, baseUrl: string): Array<{ title: string; url: string; summary: string; publishedAt?: string }> {
+function readDirectCandidates(html: string, baseUrl: string): DirectCandidate[] {
   const feedItems = readFeedCandidates(html, baseUrl);
   if (feedItems.length > 0) return feedItems;
   return readHtmlLinkCandidates(html, baseUrl);
 }
 
-function readFeedCandidates(html: string, baseUrl: string): Array<{ title: string; url: string; summary: string; publishedAt?: string }> {
+async function prioritizeDirectCandidates(
+  candidates: DirectCandidate[],
+  limitPerSection: number,
+  deadlineAt: number,
+  fetchGate: AsyncTaskGate,
+): Promise<DirectCandidate[]> {
+  const probeLimit = Math.max(3, limitPerSection * 2);
+  if (candidates[0]?.kind === "feed") {
+    const selected = selectFeedCandidatesForProbing(candidates, limitPerSection, probeLimit);
+    const resolved = await mapWithConcurrency(selected, 3, async (candidate) =>
+      candidate.publishedAt ? candidate : resolveDirectCandidate(candidate, deadlineAt, fetchGate),
+    );
+    return sortDirectCandidatesByRecency(resolved);
+  }
+
+  const selected = selectHtmlCandidatesForProbing(candidates, probeLimit);
+  const resolved = await mapWithConcurrency(selected, 3, (candidate) =>
+    resolveDirectCandidate(candidate, deadlineAt, fetchGate),
+  );
+  return sortDirectCandidatesByRecency(resolved);
+}
+
+function selectFeedCandidatesForProbing(
+  candidates: DirectCandidate[],
+  limitPerSection: number,
+  probeLimit: number,
+): DirectCandidate[] {
+  const dated = candidates.filter((candidate) => candidate.publishedAt);
+  const undated = candidates.filter((candidate) => !candidate.publishedAt);
+  const selected = dated.slice(0, Math.min(limitPerSection, dated.length));
+  selected.push(...sampleEvenly(undated, Math.min(undated.length, probeLimit - selected.length)));
+
+  const selectedUrls = new Set(selected.map((candidate) => candidate.url));
+  const remaining = candidates.filter((candidate) => !selectedUrls.has(candidate.url));
+  return [...selected, ...remaining.slice(0, probeLimit - selected.length)];
+}
+
+function selectHtmlCandidatesForProbing(candidates: DirectCandidate[], limit: number): DirectCandidate[] {
+  if (candidates.length <= limit) return candidates;
+
+  const newestRecency = directCandidateRecency(candidates[0]);
+  const newestBucket = candidates.filter((candidate) => directCandidateRecency(candidate) === newestRecency);
+  const selected = sampleEvenly(newestBucket, Math.min(limit, newestBucket.length));
+  if (selected.length >= limit) return selected;
+
+  const selectedUrls = new Set(selected.map((candidate) => candidate.url));
+  const remaining = candidates.filter((candidate) => !selectedUrls.has(candidate.url));
+  return [...selected, ...remaining.slice(0, limit - selected.length)];
+}
+
+function sampleEvenly<T>(values: T[], limit: number): T[] {
+  if (values.length <= limit) return values;
+  if (limit <= 1) return values.slice(0, 1);
+
+  return Array.from({ length: limit }, (_unused, index) => {
+    const sourceIndex = Math.round((index * (values.length - 1)) / (limit - 1));
+    return values[sourceIndex];
+  });
+}
+
+function sortDirectCandidatesByRecency(candidates: DirectCandidate[]): DirectCandidate[] {
+  return candidates
+    .map((candidate, index) => ({ candidate, index, recency: directCandidateRecency(candidate) }))
+    .sort((left, right) => right.recency - left.recency || left.index - right.index)
+    .map(({ candidate }) => candidate);
+}
+
+async function resolveDirectCandidate(
+  candidate: DirectCandidate,
+  deadlineAt: number,
+  fetchGate: AsyncTaskGate,
+): Promise<DirectCandidate> {
+  try {
+    const html = await fetchGate.run(() => fetchText(candidate.url, deadlineAt));
+    return {
+      ...candidate,
+      publishedAt:
+        extractPublishedDateFromHtml(html) ??
+        parsePublishedDate(candidate.publishedAt) ??
+        inferPublishedDateFromUrl(candidate.url),
+      articleContext: extractArticleSummaryContext(html) ?? null,
+    };
+  } catch (error) {
+    if (error instanceof CollectionDeadlineError || Date.now() >= deadlineAt) {
+      throw new CollectionDeadlineError("Collection deadline reached");
+    }
+    return {
+      ...candidate,
+      publishedAt: parsePublishedDate(candidate.publishedAt) ?? inferPublishedDateFromUrl(candidate.url),
+      articleContext: null,
+    };
+  }
+}
+
+function readFeedCandidates(html: string, baseUrl: string): DirectCandidate[] {
   const blocks = [...html.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].map((match) => match[0]);
-  const candidates: Array<{ title: string; url: string; summary: string; publishedAt?: string }> = [];
+  const candidates: DirectCandidate[] = [];
   for (const block of blocks) {
     const title = cleanText(readTag(block, "title"));
     const rawLink = readTag(block, "link") || readLinkHref(block);
     const url = resolveCandidateUrl(rawLink, baseUrl);
     const summary = cleanText(readTag(block, "description") || readTag(block, "summary") || readTag(block, "content"));
     const publishedAt = readPublishedDate(readTag(block, "pubDate") || readTag(block, "published") || readTag(block, "updated"));
-    if (title && url) candidates.push({ title, url, summary: summary || title, publishedAt });
+    if (title && url) candidates.push({ title, url, summary: summary || title, publishedAt, kind: "feed" });
   }
-  return uniqueCandidates(candidates);
+  return uniqueCandidates(candidates)
+    .map((candidate, index) => ({ candidate, index, recency: directCandidateRecency(candidate) }))
+    .sort((left, right) => right.recency - left.recency || left.index - right.index)
+    .map(({ candidate }) => candidate);
 }
 
-function readHtmlLinkCandidates(html: string, baseUrl: string): Array<{ title: string; url: string; summary: string; publishedAt?: string }> {
+function readHtmlLinkCandidates(html: string, baseUrl: string): DirectCandidate[] {
   const baseHost = hostnameFromUrl(baseUrl);
-  const candidates: Array<{ title: string; url: string; summary: string; publishedAt?: string }> = [];
+  const candidates: DirectCandidate[] = [];
   const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   for (const match of html.matchAll(anchorPattern)) {
     const url = resolveCandidateUrl(match[1], baseUrl);
@@ -779,7 +953,7 @@ function readHtmlLinkCandidates(html: string, baseUrl: string): Array<{ title: s
     if (!isLikelyArticleUrl(url)) continue;
     if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|zip)(\?|$)/i.test(url)) continue;
     if (url === baseUrl || url.endsWith("#")) continue;
-    candidates.push({ title, url, summary: title, publishedAt });
+    candidates.push({ title, url, summary: title, publishedAt, kind: "html" });
   }
   return uniqueCandidates(candidates)
     .map((candidate, index) => ({

@@ -224,6 +224,44 @@ describe("collectNewsCandidates source outcomes", () => {
     ]);
   });
 
+  it("does not turn a keyless processing deadline plus direct failure into an empty source", async () => {
+    const source = testSource("keyless-deadline", "Keyless 后处理超时源");
+    firecrawlSearchMock.mockResolvedValue({
+      news: [
+        {
+          title: "需要正文补充摘要的 Keyless 新闻标题",
+          description: "需要正文补充摘要的 Keyless 新闻标题",
+          url: "https://keyless-deadline.example.com/news/article.html",
+          publishedDate: "2026-07-18T06:00:00.000Z",
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      if (String(input) === source.sections[0].url) {
+        return Promise.resolve({ ok: false, status: 503, text: async () => "" } as Response);
+      }
+      return new Promise<Response>(() => undefined);
+    }));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      limitPerSection: 1,
+      now: new Date("2026-07-18T07:00:00.000Z"),
+      collectionBudgetMs: 60,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toHaveLength(0);
+    expect(result.sourceOutcomes).toEqual([
+      {
+        sourceId: "keyless-deadline",
+        status: "failed",
+        discoveredCount: 0,
+        errorCode: "source_server_error",
+      },
+    ]);
+  });
+
   it("keeps sources queued past the deadline eligible for the next refresh", async () => {
     vi.useFakeTimers();
     try {
@@ -251,6 +289,128 @@ describe("collectNewsCandidates source outcomes", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("keeps a source queued when article metadata probing reaches the deadline", async () => {
+    const source = testSource("probe-deadline", "探测超时源");
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(
+          htmlResponse('<a href="/news/2026/07/18/article.html">探测超时新闻标题，包含足够长度用于候选识别</a>'),
+        );
+      }
+      return new Promise<Response>(() => undefined);
+    }));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      collectionBudgetMs: 30,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toHaveLength(0);
+    expect(result.sourceOutcomes).toEqual([
+      {
+        sourceId: "probe-deadline",
+        status: "skipped",
+        discoveredCount: 0,
+        errorCode: "collection_deadline",
+      },
+    ]);
+  });
+
+  it("keeps a dated feed source queued when summary context reaches the deadline", async () => {
+    const source = testSource("feed-context-deadline", "Feed 正文超时源");
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(htmlResponse(`
+          <rss><channel><item>
+            <title>需要正文补充摘要的 Feed 新闻标题</title>
+            <link>https://feed-context-deadline.example.com/news/article.html</link>
+            <pubDate>2026-07-18T06:00:00.000Z</pubDate>
+          </item></channel></rss>
+        `));
+      }
+      return new Promise<Response>(() => undefined);
+    }));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      collectionBudgetMs: 30,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toHaveLength(0);
+    expect(result.sourceOutcomes).toEqual([
+      {
+        sourceId: "feed-context-deadline",
+        status: "skipped",
+        discoveredCount: 0,
+        errorCode: "collection_deadline",
+      },
+    ]);
+  });
+
+  it("bounds direct listing and article requests across eleven concurrent sources", async () => {
+    const sources = Array.from({ length: 11 }, (_unused, index) =>
+      testSource(`bounded-${index + 1}`, `受限来源 ${index + 1}`),
+    );
+    let articleRequestsStarted = 0;
+    let releaseArticleRequests: () => void = () => undefined;
+    const articleBarrier = new Promise<void>((resolve) => {
+      releaseArticleRequests = resolve;
+    });
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      const sourceIndex = sources.findIndex((source) => source.sections[0].url === url);
+      if (sourceIndex >= 0 && sourceIndex < 5) {
+        return htmlResponse(`
+          <rss><channel><item>
+            <title>需要正文摘要的 Feed 新闻标题</title>
+            <link>https://bounded-${sourceIndex + 1}.example.com/news/feed-article.html</link>
+            <pubDate>2026-07-18T06:00:00.000Z</pubDate>
+          </item></channel></rss>
+        `);
+      }
+      if (sourceIndex >= 5) {
+        return htmlResponse(`
+          <a href="/news/2026/07/18/article-1.html">候选新闻标题一，包含足够长度用于识别</a>
+          <a href="/news/2026/07/18/article-2.html">候选新闻标题二，包含足够长度用于识别</a>
+          <a href="/news/2026/07/18/article-3.html">候选新闻标题三，包含足够长度用于识别</a>
+        `);
+      }
+      articleRequestsStarted += 1;
+      await articleBarrier;
+      return htmlResponse(`
+        <meta property="article:published_time" content="2026-07-18T14:00:00+08:00">
+        <meta property="og:description" content="公开文章包含具体主体、事件时间、事实进展和后续安排，用于验证全局请求并发上限。">
+      `);
+    }));
+
+    const resultPromise = collectNewsCandidates({
+      sources,
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+    for (let attempt = 0; attempt < 100 && articleRequestsStarted < 11; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    expect(articleRequestsStarted).toBe(11);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(articleRequestsStarted).toBe(11);
+
+    releaseArticleRequests();
+    const result = await resultPromise;
+    expect(result.sourceOutcomes).toHaveLength(11);
+    expect(result.sourceOutcomes.every((outcome) => outcome.status === "success")).toBe(true);
   });
 
   it("prioritizes newer date-encoded article links before applying the per-section limit", async () => {
@@ -296,6 +456,157 @@ describe("collectNewsCandidates source outcomes", () => {
     expect(result.items[0]).toMatchObject({
       url: currentUrl,
       publishedAt: "2026-07-18T04:38:00.000Z",
+    });
+  });
+
+  it("resolves exact article times before truncating same-day HTML links", async () => {
+    const source = testSource("same-day", "同日排序源");
+    source.sections[0].url = "https://same-day.example.com/";
+    const newestUrl = "https://same-day.example.com/news/2026/07/18/newest.html";
+    const olderLinks = Array.from(
+      { length: 9 },
+      (_unused, index) =>
+        `<a href="/news/2026/07/18/story-${index + 1}.html">同日较早新闻标题 ${index + 1}，包含足够长度用于候选识别</a>`,
+    ).join("");
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(htmlResponse(`
+          ${olderLinks}
+          <a href="/news/2026/07/18/newest.html">同日最新新闻标题，包含足够长度用于候选识别</a>
+        `));
+      }
+      return Promise.resolve(htmlResponse(`
+        <meta property="article:published_time" content="${url === newestUrl ? "2026-07-18T14:00:00+08:00" : "2026-07-18T08:00:00+08:00"}">
+        <meta property="og:description" content="公开文章包含具体主体、事件时间、事实进展和后续安排，可用于验证同一天候选按精确发布时间选择。">
+      `));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-07-18T07:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      url: newestUrl,
+      publishedAt: "2026-07-18T06:00:00.000Z",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("resolves exact article times before truncating HTML links without dates", async () => {
+    const source = testSource("undated", "无日期排序源");
+    source.sections[0].url = "https://undated.example.com/";
+    const newestUrl = "https://undated.example.com/news/articles/newest-story";
+    const articleTimes = new Map([
+      ["https://undated.example.com/news/articles/oldest-story", "2026-07-18T08:00:00+08:00"],
+      ["https://undated.example.com/news/articles/middle-story", "2026-07-18T10:00:00+08:00"],
+      [newestUrl, "2026-07-18T14:00:00+08:00"],
+    ]);
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(htmlResponse(`
+          <a href="/news/articles/oldest-story">无日期较早新闻标题，包含足够长度用于候选识别</a>
+          <a href="/news/articles/middle-story">无日期中间新闻标题，包含足够长度用于候选识别</a>
+          <a href="/news/articles/newest-story">无日期最新新闻标题，包含足够长度用于候选识别</a>
+        `));
+      }
+      return Promise.resolve(htmlResponse(`
+        <meta property="article:published_time" content="${articleTimes.get(url)}">
+        <meta property="og:description" content="公开文章包含具体主体、事件时间、事实进展和后续安排，可用于验证无日期候选按精确发布时间选择。">
+      `));
+    }));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-07-18T07:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      url: newestUrl,
+      publishedAt: "2026-07-18T06:00:00.000Z",
+    });
+  });
+
+  it("sorts oldest-first feeds by published time before applying the section limit", async () => {
+    const source = testSource("feed-order", "Feed 排序源");
+    source.sections[0].url = "https://feed-order.example.com/rss.xml";
+    const newestUrl = "https://feed-order.example.com/news/newest.html";
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(htmlResponse(`
+          <rss><channel>
+            <item><title>Feed 较早新闻标题</title><link>https://feed-order.example.com/news/oldest.html</link><description>较早新闻摘要包含具体事实和后续安排。</description><pubDate>2026-07-18T00:00:00.000Z</pubDate></item>
+            <item><title>Feed 中间新闻标题</title><link>https://feed-order.example.com/news/middle.html</link><description>中间新闻摘要包含具体事实和后续安排。</description><pubDate>2026-07-18T03:00:00.000Z</pubDate></item>
+            <item><title>Feed 最新新闻标题</title><link>${newestUrl}</link><description>最新新闻摘要包含具体事实和后续安排。</description><pubDate>2026-07-18T06:00:00.000Z</pubDate></item>
+          </channel></rss>
+        `));
+      }
+      return Promise.resolve(htmlResponse("<p>Feed 文章正文包含足够信息用于摘要。</p>"));
+    }));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-07-18T07:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      url: newestUrl,
+      publishedAt: "2026-07-18T06:00:00.000Z",
+    });
+  });
+
+  it("re-sorts feeds after resolving missing item dates", async () => {
+    const source = testSource("feed-missing-date", "Feed 缺日期源");
+    source.sections[0].url = "https://feed-missing-date.example.com/rss.xml";
+    const newestUrl = "https://feed-missing-date.example.com/news/newest.html";
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(htmlResponse(`
+          <rss><channel>
+            <item><title>Feed 旧新闻标题</title><link>https://feed-missing-date.example.com/news/old.html</link><description>旧新闻摘要包含具体事实和后续安排。</description><pubDate>2026-07-18T00:00:00.000Z</pubDate></item>
+            <item><title>Feed 无日期最新新闻标题</title><link>${newestUrl}</link><description>最新新闻摘要包含具体事实和后续安排。</description></item>
+          </channel></rss>
+        `));
+      }
+      return Promise.resolve(htmlResponse(`
+        <meta property="article:published_time" content="2026-07-18T14:00:00+08:00">
+        <meta property="og:description" content="公开文章包含具体主体、事件时间、事实进展和后续安排，用于验证补日期后重新排序。">
+      `));
+    }));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-07-18T07:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      url: newestUrl,
+      publishedAt: "2026-07-18T06:00:00.000Z",
     });
   });
 });
