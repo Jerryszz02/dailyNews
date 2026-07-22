@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import type { RawNewsItem } from "../src/types";
+import { readBundledReport } from "./reportStore";
 import { SupabaseNewsStore } from "./supabaseNewsStore";
 
 describe("SupabaseNewsStore RPC mapping", () => {
@@ -239,6 +240,62 @@ describe("SupabaseNewsStore RPC mapping", () => {
       since: "2026-07-12T00:00:00.000Z",
       candidate_limit: 2_000,
     });
+  });
+
+  it("stores compressed reports and transparently reads them back", async () => {
+    const report = readBundledReport();
+    let storedPayload: unknown;
+    const rpc = vi.fn(async (name: string, args?: Record<string, unknown>) => {
+      if (name === "daily_news_publish_refresh") {
+        storedPayload = args?.payload;
+        return {
+          data: [{
+            published_report_id: "00000000-0000-4000-8000-000000000003",
+            previous_report_id: null,
+            last_success_at: report.generatedAt,
+          }],
+          error: null,
+        };
+      }
+      if (name === "daily_news_read_latest") {
+        return {
+          data: [{
+            report_id: "00000000-0000-4000-8000-000000000003",
+            payload: storedPayload,
+            generated_at: report.generatedAt,
+            published_at: report.generatedAt,
+            data_as_of: report.generatedAt,
+            newest_content_at: report.generatedAt,
+            last_attempt_at: report.generatedAt,
+            last_success_at: report.generatedAt,
+            last_error_code: null,
+          }],
+          error: null,
+        };
+      }
+      return { data: [], error: null };
+    });
+    const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
+    const lease = {
+      ownerId: "00000000-0000-4000-8000-000000000001",
+      runId: "00000000-0000-4000-8000-000000000002",
+      fencingToken: 4,
+    };
+
+    await store.publishRefresh({
+      ...lease,
+      reportId: "00000000-0000-4000-8000-000000000003",
+      report,
+      dataAsOf: report.generatedAt,
+      newestContentAt: report.generatedAt,
+      contentHash: "0123456789abcdef",
+      inputFingerprint: "input-fingerprint",
+      metrics: {},
+    });
+
+    expect(storedPayload).toMatchObject({ storageView: 1, encoding: "gzip-base64" });
+    expect(JSON.stringify(storedPayload).length).toBeLessThan(JSON.stringify(report).length * 0.6);
+    await expect(store.readState()).resolves.toMatchObject({ latest: { report } });
   });
 });
 

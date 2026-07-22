@@ -72,7 +72,7 @@ interface NewsTextForDisplayOptions extends NewsText {
 interface DirectCandidate extends NewsText {
   url: string;
   publishedAt?: string;
-  kind: "feed" | "html";
+  kind: "feed" | "html" | "sitemap";
   articleContext?: string | null;
 }
 
@@ -112,30 +112,27 @@ export async function collectNewsCandidates(options: NewsCollectionOptions = {})
   const translationConfig = readTranslationConfig();
   const repairSummariesWithModel = options.repairSummariesWithModel ?? true;
   const selectedSources = options.sources ?? selectSourcesForCoverage(newsSources, maxSources);
-  const keylessResult =
+  const keylessPromise =
     options.useFirecrawlKeyless === false
-      ? { items: [], outcomes: [] }
-      : await fetchWithFirecrawlKeyless({
+      ? Promise.resolve({ items: [], outcomes: [] })
+      : fetchWithFirecrawlKeyless({
           limitPerSection,
           sources: selectedSources,
           translationConfig,
           repairSummariesWithModel,
           deadlineAt: Math.min(deadlineAt, Date.now() + Math.min(8_000, Math.floor(collectionBudgetMs / 3))),
         });
+  const directPromise = fetchDirectSources({
+    limitPerSection,
+    sources: selectedSources,
+    translationConfig,
+    repairSummariesWithModel,
+    deadlineAt,
+    now,
+    maxNewsAgeHours,
+  });
+  const [keylessResult, directResult] = await Promise.all([keylessPromise, directPromise]);
   const recentFetchedItems = filterRecentItems(keylessResult.items, now, maxNewsAgeHours);
-  const minimumLiveItems = Math.max(8, selectedSources.length);
-  const directResult =
-    recentFetchedItems.length >= minimumLiveItems || Date.now() >= deadlineAt
-      ? { items: [], outcomes: [] }
-      : await fetchDirectSources({
-          limitPerSection,
-          sources: selectedSources,
-          translationConfig,
-          repairSummariesWithModel,
-          deadlineAt,
-          now,
-          maxNewsAgeHours,
-        });
   const recentDirectItems = filterRecentItems(directResult.items, now, maxNewsAgeHours);
   const combinedLiveItems = uniqueItemsByUrl([...recentFetchedItems, ...recentDirectItems]);
   const keylessOutcomes = new Map(keylessResult.outcomes.map((outcome) => [outcome.sourceId, outcome]));
@@ -173,25 +170,42 @@ function mergeSourceOutcomes(
 
   const attemptedOutcomes = outcomes.filter((outcome): outcome is NewsCollectionSourceOutcome => Boolean(outcome));
   const completedOutcomes = attemptedOutcomes.filter((outcome) => outcome.status !== "skipped");
+  const failedOutcome =
+    completedOutcomes.find(
+      (outcome) =>
+        outcome.status === "failed" &&
+        outcome.errorCode &&
+        outcome.errorCode !== "source_fetch_failed" &&
+        outcome.errorCode !== "collection_deadline",
+    ) ?? [...completedOutcomes].reverse().find((outcome) => outcome.status === "failed" && outcome.errorCode);
+  const anyFailure = failedOutcome ?? completedOutcomes.find((outcome) => outcome.status === "failed");
+  if (anyFailure) {
+    return {
+      sourceId,
+      status: "failed",
+      discoveredCount: 0,
+      errorCode: anyFailure.errorCode ?? (deadlineReached ? "collection_deadline" : "source_result_missing"),
+    };
+  }
+
   if (completedOutcomes.some((outcome) => outcome.status !== "failed")) {
     return { sourceId, status: "empty", discoveredCount: 0, errorCode: null };
   }
 
-  const lastFailure = [...completedOutcomes].reverse().find((outcome) => outcome.errorCode);
-  if (completedOutcomes.length === 0) {
-    const skipped = [...attemptedOutcomes].reverse().find((outcome) => outcome.errorCode);
+  const skippedOutcome = attemptedOutcomes.find((outcome) => outcome.status === "skipped");
+  if (skippedOutcome || completedOutcomes.length === 0) {
     return {
       sourceId,
       status: "skipped",
       discoveredCount: 0,
-      errorCode: skipped?.errorCode ?? (deadlineReached ? "collection_deadline" : null),
+      errorCode: skippedOutcome?.errorCode ?? (deadlineReached ? "collection_deadline" : null),
     };
   }
   return {
     sourceId,
     status: "failed",
     discoveredCount: 0,
-    errorCode: lastFailure?.errorCode ?? (deadlineReached ? "collection_deadline" : "source_result_missing"),
+    errorCode: deadlineReached ? "collection_deadline" : "source_result_missing",
   };
 }
 
@@ -693,7 +707,7 @@ export async function runWithinDeadline<T>(task: () => Promise<T>, deadlineAt: n
 
 async function fetchText(url: string, deadlineAt?: number): Promise<string> {
   const controller = new AbortController();
-  const timeoutMs = Math.min(8_000, deadlineAt ? Math.max(1, deadlineAt - Date.now()) : 8_000);
+  const timeoutMs = deadlineAt ? Math.max(1, deadlineAt - Date.now()) : 8_000;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await runWithinDeadline(
@@ -830,6 +844,8 @@ export function extractArticleSummaryContext(html: string): string | undefined {
 function readDirectCandidates(html: string, baseUrl: string): DirectCandidate[] {
   const feedItems = readFeedCandidates(html, baseUrl);
   if (feedItems.length > 0) return feedItems;
+  const sitemapItems = readSitemapCandidates(html, baseUrl);
+  if (sitemapItems.length > 0) return sitemapItems;
   return readHtmlLinkCandidates(html, baseUrl);
 }
 
@@ -840,6 +856,10 @@ async function prioritizeDirectCandidates(
   fetchGate: AsyncTaskGate,
 ): Promise<DirectCandidate[]> {
   const probeLimit = Math.max(3, limitPerSection * 2);
+  if (candidates[0]?.kind === "sitemap") {
+    return candidates.slice(0, 1);
+  }
+
   if (candidates[0]?.kind === "feed") {
     const selected = selectFeedCandidatesForProbing(candidates, limitPerSection, probeLimit);
     const resolved = await mapWithConcurrency(selected, 3, async (candidate) =>
@@ -927,6 +947,39 @@ async function resolveDirectCandidate(
   }
 }
 
+function readSitemapCandidates(xml: string, baseUrl: string): DirectCandidate[] {
+  const baseHost = hostnameFromUrl(baseUrl);
+  const candidates: DirectCandidate[] = [];
+  for (const match of xml.matchAll(/<url\b[^>]*>([\s\S]*?)<\/url>/gi)) {
+    const block = match[1];
+    const url = resolveCandidateUrl(readTag(block, "loc"), baseUrl);
+    if (!url || (baseHost && hostnameFromUrl(url) !== baseHost) || !isLikelyArticleUrl(url)) continue;
+    const title = titleFromCandidateUrl(url);
+    if (title.length < 8) continue;
+    candidates.push({
+      title,
+      url,
+      summary: title,
+      publishedAt: readPublishedDate(readTag(block, "lastmod")),
+      kind: "sitemap",
+      articleContext: null,
+    });
+  }
+  return uniqueCandidates(candidates)
+    .map((candidate, index) => ({ candidate, index, recency: directCandidateRecency(candidate) }))
+    .sort((left, right) => right.recency - left.recency || left.index - right.index)
+    .map(({ candidate }) => candidate);
+}
+
+function titleFromCandidateUrl(url: string): string {
+  const segment = new URL(url).pathname.split("/").filter(Boolean).at(-1) ?? "";
+  try {
+    return decodeURIComponent(segment).replace(/[-_]+/g, " ").trim();
+  } catch {
+    return segment.replace(/[-_]+/g, " ").trim();
+  }
+}
+
 function readFeedCandidates(html: string, baseUrl: string): DirectCandidate[] {
   const blocks = [...html.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].map((match) => match[0]);
   const candidates: DirectCandidate[] = [];
@@ -950,9 +1003,11 @@ function readHtmlLinkCandidates(html: string, baseUrl: string): DirectCandidate[
   const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   for (const match of html.matchAll(anchorPattern)) {
     const url = resolveCandidateUrl(match[1], baseUrl);
-    const rawTitle = cleanText(match[2]);
+    const cardHtml = match[2];
+    const rawTitle = readHeadingText(cardHtml) || cleanText(cardHtml);
+    const summary = cleanText(readTag(cardHtml, "p"));
     const publishedAt =
-      readTimeTagDates(match[2]).map((value) => parsePublishedDate(value)).find(Boolean) ??
+      readTimeTagDates(cardHtml).map((value) => parsePublishedDate(value)).find(Boolean) ??
       parsePublishedDate(rawTitle);
     const title = removeTrailingPublishedDate(rawTitle);
     if (!url || !title || title.length < 8) continue;
@@ -960,7 +1015,14 @@ function readHtmlLinkCandidates(html: string, baseUrl: string): DirectCandidate[
     if (!isLikelyArticleUrl(url)) continue;
     if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|zip)(\?|$)/i.test(url)) continue;
     if (url.replace(/\/+$/, "") === baseUrl.replace(/\/+$/, "") || url.endsWith("#")) continue;
-    candidates.push({ title, url, summary: title, publishedAt, kind: "html" });
+    candidates.push({
+      title,
+      url,
+      summary: summary || title,
+      publishedAt,
+      kind: "html",
+      articleContext: summary && !needsSummaryRepair(title, summary) ? summary : undefined,
+    });
   }
   return uniqueCandidates(candidates)
     .map((candidate, index) => ({
@@ -970,6 +1032,14 @@ function readHtmlLinkCandidates(html: string, baseUrl: string): DirectCandidate[
     }))
     .sort((left, right) => right.recency - left.recency || left.index - right.index)
     .map(({ candidate }) => candidate);
+}
+
+function readHeadingText(html: string): string {
+  for (const tagName of ["h1", "h2", "h3", "h4", "h5", "h6"]) {
+    const value = cleanText(readTag(html, tagName));
+    if (value) return value;
+  }
+  return "";
 }
 
 function directCandidateRecency(candidate: { url: string; publishedAt?: string }): number {

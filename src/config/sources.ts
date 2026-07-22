@@ -521,7 +521,7 @@ export const newsSources: NewsSource[] = [
     credibility: 90,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("News", "https://www.anthropic.com/news", "ai", ["ai", "technology"], ["Anthropic news Claude latest", "Anthropic blog research product"], webAndNews, false)],
+    sections: [section("News", "https://www.anthropic.com/sitemap.xml", "ai", ["ai", "technology"], ["Anthropic news Claude latest", "Anthropic blog research product"], webAndNews, false)],
   },
   {
     source_id: "google-deepmind",

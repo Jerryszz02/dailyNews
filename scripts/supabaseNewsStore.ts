@@ -1,3 +1,4 @@
+import { gunzipSync, gzipSync } from "node:zlib";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { DailyNewsReport, RawNewsItem } from "../src/types";
 import type {
@@ -18,6 +19,8 @@ type DatabaseRow = Record<string, unknown>;
 const candidatePageSize = 1_000;
 const readRetryDelaysMs = [250, 750] as const;
 const readAttemptTimeoutMs = 4_000;
+const storedReportEncoding = "gzip-base64";
+const maxStoredReportBytes = 10_000_000;
 
 export class SupabaseNewsStore implements NewsStore {
   readonly kind = "supabase" as const;
@@ -31,13 +34,14 @@ export class SupabaseNewsStore implements NewsStore {
       this.readRpc("daily_news_list_source_states"),
     ]);
     const latest = firstRow(latestData);
+    const report = readStoredReport(latest?.payload);
 
     return {
       latest:
-        latest && typeof latest.report_id === "string" && isRecord(latest.payload)
+        latest && typeof latest.report_id === "string" && report
           ? {
               reportId: latest.report_id,
-              report: latest.payload as unknown as DailyNewsReport,
+              report,
               dataAsOf: readTimestamp(latest.data_as_of) ?? readTimestamp(latest.generated_at)!,
               newestContentAt: readTimestamp(latest.newest_content_at),
               publishedAt: readTimestamp(latest.published_at) ?? readTimestamp(latest.generated_at)!,
@@ -168,7 +172,7 @@ export class SupabaseNewsStore implements NewsStore {
         report_id: input.reportId,
         generated_at: input.report.generatedAt,
         schema_version: String(input.report.version),
-        payload: input.report,
+        payload: storeReport(input.report),
         data_as_of: input.dataAsOf,
         newest_content_at: input.newestContentAt,
         content_hash: input.contentHash,
@@ -276,6 +280,51 @@ export class SupabaseNewsStore implements NewsStore {
       throw new NewsStoreError("supabase_request_failed");
     }
   }
+}
+
+function storeReport(report: DailyNewsReport): DatabaseRow {
+  return {
+    storageView: 1,
+    encoding: storedReportEncoding,
+    data: gzipSync(JSON.stringify(report)).toString("base64"),
+  };
+}
+
+function readStoredReport(value: unknown): DailyNewsReport | null {
+  if (isDailyNewsReport(value)) return value;
+  if (
+    !isRecord(value) ||
+    value.storageView !== 1 ||
+    value.encoding !== storedReportEncoding ||
+    typeof value.data !== "string"
+  ) {
+    return null;
+  }
+
+  try {
+    const decoded = JSON.parse(
+      gunzipSync(Buffer.from(value.data, "base64"), { maxOutputLength: maxStoredReportBytes }).toString("utf8"),
+    );
+    return isDailyNewsReport(decoded) ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+function isDailyNewsReport(value: unknown): value is DailyNewsReport {
+  if (!isRecord(value)) return false;
+  return (
+    value.version === 2 &&
+    typeof value.generatedAt === "string" &&
+    Array.isArray(value.items) &&
+    Array.isArray(value.stories) &&
+    Array.isArray(value.topStories) &&
+    Array.isArray(value.importantStories) &&
+    Array.isArray(value.watchlist) &&
+    Array.isArray(value.sections) &&
+    isRecord(value.coverage) &&
+    isRecord(value.quality)
+  );
 }
 
 export function createSupabaseNewsStore(url: string, secretKey: string): SupabaseNewsStore {

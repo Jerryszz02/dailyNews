@@ -154,7 +154,7 @@ describe("generateDailyNewsReport", () => {
 });
 
 describe("collectNewsCandidates source outcomes", () => {
-  it("preserves keyless success, empty, and failed outcomes when enough global items skip direct fetch", async () => {
+  it("preserves keyless success, empty, and failed outcomes while direct fetch runs in parallel", async () => {
     const sources = [testSource("success", "成功源"), testSource("empty", "空结果源"), testSource("failed", "失败源")];
     const fetchedItems = Array.from({ length: 8 }, (_, index) => ({
       title: `实时新闻标题 ${index + 1}`,
@@ -167,7 +167,12 @@ describe("collectNewsCandidates source outcomes", () => {
       if (query.includes("空结果源")) return Promise.resolve({ news: [] });
       return Promise.reject(new Error("HTTP 429"));
     });
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      if (String(input).includes("failed.example.com")) {
+        return Promise.resolve({ ok: false, status: 503, text: async () => "" } as Response);
+      }
+      return Promise.resolve(htmlResponse("<html><body>暂无直连新闻</body></html>"));
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await collectNewsCandidates({
@@ -184,7 +189,7 @@ describe("collectNewsCandidates source outcomes", () => {
       { sourceId: "empty", status: "empty", discoveredCount: 0, errorCode: null },
       { sourceId: "failed", status: "failed", discoveredCount: 0, errorCode: "source_rate_limited" },
     ]);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("marks a source failed only when both keyless and direct attempts fail", async () => {
@@ -342,6 +347,7 @@ describe("collectNewsCandidates source outcomes", () => {
       sources: [source],
       useFirecrawlKeyless: false,
       limitPerSection: 1,
+      now: new Date("2026-07-18T07:00:00.000Z"),
       collectionBudgetMs: 30,
       repairSummariesWithModel: false,
     });
@@ -397,6 +403,7 @@ describe("collectNewsCandidates source outcomes", () => {
       sources,
       useFirecrawlKeyless: false,
       limitPerSection: 1,
+      now: new Date("2026-07-18T07:00:00.000Z"),
       collectionBudgetMs: 3_000,
       repairSummariesWithModel: false,
     });
@@ -543,6 +550,104 @@ describe("collectNewsCandidates source outcomes", () => {
     expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
       source.sections[0].url,
       freshUrl,
+    ]);
+  });
+
+  it("uses HTML card headings and summaries without fetching a dated article page", async () => {
+    process.env.DAILY_NEWS_TRANSLATION_API_KEY = "test-key";
+    const source = testSource("card-context", "卡片上下文源");
+    source.language = "en-US";
+    source.countryOrRegion = "global";
+    source.sections[0].requireChinese = false;
+    const articleUrl = "https://card-context.example.com/news/fresh-story";
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(htmlResponse(`
+          <a href="/news/fresh-story">
+            <time datetime="2026-07-18T09:00:00.000Z">July 18, 2026</time>
+            <h2>New model improves complex reasoning</h2>
+            <p>The release improves coding, analysis, and long-context reliability for enterprise users.</p>
+          </a>
+        `));
+      }
+      if (url === "https://api.deepseek.com/chat/completions") {
+        return Promise.resolve(chatResponse(JSON.stringify({
+          title: "新模型提升复杂推理能力",
+          summary: "该版本提升编码、分析和长上下文可靠性，主要面向企业用户。",
+        })));
+      }
+      throw new Error(`Unexpected article fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-07-18T10:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: true,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      url: articleUrl,
+      title: "新模型提升复杂推理能力",
+      publishedAt: "2026-07-18T09:00:00.000Z",
+    });
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
+      source.sections[0].url,
+      "https://api.deepseek.com/chat/completions",
+    ]);
+  });
+
+  it("translates the newest sitemap entry without fetching the article page", async () => {
+    process.env.DAILY_NEWS_TRANSLATION_API_KEY = "test-key";
+    const source = testSource("sitemap-context", "站点地图源");
+    source.language = "en-US";
+    source.countryOrRegion = "global";
+    source.sections[0].requireChinese = false;
+    source.sections[0].url = "https://sitemap-context.example.com/sitemap.xml";
+    const articleUrl = "https://sitemap-context.example.com/news/new-model-release";
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(htmlResponse(`
+          <urlset>
+            <url><loc>https://sitemap-context.example.com/news/old-release</loc><lastmod>2026-07-17</lastmod></url>
+            <url><loc>${articleUrl}</loc><lastmod>2026-07-18T09:00:00.000Z</lastmod></url>
+          </urlset>
+        `));
+      }
+      if (url === "https://api.deepseek.com/chat/completions") {
+        return Promise.resolve(chatResponse(JSON.stringify({
+          title: "新模型提升复杂推理能力",
+          summary: "该版本提升编码、分析和长上下文可靠性，主要面向企业用户。",
+        })));
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-07-18T10:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: true,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      url: articleUrl,
+      title: "新模型提升复杂推理能力",
+      publishedAt: "2026-07-18T09:00:00.000Z",
+    });
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
+      source.sections[0].url,
+      "https://api.deepseek.com/chat/completions",
     ]);
   });
 

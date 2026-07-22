@@ -73,7 +73,6 @@ export async function runNewsRefresh(
   const buildReport = dependencies.buildReport ?? ((items, reportNow) => buildDailyReport(items, defaultPreferences, reportNow));
   const ownerId = randomUUID();
 
-  const stateBeforeLease = await dependencies.store.readState();
   const lease = await dependencies.store.tryAcquireRefresh({
     ownerId,
     idempotencyKey: options.idempotencyKey ?? manualIdempotencyKey(options.trigger, scheduledAt),
@@ -83,10 +82,11 @@ export async function runNewsRefresh(
   });
 
   if (!lease.acquired) {
+    const state = await dependencies.store.readState();
     return emptyResult(
       lease.outcome === "duplicate" ? "duplicate" : "busy",
       lease.runId,
-      stateBeforeLease.latest?.reportId ?? null,
+      state.latest?.reportId ?? null,
     );
   }
 
@@ -101,7 +101,7 @@ export async function runNewsRefresh(
   let missingSourceOutcomeIds: string[] = [];
   let discoveredCount = 0;
   let candidateCount = 0;
-  let latestReportId = stateBeforeLease.latest?.reportId ?? null;
+  let latestReportId: string | null = null;
 
   try {
     await dependencies.store.syncSources(
