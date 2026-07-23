@@ -72,6 +72,36 @@ describe("last-known-good report store", () => {
     expect(passesPublishGate(regressed, current)).toBe(false);
   });
 
+  it("still rejects an event-count regression when the candidate pool did not shrink", () => {
+    const current = readBundledReport();
+    const regressed = {
+      ...current,
+      quality: {
+        ...current.quality,
+        selectedEventCount: Math.max(10, Math.floor(current.quality.selectedEventCount * 0.5)),
+      },
+    };
+
+    expect(passesPublishGate(regressed, current)).toBe(false);
+  });
+
+  it("scales the event-count comparison when a bounded candidate pool stays dense", () => {
+    const current = readBundledReport();
+    const candidateCount = Math.max(1, Math.floor(current.quality.candidateCount * 0.5));
+    const contracted = {
+      ...current,
+      quality: {
+        ...current.quality,
+        candidateCount,
+        acceptedCandidateCount: candidateCount,
+        rejectedCandidateCount: 0,
+        selectedEventCount: Math.max(10, Math.floor(current.quality.selectedEventCount * 0.4)),
+      },
+    };
+
+    expect(passesPublishGate(contracted, current)).toBe(true);
+  });
+
   it("rejects a report that omits an available fresh confirmed core event", () => {
     const current = readBundledReport();
     const staleAt = new Date(Date.parse(current.generatedAt) - 121 * 60_000).toISOString();

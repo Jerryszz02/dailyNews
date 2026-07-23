@@ -85,7 +85,15 @@ export function passesPublishGate(report: DailyNewsReport, previous: DailyNewsRe
 
   const previousCoreCount = previous.topStories.length + previous.importantStories.length;
   const currentCoreCount = report.topStories.length + report.importantStories.length;
-  if (report.quality.selectedEventCount < Math.max(10, Math.floor(previous.quality.selectedEventCount * 0.6))) return false;
+  const candidatePoolRatio = Math.min(
+    1,
+    report.quality.candidateCount / Math.max(1, previous.quality.candidateCount),
+  );
+  const minimumSelectedEventCount = Math.max(
+    10,
+    Math.floor(previous.quality.selectedEventCount * candidatePoolRatio * 0.6),
+  );
+  if (report.quality.selectedEventCount < minimumSelectedEventCount) return false;
   if (currentCoreCount < Math.max(5, Math.floor(previousCoreCount * 0.5))) return false;
   if (report.sourceCount < Math.max(3, Math.floor(previous.sourceCount * 0.5))) return false;
 
