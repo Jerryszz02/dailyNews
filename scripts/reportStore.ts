@@ -2,7 +2,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { defaultPreferences } from "../src/config/preferences.js";
 import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot.js";
 import { buildDailyReport } from "../src/lib/newsPipeline.js";
-import { freshCoreWindowMinutes, isStoryActiveWithin } from "../src/lib/curation.js";
+import {
+  freshCoreWindowMinutes,
+  isStoryActiveWithin,
+  selectionBeatLimit,
+  selectionPublisherLimit,
+} from "../src/lib/curation.js";
 import type { DailyNewsReport, RankedNewsItem, RawNewsItem } from "../src/types";
 
 export interface NewsReportStore {
@@ -115,8 +120,33 @@ function selectsFreshCoreWhenAvailable(report: DailyNewsReport): boolean {
       isStoryActiveWithin(story, generatedAt, freshCoreWindowMinutes),
   );
   if (freshCoreCandidates.length === 0) return true;
-  const selectedIds = new Set([...report.topStories, ...report.importantStories].map((story) => story.id));
-  return freshCoreCandidates.some((story) => selectedIds.has(story.id));
+  const selectedCore = [...report.topStories, ...report.importantStories];
+  const selectedIds = new Set(selectedCore.map((story) => story.id));
+  if (freshCoreCandidates.some((story) => selectedIds.has(story.id))) return true;
+
+  const publisherCounts = countBy(selectedCore, (story) => story.evidence[0]?.sourceId ?? "unknown");
+  const topBeatCounts = countBy(report.topStories, (story) => story.primaryBeat);
+  const importantBeatCounts = countBy(report.importantStories, (story) => story.primaryBeat);
+  return freshCoreCandidates.every((story) => {
+    const publisher = story.evidence[0]?.sourceId ?? "unknown";
+    if ((publisherCounts.get(publisher) ?? 0) >= selectionPublisherLimit) return true;
+    if (story.tier === "important") {
+      return (importantBeatCounts.get(story.primaryBeat) ?? 0) >= selectionBeatLimit;
+    }
+    return (
+      (topBeatCounts.get(story.primaryBeat) ?? 0) >= selectionBeatLimit &&
+      (importantBeatCounts.get(story.primaryBeat) ?? 0) >= selectionBeatLimit
+    );
+  });
+}
+
+function countBy<T>(values: T[], keyFor: (value: T) => string): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    const key = keyFor(value);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
 }
 
 function isV2Report(value: Partial<DailyNewsReport>): value is DailyNewsReport {

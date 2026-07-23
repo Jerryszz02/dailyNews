@@ -116,19 +116,65 @@ describe("last-known-good report store", () => {
       ...template,
       id: "fresh-core-regression",
       itemId: "fresh-core-regression",
+      primaryBeat: "science" as const,
       status: "confirmed" as const,
       tier: "important" as const,
       updatedAt: current.generatedAt,
-      evidence: template.evidence.map((evidence) => ({ ...evidence, publishedAt: current.generatedAt })),
+      evidence: template.evidence.map((evidence) => ({
+        ...evidence,
+        sourceId: "fresh-core-source",
+        publishedAt: current.generatedAt,
+      })),
     };
     const regressed = {
       ...current,
       stories: [...current.stories.map(staleStory), freshCore],
-      topStories: current.topStories.map(staleStory),
-      importantStories: current.importantStories.map(staleStory),
+      topStories: current.topStories.map(staleStory).filter((story) => story.primaryBeat !== "science"),
+      importantStories: current.importantStories.map(staleStory).filter((story) => story.primaryBeat !== "science"),
     };
 
     expect(passesPublishGate(regressed)).toBe(false);
+  });
+
+  it("allows a fresh core event that is excluded by the publisher diversity limit", () => {
+    const current = readBundledReport();
+    const staleAt = new Date(Date.parse(current.generatedAt) - 121 * 60_000).toISOString();
+    const staleStory = (story: DailyNewsReport["stories"][number]) => ({
+      ...story,
+      publishedAt: staleAt,
+      updatedAt: staleAt,
+      evidence: story.evidence.map((evidence) => ({ ...evidence, publishedAt: staleAt })),
+    });
+    const withPublisher = (story: DailyNewsReport["stories"][number]) => ({
+      ...staleStory(story),
+      evidence: story.evidence.map((evidence) => ({
+        ...evidence,
+        sourceId: "saturated-publisher",
+        publishedAt: staleAt,
+      })),
+    });
+    const template = current.stories[0];
+    const freshCore = {
+      ...template,
+      id: "fresh-core-diversity-limit",
+      itemId: "fresh-core-diversity-limit",
+      status: "confirmed" as const,
+      tier: "important" as const,
+      updatedAt: current.generatedAt,
+      evidence: template.evidence.map((evidence) => ({
+        ...evidence,
+        sourceId: "saturated-publisher",
+        publishedAt: current.generatedAt,
+      })),
+    };
+    const report = {
+      ...current,
+      stories: [...current.stories.map(staleStory), freshCore],
+      topStories: current.topStories.map((story, index) => (index < 3 ? withPublisher(story) : staleStory(story))),
+      importantStories: current.importantStories.map(staleStory),
+    };
+
+    expect(passesPublishGate(report)).toBe(true);
   });
 
   it("does not force a fresh developing event into the confirmed core", () => {

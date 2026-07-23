@@ -31,6 +31,8 @@ const allBeats: Category[] = [
 const sourceById = new Map(newsSources.map((source) => [source.source_id, source]));
 export const freshCoreWindowMinutes = 120;
 export const currentCoreWindowMinutes = 24 * 60;
+export const selectionBeatLimit = 3;
+export const selectionPublisherLimit = 3;
 
 const beatImpactBase: Record<Category, number> = {
   ai: 46,
@@ -373,8 +375,8 @@ function selectDiverse(
   const trySelect = (story: StoryCard): boolean => {
     if (selectedIds.has(story.id)) return false;
     const primarySource = story.evidence[0]?.sourceId ?? "unknown";
-    if ((beatCounts.get(story.primaryBeat) ?? 0) >= 3) return false;
-    if ((sourceCounts.get(primarySource) ?? 0) >= 3) return false;
+    if ((beatCounts.get(story.primaryBeat) ?? 0) >= selectionBeatLimit) return false;
+    if ((sourceCounts.get(primarySource) ?? 0) >= selectionPublisherLimit) return false;
     selected.push(story);
     selectedIds.add(story.id);
     beatCounts.set(story.primaryBeat, (beatCounts.get(story.primaryBeat) ?? 0) + 1);
