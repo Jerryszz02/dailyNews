@@ -21,6 +21,7 @@ import { passesPublishGate } from "./reportStore.js";
 
 export const defaultServerlessMaxSources = 11;
 export const defaultRefreshLeaseSeconds = 120;
+export const defaultRefreshCandidateLimit = 500;
 
 export type NewsRefreshStatus = "published" | "unchanged" | "busy" | "duplicate" | "rejected" | "failed";
 
@@ -160,7 +161,7 @@ export async function runNewsRefresh(
     if (collection.items.length > 0) await dependencies.store.upsertCandidates(leaseIdentity, collection.items);
 
     const windowFrom = new Date(scheduledAt.getTime() - defaultMaxNewsAgeHours * 60 * 60_000).toISOString();
-    const candidates = await dependencies.store.readRecentCandidates(windowFrom);
+    const candidates = await dependencies.store.readRecentCandidates(windowFrom, defaultRefreshCandidateLimit);
     candidateCount = candidates.length;
     const contentFreshness = evaluatePublishedContentFreshness(candidates, scheduledAt);
     const metrics: Record<string, unknown> = {
@@ -241,7 +242,8 @@ export async function runNewsRefresh(
     }
 
     const contentHash = hashReportContent(report);
-    if (state.latest && contentHash === hashReportContent(state.latest.report)) {
+    const previousContentHash = state.latest?.contentHash ?? (state.latest ? hashReportContent(state.latest.report) : null);
+    if (state.latest && contentHash === previousContentHash) {
       await dependencies.store.completeRefreshWithoutPublish(leaseIdentity, { ...metrics, outcome: "unchanged", content_hash: contentHash });
       return unchangedResult(
         lease.runId,

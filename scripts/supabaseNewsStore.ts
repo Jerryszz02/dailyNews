@@ -1,5 +1,6 @@
 import { gunzipSync, gzipSync } from "node:zlib";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { compactDailyNewsReport, hydrateWebDailyNewsReport, isWebDailyNewsReport } from "../src/lib/webReport.js";
 import type { DailyNewsReport, RawNewsItem } from "../src/types";
 import type {
   AcquireRefreshInput,
@@ -42,6 +43,7 @@ export class SupabaseNewsStore implements NewsStore {
           ? {
               reportId: latest.report_id,
               report,
+              contentHash: readNullableString(latest.content_hash) ?? undefined,
               dataAsOf: readTimestamp(latest.data_as_of) ?? readTimestamp(latest.generated_at)!,
               newestContentAt: readTimestamp(latest.newest_content_at),
               publishedAt: readTimestamp(latest.published_at) ?? readTimestamp(latest.generated_at)!,
@@ -284,9 +286,9 @@ export class SupabaseNewsStore implements NewsStore {
 
 function storeReport(report: DailyNewsReport): DatabaseRow {
   return {
-    storageView: 1,
+    storageView: 2,
     encoding: storedReportEncoding,
-    data: gzipSync(JSON.stringify(report)).toString("base64"),
+    data: gzipSync(JSON.stringify(compactDailyNewsReport(report))).toString("base64"),
   };
 }
 
@@ -294,7 +296,7 @@ function readStoredReport(value: unknown): DailyNewsReport | null {
   if (isDailyNewsReport(value)) return value;
   if (
     !isRecord(value) ||
-    value.storageView !== 1 ||
+    (value.storageView !== 1 && value.storageView !== 2) ||
     value.encoding !== storedReportEncoding ||
     typeof value.data !== "string"
   ) {
@@ -302,10 +304,11 @@ function readStoredReport(value: unknown): DailyNewsReport | null {
   }
 
   try {
-    const decoded = JSON.parse(
+    const decoded: unknown = JSON.parse(
       gunzipSync(Buffer.from(value.data, "base64"), { maxOutputLength: maxStoredReportBytes }).toString("utf8"),
     );
-    return isDailyNewsReport(decoded) ? decoded : null;
+    if (isDailyNewsReport(decoded)) return decoded;
+    return isWebDailyNewsReport(decoded) ? hydrateWebDailyNewsReport(decoded) : null;
   } catch {
     return null;
   }

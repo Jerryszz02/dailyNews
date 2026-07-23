@@ -3,7 +3,7 @@ import { newsSources } from "../src/config/sources";
 import { selectSourcesForCoverage } from "../src/lib/sourceCoverage";
 import type { RawNewsItem } from "../src/types";
 import { InMemoryNewsStore } from "./inMemoryNewsStore";
-import { defaultServerlessMaxSources, hashReportContent, runNewsRefresh } from "./newsRefresh";
+import { defaultRefreshCandidateLimit, defaultServerlessMaxSources, hashReportContent, runNewsRefresh } from "./newsRefresh";
 import type { NewsCollectionOptions, NewsCollectionResult } from "./newsService";
 import { expandLegacyItems, readBundledReport } from "./reportStore";
 
@@ -15,6 +15,7 @@ describe("durable news refresh", () => {
     const initial = readBundledReport();
     const now = new Date("2026-07-15T23:45:00.000Z");
     const store = new InMemoryNewsStore(initial, () => now);
+    const readRecentCandidates = vi.spyOn(store, "readRecentCandidates");
     const sources = newsSources.filter((source) => source.enabled).slice(0, 11);
     const collect = vi.fn(async (_options: NewsCollectionOptions): Promise<NewsCollectionResult> => ({
       items: [],
@@ -52,6 +53,7 @@ describe("durable news refresh", () => {
       maxSources: 11,
       collectionBudgetMs: expected,
     });
+    expect(readRecentCandidates).toHaveBeenCalledWith(expect.any(String), defaultRefreshCandidateLimit);
   });
 
   it("publishes changed live candidates from the rolling pool", async () => {
@@ -99,12 +101,19 @@ describe("durable news refresh", () => {
       { store, now: () => now, collect: collection(candidates) },
     );
     const firstReport = await store.readState();
+    expect(firstReport.latest?.contentHash).toBe(hashReportContent(firstReport.latest!.report));
+
+    const hydratedState = structuredClone(firstReport);
+    hydratedState.latest!.report.items[0]!.summary = "兼容读取会重建旧字段，但数据库内容哈希仍代表原始发布内容";
+    expect(hashReportContent(hydratedState.latest!.report)).not.toBe(hydratedState.latest?.contentHash);
+    const readState = vi.spyOn(store, "readState").mockResolvedValueOnce(hydratedState);
 
     now = new Date("2026-07-13T08:15:00.000Z");
     const second = await runNewsRefresh(
       { trigger: "cron", scheduledAt: now, idempotencyKey: "refresh:second" },
       { store, now: () => now, collect: collection(candidates) },
     );
+    readState.mockRestore();
     const secondReport = await store.readState();
 
     expect(first.status).toBe("published");

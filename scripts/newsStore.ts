@@ -7,6 +7,7 @@ export type SourceResultStatus = "success" | "empty" | "failed";
 export interface PublishedNewsReport {
   reportId: string;
   report: DailyNewsReport;
+  contentHash?: string;
   dataAsOf: string;
   newestContentAt: string | null;
   publishedAt: string;

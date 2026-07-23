@@ -1,3 +1,4 @@
+import { gzipSync } from "node:zlib";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import type { RawNewsItem } from "../src/types";
@@ -266,6 +267,7 @@ describe("SupabaseNewsStore RPC mapping", () => {
             published_at: report.generatedAt,
             data_as_of: report.generatedAt,
             newest_content_at: report.generatedAt,
+            content_hash: "0123456789abcdef",
             last_attempt_at: report.generatedAt,
             last_success_at: report.generatedAt,
             last_error_code: null,
@@ -293,9 +295,40 @@ describe("SupabaseNewsStore RPC mapping", () => {
       metrics: {},
     });
 
-    expect(storedPayload).toMatchObject({ storageView: 1, encoding: "gzip-base64" });
+    expect(storedPayload).toMatchObject({ storageView: 2, encoding: "gzip-base64" });
     expect(JSON.stringify(storedPayload).length).toBeLessThan(JSON.stringify(report).length * 0.6);
-    await expect(store.readState()).resolves.toMatchObject({ latest: { report } });
+    const state = await store.readState();
+    expect(state.latest?.report.stories).toEqual(report.stories);
+    expect(state.latest?.report.topStories.map((story) => story.id)).toEqual(report.topStories.map((story) => story.id));
+    expect(state.latest?.contentHash).toBe("0123456789abcdef");
+  });
+
+  it("keeps reading legacy full-report gzip payloads", async () => {
+    const report = readBundledReport();
+    const payload = {
+      storageView: 1,
+      encoding: "gzip-base64",
+      data: gzipSync(JSON.stringify(report)).toString("base64"),
+    };
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "daily_news_read_latest"
+        ? [{
+            report_id: "00000000-0000-4000-8000-000000000003",
+            payload,
+            generated_at: report.generatedAt,
+            published_at: report.generatedAt,
+            data_as_of: report.generatedAt,
+            newest_content_at: report.generatedAt,
+            last_attempt_at: report.generatedAt,
+            last_success_at: report.generatedAt,
+            last_error_code: null,
+          }]
+        : [],
+      error: null,
+    }));
+    const state = await new SupabaseNewsStore({ rpc } as unknown as SupabaseClient).readState();
+
+    expect(state.latest?.report).toEqual(report);
   });
 });
 

@@ -199,6 +199,7 @@ export class InMemoryNewsStore implements NewsStore {
     const stored: PublishedNewsReport = {
       reportId: input.reportId,
       report: structuredClone(input.report),
+      contentHash: input.contentHash,
       dataAsOf: input.dataAsOf,
       newestContentAt: input.newestContentAt,
       publishedAt,
