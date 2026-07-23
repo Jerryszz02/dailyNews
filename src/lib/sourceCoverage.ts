@@ -28,6 +28,7 @@ export interface CoverageSelectionOptions {
   health?: SourceHealthState[];
   now?: Date;
   defaultIntervalMinutes?: number;
+  lookaheadMinutes?: number;
 }
 
 export const defaultSourceIntervalMinutes = 90;
@@ -51,10 +52,12 @@ export function selectSourcesForCoverage(
   const healthById = new Map((options.health ?? []).map((state) => [state.sourceId, state]));
   const available = sources.filter((source) => source.enabled && !isCircuitOpen(healthById.get(source.source_id), now));
   const defaultIntervalMinutes = positiveNumber(options.defaultIntervalMinutes) ?? defaultSourceIntervalMinutes;
+  const lookaheadMinutes = positiveNumber(options.lookaheadMinutes) ?? 0;
+  const selectionCutoff = now.getTime() + lookaheadMinutes * 60_000;
   const candidates =
     options.health === undefined
       ? available
-      : available.filter((source) => sourceDueAt(healthById.get(source.source_id), defaultIntervalMinutes) <= now.getTime());
+      : available.filter((source) => sourceDueAt(healthById.get(source.source_id), defaultIntervalMinutes) <= selectionCutoff);
   if (options.health === undefined && maxSources >= candidates.length) return candidates;
 
   const selected: NewsSource[] = [];

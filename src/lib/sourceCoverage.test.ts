@@ -128,6 +128,48 @@ describe("source coverage scheduling", () => {
     }
   });
 
+  it("uses an idle slot to stagger a 12-source cohort before it exceeds the next slot budget", () => {
+    const sources = newsSources.filter((source) => source.enabled).slice(0, 12);
+    const idleSlot = new Date("2026-07-23T15:15:00.000Z");
+    const dueSlot = new Date("2026-07-23T15:30:00.000Z");
+    const health = new Map<string, SourceHealthState>(
+      sources.map((source) => [
+        source.source_id,
+        {
+          sourceId: source.source_id,
+          consecutiveFailures: 0,
+          nextDueAt: dueSlot.toISOString(),
+          intervalMinutes: 90,
+        },
+      ]),
+    );
+
+    const early = selectSourcesForCoverage(sources, 11, {
+      now: idleSlot,
+      health: Array.from(health.values()),
+      lookaheadMinutes: 15,
+    });
+    expect(early).toHaveLength(11);
+
+    early.forEach((source) => {
+      health.set(source.source_id, {
+        sourceId: source.source_id,
+        consecutiveFailures: 0,
+        lastAttemptAt: idleSlot.toISOString(),
+        lastSuccessAt: idleSlot.toISOString(),
+        nextDueAt: new Date(idleSlot.getTime() + 90 * 60_000).toISOString(),
+        intervalMinutes: 90,
+      });
+    });
+
+    const next = selectSourcesForCoverage(sources, 11, {
+      now: dueSlot,
+      health: Array.from(health.values()),
+      lookaheadMinutes: 15,
+    });
+    expect(next).toHaveLength(1);
+  });
+
   it("is deterministic for the same inputs", () => {
     const left = selectSourcesForCoverage(newsSources, 6).map((source) => source.source_id);
     const right = selectSourcesForCoverage(newsSources, 6).map((source) => source.source_id);

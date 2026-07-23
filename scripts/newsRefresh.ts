@@ -123,6 +123,7 @@ export async function runNewsRefresh(
       health: state.sources,
       now: sourceSelectionAt,
       defaultIntervalMinutes: defaultSourceIntervalMinutes,
+      lookaheadMinutes: options.trigger === "cron" ? 15 : 0,
     });
     plannedSourceIds = selectedSources.map((source) => source.source_id);
     if (selectedSources.length === 0) {
