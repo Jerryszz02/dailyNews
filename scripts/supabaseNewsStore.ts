@@ -366,6 +366,7 @@ function requiredFirstRow(value: unknown, code: string): DatabaseRow {
 function readSourceState(row: DatabaseRow): NewsSourceState {
   return {
     sourceId: readString(row.source_id),
+    enabled: typeof row.enabled === "boolean" ? row.enabled : undefined,
     lastAttemptAt: readTimestamp(row.last_attempt_at),
     lastSuccessAt: readTimestamp(row.last_success_at),
     nextDueAt: readTimestamp(row.next_due_at),

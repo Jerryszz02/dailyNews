@@ -67,10 +67,14 @@ export class InMemoryNewsStore implements NewsStore {
 
   async syncSources(lease: LeaseIdentity, sources: SourceDefinition[], observedAt: string): Promise<void> {
     this.assertLease(lease);
+    for (const [sourceId, current] of this.sourceStates) {
+      this.sourceStates.set(sourceId, { ...current, enabled: false });
+    }
     for (const source of sources) {
       const current = this.sourceStates.get(source.sourceId);
       this.sourceStates.set(source.sourceId, {
         sourceId: source.sourceId,
+        enabled: source.enabled,
         lastAttemptAt: current?.lastAttemptAt ?? null,
         lastSuccessAt: current?.lastSuccessAt ?? null,
         nextDueAt: current?.nextDueAt ?? observedAt,

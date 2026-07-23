@@ -296,7 +296,7 @@ describe("collectNewsCandidates source outcomes", () => {
     }
   });
 
-  it("keeps a source queued when article metadata probing reaches the deadline", async () => {
+  it("records a successful listing fetch as attempted when article metadata probing reaches the deadline", async () => {
     const source = testSource("probe-deadline", "探测超时源");
     vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
       const url = String(input);
@@ -320,14 +320,14 @@ describe("collectNewsCandidates source outcomes", () => {
     expect(result.sourceOutcomes).toEqual([
       {
         sourceId: "probe-deadline",
-        status: "skipped",
+        status: "empty",
         discoveredCount: 0,
-        errorCode: "collection_deadline",
+        errorCode: null,
       },
     ]);
   });
 
-  it("keeps a dated feed source queued when summary context reaches the deadline", async () => {
+  it("records a successful feed fetch as attempted when summary context reaches the deadline", async () => {
     const source = testSource("feed-context-deadline", "Feed 正文超时源");
     vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
       const url = String(input);
@@ -356,9 +356,9 @@ describe("collectNewsCandidates source outcomes", () => {
     expect(result.sourceOutcomes).toEqual([
       {
         sourceId: "feed-context-deadline",
-        status: "skipped",
+        status: "empty",
         discoveredCount: 0,
-        errorCode: "collection_deadline",
+        errorCode: null,
       },
     ]);
   });

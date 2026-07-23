@@ -599,14 +599,14 @@ async function fetchDirectSources(
         status:
           items.length > 0
             ? "success" as const
-            : lastErrorCode === "collection_deadline" || attemptedSections === 0
-              ? "skipped" as const
-              : successfulSections > 0
-                ? "empty" as const
+            : successfulSections > 0
+              ? "empty" as const
+              : lastErrorCode === "collection_deadline" || attemptedSections === 0
+                ? "skipped" as const
                 : "failed" as const,
         discoveredCount: items.length,
         errorCode:
-          items.length > 0 || (successfulSections > 0 && lastErrorCode !== "collection_deadline")
+          items.length > 0 || successfulSections > 0
             ? null
             : (lastErrorCode ?? (attemptedSections > 0 ? "source_unavailable" : "collection_deadline")),
       },

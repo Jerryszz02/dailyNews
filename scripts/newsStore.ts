@@ -21,6 +21,7 @@ export interface NewsRuntimeState {
 
 export interface NewsSourceState {
   sourceId: string;
+  enabled?: boolean;
   lastAttemptAt: string | null;
   lastSuccessAt: string | null;
   nextDueAt: string | null;

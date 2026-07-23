@@ -161,6 +161,7 @@ describe("durable news refresh", () => {
     );
     await store.completeRefreshWithoutPublish(seedIdentity, { outcome: "source_seed" });
     const before = await store.readState();
+    const syncSources = vi.spyOn(store, "syncSources");
 
     const result = await runNewsRefresh(
       { trigger: "cron", scheduledAt: new Date(now.getTime() + 15 * 60_000), idempotencyKey: "refresh:no-sources" },
@@ -171,6 +172,7 @@ describe("durable news refresh", () => {
     expect(result.status).toBe("unchanged");
     expect(after.latest?.reportId).toBe(before.latest?.reportId);
     expect(after.latest?.dataAsOf).toBe(before.latest?.dataAsOf);
+    expect(syncSources).not.toHaveBeenCalled();
   });
 
   it("selects a source that becomes due while refresh setup is running", async () => {

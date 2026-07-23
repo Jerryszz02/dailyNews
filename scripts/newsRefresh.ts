@@ -73,21 +73,28 @@ export async function runNewsRefresh(
   const collect = dependencies.collect ?? collectNewsCandidates;
   const buildReport = dependencies.buildReport ?? ((items, reportNow) => buildDailyReport(items, defaultPreferences, reportNow));
   const ownerId = randomUUID();
+  const sourceRegistry = configuredSources.map((source) => ({
+    sourceId: source.source_id,
+    enabled: source.enabled,
+    intervalMinutes: defaultSourceIntervalMinutes,
+  }));
 
-  const lease = await dependencies.store.tryAcquireRefresh({
-    ownerId,
-    idempotencyKey: options.idempotencyKey ?? manualIdempotencyKey(options.trigger, scheduledAt),
-    trigger: options.trigger,
-    scheduledAt: scheduledAt.toISOString(),
-    leaseSeconds,
-  });
+  const [lease, initialState] = await Promise.all([
+    dependencies.store.tryAcquireRefresh({
+      ownerId,
+      idempotencyKey: options.idempotencyKey ?? manualIdempotencyKey(options.trigger, scheduledAt),
+      trigger: options.trigger,
+      scheduledAt: scheduledAt.toISOString(),
+      leaseSeconds,
+    }),
+    dependencies.store.readState(),
+  ]);
 
   if (!lease.acquired) {
-    const state = await dependencies.store.readState();
     return emptyResult(
       lease.outcome === "duplicate" ? "duplicate" : "busy",
       lease.runId,
-      state.latest?.reportId ?? null,
+      initialState.latest?.reportId ?? null,
     );
   }
 
@@ -105,16 +112,11 @@ export async function runNewsRefresh(
   let latestReportId: string | null = null;
 
   try {
-    await dependencies.store.syncSources(
-      leaseIdentity,
-      configuredSources.map((source) => ({
-        sourceId: source.source_id,
-        enabled: source.enabled,
-        intervalMinutes: defaultSourceIntervalMinutes,
-      })),
-      scheduledAt.toISOString(),
-    );
-    const state = await dependencies.store.readState();
+    let state = initialState;
+    if (!sourceRegistryMatches(sourceRegistry, state.sources)) {
+      await dependencies.store.syncSources(leaseIdentity, sourceRegistry, scheduledAt.toISOString());
+      state = await dependencies.store.readState();
+    }
     latestReportId = state.latest?.reportId ?? null;
     const sourceSelectionAt = new Date(Math.max(scheduledAt.getTime(), now().getTime()));
     const selectedSources = selectSourcesForCoverage(enabledSources, maxSources, {
@@ -314,6 +316,19 @@ export async function runNewsRefresh(
       errorCode,
     );
   }
+}
+
+function sourceRegistryMatches(
+  registry: Array<{ sourceId: string; enabled: boolean; intervalMinutes: number }>,
+  states: Array<{ sourceId: string; enabled?: boolean; intervalMinutes: number }>,
+): boolean {
+  const registryById = new Map(registry.map((source) => [source.sourceId, source]));
+  const stateById = new Map(states.map((source) => [source.sourceId, source]));
+  if (registry.some((source) => {
+    const state = stateById.get(source.sourceId);
+    return !state || state.enabled !== source.enabled || state.intervalMinutes !== source.intervalMinutes;
+  })) return false;
+  return states.every((state) => state.enabled !== true || registryById.get(state.sourceId)?.enabled === true);
 }
 
 function timestampString(timestamp: number): string | null {
