@@ -140,15 +140,19 @@ export async function runNewsRefresh(
       );
     }
 
-    const collection = await collect({
-      sources: selectedSources,
-      maxSources: selectedSources.length,
-      limitPerSection,
-      collectionBudgetMs,
-      now: scheduledAt,
-      useFirecrawlKeyless: options.useFirecrawlKeyless ?? true,
-      repairSummariesWithModel: options.repairSummariesWithModel ?? true,
-    });
+    const windowFrom = new Date(scheduledAt.getTime() - defaultMaxNewsAgeHours * 60 * 60_000).toISOString();
+    const [collection, storedCandidates] = await Promise.all([
+      collect({
+        sources: selectedSources,
+        maxSources: selectedSources.length,
+        limitPerSection,
+        collectionBudgetMs,
+        now: scheduledAt,
+        useFirecrawlKeyless: options.useFirecrawlKeyless ?? true,
+        repairSummariesWithModel: options.repairSummariesWithModel ?? true,
+      }),
+      dependencies.store.readRecentCandidates(windowFrom, defaultRefreshCandidateLimit),
+    ]);
     discoveredCount = collection.items.length;
     const outcomeSourceIds = new Set(collection.sourceOutcomes.map((outcome) => outcome.sourceId));
     missingSourceOutcomeIds = plannedSourceIds.filter((sourceId) => !outcomeSourceIds.has(sourceId));
@@ -159,11 +163,18 @@ export async function runNewsRefresh(
 
     const sourceResults = buildSourceResults(selectedSources, collection, scheduledAt, state.sources);
     selectedSourceIds = sourceResults.map((result) => result.sourceId);
-    await dependencies.store.recordSourceResults(leaseIdentity, sourceResults);
-    if (collection.items.length > 0) await dependencies.store.upsertCandidates(leaseIdentity, collection.items);
-
-    const windowFrom = new Date(scheduledAt.getTime() - defaultMaxNewsAgeHours * 60 * 60_000).toISOString();
-    const candidates = await dependencies.store.readRecentCandidates(windowFrom, defaultRefreshCandidateLimit);
+    const persistence = Promise.all([
+      dependencies.store.recordSourceResults(leaseIdentity, sourceResults),
+      collection.items.length > 0
+        ? dependencies.store.upsertCandidates(leaseIdentity, collection.items)
+        : Promise.resolve(0),
+    ]);
+    const candidates = mergeRefreshCandidates(
+      storedCandidates,
+      collection.items,
+      windowFrom,
+      defaultRefreshCandidateLimit,
+    );
     candidateCount = candidates.length;
     const contentFreshness = evaluatePublishedContentFreshness(candidates, scheduledAt);
     const metrics: Record<string, unknown> = {
@@ -182,6 +193,7 @@ export async function runNewsRefresh(
     };
 
     if (candidates.length === 0) {
+      await persistence;
       if (state.latest) {
         await dependencies.store.completeRefreshWithoutPublish(leaseIdentity, { ...metrics, outcome: "no_recent_candidates" });
         return unchangedResult(lease.runId, state.latest.reportId, state.latest.report.generatedAt, selectedSourceIds, discoveredCount, 0);
@@ -191,6 +203,7 @@ export async function runNewsRefresh(
     }
 
     if (!contentFreshness.publishable) {
+      await persistence;
       await dependencies.store.markRefreshFailed(leaseIdentity, "stale_candidate_pool", {
         ...metrics,
         outcome: "stale_candidate_pool",
@@ -206,7 +219,13 @@ export async function runNewsRefresh(
       );
     }
 
-    const report = buildReport(candidates, scheduledAt);
+    let report: DailyNewsReport;
+    try {
+      report = buildReport(candidates, scheduledAt);
+    } catch (error) {
+      await persistence.catch(() => {});
+      throw error;
+    }
     const homepageFreshness = evaluatePublishedContentFreshness(
       [...report.topStories, ...report.importantStories, ...report.watchlist].map((story) => ({
         publishedAt: timestampString(storyActivityTimestamp(story)),
@@ -215,6 +234,7 @@ export async function runNewsRefresh(
     );
     metrics.homepage_newest_activity_at = homepageFreshness.newestPublishedAt;
     metrics.homepage_newest_activity_age_minutes = homepageFreshness.ageMinutes;
+    await persistence;
     if (!homepageFreshness.publishable) {
       await dependencies.store.markRefreshFailed(leaseIdentity, "stale_homepage_selection", {
         ...metrics,
@@ -329,6 +349,66 @@ function sourceRegistryMatches(
     return !state || state.enabled !== source.enabled || state.intervalMinutes !== source.intervalMinutes;
   })) return false;
   return states.every((state) => state.enabled !== true || registryById.get(state.sourceId)?.enabled === true);
+}
+
+export function mergeRefreshCandidates(
+  storedCandidates: RawNewsItem[],
+  collectedCandidates: RawNewsItem[],
+  since: string,
+  limit: number,
+): RawNewsItem[] {
+  const bySourceAndUrl = new Map<string, RawNewsItem>();
+  for (const candidate of storedCandidates) {
+    bySourceAndUrl.set(candidateKey(candidate), candidate);
+  }
+  for (const candidate of collectedCandidates) {
+    const key = candidateKey(candidate);
+    const stored = bySourceAndUrl.get(key);
+    bySourceAndUrl.set(key, {
+      ...candidate,
+      publishedAt: candidate.publishedAt ?? stored?.publishedAt,
+      extractedAt: earliestTimestamp(stored?.extractedAt, candidate.extractedAt),
+    });
+  }
+  const sinceMs = Date.parse(since);
+  return [...bySourceAndUrl.values()]
+    .filter((candidate) => {
+      const timestamp = candidateTimestamp(candidate);
+      return Number.isFinite(timestamp) && timestamp >= sinceMs;
+    })
+    .sort((left, right) =>
+      candidateTimestamp(right) - candidateTimestamp(left) ||
+      candidateKey(left).localeCompare(candidateKey(right)))
+    .slice(0, limit);
+}
+
+function candidateTimestamp(candidate: RawNewsItem): number {
+  return Date.parse(candidate.publishedAt ?? candidate.extractedAt ?? "");
+}
+
+function earliestTimestamp(left: string | undefined, right: string): string {
+  const leftMs = Date.parse(left ?? "");
+  const rightMs = Date.parse(right);
+  if (!Number.isFinite(leftMs)) return right;
+  if (!Number.isFinite(rightMs)) return left!;
+  return leftMs <= rightMs ? left! : right;
+}
+
+function candidateKey(candidate: RawNewsItem): string {
+  return `${candidate.sourceId}\n${canonicalCandidateUrl(candidate.url)}`;
+}
+
+function canonicalCandidateUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_|spm$|from$|source$|ref$)/i.test(key)) url.searchParams.delete(key);
+    }
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return value;
+  }
 }
 
 function timestampString(timestamp: number): string | null {

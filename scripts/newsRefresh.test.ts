@@ -1,9 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
+import { defaultPreferences } from "../src/config/preferences";
 import { newsSources } from "../src/config/sources";
+import { buildDailyReport } from "../src/lib/newsPipeline";
 import { selectSourcesForCoverage } from "../src/lib/sourceCoverage";
 import type { RawNewsItem } from "../src/types";
 import { InMemoryNewsStore } from "./inMemoryNewsStore";
-import { defaultRefreshCandidateLimit, defaultServerlessMaxSources, hashReportContent, runNewsRefresh } from "./newsRefresh";
+import {
+  defaultRefreshCandidateLimit,
+  defaultServerlessMaxSources,
+  hashReportContent,
+  mergeRefreshCandidates,
+  runNewsRefresh,
+} from "./newsRefresh";
 import type { NewsCollectionOptions, NewsCollectionResult } from "./newsService";
 import { expandLegacyItems, readBundledReport } from "./reportStore";
 
@@ -54,6 +62,106 @@ describe("durable news refresh", () => {
       collectionBudgetMs: expected,
     });
     expect(readRecentCandidates).toHaveBeenCalledWith(expect.any(String), defaultRefreshCandidateLimit);
+  });
+
+  it("merges newly collected candidates with the same canonical ordering as the rolling pool", () => {
+    const now = new Date("2026-07-23T06:45:00.000Z");
+    const stored = recentCandidates(now, "旧标题").slice(0, 2);
+    const replacement = {
+      ...stored[0]!,
+      title: "更新后的标题",
+      url: `${stored[0]!.url}?utm_source=refresh`,
+      publishedAt: now.toISOString(),
+    };
+    const result = mergeRefreshCandidates(
+      stored,
+      [replacement],
+      new Date(now.getTime() - 72 * 60 * 60_000).toISOString(),
+      2,
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result[0]?.title).toBe("更新后的标题");
+    expect(result.filter((candidate) => candidate.sourceId === replacement.sourceId)).toHaveLength(1);
+
+    const withoutPublishedAt = { ...replacement, publishedAt: undefined, extractedAt: now.toISOString() };
+    const inherited = mergeRefreshCandidates(
+      stored,
+      [withoutPublishedAt],
+      new Date(now.getTime() - 72 * 60 * 60_000).toISOString(),
+      2,
+    );
+    expect(inherited.find((candidate) => candidate.title === "更新后的标题")?.publishedAt).toBe(stored[0]?.publishedAt);
+    expect(inherited.find((candidate) => candidate.title === "更新后的标题")?.extractedAt).toBe(stored[0]?.extractedAt);
+  });
+
+  it("overlaps candidate reads and persistence with collection and report building", async () => {
+    const initial = readBundledReport();
+    const now = new Date("2026-07-23T06:45:00.000Z");
+    const store = new InMemoryNewsStore(initial, () => now);
+    const sources = newsSources.filter((source) => source.enabled).slice(0, 10);
+    const candidates = recentCandidates(now, "并行刷新候选");
+    const events: string[] = [];
+    let completedWrites = 0;
+
+    const originalRead = store.readRecentCandidates.bind(store);
+    vi.spyOn(store, "readRecentCandidates").mockImplementation(async (...args) => {
+      events.push("read-start");
+      const result = await originalRead(...args);
+      events.push("read-end");
+      return result;
+    });
+    const originalRecord = store.recordSourceResults.bind(store);
+    vi.spyOn(store, "recordSourceResults").mockImplementation(async (...args) => {
+      events.push("record-start");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const result = await originalRecord(...args);
+      completedWrites += 1;
+      events.push("record-end");
+      return result;
+    });
+    const originalUpsert = store.upsertCandidates.bind(store);
+    vi.spyOn(store, "upsertCandidates").mockImplementation(async (...args) => {
+      events.push("upsert-start");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const result = await originalUpsert(...args);
+      completedWrites += 1;
+      events.push("upsert-end");
+      return result;
+    });
+    const collect = vi.fn(async (): Promise<NewsCollectionResult> => {
+      events.push("collect-start");
+      await Promise.resolve();
+      expect(events).toContain("read-start");
+      events.push("collect-end");
+      return {
+        items: candidates,
+        mode: "Direct source fetch",
+        sourceOutcomes: sources.map((source) => ({
+          sourceId: source.source_id,
+          status: candidates.some((candidate) => candidate.sourceId === source.source_id) ? "success" : "empty",
+          discoveredCount: candidates.filter((candidate) => candidate.sourceId === source.source_id).length,
+          errorCode: null,
+        })),
+      };
+    });
+    const buildReport = vi.fn((items: RawNewsItem[], reportNow: Date) => {
+      events.push("build");
+      expect(completedWrites).toBe(0);
+      return buildDailyReport(items, defaultPreferences, reportNow);
+    });
+
+    const result = await runNewsRefresh(
+      { trigger: "cron", scheduledAt: now, idempotencyKey: "refresh:parallel-persistence" },
+      { store, now: () => now, sources, collect, buildReport },
+    );
+
+    expect(result.status).toBe("published");
+    expect(buildReport).toHaveBeenCalledOnce();
+    expect(events.indexOf("read-start")).toBeLessThan(events.indexOf("collect-end"));
+    expect(events.indexOf("build")).toBeLessThan(events.indexOf("record-end"));
+    expect(events.indexOf("build")).toBeLessThan(events.indexOf("upsert-end"));
+    expect(completedWrites).toBe(2);
   });
 
   it("publishes changed live candidates from the rolling pool", async () => {
