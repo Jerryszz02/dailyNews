@@ -20,6 +20,7 @@ type DatabaseRow = Record<string, unknown>;
 const candidatePageSize = 1_000;
 const readRetryDelaysMs = [250, 750] as const;
 const readAttemptTimeoutMs = 4_000;
+const writeAttemptTimeoutMs = 8_000;
 const storedReportEncoding = "gzip-base64";
 const maxStoredReportBytes = 10_000_000;
 
@@ -211,17 +212,20 @@ export class SupabaseNewsStore implements NewsStore {
   }
 
   private async rpc(name: string, args: Record<string, unknown> = {}, signal?: AbortSignal): Promise<unknown> {
-    try {
-      const request = this.client.rpc(name, args);
-      const { data, error } = signal && typeof request.abortSignal === "function"
-        ? await request.abortSignal(signal)
-        : await request;
-      if (error) throw new NewsStoreError(normalizeSupabaseError(error.code), error.code);
-      return data;
-    } catch (error) {
-      if (error instanceof NewsStoreError) throw error;
-      throw new NewsStoreError("supabase_request_failed");
-    }
+    const operation = async (requestSignal?: AbortSignal) => {
+      try {
+        const request = this.client.rpc(name, args);
+        const { data, error } = requestSignal && typeof request.abortSignal === "function"
+          ? await request.abortSignal(requestSignal)
+          : await request;
+        if (error) throw new NewsStoreError(normalizeSupabaseError(error.code), error.code);
+        return data;
+      } catch (error) {
+        if (error instanceof NewsStoreError) throw error;
+        throw new NewsStoreError("supabase_request_failed");
+      }
+    };
+    return signal ? operation(signal) : runWriteAttempt(operation);
   }
 
   private async readRpc(name: string, args: Record<string, unknown> = {}): Promise<unknown> {
@@ -467,6 +471,24 @@ async function runReadAttempt(operation: (signal: AbortSignal) => Promise<unknow
           controller.abort();
           reject(new NewsStoreError("supabase_request_failed", "read_timeout"));
         }, readAttemptTimeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
+async function runWriteAttempt(operation: (signal: AbortSignal) => Promise<unknown>): Promise<unknown> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation(controller.signal),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => {
+          reject(new NewsStoreError("supabase_request_failed", "write_timeout"));
+          controller.abort();
+        }, writeAttemptTimeoutMs);
       }),
     ]);
   } finally {

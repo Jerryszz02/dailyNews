@@ -141,6 +141,31 @@ describe("SupabaseNewsStore RPC mapping", () => {
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 
+  it("times out a hanging write RPC without retrying it", async () => {
+    vi.useFakeTimers();
+    try {
+      const rpc = vi.fn(() => new Promise(() => undefined));
+      const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
+
+      const rejection = expect(store.tryAcquireRefresh({
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        idempotencyKey: "refresh:2026-07-13T08:00:00.000Z",
+        trigger: "cron",
+        scheduledAt: "2026-07-13T08:00:00.000Z",
+        leaseSeconds: 120,
+      })).rejects.toMatchObject({
+        code: "supabase_request_failed",
+        sourceCode: "write_timeout",
+      });
+      await vi.runAllTimersAsync();
+
+      await rejection;
+      expect(rpc).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("preserves enabled state when synchronizing the source registry", async () => {
     const rpc = vi.fn(async () => ({ data: [{ upserted_count: 2 }], error: null }));
     const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
