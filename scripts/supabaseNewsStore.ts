@@ -111,16 +111,7 @@ export class SupabaseNewsStore implements NewsStore {
       lease_owner: lease.ownerId,
       run_id: lease.runId,
       fencing_token: lease.fencingToken,
-      results: results.map((result) => ({
-        source_id: result.sourceId,
-        status: result.status,
-        success: result.status !== "failed",
-        attempted_at: result.attemptedAt,
-        next_due_at: result.nextDueAt,
-        discovered_count: result.discoveredCount,
-        accepted_count: result.acceptedCount,
-        last_error_code: result.errorCode,
-      })),
+      results: sourceResultsPayload(results),
     });
   }
 
@@ -129,16 +120,7 @@ export class SupabaseNewsStore implements NewsStore {
       lease_owner: lease.ownerId,
       run_id: lease.runId,
       fencing_token: lease.fencingToken,
-      candidates: candidates.map((candidate) => ({
-        source_id: candidate.sourceId,
-        canonical_url: canonicalUrl(candidate.url),
-        title: candidate.title,
-        summary: candidate.summary,
-        published_at: candidate.publishedAt,
-        discovered_at: candidate.extractedAt,
-        language: candidate.language,
-        payload: candidate,
-      })),
+      candidates: candidatesPayload(candidates),
     });
     return readNumber(firstRow(data)?.upserted_count);
   }
@@ -165,30 +147,30 @@ export class SupabaseNewsStore implements NewsStore {
     return candidates;
   }
 
-  async publishRefresh(input: PublishRefreshInput): Promise<PublishRefreshResult> {
-    const row = requiredFirstRow(
-      await this.rpc("daily_news_publish_refresh", {
-        lease_owner: input.ownerId,
-        run_id: input.runId,
-        fencing_token: input.fencingToken,
-        report_id: input.reportId,
-        generated_at: input.report.generatedAt,
-        schema_version: String(input.report.version),
-        payload: storeReport(input.report),
-        data_as_of: input.dataAsOf,
-        newest_content_at: input.newestContentAt,
-        content_hash: input.contentHash,
-        input_fingerprint: input.inputFingerprint,
-        run_metrics: input.metrics,
-      }),
-      "publish_result_missing",
+  async commitRefresh(
+    input: PublishRefreshInput,
+    sourceResults: SourceCollectionResult[],
+    candidates: RawNewsItem[],
+  ): Promise<PublishRefreshResult> {
+    return readPublishRefreshResult(
+      requiredFirstRow(
+        await this.rpc("daily_news_commit_refresh", {
+          ...publishRefreshArgs(input),
+          source_results: sourceResultsPayload(sourceResults),
+          candidates: candidatesPayload(candidates),
+        }),
+        "commit_result_missing",
+      ),
     );
-    return {
-      published: typeof row.published_report_id === "string",
-      reportId: readNullableString(row.published_report_id),
-      previousReportId: readNullableString(row.previous_report_id),
-      lastSuccessAt: readTimestamp(row.last_success_at),
-    };
+  }
+
+  async publishRefresh(input: PublishRefreshInput): Promise<PublishRefreshResult> {
+    return readPublishRefreshResult(
+      requiredFirstRow(
+        await this.rpc("daily_news_publish_refresh", publishRefreshArgs(input)),
+        "publish_result_missing",
+      ),
+    );
   }
 
   async completeRefreshWithoutPublish(
@@ -289,6 +271,58 @@ function storeReport(report: DailyNewsReport): DatabaseRow {
     storageView: 2,
     encoding: storedReportEncoding,
     data: gzipSync(JSON.stringify(compactDailyNewsReport(report))).toString("base64"),
+  };
+}
+
+function sourceResultsPayload(results: SourceCollectionResult[]): DatabaseRow[] {
+  return results.map((result) => ({
+    source_id: result.sourceId,
+    status: result.status,
+    success: result.status !== "failed",
+    attempted_at: result.attemptedAt,
+    next_due_at: result.nextDueAt,
+    discovered_count: result.discoveredCount,
+    accepted_count: result.acceptedCount,
+    last_error_code: result.errorCode,
+  }));
+}
+
+function candidatesPayload(candidates: RawNewsItem[]): DatabaseRow[] {
+  return candidates.map((candidate) => ({
+    source_id: candidate.sourceId,
+    canonical_url: canonicalUrl(candidate.url),
+    title: candidate.title,
+    summary: candidate.summary,
+    published_at: candidate.publishedAt,
+    discovered_at: candidate.extractedAt,
+    language: candidate.language,
+    payload: candidate,
+  }));
+}
+
+function publishRefreshArgs(input: PublishRefreshInput): DatabaseRow {
+  return {
+    lease_owner: input.ownerId,
+    run_id: input.runId,
+    fencing_token: input.fencingToken,
+    report_id: input.reportId,
+    generated_at: input.report.generatedAt,
+    schema_version: String(input.report.version),
+    payload: storeReport(input.report),
+    data_as_of: input.dataAsOf,
+    newest_content_at: input.newestContentAt,
+    content_hash: input.contentHash,
+    input_fingerprint: input.inputFingerprint,
+    run_metrics: input.metrics,
+  };
+}
+
+function readPublishRefreshResult(row: DatabaseRow): PublishRefreshResult {
+  return {
+    published: typeof row.published_report_id === "string",
+    reportId: readNullableString(row.published_report_id),
+    previousReportId: readNullableString(row.previous_report_id),
+    lastSuccessAt: readTimestamp(row.last_success_at),
   };
 }
 

@@ -5,6 +5,7 @@ import { buildDailyReport } from "../src/lib/newsPipeline";
 import { selectSourcesForCoverage } from "../src/lib/sourceCoverage";
 import type { RawNewsItem } from "../src/types";
 import { InMemoryNewsStore } from "./inMemoryNewsStore";
+import type { NewsStore } from "./newsStore";
 import {
   defaultRefreshCandidateLimit,
   defaultServerlessMaxSources,
@@ -162,6 +163,42 @@ describe("durable news refresh", () => {
     expect(events.indexOf("build")).toBeLessThan(events.indexOf("record-end"));
     expect(events.indexOf("build")).toBeLessThan(events.indexOf("upsert-end"));
     expect(completedWrites).toBe(2);
+  });
+
+  it("uses the atomic store commit for a changed Supabase-style refresh", async () => {
+    const initial = readBundledReport();
+    const now = new Date("2026-07-23T09:15:00.000Z");
+    const store = new InMemoryNewsStore(initial, () => now);
+    const candidates = recentCandidates(now, "原子提交刷新候选");
+    const recordSourceResults = vi.spyOn(store, "recordSourceResults");
+    const upsertCandidates = vi.spyOn(store, "upsertCandidates");
+    const publishRefresh = vi.spyOn(store, "publishRefresh");
+    const commitRefresh = vi.fn(async (
+      input: Parameters<NonNullable<NewsStore["commitRefresh"]>>[0],
+      _sourceResults: Parameters<NonNullable<NewsStore["commitRefresh"]>>[1],
+      _candidates: Parameters<NonNullable<NewsStore["commitRefresh"]>>[2],
+    ) => ({
+      published: true,
+      reportId: input.reportId,
+      previousReportId: null,
+      lastSuccessAt: input.dataAsOf,
+    }));
+    Object.assign(store, { commitRefresh });
+
+    const result = await runNewsRefresh(
+      { trigger: "cron", scheduledAt: now, idempotencyKey: "refresh:atomic-commit" },
+      { store, now: () => now, collect: collection(candidates) },
+    );
+
+    expect(result.status).toBe("published");
+    expect(commitRefresh).toHaveBeenCalledOnce();
+    expect(commitRefresh.mock.calls[0]?.[1]).toEqual(expect.arrayContaining([
+      expect.objectContaining({ sourceId: candidates[0]?.sourceId }),
+    ]));
+    expect(commitRefresh.mock.calls[0]?.[2]).toEqual(candidates);
+    expect(recordSourceResults).not.toHaveBeenCalled();
+    expect(upsertCandidates).not.toHaveBeenCalled();
+    expect(publishRefresh).not.toHaveBeenCalled();
   });
 
   it("publishes changed live candidates from the rolling pool", async () => {

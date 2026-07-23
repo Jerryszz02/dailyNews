@@ -211,6 +211,64 @@ describe("SupabaseNewsStore RPC mapping", () => {
     expect(candidateArgs.candidates[0]).not.toHaveProperty("candidate_id");
   });
 
+  it("maps an atomic refresh commit to one compressed RPC payload", async () => {
+    const report = readBundledReport();
+    const rpc = vi.fn(async () => ({
+      data: [{
+        published_report_id: "00000000-0000-4000-8000-000000000003",
+        previous_report_id: "00000000-0000-4000-8000-000000000004",
+        last_success_at: report.generatedAt,
+      }],
+      error: null,
+    }));
+    const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
+    const lease = {
+      ownerId: "00000000-0000-4000-8000-000000000001",
+      runId: "00000000-0000-4000-8000-000000000002",
+      fencingToken: 4,
+    };
+    const sourceResults = [{
+      sourceId: "xinhua",
+      status: "success" as const,
+      attemptedAt: report.generatedAt,
+      nextDueAt: report.generatedAt,
+      discoveredCount: 1,
+      acceptedCount: 1,
+      errorCode: null,
+    }];
+
+    const result = await store.commitRefresh({
+      ...lease,
+      reportId: "00000000-0000-4000-8000-000000000003",
+      report,
+      dataAsOf: report.generatedAt,
+      newestContentAt: report.generatedAt,
+      contentHash: "0123456789abcdef",
+      inputFingerprint: "input-fingerprint",
+      metrics: { planned_source_ids: ["xinhua"] },
+    }, sourceResults, [candidate()]);
+
+    expect(result).toEqual({
+      published: true,
+      reportId: "00000000-0000-4000-8000-000000000003",
+      previousReportId: "00000000-0000-4000-8000-000000000004",
+      lastSuccessAt: report.generatedAt,
+    });
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("daily_news_commit_refresh", expect.objectContaining({
+      source_results: [expect.objectContaining({
+        source_id: "xinhua",
+        status: "success",
+        success: true,
+      })],
+      candidates: [expect.objectContaining({
+        source_id: "xinhua",
+        canonical_url: "https://example.com/article",
+      })],
+      payload: expect.objectContaining({ storageView: 2, encoding: "gzip-base64" }),
+    }));
+  });
+
   it("pages candidate reads beyond the PostgREST max_rows boundary", async () => {
     const available = Array.from({ length: 1_250 }, (_, index) => ({
       candidate: { ...candidate(), id: `candidate-${index}`, url: `https://example.com/article/${index}` },

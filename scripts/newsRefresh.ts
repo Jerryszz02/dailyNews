@@ -163,12 +163,17 @@ export async function runNewsRefresh(
 
     const sourceResults = buildSourceResults(selectedSources, collection, scheduledAt, state.sources);
     selectedSourceIds = sourceResults.map((result) => result.sourceId);
-    const persistence = Promise.all([
+    const persistCollection = () => Promise.all([
       dependencies.store.recordSourceResults(leaseIdentity, sourceResults),
       collection.items.length > 0
         ? dependencies.store.upsertCandidates(leaseIdentity, collection.items)
         : Promise.resolve(0),
     ]);
+    let persistence = dependencies.store.commitRefresh ? null : persistCollection();
+    const ensurePersisted = () => {
+      persistence ??= persistCollection();
+      return persistence;
+    };
     const candidates = mergeRefreshCandidates(
       storedCandidates,
       collection.items,
@@ -193,7 +198,7 @@ export async function runNewsRefresh(
     };
 
     if (candidates.length === 0) {
-      await persistence;
+      await ensurePersisted();
       if (state.latest) {
         await dependencies.store.completeRefreshWithoutPublish(leaseIdentity, { ...metrics, outcome: "no_recent_candidates" });
         return unchangedResult(lease.runId, state.latest.reportId, state.latest.report.generatedAt, selectedSourceIds, discoveredCount, 0);
@@ -203,7 +208,7 @@ export async function runNewsRefresh(
     }
 
     if (!contentFreshness.publishable) {
-      await persistence;
+      await ensurePersisted();
       await dependencies.store.markRefreshFailed(leaseIdentity, "stale_candidate_pool", {
         ...metrics,
         outcome: "stale_candidate_pool",
@@ -223,7 +228,7 @@ export async function runNewsRefresh(
     try {
       report = buildReport(candidates, scheduledAt);
     } catch (error) {
-      await persistence.catch(() => {});
+      await ensurePersisted().catch(() => {});
       throw error;
     }
     const homepageFreshness = evaluatePublishedContentFreshness(
@@ -234,8 +239,8 @@ export async function runNewsRefresh(
     );
     metrics.homepage_newest_activity_at = homepageFreshness.newestPublishedAt;
     metrics.homepage_newest_activity_age_minutes = homepageFreshness.ageMinutes;
-    await persistence;
     if (!homepageFreshness.publishable) {
+      await ensurePersisted();
       await dependencies.store.markRefreshFailed(leaseIdentity, "stale_homepage_selection", {
         ...metrics,
         outcome: "stale_homepage_selection",
@@ -251,6 +256,7 @@ export async function runNewsRefresh(
       );
     }
     if (!passesPublishGate(report, state.latest?.report ?? null)) {
+      await ensurePersisted();
       await dependencies.store.markRefreshFailed(leaseIdentity, "quality_gate_failed", metrics);
       return failedResult(
         "rejected",
@@ -266,6 +272,7 @@ export async function runNewsRefresh(
     const contentHash = hashReportContent(report);
     const previousContentHash = state.latest?.contentHash ?? (state.latest ? hashReportContent(state.latest.report) : null);
     if (state.latest && contentHash === previousContentHash) {
+      await ensurePersisted();
       await dependencies.store.completeRefreshWithoutPublish(leaseIdentity, { ...metrics, outcome: "unchanged", content_hash: contentHash });
       return unchangedResult(
         lease.runId,
@@ -278,7 +285,7 @@ export async function runNewsRefresh(
     }
 
     const reportId = randomUUID();
-    const publication = await dependencies.store.publishRefresh({
+    const publishInput = {
       ...leaseIdentity,
       reportId,
       report,
@@ -287,7 +294,14 @@ export async function runNewsRefresh(
       contentHash,
       inputFingerprint: hashCandidates(candidates),
       metrics,
-    });
+    };
+    let publication;
+    if (dependencies.store.commitRefresh) {
+      publication = await dependencies.store.commitRefresh(publishInput, sourceResults, collection.items);
+    } else {
+      await ensurePersisted();
+      publication = await dependencies.store.publishRefresh(publishInput);
+    }
     if (!publication.published) {
       return unchangedResult(
         lease.runId,

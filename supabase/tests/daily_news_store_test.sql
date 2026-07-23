@@ -14,7 +14,7 @@ restart identity;
 insert into daily_news.runtime_state (singleton_id) values (true);
 insert into daily_news.refresh_lease (singleton_id) values (true);
 
-select plan(72);
+select plan(73);
 
 select has_schema('daily_news', 'private daily_news schema exists');
 select has_table('daily_news', 'refresh_run', 'refresh_run table exists');
@@ -23,6 +23,12 @@ select has_table('daily_news', 'runtime_state', 'runtime_state table exists');
 select has_table('daily_news', 'refresh_lease', 'refresh_lease table exists');
 select has_table('daily_news', 'source_state', 'source_state table exists');
 select has_table('daily_news', 'article_candidate', 'article_candidate table exists');
+select ok(
+  to_regprocedure(
+    'public.daily_news_commit_refresh(uuid,uuid,bigint,jsonb,jsonb,uuid,timestamptz,text,jsonb,text,text,timestamptz,timestamptz,jsonb)'
+  ) is not null,
+  'atomic refresh commit RPC exists'
+);
 
 select is(
   (

@@ -110,6 +110,11 @@ export interface NewsStore {
   recordSourceResults(lease: LeaseIdentity, results: SourceCollectionResult[]): Promise<void>;
   upsertCandidates(lease: LeaseIdentity, candidates: RawNewsItem[]): Promise<number>;
   readRecentCandidates(since: string, limit?: number): Promise<RawNewsItem[]>;
+  commitRefresh?(
+    input: PublishRefreshInput,
+    sourceResults: SourceCollectionResult[],
+    candidates: RawNewsItem[],
+  ): Promise<PublishRefreshResult>;
   publishRefresh(input: PublishRefreshInput): Promise<PublishRefreshResult>;
   completeRefreshWithoutPublish(
     lease: LeaseIdentity,
