@@ -14,6 +14,7 @@
     "test:db": "supabase test db",
     "bootstrap:supabase": "tsx scripts/bootstrapSupabase.ts",
     "generate": "tsx scripts/generateDailyNews.ts",
+    "monitor:production": "tsx scripts/productionAcceptanceMonitor.ts",
     "upgrade-report": "tsx scripts/upgradeDailyNewsReport.ts"
   },
   "dependencies": {

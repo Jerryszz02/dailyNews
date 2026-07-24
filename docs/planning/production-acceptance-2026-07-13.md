@@ -479,6 +479,100 @@ commit `19b3f3c` 只触发一份 Git integration production deployment `dpl_EACb
 
 因此第十四次窗口在严格槽 1 立即失败；15:15 基线及 15:30 失败槽都不得与后续候选拼接。现有未部署的原子 commit RPC 正针对成功发布路径的三次数据库往返，但 Supabase CLI 项目枚举仍不可用，不能 dry-run/apply migration，也不能部署会调用不存在 RPC 的应用代码。cadence 侧还需在不提高 `maxSources=11` 的前提下确定性错开同批第 12 个来源；只部署错峰不能消除当前性能硬失败。后续自然槽只作只读诊断；取得正确 project link/迁移权限前，不做 DDL/DML、提交或部署。
 
+### 第十五次 24 小时 burn-in（进行中）
+
+Supabase CLI 权限恢复后，可见项目聚合数为 3；通过 production `SUPABASE_URL` 的 project ref 与 CLI 列表在临时进程内比较，唯一匹配到正确项目并完成本地 link，未在输出或文档保存 project ref、host 或连接值。`supabase db push --dry-run` 只列出 `20260723093000_atomic_refresh_commit.sql`；审查确认它仅新增 `daily_news_commit_refresh`，复用现有 source-result、candidate-upsert 与 publish fencing RPC，并只向 `service_role` 授权。随后通过已认证的 Supabase CLI 正式应用这一份 migration，没有借 production env 连接执行 DDL/DML。
+
+远程 pgTAP runner 因本机 Docker 不可用而在建立数据库连接前停止，没有执行部分测试或触碰远端数据。作为安全补充，production env 连接只执行只读结构/权限审计并 ROLLBACK：事务 `read_only=on`、TLS encrypted、函数恰好 1 个且 14 参数、`SECURITY DEFINER`、固定 `search_path`，仅 `service_role` 有 execute，anon/authenticated 均无 execute；migration history 中该版本恰好 1 条。应用回归门为 unit 156/156、integration 70/70、build 1711 modules、`git diff --check`。
+
+commit `a4a61d9` 提交原子发布路径后，又针对第十四次暴露的超大 due cohort 增加确定性 15 分钟 lookahead：已到期来源始终按最早 `next_due_at` 优先，空闲槽可提前处理下一槽来源，但 `maxSources=11`、12 秒采集预算、直连并发 11、keyless、排序和质量门均不变。精确 12-source 回归先证明旧实现会留下 backlog，再验证当前槽 11、下一槽 1；focused 26/26、unit 157/157、integration 71/71、build 1711 modules 与 `git diff --check` 全部通过。commit `b31cdbc` 推送后只产生一份 production deployment `dpl_29ksbH9yGAYC3VQZBsvFhfpYegqo`，创建于 `2026-07-23T15:59:26Z`，Production/READY；正式 alias 已由独立 inspect 精确绑定，旧窗口全部作废。
+
+`16:00Z` 是部署完成后第一个自然诊断槽，但部署/alias 切换与 Cron 相距过近，不作为正式基线。Cron run 983 唯一 succeeded、response 985 HTTP 200/body 精确 9 键/无 network error；durable run `c5ee531c-1c8c-4d1a-af1d-4b0617be3d73` 在 28.169 秒发布 report `d7ddaa18-7e87-44d8-928a-ab4f55e311ee`，11 planned/11 attempted/0 skipped/0 missing，集合与 body counts 一致。snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released；这同时是新原子 RPC 的真实 production published-path canary。Vercel 日志中的 `x-karpathy collection_deadline` 最终正确记为 attempted、非 skipped。公开四视图 200、invalid 400、四类重复 0、核心 21/21 confirmed、publisher share 0.143、24 来源、10/10 beats；但即时 state 仍有 11 个 due backlog，因此不可建立基线。
+
+`16:15Z` 继续消化第二批 cohort。Cron run 984 唯一 succeeded、response 986 HTTP 200/body 精确 9 键/无 network error；durable run `0cf8b266-d21f-4e9b-89ff-fa87ac48f59d` 在 29.203 秒发布 report `3649228f-7872-4ed5-adfb-360942bbba9d`，11 planned/11 attempted/0 skipped/0 missing、发现/采用 9/9、集合与 body counts 一致。Anthropic 本槽真实 planned/attempted/succeeded、非 skipped，failures 0、无 circuit/error；snapshot/runtime/latest 原子、singleton 1、lease released。公开 full/compact/reload 原子一致 337 stories，候选/首页实际活动年龄 37.996/111.646 分钟，四类重复 0，top/important/watch=9/11/8，核心 20/20 confirmed，publisher share 0.15，24 来源、10/10 beats。由于即时 state 仍有 4 个 due backlog，`16:15Z` 同样不能作为基线；下一候选自然槽为 `16:30Z`，必须同时清零 backlog、保持 duration≤30 秒并让首页实际活动继续≤120 分钟。
+
+`16:30Z` 的 Cron run 985 唯一 succeeded、response 987 HTTP 200/body 精确 9 键/无 network error；durable run `48d64ee3-7351-4afb-9fe5-013c219c6d9e` 在 29.747 秒发布 report `20c47024-0690-4f59-a3d9-d74ef95115ac`，11 planned/11 attempted/0 skipped/0 missing、发现/采用 14/14、集合与 body counts 一致。snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released；正式 alias 精确绑定新 deployment。公开 full/compact/reload 原子一致 335 stories，候选/首页实际活动年龄 49.954/56.388 分钟，四类重复 0，top/important/watch=9/12/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats。即时 source state 仍有 `cbs-sports-nba`、`qbitai`、`the-verge` 三个 due backlog，因此该槽也不能建立基线；下一候选自然槽顺延至 `16:45Z`。
+
+`16:45Z` 完整通过并建立正式基线。Cron run 986 在 `16:45:00.199Z` 启动、`16:45:00.242Z` 结束并唯一 succeeded；pg_net response 988 为 HTTP 200、body 精确 9 键、无 network error。durable run `41ad4bb8-4c95-4d8c-b12f-1f51dfd875cb` 从 `16:45:03.040Z` 到 `16:45:31.521Z`，28.481 秒发布 report `1ec0412c-bbea-43cc-b505-4d37fe1a98c5`；11 planned/11 attempted/0 skipped/0 missing、发现/采用 19/19，集合与 body counts 一致。snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空；enabled 49、healthy 46/open 3、half-open due 0，健康 rolling attempted/succeeded=46/46，overdue/backlog 均为 0，attempted state mismatch 与 skipped advancement 均为 0。
+
+16:47 公开门为 health/full/compact/reload=200、invalid=400，缓存契约分别为 public max-age 0/public max-age 0/no-store/no-store；四视图原子指向同一 report，共 335 stories。候选/首页最新实际活动为 `15:42:26Z`/`15:36:00Z`，审计年龄 64.750/71.184 分钟；标题/摘要/组合/tier 重复均为 0，top/important/watch=9/11/8，核心 20/20 confirmed，publisher share 0.15，24 来源、10/10 beats，storage Supabase、health error 为空。Anthropic 本槽未到期，最近一次 attempt/success 为 `16:15:01.723Z`，next due `17:45:01.723Z`，failures 0、无 circuit/error。
+
+窗口以 durable finished_at `2026-07-23T16:45:31.521Z` 固定基线边界；严格理论槽从 `17:00Z` 开始，每 15 分钟一槽，共 96 槽，最后为次日 `16:45Z`。16:00/16:15/16:30 仅为部署后排空槽，不得与本窗口拼接；17:00 是首个严格槽，必须继续保存五层即时证据、duration≤30 秒、来源 backlog/cadence 与公开内容门。
+
+首个严格槽 `17:00Z` 完整通过。Cron run 987 唯一 succeeded、response 989 HTTP 200/body 精确 9 键/无 network error；durable run `1a5aa185-7e9b-4fda-887c-147cfd09cd88` 从 `17:00:02.389Z` 到 `17:00:22.671Z`，20.282 秒发布 report `16c28c43-a791-4959-a5f8-1ee9c69a20e6`。2 planned/2 attempted/0 skipped/0 missing、集合与 body counts 一致，snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空。来源仍为 enabled 49、healthy 46/open 3、rolling attempted/succeeded 46/46、overdue/backlog 0；Anthropic 尚未到期且 state 无失败/熔断。
+
+17:02 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 335 stories；候选/首页实际活动年龄 79.819/86.253 分钟，标题/摘要/组合/tier 重复均为 0，top/important/watch=9/11/8，核心 20/20 confirmed，publisher share 0.15，24 来源、10/10 beats，缓存契约正确。截至本槽，严格理论/实际=1/1，失败、缺槽、重复、running、skipped、missing、network error、链接错配和 backlog 均为 0；baseline+strict duration P95/max=28.481 秒，`>30s=0`，最大成功完成间隔约 14.852 分钟。下一严格槽为 `17:15Z`。
+
+第二个严格槽 `17:15Z` 同样通过。Cron run 988 唯一 succeeded、response 990 HTTP 200/body 精确 9 键/无 network error；durable run `9355e636-6932-45bd-bdeb-2abc5bb76157` 在 28.310 秒发布 report `8bfdc239-3e7c-4468-a288-0ebb925d24f7`，11 planned/11 attempted/0 skipped/0 missing、发现/采用 27/27，集合与 body counts 一致。snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空；enabled 49、healthy 46/open 3、rolling attempted/succeeded 46/46、overdue/backlog 0。
+
+17:16 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 331 stories；候选/首页实际活动年龄 93.925/15.475 分钟，四类重复为 0，top/important/watch=10/11/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats，缓存契约正确。累计严格理论/实际=2/2，失败、缺槽、重复、running、skipped、missing、network error、链接错配和 backlog 均为 0；baseline+strict P95/max 仍为 28.481 秒、`>30s=0`。下一严格槽为 `17:30Z`。
+
+第三个严格槽 `17:30Z` 继续通过。Cron run 989 唯一 succeeded、response 991 HTTP 200/body 精确 9 键/无 network error；durable run `34a8401b-9a9f-4113-92f5-74e676304552` 在 27.712 秒发布 report `65cce5d1-ae3f-475e-bf8a-0a18e6697732`，11 planned/11 attempted/0 skipped/0 missing、发现/采用 5/5，集合与 body counts 一致。snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空；enabled 49、healthy 46/open 3、rolling attempted/succeeded 46/46、overdue/backlog 0。Anthropic 本槽真实 planned/attempted/succeeded、非 skipped，next due `19:00:01.436Z`、failures 0、无 circuit/error。
+
+17:31 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 331 stories；候选/首页实际活动年龄 108.920/30.470 分钟，四类重复为 0，top/important/watch=10/11/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats，缓存契约正确。累计严格理论/实际=3/3，失败、缺槽、重复、running、skipped、missing、network error、链接错配和 backlog 均为 0；baseline+strict P95/max 仍为 28.481 秒、`>30s=0`。候选池实际活动已接近 120 分钟门，下一严格槽 `17:45Z` 必须验证候选活动真实推进，不能用 report generatedAt 或仅首页活动掩盖旧候选。
+
+第四个严格槽 `17:45Z` 通过并解除内容活动年龄风险。Cron run 990 唯一 succeeded、response 992 HTTP 200/body 精确 9 键/无 network error；durable run `f36d2910-bf85-4c8e-9eae-3a08ebb8d297` 在 28.344 秒发布 report `3364415b-619c-4cf5-90ef-55d324229b1a`，11 planned/11 attempted/0 skipped/0 missing、发现/采用 20/20，集合与 body counts 一致。snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空；enabled 49、healthy 46/open 3、rolling attempted/succeeded 46/46、overdue/backlog 0。
+
+17:46 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 331 stories；候选与首页实际活动均推进至 `17:35:46Z`，审计年龄 10.754 分钟，四类重复为 0，top/important/watch=10/11/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats，缓存契约正确。累计严格理论/实际=4/4，失败、缺槽、重复、running、skipped、missing、network error、链接错配和 backlog 均为 0；baseline+strict P95/max 仍为 28.481 秒、`>30s=0`。下一严格槽为 `18:00Z`。
+
+第五个严格槽 `18:00Z` 继续通过。Cron run 991 唯一 succeeded、response 993 HTTP 200/body 精确 9 键/无 network error；durable run `a1ce3feb-1c74-4c2b-b804-10f5c5876787` 在 28.661 秒发布 report `baff5bf0-8a12-4dbb-af57-ece4d515522b`，11 planned/11 attempted/0 skipped/0 missing、发现/采用 17/17，集合与 body counts 一致。snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空；enabled 49、healthy 46/open 3、rolling attempted/succeeded 46/46、overdue/backlog 0。
+
+18:01 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 334 stories；候选/首页实际活动年龄 19.510/25.636 分钟，四类重复为 0，top/important/watch=10/11/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats，缓存契约正确。累计严格理论/实际=5/5，失败、缺槽、重复、running、skipped、missing、network error、链接错配和 backlog 均为 0；baseline+strict duration P95/max=28.661 秒、`>30s=0`。下一严格槽为 `18:15Z`。
+
+第六个严格槽 `18:15Z` 继续通过。Cron run 992 唯一 succeeded、response 994 HTTP 200/body 精确 9 键/无 network error；durable run `d0c360d5-e64f-4e55-8fca-91ef4b01c01f` 在 23.040 秒发布 report `af6fdb3f-9d50-45cc-9ca2-51087dc08cea`，4 planned/4 attempted/0 skipped/0 missing、发现/采用 0/0，集合与 body counts 一致。snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空；enabled 49、healthy 46/open 3、rolling attempted/succeeded 46/46、overdue/backlog 0。Anthropic 本槽未到期，最近一次 attempt/success 为 `17:30:01.436Z`，next due `19:00:01.436Z`，failures 0、无 circuit/error。
+
+18:16 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 334 stories；候选/首页实际活动年龄 34.490/40.616 分钟，四类重复为 0，top/important/watch=10/11/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats，缓存契约正确。累计严格理论/实际=6/6，失败、缺槽、重复、running、skipped、missing、network error、链接错配和 backlog 均为 0；baseline+strict duration P95/max=28.661 秒、`>30s=0`。下一严格槽为 `18:30Z`。
+
+第七个严格槽 `18:30Z` 发生不可恢复硬失败。Cron run 993 在 `18:30:00.212Z` 启动并唯一 succeeded，但 pg_net response 995 为 timeout：HTTP 状态与 9 键 body 均为空、network error 1，且没有对应 durable run。`18:31:32Z` 与 `18:32:33Z` 两次只读复核结果一致；Vercel 同请求日志显示 `/api/cron` 在平台 60 秒上限被强制终止并记为 HTTP 504。由于 durable run 尚未创建，runtime 仍安全保留上一 report `af6fdb3f-9d50-45cc-9ca2-51087dc08cea`，lease released、last error 为空；OpenAI 因本槽未执行形成 overdue/backlog 1。公开 health/full/compact/reload 仍为 200、invalid 400，四视图原子一致 334 stories，候选/首页活动年龄 50.672/56.797 分钟，四类重复 0，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats。
+
+根因在刷新入口的首组并行请求：read RPC 已有单次 4 秒超时与有限重试，但 `tryAcquireRefresh` 等写 RPC 没有任何 AbortSignal 上限；本槽写请求挂起时无法创建 durable row，最终由 Vercel 60 秒平台上限强杀。最小修复为所有写 RPC 增加一次性 8 秒超时并主动 abort，绝不重试写操作；12 秒采集预算、maxSources 11、直连并发 11、keyless、排序和质量门全部不变。新增“挂起写 RPC 在 8 秒失败且只调用一次”回归后，focused 14/14、unit 158/158、integration 72/72、build 1711 modules 与 `git diff --check` 全部通过。第十五次窗口在严格槽 7 失败，前六个通过槽不得与后续部署拼接；新 deployment 必须再次重置窗口。
+
+commit `8812922` 只触发一份 Git integration production deployment `dpl_BJ8sBkgi2Akrd4ETM1EWxXtvrE8B`；创建于 `2026-07-23T18:37:13Z`，Production/READY，正式 alias 已精确切换。18:38 部署后即时只读 smoke 为 health/full/compact/reload 200、invalid 400，四视图原子保留上一 report `af6fdb3f-9d50-45cc-9ca2-51087dc08cea`、334 stories，storage Supabase、health error 为空；候选/首页活动年龄 56.407/62.533 分钟，四类重复 0，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats。18:30 失败遗留的 OpenAI overdue/backlog 1 尚未被新槽消化；`18:45Z` 是新 deployment 首个完整自然槽，只有它同时通过五层、清零 backlog、保持内容门且 durable `<=30s`，才可建立新一轮正式基线。
+
+`18:45Z` 首槽完成除来源 backlog 外的全部门。Cron run 994 唯一 succeeded、response 996 HTTP 200/body 精确 9 键/无 network error；durable run `175aa709-8dd6-4000-a987-670801c33fbd` 在 29.568 秒发布 report `fed7ddaa-7dca-4811-b3d0-58d28e989b86`，11 planned/11 attempted/0 skipped/0 missing、发现/采用 29/29，集合与 body counts 一致。snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空，证明写 RPC 超时修复没有影响正常成功路径。公开四视图原子一致 338 stories，候选与首页实际活动年龄均为 29.293 分钟，四类重复 0，top/important/watch=8/13/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats。
+
+即时来源状态仍有 `x-karpathy` overdue/backlog 1，healthy 46/open 3、half-open due 0、healthy rolling attempted/succeeded=45/45；本槽 11 个已选来源全部真实 attempted，0 skipped/状态误推进，但未覆盖完整 healthy cohort。因此 `18:45Z` 不能作为基线。下一候选槽为 `19:00Z`，Anthropic 同时到期；必须验证 Anthropic 与遗留 backlog 均真实 attempted、overdue/backlog 清零，并继续满足 `duration<=30s` 与公开内容门。
+
+### 第十六次 24 小时 burn-in（失败）
+
+`19:00Z` 候选槽完整通过并建立正式基线。Cron run 995 在 `19:00:00.237Z` 启动、`19:00:00.273Z` 结束并唯一 succeeded；pg_net response 997 为 HTTP 200、body 精确 9 键且无 network error。durable run `09c39163-dbaf-40ed-9357-0756ebbf317d` 在 29.543 秒发布 report `0b394f8d-f446-440f-b471-021a7da57ef2`，11 planned/11 attempted/0 skipped/0 missing、发现/采用 0/0，集合与 body counts 一致；snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空。
+
+即时来源状态恢复为 enabled 49、healthy 46/open 3、half-open due 0、healthy rolling attempted/succeeded=46/46、overdue/backlog 0，`x-karpathy` 遗留 backlog 已消化。Anthropic 本槽真实 planned/attempted/succeeded、非 skipped，last attempt/success=`19:00:01.820Z`、next due=`20:30:01.820Z`，failures 0、无 circuit/error。19:01 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 338 stories；候选与首页实际活动年龄均为 44.185 分钟，四类重复 0，top/important/watch=8/13/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats，缓存契约正确。
+
+窗口以 durable finished_at `2026-07-23T19:00:32.572Z` 为基线边界；严格理论槽从 `19:15Z` 开始，每 15 分钟一槽，共 96 槽，最后为次日 `19:00Z`。18:45 排空槽与全部历史失败窗口不得拼接；19:15 是首个严格槽，必须继续在下一槽前保存五层、来源即时状态、`duration<=30s` 与公开内容门。
+
+首个严格槽 `19:15Z` 完整通过。Cron run 996 唯一 succeeded、response 998 HTTP 200/body 精确 9 键/无 network error；durable run `7eed972a-b628-4b06-bd31-6c5d99a73cf9` 从 `19:15:02.955Z` 到 `19:15:31.765Z`，28.810 秒发布 report `57e07cec-8c03-46e0-a34b-6da6afa2cf14`。11 planned/11 attempted/0 skipped/0 missing、发现/采用 17/17，集合与 body counts 一致；snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空。
+
+19:16 即时来源状态保持 enabled 49、healthy 46/open 3、half-open due 0、healthy rolling attempted/succeeded=46/46、overdue/backlog 0；Anthropic 本槽未到期，最近一次 attempt/success 仍为 `19:00:01.820Z`，failures 0、无 circuit/error。公开 health/full/compact/reload=200、invalid=400，四视图原子一致 336 stories；候选与首页实际活动年龄均为 59.237 分钟，四类重复 0，top/important/watch=8/13/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats，缓存契约正确。累计严格理论/实际=1/1，全部失败类与 backlog 为 0；baseline+strict P95/max=29.543 秒、`>30s=0`，最大成功完成间隔约 14.987 分钟。下一严格槽为 `19:30Z`。
+
+第二个严格槽 `19:30Z` 继续通过。Cron run 997 唯一 succeeded、response 999 HTTP 200/body 精确 9 键/无 network error；durable run `6f1520f7-84ba-42b8-91ea-63326d109c4e` 从 `19:30:02.949Z` 到 `19:30:32.005Z`，29.056 秒发布 report `9415797d-c858-439a-9e6c-513c14e65c4d`。11 planned/11 attempted/0 skipped/0 missing、发现/采用 21/21，集合与 body counts 一致；snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空。来源仍为 enabled 49、healthy 46/open 3、rolling attempted/succeeded 46/46、overdue/backlog 0；Anthropic 未到期且 state 无失败/熔断。
+
+19:31 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 335 stories；候选/首页实际活动年龄 34.428/71.007 分钟，四类重复 0，top/important/watch=8/13/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats，缓存契约正确。累计严格理论/实际=2/2，全部失败类与 backlog 为 0；baseline+strict P95/max=29.543 秒、`>30s=0`，最大成功完成间隔约 15.004 分钟。下一严格槽为 `19:45Z`。
+
+第三个严格槽 `19:45Z` 完整通过。Cron run 998 唯一 succeeded、response 1000 HTTP 200/body 精确 9 键/无 network error；durable run `2981bad4-01b6-40e8-9ca8-bdf08b456481` 从 `19:45:03.148Z` 到 `19:45:23.538Z`，20.390 秒发布 report `4e4e8f9c-22ac-49f6-8518-9cfa1e5a589f`。3 planned/3 attempted/0 skipped/0 missing、发现/采用 0/0，集合与 body counts 一致；snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空。来源保持 enabled 49、healthy 46/open 3、rolling attempted/succeeded 46/46、overdue/backlog 0；Anthropic 未到期且 state 无失败/熔断。
+
+19:46 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 335 stories；候选/首页实际活动年龄 49.287/85.866 分钟，四类重复 0，top/important/watch=8/13/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats，缓存契约正确。累计严格理论/实际=3/3，全部失败类与 backlog 为 0；baseline+strict P95/max=29.543 秒、`>30s=0`，最大成功完成间隔仍约 15.004 分钟。下一严格槽为 `20:00Z`。
+
+第四个严格槽 `20:00Z` 因内容质量门失败，第十六次窗口不可恢复地结束，前三个通过槽不得拼接。Cron run 999 唯一 succeeded；pg_net response 1001 为 HTTP 422、body 精确 9 键且无 network error。durable run `534c2165-17e8-4b14-8350-3148d29a1c88` 从 `20:00:03.114Z` 到 `20:00:31.503Z`，28.389 秒后以 `quality_gate_failed` 结束；10 planned/10 attempted/0 skipped/0 missing、发现/采用 26/26，集合与 body counts 一致。失败路径未创建 report/snapshot，runtime 正确保留上一 report `4e4e8f9c-22ac-49f6-8518-9cfa1e5a589f`、singleton 1、lease released、last error=`quality_gate_failed`。来源仍为 enabled 49、healthy 46/open 3、rolling attempted/succeeded 46/46、overdue/backlog 0。
+
+20:01 公开 health=503，full/compact/reload=200、invalid=400，四视图仍原子指向上一 report 的 335 stories；候选/首页实际活动年龄 64.393/100.971 分钟，四类重复 0，top/important/watch=8/13/8，核心 21/21 confirmed，publisher share 0.143，24 来源、10/10 beats。只读 72 小时/500 候选精确重建定位到唯一失败子门：500 候选中 483 accepted、17 rejected、333 selected、核心 23、来源 23、受保护分类完整，相对事件数/核心数/来源数门全部通过；唯一 120 分钟内 confirmed 核心候选 `event-1ateqof` 为 xinhua/china/important、年龄 85.350 分钟，但核心区已占满同 publisher 3 条且 top/important 的 china 配额分别均为 3，因此它按既有多样性硬上限不可被选中，旧发布门却误判为“漏选新鲜核心”。
+
+最小修复不放宽候选量、事件量、来源、核心数、受保护分类、120 分钟公开内容门或每 publisher/每层 beat 上限；发布门改为复用选稿的同一组上限，仅在所有新鲜核心候选都因这些硬上限不可选时允许发布，可选却漏选仍拒绝。相关 `reportStore` 与 `curation` focused tests 21/21 通过；对同一生产500候选的 no-write 重放由 `rebuiltGate=false` 精确变为 `true`，其余聚合不变。修复部署后必须从新的自然槽重建完整24小时窗口。
+
+### 第十七次 24 小时 burn-in（进行中）
+
+最小修复 commit `02b0a49` 只包含 `curation` 共享多样性上限、`reportStore` 发布门对齐和对应回归测试；planning 文档未进入提交。unit 159/159、integration 72/72、build 1711 modules、diff-check 全部通过。GitHub push 只触发一个新 production deployment `dpl_72Uw7K2omBB94Kxyceuet14whekD`，Production/READY，正式 alias 精确绑定，main/origin=0/0。
+
+新 deployment 的首个完整自然槽 `20:15Z` 五层、来源与公开门全部通过，建立第十七次正式基线。Cron run 1000 在 `20:15:00.274Z` 启动、`20:15:00.321Z` 结束并唯一 succeeded；pg_net response 1002 为 HTTP 200、body 精确 9 键且无 network error。durable run `bf4e043a-004a-4963-9178-83ac7bbd6a13` 从 `20:15:02.280Z` 到 `20:15:31.176Z`，28.896 秒发布 report `427c140f-b0f4-42f6-a741-f57e39a83d6d`；11 planned/11 attempted/0 skipped/0 missing、发现/采用 6/6，集合、response 与 body counts 一致。snapshot/runtime/latest 原子链接、storage view 2 gzip-base64、runtime/lease singleton 各 1、lease released、last error 为空。
+
+即时来源状态为 enabled 49、healthy 46/open 3、half-open due 0、healthy rolling attempted/succeeded=46/46、overdue/backlog 0。Anthropic 本槽真实 planned/attempted/succeeded、非 skipped，last attempt/success=`20:15:01.106Z`、next due=`21:45:01.106Z`、failures 0、无 circuit/error。20:16 公开 health/full/compact/reload=200、invalid=400，四视图原子一致 report `427c140f-b0f4-42f6-a741-f57e39a83d6d`、333 stories；候选与首页实际活动年龄均为 48.005 分钟，四类重复 0，top/important/watch=10/13/8，核心 23/23 confirmed，publisher share 0.13，23 来源、10/10 beats，缓存契约正确。
+
+窗口以 durable finished_at `2026-07-23T20:15:31.176Z` 为基线边界；严格理论槽从 `20:30Z` 开始，每 15 分钟一槽，共 96 槽，最后为次日 `20:15Z`。第十六次前三个通过槽与全部历史失败窗口不得拼接；下一槽必须继续在下一自然槽前保存五层、来源即时状态、`duration<=30s` 和公开内容门。
+
+首个严格槽 `20:30Z` 完整通过。Cron run 1001 唯一 succeeded、pg_net response 1003 HTTP 200/body 精确 9 键/无 network error；durable run `44f6ad76-15c4-42c1-99d5-301d2a34c616` 从 `20:30:02.927Z` 到 `20:30:31.237Z`，28.310 秒发布 report `b93803c9-54d6-4da6-9e6f-1a06d2cde6fd`。11 planned/11 attempted/0 skipped/0 missing、发现/采用 18/18，集合、response 与 body counts 一致；snapshot/runtime/latest 原子、storage view 2 gzip-base64、singleton 1、lease released、last error 为空。
+
+20:31 即时来源状态保持 enabled 49、healthy 46/open 3、half-open due 0、healthy rolling attempted/succeeded=46/46、overdue/backlog 0；Anthropic 本槽未到期，最近一次 attempt/success 仍为 `20:15:01.106Z`，failures 0、无 circuit/error。公开 health/full/compact/reload=200、invalid=400，四视图原子一致 333 stories；候选与首页实际活动年龄均为 62.937 分钟，四类重复 0，top/important/watch=10/13/8，核心 23/23 confirmed，publisher share 0.13，23 来源、10/10 beats，缓存契约正确。累计严格理论/实际=1/1，失败、缺槽、重复、running、skipped、missing、network error、链接错配和 backlog 均为 0；baseline+strict duration P95/max=28.896 秒、`>30s=0`，最大成功完成间隔约 15.001 分钟。下一严格槽为 `20:45Z`。
+
 ## 历史内容与首页证据（第九次窗口截至 08:21Z）
 
 - 当前 report `a44365a3-86f2-4e3c-ba7a-d16e8be46240` 共 212 个事件、24 个来源；top/important/watch 为 10/15/8，核心 25 条全部为 confirmed，`dataAsOf=2026-07-16T08:15:01.654Z`。
@@ -511,7 +605,17 @@ commit `19b3f3c` 只触发一份 Git integration production deployment `dpl_EACb
 
 - 独立 staging 与真实数据库 20 候选并发 upsert、10 lease 竞争、发布 failpoint 仍是后续 migration 的硬化缺口；当前生产 pgTAP、fencing、同槽 duplicate 与回滚已覆盖主链路。
 - 第八次窗口已在 00:15 因健康来源 cadence 缺口判定失败；第九次窗口只有前 30/96 个严格槽保存了完整四层证据，剩余 66 个槽的 pg_net 证据已过期且未独立落盘，因此不能判通过。
-- 第十次窗口因 Anthropic cadence 失败；第十一次窗口因 4 个 durable hard failure 与 45.146 分钟最大成功间隔失败；第十二次候选窗口因 pg_net/证据 TTL/性能失败；后续 deployments 又分别因质量门、持续 `>30s`、缺 durable 与 09:00/09:15 的 `>30s` 失败。第十三次与 12:45 后续候选因执行时钟推进/公开 smoke timeout 未能逐槽保存即时 state，同样不可拼接。第十四次窗口在首个严格槽因 duration 30.622 秒及 eligible backlog 1 失败；原子提交迁移仍须取得正确 Supabase project link/迁移权限，只作为再次生产性能失败时的备用修复。
+- 第十次窗口因 Anthropic cadence 失败；第十一次窗口因 4 个 durable hard failure 与 45.146 分钟最大成功间隔失败；第十二次候选窗口因 pg_net/证据 TTL/性能失败；后续 deployments 又分别因质量门、持续 `>30s`、缺 durable 与 09:00/09:15 的 `>30s` 失败。第十三次与 12:45 后续候选因执行时钟推进/公开 smoke timeout 未能逐槽保存即时 state，同样不可拼接。第十四次窗口在首个严格槽因 duration 30.622 秒及 eligible backlog 1 失败。原子提交 migration 与新 deployment 已上线；16:00/16:15/16:30 排空槽 backlog 为 11/4/3，16:45 backlog 清零并建立第十五次正式窗口。
 - 完成 7 天 soak：调度成功率、报告年龄 P95、来源 cadence、source-to-site 延迟与内容质量抽样。
 
-历史失败窗口均不能拼接。当前唯一 production deployment 为 `dpl_EACb33TJcxyjHU19RMve6nLf8zJ2`；当前没有 active 24 小时窗口。下一 heartbeat 继续把“预准备临时 client 并由 bounded session 在槽后立即查询”放在首位，且公开 smoke 必须 fail-soft，不能吞掉已经 ROLLBACK 的数据库证据；后续槽只作新候选或根因诊断，不得与 15:15/15:30 拼接。原子提交修复尚未迁移或部署；生产已再次违反性能门，但仍须先取得正确 Supabase project link/迁移权限才能 dry-run、迁移、发布并重新起算。只有完整 24 小时窗口通过后才调整为每日检查并进入 7 天 soak。任何内容、性能、权限或调度硬门失败都先停止新增调度或回到 last-known-good，再按 [release-plan.md](release-plan.md) 重验。
+历史失败窗口均不能拼接。第十五次窗口已在 `18:30Z` 因旧 deployment 的 Vercel 60 秒 timeout、pg_net network error、缺 durable 与 OpenAI backlog 1 判定失败；此前 6/96 个严格通过槽均不得拼接。deployment `dpl_BJ8sBkgi2Akrd4ETM1EWxXtvrE8B`、commit `8812922` 的写 RPC 8 秒单次超时修复已上线并在 19:00 建立第十六次正式窗口，但该窗口又在第四个严格槽 `20:00Z` 因新鲜核心候选被多样性上限挡住却遭发布门误拒而失败；前三个通过槽不得拼接。commit `02b0a49` / deployment `dpl_72Uw7K2omBB94Kxyceuet14whekD` 已精确修复并在 `20:15Z` 建立第十七次正式窗口；严格槽从 `20:30Z` 开始共96槽，最后为次日 `20:15Z`。heartbeat 继续把“预准备临时 client 并由 bounded session 在槽后立即查询”放在首位，且公开 smoke 必须 fail-soft，不能吞掉已经 ROLLBACK 的数据库证据。完整 24 小时窗口通过后才调整为每日检查并进入 7 天 soak。任何内容、性能、权限或调度硬门失败都先停止新增调度或回到 last-known-good，再按 [release-plan.md](release-plan.md) 重验。
+
+### 固定脚本接管验收
+
+用户于 `2026-07-24` 暂停高频 AI heartbeat，以避免每 15 分钟重复读取上下文消耗额度。第十七次人工窗口因此在 20:30 后没有连续保存全部即时 source state；该窗口按证据规则作废，不得与后续脚本窗口拼接。云端 Supabase Cron 未停止。
+
+本地新增确定性监控命令 `npm run monitor:production`，不依赖模型判断。burn-in 阶段每个自然槽后 75 秒执行一次：验证唯一 Cron、pg_net HTTP 200/精确 9 键、durable 集合与 `duration<=30s`、snapshot/runtime/latest/lease、49 源 rolling cadence/backlog/Anthropic，以及 alias、五个公开 API、实际内容年龄、重复、核心媒体占比与 10/10 beats。任一硬门失败会封存该次尝试并从下一槽重新寻找基线，不补造或拼接证据。连续基线加 96 个严格槽通过后，脚本自动转为每日 soak；每次 soak 除即时五层/内容门外，还汇总此前 24 小时 96 个 Cron/durable 槽的失败、缺槽、重复、running、skipped/missing、P95/max、`>30s` 与最大成功间隔。连续 7 次每日门通过才生成 `final-report.json`。
+
+`2026-07-24T05:45Z` 的单次演练完整通过，但因为 `--once` 结束而只作为脚本验真，不作为正式窗口：Cron run 1038、pg_net response 1040，durable run `eff132ce-3928-4cba-8128-c1bea5c5a739` 在 28.947 秒发布 report `1ec28c77-79db-4aa5-b4fc-a887bf8334a2`；11/11 attempted、0 skipped/missing，五层原子与 cadence/backlog 健康。公开四视图原子一致 345 stories，候选/首页实际活动年龄 56.431/34.431 分钟，四类重复 0、核心 22/22 confirmed、publisher share 0.136、22 来源、10/10 beats。只读事务、TLS 与 ROLLBACK 均验证，临时目录残留 0。正式窗口必须由持续后台进程的下一通过槽重新建立。
+
+持续后台进程已在 `2026-07-24T06:00Z` 建立正式脚本窗口。基线 verdict 通过：durable run `5221ba31-7372-4151-bf90-4bb863d1dbb3` 在 28.646 秒发布 report `0112d7ef-deb0-4eab-b36e-8c606612cd8f`，全部失败码为空；完整聚合证据已原子写入 `.production-acceptance/current/evidence.jsonl`，state 进入 `burn_in`，严格进度 0/96，下一槽 `06:15Z`。后台使用标准 LaunchAgent、`env -i` 最小环境与 `caffeinate -i`，stderr 为空；production env 只在单槽查询期间存在于 mode-600 随机文件，槽后删除。AI heartbeat 已改为最早完成日后每天一次、仅检查本地 `summary.json/final-report.json`，不再逐槽读取生产或消耗模型额度。

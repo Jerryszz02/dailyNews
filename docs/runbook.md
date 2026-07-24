@@ -109,3 +109,22 @@ Expected behavior:
 - Preferences only reorder important/category stories; they never hide or promote `must_know` events.
 - Refresh is polling-based: Supabase Cron checks every 15 minutes and the frontend reloads the published report every 30 seconds through the shared window URL. The app does not receive source-side webhooks.
 - If `/api/news` is readable but `/api/health` is stale, check Supabase `refresh_run`, `runtime_state`, source due-state, Cron/Vault configuration and Vercel `/api/cron` logs in that order.
+
+## Token-free production acceptance monitor
+
+Use the deterministic local monitor instead of an AI heartbeat for the 24-hour burn-in and seven-day soak. It audits each burn-in slot at the 15-minute boundary plus 75 seconds, writes secret-free JSONL evidence immediately, automatically starts a fresh candidate window after a failed slot, and changes to one rolling 24-hour check per day after all 96 strict burn-in slots pass.
+
+```bash
+npm run monitor:production -- start \
+  --deployment dpl_PUBLIC_DEPLOYMENT_ID \
+  --output .production-acceptance/current \
+  --first-slot next \
+  --keep-awake
+
+npm run monitor:production -- status --output .production-acceptance/current
+npm run monitor:production -- stop --output .production-acceptance/current
+```
+
+The output directory is gitignored. `evidence.jsonl` is append-only; `state.json` and `summary.json` are atomically replaced after every audit; `final-report.json` appears only after the burn-in and all seven soak days pass. The production environment is pulled only into a random mode-600 file, the database transaction is read-only and rolled back, and the temporary PostgreSQL client is deleted when the monitor exits. Evidence contains public deployment/run/report IDs and non-sensitive aggregates only.
+
+`start` installs a minimal-environment plist under `~/Library/LaunchAgents`, so the saved monitor resumes after a login or reboot. `--keep-awake` prevents idle system sleep while the monitor runs, but it cannot make a closed laptop lid execute code. A missed slot is recorded as a real failed attempt and is never reconstructed from later data. Restart the same command with the same output directory to resume from its saved state.
