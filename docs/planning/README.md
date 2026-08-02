@@ -8,25 +8,25 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 请求 | 以 Supabase 实现生产持久化、15 分钟调度与可验证的实时更新闭环 |
-| 更新时间 | 2026-07-18 |
-| 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews` |
-| 工作模式 | Supabase Phase 2 已部署；上线门收尾与 24 小时/7 天连续运行验证进行中 |
+| 请求 | 以完整性优先重构来源准入、采集、选取、发布、公开状态与 CI |
+| 更新时间 | 2026-08-03 |
+| 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews-news-pipeline-stability` |
+| 工作模式 | `codex/news-pipeline-stability` 隔离分支；先更新规划，再实施、PR 自审、CI、合并和生产验收 |
 
 ## 项目概览
 
 Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配置化来源发现候选，经过质量门槛、事件聚类、证据状态、公共影响分级和集合级多样性选择，在网页中展示今日必知、重要进展、持续关注、分类深读、搜索和偏好设置。
 
-事件级核心管线、V2 API/UI、last-known-good、30 秒整轮目标和 Supabase 持久化已实现，生产 Supabase Cron 每 15 分钟运行。前八次 burn-in 暴露并修复了调度丢槽、到期边界、deadline cadence、瞬时读失败、半开容量和 P95 问题。第九次窗口前 30/96 个严格槽通过，但其余 66 个槽没有在 pg_net 的 6 小时 TTL 内保存完整证据，不能判定通过。`2026-07-18` 第一版直连排序修复仍在同日/无日期 HTML 与逆序 feed 上触发 stale；第二版用有界文章 metadata 探测、feed 补日期后重排、全局 HTTP 闸门和严格 deadline 语义修复，已通过 unit 145/145、integration 64/64、build 1711 modules、真实两来源与 11 来源只读 canary，并发布为 production deployment `dpl_2rrwW4zspHmJCk77T1kBcwzAP8Cy`。用户授权生产只读查询后，09:45 自然槽完成四层与公开内容门闭环，但 10:00 首个严格槽中 Anthropic 再次 `planned→skipped`，健康来源实际 cadence 达到 108.104 分钟，因此第十次窗口当场判失败。最小修复读取 HTML anchor 内的 `<time>` 日期、在正文/翻译前淘汰过期候选，并消除尾斜杠 self-link 重复抓取；unit 146/146、integration 64/64、build 1711 modules、`git diff --check` 和精确 11-source 不写库 canary 均通过，已作为唯一 production deployment `dpl_BPP9QWt15YZ5ERshpUu3Zh44S1zd` 发布。10:30 自然槽完成四层、来源与公开内容门，Anthropic 实际 attempted/succeeded，0 skipped/missing；第十一次窗口固定为 `2026-07-18T10:30:23.044Z` 至 `2026-07-19T10:30:23.044Z`，严格槽从 10:45 开始。完整 24 小时与随后 7 天 soak 通过前，仍不能宣布运行门完成。
+事件级 V2 API/UI、Supabase last-known-good、租约、候选池和不可变快照已经存在，但 2026-08-02 的生产审计证明“候选新鲜”与“首页精选新鲜”使用不同集合，导致有效新稿被 `stale_homepage_selection` 阻断；运行时 trust、全局 500 候选截断、翻译失败丢稿和 compact 水合丢事件进一步破坏完整性。本轮以“所有已准入有效候选可见”为首要不变量：生产改为 5 分钟调度、30 分钟全来源尝试，首页新增 24 小时全量 latest lane，局部来源或内容质量告警不再冻结整份报告。
 
 项目由四条主要链路组成：
 
 | 链路 | 作用 | 主要入口 |
 | --- | --- | --- |
 | 来源配置 | 定义新闻来源、栏目、查询词、主分类、语言、地区、可信度、付费墙提示和启用状态 | `src/config/sources.ts` |
-| 报告生成 | 覆盖调度、Firecrawl/直连候选、质量门槛、事件证据、公共影响分层、30 秒预算和 fallback | `src/lib/sourceCoverage.ts`, `src/lib/curation.ts`, `scripts/newsService.ts` |
-| API 与静态服务 | 启动即读取 last-known-good，读请求不抓取；刷新通过相对质量门槛才切换 latest | `scripts/reportStore.ts`, `scripts/newsApi.ts`, `scripts/newsServer.ts` |
-| 前端体验 | 优先读取 V2 API，再读静态 V2/V1 自动升级，展示三个首页层级和统一事件分类引用 | `src/App.tsx` |
+| 报告生成 | 5 分钟覆盖调度、Firecrawl/直连候选、准入校验、保守聚类、完整 stories/latest 与精选软重排 | `src/lib/sourceCoverage.ts`, `src/lib/curation.ts`, `scripts/newsService.ts` |
+| API 与静态服务 | 启动即读取 last-known-good，读请求不抓取；结构不变量通过即原子发布，质量告警独立上报 | `scripts/reportStore.ts`, `scripts/newsApi.ts`, `scripts/newsServer.ts` |
+| 前端体验 | 优先读取 V2 API，首页先展示 24 小时“全部最新”，精选和分类引用完整 stories | `src/App.tsx` |
 | Phase 2 持久更新 | Supabase 候选池/租约/不可变快照、受保护 cron、公平来源轮转和 durable freshness | [database-design.md](database-design.md), [release-plan.md](release-plan.md) |
 
 ## 已检查的项目证据
@@ -81,14 +81,14 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 
 ## 后续开发入口
 
-1. 修改新闻来源或选题前，先读 [news-curation-refactor-plan.md](news-curation-refactor-plan.md)，保留 V2 质量门槛、V1 `items` 兼容和 last-known-good 回滚路径。
+1. 修改新闻来源或选题前，先读 [news-curation-refactor-plan.md](news-curation-refactor-plan.md)，把来源准入与运行时事实状态分开，保留 V1 `items` 兼容和 last-known-good 回滚路径。
 2. 引入持久状态前读 [database-design.md](database-design.md)，保持报告不可变、latest 原子切换和 V1 回滚能力。
 3. 修改当前用户可见行为前读 [prd.md](prd.md)，以事件级 V2 首页为当前行为。
 4. 修改数据生成、排序、去重、可信度或 fallback 前读 [technical-design.md](technical-design.md)。
 5. 修改 `/api/*` 路由或响应字段前读 [api-design.md](api-design.md)。
 6. 涉及 `.env.local`、翻译密钥、Firecrawl、外部抓取或浏览器数据边界时先读 [security-privacy.md](security-privacy.md)。
 7. 实现完成后按 [test-plan.md](test-plan.md) 验证数据库事务、跨实例、来源轮转、freshness、API/UI 和内容质量。
-8. 生产变更严格按 [release-plan.md](release-plan.md) 先迁移和 bootstrap，再配环境、部署、启用 cron、24 小时 burn-in 和 7 天 soak。
+8. 生产变更严格按 [release-plan.md](release-plan.md) 走独立分支、GitHub CI、向后兼容 migration、部署、5 分钟 cron 和 24 小时 burn-in。
 
 ## 待确认
 
@@ -96,7 +96,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | --- | --- |
 | 目标用户和正式使用场景 | 仓库说明为“原型”，没有产品 brief、访谈、运营目标或正式用户角色文档 |
 | Supabase 区域、配额和维护责任 | 生产资源与 secret scope 已验证可用；项目区域、长期配额和轮换责任仍需运营确认 |
-| 来源准入和禁用审批流程 | `src/config/sources.ts` 有启用状态和可信度字段，但没有谁能批准新增/禁用来源的流程 |
+| 来源准入责任人 | 本轮会把准入状态、允许域名和审核说明写入配置；具体由谁批准新增/禁用来源仍需运营确认 |
 | 真实访问量与告警渠道 | 中国到 iad1 的 Phase 0 样本已把 latest read 校准为 P95 ≤750ms、P99 ≤1s；通知渠道仍需结合账号配置 |
 | 长期数据保留策略 | Supabase 已保存候选、运行和不可变快照；长期保留期限与清理策略仍待确认 |
 | 首页最终事件数量 | 当前按质量门槛自然变化，不为达到建议区间回填低价值事件；阈值仍需 golden dataset 校准 |
