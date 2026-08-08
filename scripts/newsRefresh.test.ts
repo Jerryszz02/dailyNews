@@ -732,7 +732,7 @@ describe("durable news refresh", () => {
       sourceId: source.source_id,
       status: "empty",
       attemptedAt: disabledAt.toISOString(),
-      nextDueAt: new Date(disabledAt.getTime() + 90 * 60_000).toISOString(),
+      nextDueAt: new Date(disabledAt.getTime() - 30 * 60_000).toISOString(),
       discoveredCount: 0,
       acceptedCount: 0,
       errorCode: null,

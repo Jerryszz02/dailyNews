@@ -81,7 +81,7 @@ export class InMemoryNewsStore implements NewsStore {
         nextDueAt = earlierTimestamp(nextDueAt, coverageDueAt);
       }
       if (current?.enabled === false && source.enabled) {
-        nextDueAt = earlierTimestamp(nextDueAt, observedAt);
+        nextDueAt = observedAt;
       }
       this.sourceStates.set(source.sourceId, {
         sourceId: source.sourceId,
