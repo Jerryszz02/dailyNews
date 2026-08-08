@@ -1,4 +1,4 @@
-import { defineApprovedSource, type SourceDefinition } from "../lib/sourceAdmission";
+import { defineApprovedSource, type SourceDefinition } from "../lib/sourceAdmission.js";
 import type { Category, NewsSource, SearchSourceType, SourceSection } from "../types";
 
 const newsOnly: SearchSourceType[] = ["news"];

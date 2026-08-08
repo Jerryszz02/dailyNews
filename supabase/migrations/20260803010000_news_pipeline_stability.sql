@@ -131,15 +131,6 @@ begin
 end;
 $$;
 
-do $$
-begin
-  if exists (select 1 from pg_extension where extname = 'pg_cron') then
-    execute 'update cron.job set schedule = $1 where jobname = $2'
-      using '*/5 * * * *', 'daily-news-refresh';
-  end if;
-end;
-$$;
-
 create function public.daily_news_try_acquire_refresh_v2(
   lease_owner uuid,
   idempotency_key text,
