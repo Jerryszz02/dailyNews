@@ -6,7 +6,7 @@
 
 ## 2026-08-03 目标不变量
 
-1. `approved + enabled` 是来源唯一发布边界；运行时 trust/credibility 不得删除或降出可见集合。
+1. `approved` 是来源发布边界，`enabled` 只控制是否采集；运行时 trust/credibility 不得删除或降出可见集合。
 2. 每个 `display_ready/degraded` 候选恰好映射一个 story；最近 24 小时 story 全部进入 `latestStories`。
 3. 全部启用来源滚动 30 分钟内至少尝试一次；局部失败返回 partial 并优先重试。
 4. 发布只阻断结构损坏、引用错误、未知来源和不可确认的存储失败；精选、内容年龄和覆盖波动只产生 warning。
@@ -17,9 +17,9 @@
 ```text
 src/config/sources.ts
   -> src/lib/sourceCoverage.ts
-  -> Firecrawl keyless（默认约 4 秒，最多 8 秒）+ 有限并发 direct fetch
-  -> 72 小时候选池、12 秒采集截止与 30 秒整轮目标
-  -> src/lib/curation.ts 质量门槛
+  -> Firecrawl keyless + 有限并发 direct fetch（单请求最多 8 秒）
+  -> 45 秒采集预算内维护 72 小时候选池
+  -> src/lib/curation.ts 结构准入门槛
   -> src/lib/dedupe.ts 事件聚类
   -> evidence / status / public impact / tier / diversity
   -> DailyNewsReport V2
@@ -38,10 +38,9 @@ src/config/sources.ts
   -> Supabase RPC 获取刷新租约
   -> 按 next_due_at 公平选择本轮来源
   -> Firecrawl keyless + direct fetch
-  -> upsert 公开候选和来源结果
   -> 读取 Supabase 最近 72 小时候选
-  -> V2 质量门槛、事件聚类和选题
-  -> Supabase RPC 原子写 snapshot + 切换 latest
+  -> 合并原文候选、补译状态、事件聚类和选题
+  -> Supabase V2 RPC 原子写来源结果、候选、可选 snapshot + latest
   -> GET /api/news / GET /api/health 只读 durable state
   -> 浏览器每 30 秒读取共享 CDN URL，主动重载使用 no-store
 ```
@@ -60,7 +59,7 @@ src/config/sources.ts
 | 子系统 | 文件 | 当前职责 |
 | --- | --- | --- |
 | 来源注册表 | `src/config/sources.ts` | 来源、栏目、查询词、主分类、admission、允许域名、审核说明和技术启用状态 |
-| 覆盖调度 | `src/lib/sourceCoverage.ts` | 按未覆盖 beat、单入口 beat、来源类型、地区、可信度和可选健康状态选源 |
+| 覆盖调度 | `src/lib/sourceCoverage.ts` | 按 due 时间、beat、来源类型、地区和可选失败状态公平选源；错误状态只影响最多两个优先重试槽 |
 | 采集服务 | `scripts/newsService.ts` | Firecrawl/直连、中文化、发布时间、域名归因、并发、总预算、新鲜度和 fallback |
 | 候选门槛 | `src/lib/curation.ts` | 只拒绝未知/越域来源、非法身份、导航和推广；翻译/摘要/日期不足进入 degraded |
 | 事件聚类 | `src/lib/dedupe.ts` | canonical URL、标题相似度、中文连续文本、时间窗和共享上下文聚类；唯一主分类 |
@@ -106,7 +105,7 @@ Phase 2 新增职责：
 - 采集阶段默认预算为 `DAILY_NEWS_COLLECTION_BUDGET_MS=45000`；60 秒函数上限中至少预留 10 秒用于构建、验证和原子终结。
 - Firecrawl 与 direct fetch 按来源独立截止并发运行；一个来源的 terminal/timeout 不能跳过其它已选来源。
 - 直连来源并发默认 `DAILY_NEWS_SOURCE_CONCURRENCY=11`，与单轮最大来源数一致，确保所有 selected source 在 12 秒 deadline 内都有 worker；单请求最长 8 秒且受整轮 deadline 约束。
-- deadline 前尚未真正发起请求的来源不写入 `source_state`，保留 due 状态并在下个时槽继续优先，不能误计失败或触发熔断。
+- deadline 前尚未真正发起请求的来源不写入 `source_state`，保留 due 状态并在下个时槽继续优先；错误/circuit 诊断不得抑制滚动 30 分钟尝试。
 - 事件/核心层/来源数量回退只记 warning；完整候选窗口下的合法变化可发布，窗口不完整时只增不减并保留 last-known-good 内容。
 - `GET /api/news` 不允许触发外部抓取。
 - `generatedAt` 只表示该报告成功发布的时间；`newestContentAt` 表示报告中最新新闻时间；浏览器 `lastLoadedAt` 只表示客户端检查时间，三者不得互相替代。

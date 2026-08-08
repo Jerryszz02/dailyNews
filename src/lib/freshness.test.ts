@@ -14,6 +14,7 @@ const report: FreshnessReport = {
     {
       publishedAt: "2026-07-10T00:50:00.000Z",
       extractedAt: "2026-07-10T00:55:00.000Z",
+      updatedAt: "2026-07-10T00:50:00.000Z",
     },
   ],
 };
@@ -31,6 +32,8 @@ describe("report freshness", () => {
 
     expect(result).toEqual({
       status: "fresh",
+      pipelineStatus: "healthy",
+      contentStatus: "quiet",
       dataAsOf: "2026-07-10T01:50:00.000Z",
       newestContentAt: "2026-07-10T00:50:00.000Z",
       ageMinutes: 10,
@@ -60,6 +63,8 @@ describe("report freshness", () => {
     );
 
     expect(result.status).toBe("stale");
+    expect(result.pipelineStatus).toBe("healthy");
+    expect(result.contentStatus).toBe("quiet");
     expect(result.dataAsOf).toBe("2026-07-10T01:20:00.000Z");
     expect(result.ageMinutes).toBe(40);
   });
@@ -99,7 +104,7 @@ describe("report freshness", () => {
     ).toBe("unavailable");
   });
 
-  it("computes content time only from report content timestamps", () => {
+  it("computes content time only from event updatedAt timestamps", () => {
     expect(findNewestContentAt(report)).toBe("2026-07-10T00:50:00.000Z");
     expect(
       evaluateFreshness({ report }, new Date("2026-07-11T12:00:00.000Z")).newestContentAt,
@@ -111,7 +116,11 @@ describe("report freshness", () => {
       findNewestContentAt({
         generatedAt: "2026-07-10T01:50:00.000Z",
         stories: [{ publishedAt: "not-a-date", updatedAt: null }],
-        items: [{ publishedAt: "2026-07-10T00:10:00.000Z", extractedAt: "2026-07-10T02:00:00.000Z" }],
+        items: [{
+          publishedAt: "2026-07-10T00:05:00.000Z",
+          extractedAt: "2026-07-10T02:00:00.000Z",
+          updatedAt: "2026-07-10T00:10:00.000Z",
+        }],
       }),
     ).toBe("2026-07-10T00:10:00.000Z");
   });

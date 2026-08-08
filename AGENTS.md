@@ -2,24 +2,27 @@
 
 ## Project Shape
 
-- This is a Vite + React + TypeScript news-ranking prototype.
+- This is a Vite + React + TypeScript event-level news briefing.
 - The app prefers `GET /api/news`, falls back to `public/daily-news.json`, then falls back to `src/data/firecrawlSnapshot.ts`.
-- `scripts/newsServer.ts` provides the local API and in-memory refresh cache. Firecrawl runs keyless; `DAILY_NEWS_TRANSLATION_*` values remain server-only for live browser use.
+- `scripts/newsRefresh.ts` owns manual/Cron refresh orchestration. Production uses Supabase for leases, source state, candidates, immutable snapshots and the latest pointer; local development without Supabase uses `InMemoryNewsStore`.
+- `scripts/newsServer.ts` provides the local API and production-style static server. Firecrawl runs keyless; `DAILY_NEWS_TRANSLATION_*` values remain server-only.
 - `scripts/generateDailyNews.ts` writes `public/daily-news.json` through shared logic in `scripts/newsService.ts`.
-- `scripts/newsService.ts` tries Firecrawl first, then direct public source page/feed fetching, then generated/static fallback data.
+- `scripts/newsService.ts` runs Firecrawl keyless and direct public source page/feed collection concurrently. Production refreshes never insert fallback content into the live candidate pool.
 
 ## Commands
 
 ```bash
 npm test
+npm run test:integration
 npm run build
 npm run generate
 npm run api
 npm run dev
 npm run serve
+npm run monitor:production -- status --output .production-acceptance/current
 ```
 
-Use `npm test` for scoring/dedupe logic changes and `npm run build` for frontend or TypeScript changes.
+Use `npm test` for core logic changes, `npm run test:integration` for API/store/refresh changes, and `npm run build` for frontend or TypeScript changes.
 
 ## Editing Rules
 
@@ -28,9 +31,9 @@ Use `npm test` for scoring/dedupe logic changes and `npm run build` for frontend
 - Do not treat `public/daily-news.json` as the source of truth. When changing saved news content or source coverage, update `src/data/firecrawlSnapshot.ts` or `src/config/sources.ts` first, then regenerate the JSON if needed.
 - Do not paste Firecrawl keys or `.env.local` values into code, logs, commits, or responses.
 - `dist/` is build output. Update it only when a verified build is part of the requested change.
-- Keep `/api/news`, `/api/health`, and `/api/refresh` server-only; do not move Firecrawl calls into browser code.
+- Keep `/api/news`, `/api/health`, `/api/refresh`, and `/api/cron` server-only; do not move collection or refresh calls into browser code.
 - Category pages filter by `primaryCategory`; auxiliary `categories` are explanatory tags and must not make one story appear in multiple category tabs.
-- `trust` is independent of ranking. Low-trust stories may show, but invalid or extremely low-quality stories should be filtered by `trust.shouldShow`.
+- Source admission is decided when configuring a source. `trust.shouldShow` is compatibility-only and must not filter, tier or rank stories.
 - Reuters, Bloomberg, FT, WSJ, and The Athletic are disabled because direct visitor verification is unreliable due to 401/paywall behavior.
 
 ## Key Files
@@ -40,6 +43,8 @@ Use `npm test` for scoring/dedupe logic changes and `npm run build` for frontend
 - `src/lib/newsPipeline.ts` — report build pipeline.
 - `src/lib/scoring.ts`, `src/lib/trust.ts`, and `src/lib/dedupe.ts` — ranking, trust, clustering and primary-category logic.
 - `scripts/newsService.ts` — shared Firecrawl fetch, direct source fetch, translation, fallback merge, and report generation logic.
+- `scripts/newsRefresh.ts` — durable lease, source selection, candidate pool, structural invariants and atomic publish orchestration.
+- `scripts/supabaseNewsStore.ts` and `scripts/inMemoryNewsStore.ts` — production and local `NewsStore` implementations.
 - `scripts/newsServer.ts` — local live API and production-style static server.
 - `scripts/generateDailyNews.ts` — report generation entrypoint.
 - `docs/architecture.md` and `docs/runbook.md` — current API/data-flow and operations references.

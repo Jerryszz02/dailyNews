@@ -20,13 +20,6 @@ const noStoreJsonHeaders = {
   "Content-Type": "application/json; charset=utf-8",
 };
 
-const reloadJsonHeaders = {
-  ...noStoreJsonHeaders,
-  "Vercel-CDN-Cache-Control": "public, max-age=5",
-};
-
-const reportCacheWindowMs = 30_000;
-
 export interface NewsApiDependencies {
   store?: NewsStore | null;
   bundledReport?: DailyNewsReport | null;
@@ -55,11 +48,11 @@ export function createNewsApiHandlers(dependencies: NewsApiDependencies = {}): N
       if (!requestMode) return jsonResponse(400, { error: "Invalid news cache key" }, noStoreJsonHeaders);
       const read = await readLatestWithFallback(store, bundledReport);
       if (!read.latest) return jsonResponse(503, { error: "No published news report is available" }, noStoreJsonHeaders);
-      const report = reportResponse(read.latest, read.state, read.storageErrorCode, requestedAt);
+      const report = reportResponse(read.latest, read.state, read.storage, read.storageErrorCode, requestedAt);
       return jsonResponse(
         200,
         requestMode.view === "web" ? compactDailyNewsReport(report) : report,
-        requestMode.cache === "reload" ? reloadJsonHeaders : newsJsonHeaders,
+        requestMode.cache === "reload" ? noStoreJsonHeaders : newsJsonHeaders,
       );
     },
 
@@ -77,8 +70,8 @@ export function createNewsApiHandlers(dependencies: NewsApiDependencies = {}): N
         now(),
       );
       const reportAvailable = Boolean(read.latest);
-      const healthy = freshness.status === "fresh";
-      const status = healthy ? 200 : 503;
+      const healthy = reportAvailable;
+      const status = reportAvailable ? 200 : 503;
       return jsonResponse(
         status,
         {
@@ -87,11 +80,21 @@ export function createNewsApiHandlers(dependencies: NewsApiDependencies = {}): N
           storage: read.storage,
           reportAvailable,
           refreshStatus: freshness.status,
+          servingMode: servingModeForStorage(read.storage),
+          pipelineStatus: pipelineStatusForState(freshness.pipelineStatus, read.state),
+          contentStatus: freshness.contentStatus,
+          coverageStatus: coverageStatus(read.state, now()),
           generatedAt: read.latest?.report.generatedAt ?? null,
           dataAsOf: freshness.dataAsOf,
           latestReportId: read.latest?.reportId ?? null,
           lastAttemptAt: read.state.runtime.lastAttemptAt,
           lastSuccessAt: read.state.runtime.lastSuccessAt,
+          lastCheckedAt: read.state.runtime.lastAttemptAt,
+          lastFullSweepAt: fullSweepTimestamp(read.state),
+          lastPublishedAt: read.latest?.publishedAt ?? null,
+          publicationStateAt: read.state.runtime.publicationStateAt ?? null,
+          newestContentAt: read.latest?.newestContentAt ?? freshness.newestContentAt,
+          lastOutcomeCode: read.state.runtime.lastOutcomeCode ?? null,
           ageMinutes: freshness.ageMinutes,
           staleAfterMinutes: freshness.staleAfterMinutes,
           itemCount: read.latest?.report.items.length ?? 0,
@@ -176,7 +179,7 @@ async function readLatestWithFallback(
 }> {
   if (store) {
     try {
-      const state = await store.readState();
+      const state = await (store.readPublicationState?.() ?? store.readState());
       if (state.latest) return { latest: state.latest, state, storage: store.kind, storageErrorCode: null };
       return {
         latest: bundledPublication(bundledReport),
@@ -209,6 +212,7 @@ async function readLatestWithFallback(
 function reportResponse(
   latest: PublishedNewsReport,
   state: NewsStoreState,
+  storage: "supabase" | "memory" | "bundled",
   storageErrorCode: string | null,
   now: Date,
 ): DailyNewsReport {
@@ -229,10 +233,19 @@ function reportResponse(
       reportId: latest.reportId,
       intervalMinutes: refreshIntervalMinutes(),
       status: freshness.status,
+      servingMode: servingModeForStorage(storage),
+      pipelineStatus: pipelineStatusForState(freshness.pipelineStatus, state),
+      contentStatus: freshness.contentStatus,
+      coverageStatus: coverageStatus(state, now),
       dataAsOf: freshness.dataAsOf,
       newestContentAt: latest.newestContentAt ?? freshness.newestContentAt,
       lastAttemptAt: state.runtime.lastAttemptAt,
       lastSuccessAt: state.runtime.lastSuccessAt,
+      lastCheckedAt: state.runtime.lastAttemptAt,
+      lastFullSweepAt: fullSweepTimestamp(state),
+      lastPublishedAt: latest.publishedAt,
+      publicationStateAt: state.runtime.publicationStateAt ?? null,
+      lastOutcomeCode: state.runtime.lastOutcomeCode ?? null,
       staleAfterMinutes: freshness.staleAfterMinutes,
       lastError,
     },
@@ -284,25 +297,50 @@ function methodNotAllowed(methods: string[]): Response {
   });
 }
 
-function newsRequestMode(request: Request, now: Date): { cache: "shared" | "reload"; view: "full" | "web" } | null {
+function newsRequestMode(request: Request, _now: Date): { cache: "shared" | "reload"; view: "full" | "web" } | null {
   const searchParams = new URL(request.url).searchParams;
-  if ([...searchParams.keys()].some((key) => key !== "view" && key !== "reload" && key !== "window")) return null;
-  if (["view", "reload", "window"].some((key) => searchParams.getAll(key).length > 1)) return null;
+  if ([...searchParams.keys()].some((key) => key !== "view" && key !== "reload")) return null;
+  if (["view", "reload"].some((key) => searchParams.getAll(key).length > 1)) return null;
   const viewValue = searchParams.get("view");
   if (viewValue !== null && viewValue !== "web") return null;
   const view = viewValue === "web" ? "web" : "full";
   const reloadValue = searchParams.get("reload");
-  const windowValue = searchParams.get("window");
-  if (reloadValue !== null && windowValue !== null) return null;
   if (reloadValue !== null) return reloadValue === "1" ? { cache: "reload", view } : null;
-  if (windowValue === null) return { cache: "shared", view };
+  return { cache: "shared", view };
+}
 
-  if (!/^\d+$/.test(windowValue)) return null;
-  const requestedWindow = Number(windowValue);
-  const currentWindow = Math.floor(now.getTime() / reportCacheWindowMs);
-  return Number.isSafeInteger(requestedWindow) && String(requestedWindow) === windowValue && Math.abs(requestedWindow - currentWindow) <= 2
-    ? { cache: "shared", view }
-    : null;
+function fullSweepTimestamp(state: NewsStoreState): string | null {
+  if (state.runtime.lastFullSweepAt !== undefined) return state.runtime.lastFullSweepAt;
+  const enabled = state.sources.filter((source) => source.enabled !== false);
+  if (enabled.length === 0 || enabled.some((source) => !source.lastAttemptAt)) return null;
+  return enabled
+    .map((source) => source.lastAttemptAt!)
+    .sort((left, right) => Date.parse(left) - Date.parse(right))[0] ?? null;
+}
+
+function servingModeForStorage(storage: "supabase" | "memory" | "bundled"): "durable" | "bundled" {
+  return storage === "bundled" ? "bundled" : "durable";
+}
+
+function pipelineStatusForState(
+  status: "healthy" | "degraded" | "failed",
+  state: NewsStoreState,
+): "healthy" | "degraded" | "failed" {
+  return status === "healthy" && state.runtime.lastOutcomeCode === "partial" ? "degraded" : status;
+}
+
+function coverageStatus(state: NewsStoreState, now: Date): "current" | "stale" | "incomplete" | "unavailable" {
+  if (state.runtime.enabledSourceCount !== undefined) {
+    if (state.runtime.enabledSourceCount === 0) return "unavailable";
+    if ((state.runtime.recentlyAttemptedSourceCount ?? 0) >= state.runtime.enabledSourceCount) return "current";
+    return state.runtime.lastFullSweepAt ? "stale" : "incomplete";
+  }
+  const enabled = state.sources.filter((source) => source.enabled !== false);
+  if (enabled.length === 0) return "unavailable";
+  if (enabled.some((source) => !source.lastAttemptAt)) return "incomplete";
+  return enabled.every((source) => now.getTime() - Date.parse(source.lastAttemptAt!) <= 30 * 60_000)
+    ? "current"
+    : "stale";
 }
 
 function isRefreshAuthorized(request: Request): boolean {

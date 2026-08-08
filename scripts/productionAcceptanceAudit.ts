@@ -1,7 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import type { SlotAudit } from "./productionAcceptanceRules";
+import { newsSources } from "../src/config/sources.js";
+import {
+  SLOT_MS,
+  SLOTS_PER_DAY,
+  SOURCE_ATTEMPT_WINDOW_MINUTES,
+  type SlotAudit,
+} from "./productionAcceptanceRules";
 
 const RESPONSE_KEYS = [
   "candidateCount",
@@ -21,10 +27,8 @@ const iso = (value: unknown): string | null => {
   return Number.isFinite(time) ? new Date(time).toISOString() : null;
 };
 const slot = (value: unknown): string => {
-  const date = new Date(String(value));
-  date.setUTCSeconds(0, 0);
-  date.setUTCMinutes(Math.floor(date.getUTCMinutes() / 15) * 15);
-  return date.toISOString();
+  const time = new Date(String(value)).getTime();
+  return new Date(Math.floor(time / SLOT_MS) * SLOT_MS).toISOString();
 };
 const normalize = (value: unknown): string =>
   typeof value === "string" ? value.trim().toLowerCase().replace(/\s+/g, " ") : "";
@@ -48,6 +52,96 @@ const percentile = (values: number[], value: number): number | null => {
 };
 const metricIds = (metrics: Record<string, unknown>, key: string): string[] =>
   list(metrics[key]).filter((value): value is string => typeof value === "string");
+const refreshOutcome = (
+  value: unknown,
+  status: unknown,
+): SlotAudit["durable"][number]["outcome"] => {
+  if (["published", "unchanged", "partial", "failed"].includes(String(value))) {
+    return String(value) as SlotAudit["durable"][number]["outcome"];
+  }
+  if (status === "published") return "published";
+  if (status === "completed") return "unchanged";
+  if (status === "failed") return "failed";
+  return null;
+};
+
+export function summarizePublicReport(
+  report: Record<string, any>,
+  now: string,
+): Pick<SlotAudit["public"], "latest" | "unmappedCandidateCount"> {
+  const stories = list(report.stories) as Array<Record<string, any>>;
+  const nowTime = Date.parse(now);
+  const recentThreshold = nowTime - 24 * 60 * 60_000;
+  const fallbackThreshold = nowTime - 72 * 60 * 60_000;
+  const eligible24h = stories.filter((story) => {
+    const updatedAt = Date.parse(String(story?.updatedAt ?? ""));
+    return Number.isFinite(updatedAt) && updatedAt >= recentThreshold && updatedAt <= nowTime;
+  });
+  const fallback72h = stories.filter((story) => {
+    const updatedAt = Date.parse(String(story?.updatedAt ?? ""));
+    return Number.isFinite(updatedAt) && updatedAt >= fallbackThreshold && updatedAt <= nowTime;
+  });
+  const explicitLatest = Array.isArray(report.latestStories)
+    ? (report.latestStories as Array<Record<string, any>>)
+    : null;
+  const latestStories = explicitLatest ?? (eligible24h.length > 0 ? eligible24h : fallback72h);
+  const latestIds = latestStories
+    .map((story) => story?.id)
+    .filter((value): value is string => typeof value === "string" && value.length > 0);
+  const latestIdSet = new Set(latestIds);
+  const eligibleIds = eligible24h
+    .map((story) => story?.id)
+    .filter((value): value is string => typeof value === "string" && value.length > 0);
+  const visible24h = eligibleIds.filter((id) => latestIdSet.has(id)).length;
+  const fallbackIds = eligibleIds.length === 0
+    ? fallback72h
+        .map((story) => story?.id)
+        .filter((value): value is string => typeof value === "string" && value.length > 0)
+    : [];
+  const visibleFallback = fallbackIds.filter((id) => latestIdSet.has(id)).length;
+  const acceptedCandidateCount =
+    typeof report.quality?.acceptedCandidateCount === "number" &&
+    Number.isFinite(report.quality.acceptedCandidateCount)
+      ? report.quality.acceptedCandidateCount
+      : null;
+  const explicitUnmapped =
+    typeof report.quality?.unmappedCandidateCount === "number" &&
+    Number.isFinite(report.quality.unmappedCandidateCount)
+      ? report.quality.unmappedCandidateCount
+      : null;
+  const mappedCandidateIds = new Set(
+    stories.flatMap((story) =>
+      (list(story?.evidence) as Array<Record<string, any>>)
+        .map((evidence) => evidence?.candidateId)
+        .filter((value): value is string => typeof value === "string" && value.length > 0),
+    ),
+  );
+  const derivedUnmapped =
+    acceptedCandidateCount === null
+      ? null
+      : Math.max(0, acceptedCandidateCount - mappedCandidateIds.size);
+  const unmappedCandidateCount =
+    explicitUnmapped === null
+      ? derivedUnmapped
+      : derivedUnmapped === null
+        ? explicitUnmapped
+        : Math.max(explicitUnmapped, derivedUnmapped);
+
+  return {
+    latest: {
+      eligible24h: eligibleIds.length,
+      visible24h,
+      missing24h: eligibleIds.length - visible24h,
+      recall: eligibleIds.length === 0 ? 1 : visible24h / eligibleIds.length,
+      duplicateIds: latestIds.length - latestIdSet.size,
+      fallbackWindowHours: eligibleIds.length > 0 ? 24 : fallback72h.length > 0 ? 72 : null,
+      eligibleFallback: fallbackIds.length,
+      visibleFallback,
+      missingFallback: fallbackIds.length - visibleFallback,
+    },
+    unmappedCandidateCount,
+  };
+}
 
 function parseBody(content: unknown): Record<string, unknown> | null {
   if (content == null) return null;
@@ -244,7 +338,7 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
   }
 
   const from = new Date(options.targetSlot).toISOString();
-  const until = new Date(Date.parse(from) + 15 * 60 * 1000).toISOString();
+  const until = new Date(Date.parse(from) + SLOT_MS).toISOString();
   const { client, strictCert } = await connectReadOnly(env, ref, Client);
   let rolledBack = false;
 
@@ -259,7 +353,7 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
 
     const cron = (
       await client.query(
-        "select runid,status,start_time,end_time from cron.job_run_details where jobid=2 and start_time >= $1::timestamptz and start_time < $2::timestamptz order by start_time",
+        "select runid,status,start_time,end_time from cron.job_run_details where jobid=(select jobid from cron.job where jobname='daily-news-refresh') and start_time >= $1::timestamptz and start_time < $2::timestamptz order by start_time",
         [from, until],
       )
     ).rows;
@@ -286,7 +380,7 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
       : [];
     const runtime = (
       await client.query(
-        "select singleton_id,latest_report_id,last_error_code from daily_news.runtime_state",
+        "select runtime.singleton_id,runtime.latest_report_id,runtime.last_attempt_at,runtime.last_success_at,runtime.last_error_code,runtime.last_outcome_code,snapshot.published_at latest_published_at,snapshot.newest_content_at latest_newest_content_at from daily_news.runtime_state runtime left join daily_news.report_snapshot snapshot on snapshot.report_id=runtime.latest_report_id",
       )
     ).rows;
     const lease = (
@@ -294,16 +388,25 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
         "select singleton_id,run_id,lease_expires_at from daily_news.refresh_lease",
       )
     ).rows;
-    const sources = (
+    const storedSources = (
       await client.query(
         "select source_id,enabled,interval_minutes,last_attempt_at,last_success_at,next_due_at,consecutive_failures,circuit_open_until,last_error_code,last_run_id from daily_news.source_state where enabled order by source_id",
       )
     ).rows;
-    const rollingFrom = new Date(Date.parse(from) - 95 * 15 * 60 * 1000).toISOString();
+    const approvedSourceIds = new Set(
+      newsSources
+        .filter((source) => source.enabled && source.admission === "approved")
+        .map((source) => source.source_id),
+    );
+    const sources = storedSources.filter((row) => approvedSourceIds.has(row.source_id));
+    const missingSourceStateIds = [...approvedSourceIds].filter(
+      (sourceId) => !sources.some((row) => row.source_id === sourceId),
+    );
+    const rollingFrom = new Date(Date.parse(from) - (SLOTS_PER_DAY - 1) * SLOT_MS).toISOString();
     const rollingCron = options.includeRolling24h
       ? (
           await client.query(
-            "select runid,status,start_time,end_time from cron.job_run_details where jobid=2 and start_time >= $1::timestamptz and start_time < $2::timestamptz order by start_time",
+            "select runid,status,start_time,end_time from cron.job_run_details where jobid=(select jobid from cron.job where jobname='daily-news-refresh') and start_time >= $1::timestamptz and start_time < $2::timestamptz order by start_time",
             [rollingFrom, until],
           )
         ).rows
@@ -396,6 +499,7 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
         storageView: snapshot?.storage_view ?? null,
         encoding: snapshot?.encoding ?? null,
         encodedLength: Number(snapshot?.encoded_length ?? 0),
+        outcome: refreshOutcome(metrics.publishOutcome ?? metrics.outcome, row.status),
       };
     });
 
@@ -416,30 +520,31 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
         Date.parse(row.circuit_open_until) <= nowTime &&
         Date.parse(row.next_due_at) <= nowTime,
     );
-    const rollingAttempted = healthy.filter(
-      (row) => row.last_attempt_at && nowTime - Date.parse(row.last_attempt_at) <= 5_400_000,
+    const attemptWindowMs = SOURCE_ATTEMPT_WINDOW_MINUTES * 60_000;
+    const rollingAttempted = sources.filter(
+      (row) => row.last_attempt_at && nowTime - Date.parse(row.last_attempt_at) <= attemptWindowMs,
     );
     const rollingSucceeded = healthy.filter(
-      (row) => row.last_success_at && nowTime - Date.parse(row.last_success_at) <= 5_400_000,
+      (row) => row.last_success_at && nowTime - Date.parse(row.last_success_at) <= attemptWindowMs,
     );
-    const overdue = healthy.filter(
+    const overdue = sources.filter(
       (row) =>
         !row.last_attempt_at ||
-        nowTime - Date.parse(row.last_attempt_at) > Number(row.interval_minutes) * 60_000,
+        nowTime - Date.parse(row.last_attempt_at) > attemptWindowMs,
     );
     const backlog = healthy.filter((row) => Date.parse(row.next_due_at) <= nowTime);
     const anthropic = bySource.get("anthropic");
 
-    const cacheWindow = Math.floor(Date.now() / 30_000);
     const [health, full, compact, reload, invalid] = await Promise.all([
       fetchJson(`${options.alias}/api/health`),
       fetchJson(`${options.alias}/api/news`),
-      fetchJson(`${options.alias}/api/news?view=web&window=${cacheWindow}`),
+      fetchJson(`${options.alias}/api/news?view=web`),
       fetchJson(`${options.alias}/api/news?view=web&reload=1`),
       fetchJson(`${options.alias}/api/news?view=web&window=0002`),
     ]);
     const report = full.body ?? {};
     const stories = list(report.stories) as Array<Record<string, any>>;
+    const publicSummary = summarizePublicReport(report, now);
     const top = list(report.topStories) as Array<Record<string, any>>;
     const important = list(report.importantStories) as Array<Record<string, any>>;
     const watch = list(report.watchlist) as Array<Record<string, any>>;
@@ -473,11 +578,56 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
       reportId(compact.body),
       reportId(reload.body),
     ];
+    const refresh = report.refresh ?? {};
+    const servingMode = refresh.servingMode ?? health.body?.servingMode ?? null;
+    const pipelineStatus = refresh.pipelineStatus ?? health.body?.pipelineStatus ?? null;
+    const contentStatus = refresh.contentStatus ?? health.body?.contentStatus ?? null;
+    const coverageStatus = refresh.coverageStatus ?? health.body?.coverageStatus ?? null;
+    const lastCheckedAt = iso(refresh.lastCheckedAt ?? health.body?.lastCheckedAt);
+    const lastFullSweepAt = iso(refresh.lastFullSweepAt ?? health.body?.lastFullSweepAt);
+    const lastPublishedAt = iso(refresh.lastPublishedAt ?? health.body?.lastPublishedAt);
+    const newestContentAt = iso(refresh.newestContentAt ?? health.body?.newestContentAt);
+    const lastOutcomeCode =
+      typeof refresh.lastOutcomeCode === "string"
+        ? refresh.lastOutcomeCode
+        : typeof health.body?.lastOutcomeCode === "string"
+          ? health.body.lastOutcomeCode
+          : null;
+    const sourceAttemptTimes = sources
+      .map((row) => Date.parse(String(row.last_attempt_at ?? "")))
+      .filter(Number.isFinite);
+    const expectedFullSweepAt =
+      sources.length === approvedSourceIds.size && sourceAttemptTimes.length === sources.length
+        ? new Date(Math.min(...sourceAttemptTimes)).toISOString()
+        : null;
+    const runtimeRow = runtime[0] ?? {};
+    const statusMetadataTruthful = Boolean(
+      servingMode === "durable" &&
+        health.body?.servingMode === servingMode &&
+        refresh.servingMode === servingMode &&
+        health.body?.pipelineStatus === pipelineStatus &&
+        refresh.pipelineStatus === pipelineStatus &&
+        health.body?.contentStatus === contentStatus &&
+        refresh.contentStatus === contentStatus &&
+        health.body?.coverageStatus === coverageStatus &&
+        refresh.coverageStatus === coverageStatus &&
+        lastCheckedAt &&
+        lastCheckedAt === iso(runtimeRow.last_attempt_at) &&
+        lastFullSweepAt &&
+        lastFullSweepAt === expectedFullSweepAt &&
+        lastPublishedAt &&
+        lastPublishedAt === iso(runtimeRow.latest_published_at) &&
+        newestContentAt &&
+        newestContentAt === iso(runtimeRow.latest_newest_content_at) &&
+        lastOutcomeCode &&
+        lastOutcomeCode === runtimeRow.last_outcome_code &&
+        (lastOutcomeCode !== "partial" || pipelineStatus === "degraded")
+    );
     const cronSlots = cron.map((row) => slot(row.start_time));
     const runSlots = runRows.map((row) => row.slot);
     const expectedRollingSlots = options.includeRolling24h
-      ? Array.from({ length: 96 }, (_, index) =>
-          new Date(Date.parse(rollingFrom) + index * 15 * 60 * 1000).toISOString(),
+      ? Array.from({ length: SLOTS_PER_DAY }, (_, index) =>
+          new Date(Date.parse(rollingFrom) + index * SLOT_MS).toISOString(),
         )
       : [];
     const rollingCronSlots = rollingCron.map((row) => slot(row.start_time));
@@ -556,7 +706,10 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
         lastErrorCode: runtime[0]?.last_error_code ?? null,
       },
       sources: {
-        enabled: sources.length,
+        enabled: approvedSourceIds.size,
+        registered: sources.length,
+        missingState: missingSourceStateIds.length,
+        attemptWindowMinutes: SOURCE_ATTEMPT_WINDOW_MINUTES,
         healthy: healthy.length,
         circuitOpen: open.length,
         halfOpenDue: halfOpen.length,
@@ -639,6 +792,9 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
         homepageLatest,
         homepageAge: ageMinutes(now, homepageLatest),
         duplicates: {
+          storyId:
+            stories.length -
+            new Set(stories.map((story) => story?.id).filter(Boolean)).size,
           title: duplicates(stories.map((story) => story?.title)),
           summary: duplicates(stories.map((story) => story?.whatHappened)),
           combination: duplicates(
@@ -663,6 +819,19 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
         beats: {
           covered: report.coverage?.coveredBeatCount ?? null,
           total: report.coverage?.totalBeatCount ?? null,
+        },
+        ...publicSummary,
+        statusMetadata: {
+          servingMode,
+          pipelineStatus,
+          contentStatus,
+          coverageStatus,
+          lastCheckedAt,
+          lastFullSweepAt,
+          lastPublishedAt,
+          newestContentAt,
+          lastOutcomeCode,
+          truthful: statusMetadataTruthful,
         },
       },
       rolling24h: options.includeRolling24h
@@ -705,6 +874,7 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
             durationP95: percentile(rollingDurations, 0.95),
             durationMax: rollingDurations.length ? Math.max(...rollingDurations) : null,
             over30Seconds: rollingDurations.filter((duration) => duration > 30).length,
+            over60Seconds: rollingDurations.filter((duration) => duration > 60).length,
             maxSuccessfulGapMinutes: rollingGaps.length ? Math.max(...rollingGaps) : null,
           }
         : null,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BURN_IN_STRICT_SLOTS,
+  SLOTS_PER_DAY,
   SOAK_DAYS,
   advanceMonitorState,
   createMonitorState,
@@ -49,8 +50,8 @@ function passingAudit(slot = "2026-07-24T06:00:00.000Z"): SlotAudit {
       runId,
       status: "published",
       startedAt: slot,
-      finishedAt: "2026-07-24T06:00:28.000Z",
-      duration: 28,
+      finishedAt: "2026-07-24T06:00:55.000Z",
+      duration: 55,
       plannedCount: 11,
       attemptedCount: 11,
       skippedCount: 0,
@@ -70,6 +71,7 @@ function passingAudit(slot = "2026-07-24T06:00:00.000Z"): SlotAudit {
       storageView: "2",
       encoding: "gzip-base64",
       encodedLength: 100,
+      outcome: "published",
     }],
     atomic: {
       runtimeSingleton: 1,
@@ -83,12 +85,15 @@ function passingAudit(slot = "2026-07-24T06:00:00.000Z"): SlotAudit {
       lastErrorCode: null,
     },
     sources: {
-      enabled: 49,
-      healthy: 46,
-      circuitOpen: 3,
+      enabled: 7,
+      registered: 7,
+      missingState: 0,
+      attemptWindowMinutes: 30,
+      healthy: 6,
+      circuitOpen: 1,
       halfOpenDue: 0,
-      rollingAttempted: 46,
-      rollingSucceeded: 46,
+      rollingAttempted: 7,
+      rollingSucceeded: 6,
       overdue: 0,
       backlog: 0,
       currentAttemptMismatch: 0,
@@ -124,13 +129,37 @@ function passingAudit(slot = "2026-07-24T06:00:00.000Z"): SlotAudit {
       candidateAge: 31.25,
       homepageLatest: "2026-07-24T05:30:00.000Z",
       homepageAge: 31.25,
-      duplicates: { title: 0, summary: 0, combination: 0, tier: 0 },
+      duplicates: { storyId: 0, title: 0, summary: 0, combination: 0, tier: 0 },
       tiers: { top: 10, important: 13, watch: 8 },
       core: { count: 23, confirmed: 23 },
       publisherShare: 0.13,
       declaredPublisherShare: 0.13,
       sourceCount: 23,
       beats: { covered: 10, total: 10 },
+      latest: {
+        eligible24h: 333,
+        visible24h: 333,
+        missing24h: 0,
+        recall: 1,
+        duplicateIds: 0,
+        fallbackWindowHours: 24,
+        eligibleFallback: 0,
+        visibleFallback: 0,
+        missingFallback: 0,
+      },
+      unmappedCandidateCount: 0,
+      statusMetadata: {
+        servingMode: "durable",
+        pipelineStatus: "healthy",
+        contentStatus: "current",
+        coverageStatus: "current",
+        lastCheckedAt: slot,
+        lastFullSweepAt: slot,
+        lastPublishedAt: slot,
+        newestContentAt: "2026-07-24T05:30:00.000Z",
+        lastOutcomeCode: "published",
+        truthful: true,
+      },
     },
     rolling24h: null,
   };
@@ -143,19 +172,40 @@ describe("production acceptance rules", () => {
       failures: [],
       runId: "run-public-id",
       reportId: "report-public-id",
-      duration: 28,
+      duration: 55,
     });
   });
 
-  it("rejects skipped sources, stale content, and a slow durable run", () => {
+  it("rejects structural coverage gaps while allowing old curated content", () => {
     const audit = passingAudit();
-    audit.durable[0].duration = 30.001;
-    audit.durable[0].skippedCount = 1;
-    audit.public.homepageAge = 120.001;
+    audit.durable[0].duration = 60.001;
+    audit.public.homepageAge = 10_000;
+    audit.public.unmappedCandidateCount = 1;
+    audit.public.latest.missing24h = 1;
+    audit.public.latest.recall = 0.99;
 
-    expect(evaluateSlotAudit(audit).failures).toEqual(
-      expect.arrayContaining(["durable_over_30_seconds", "durable_skipped", "public_homepage_stale"]),
+    const failures = evaluateSlotAudit(audit).failures;
+    expect(failures).toEqual(
+      expect.arrayContaining([
+        "durable_over_60_seconds",
+        "public_unmapped_candidates",
+        "public_latest_missing_24h",
+        "public_latest_recall",
+      ]),
     );
+    expect(failures).not.toContain("public_homepage_stale");
+  });
+
+  it("allows a source-level partial refresh to serve the last-known-good report", () => {
+    const audit = passingAudit();
+    audit.durable[0].outcome = "partial";
+    audit.durable[0].responseBodyStatus = "partial";
+    audit.pgNet.rows[0].bodyStatus = "partial";
+    audit.public.healthError = "source_partial";
+    audit.public.statusMetadata.pipelineStatus = "degraded";
+    audit.public.statusMetadata.lastOutcomeCode = "partial";
+
+    expect(evaluateSlotAudit(audit).passed).toBe(true);
   });
 
   it("allows completed slots to retain the previously published report", () => {
@@ -168,10 +218,12 @@ describe("production acceptance rules", () => {
       reportId: null,
       snapshotLinked: false,
       responseBodyStatus: "unchanged",
+      outcome: "unchanged",
     };
     audit.atomic.latestPublishedReportId = null;
     audit.atomic.runtimeMatches = false;
     audit.atomic.latestSnapshotLinked = false;
+    audit.public.statusMetadata.lastOutcomeCode = "unchanged";
 
     expect(evaluateSlotAudit(audit).passed).toBe(true);
   });
@@ -191,11 +243,12 @@ describe("production acceptance rules", () => {
       phase: "burn_in",
       baselineSlot: audit.targetSlot,
       burnInStrictPassed: 0,
-      nextSlot: "2026-07-24T06:15:00.000Z",
+      nextSlot: "2026-07-24T06:05:00.000Z",
     });
 
-    const failedAudit = passingAudit("2026-07-24T06:15:00.000Z");
-    failedAudit.public.homepageAge = 121;
+    const failedAudit = passingAudit("2026-07-24T06:05:00.000Z");
+    failedAudit.public.latest.missing24h = 1;
+    failedAudit.public.latest.recall = 0.99;
     state = advanceMonitorState(state, failedAudit, evaluateSlotAudit(failedAudit));
 
     expect(state).toMatchObject({
@@ -203,11 +256,11 @@ describe("production acceptance rules", () => {
       attempt: 2,
       baselineSlot: null,
       burnInStrictPassed: 0,
-      nextSlot: "2026-07-24T06:30:00.000Z",
+      nextSlot: "2026-07-24T06:10:00.000Z",
     });
   });
 
-  it("transitions from 96 strict slots to seven daily soak checks", () => {
+  it("transitions from a 24-hour five-minute burn-in to seven daily soak checks", () => {
     let audit = passingAudit();
     let state = createMonitorState({
       deployment: "dpl_public",
@@ -235,11 +288,11 @@ describe("production acceptance rules", () => {
   it("requires a clean rolling 24-hour summary during soak", () => {
     const audit = passingAudit();
     audit.rolling24h = {
-      expectedSlots: 96,
-      cron: 96,
-      cronSucceeded: 96,
-      durable: 96,
-      durableSucceeded: 96,
+      expectedSlots: SLOTS_PER_DAY,
+      cron: SLOTS_PER_DAY,
+      cronSucceeded: SLOTS_PER_DAY,
+      durable: SLOTS_PER_DAY,
+      durableSucceeded: SLOTS_PER_DAY,
       durableFailed: 0,
       durableRunning: 0,
       missingCron: 0,
@@ -249,9 +302,10 @@ describe("production acceptance rules", () => {
       skippedSources: 0,
       missingSourceOutcomes: 0,
       durationP95: 28,
-      durationMax: 29,
-      over30Seconds: 0,
-      maxSuccessfulGapMinutes: 15.1,
+      durationMax: 59,
+      over30Seconds: SLOTS_PER_DAY,
+      over60Seconds: 0,
+      maxSuccessfulGapMinutes: 5.1,
     };
     expect(evaluateSlotAudit(audit, { requireRolling24h: true }).passed).toBe(true);
 

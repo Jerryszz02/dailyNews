@@ -203,6 +203,22 @@ h1 {
   margin-top: 2px;
 }
 
+.status-semantics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.status-semantics span {
+  border: 1px solid #d7e4eb;
+  border-radius: 999px;
+  color: #526577;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+}
+
 .inferred-badge {
   background: #fff5da;
   border: 1px solid #ead39b;
@@ -674,6 +690,15 @@ select {
   max-width: 1280px;
 }
 
+.latest-news-section {
+  background: #f8fbfd;
+  border-color: #cbdde8;
+}
+
+.latest-news-section .show-more {
+  margin-top: 18px;
+}
+
 .latest-updates {
   display: grid;
   grid-template-columns: minmax(150px, 0.28fr) 1fr;
@@ -853,6 +878,14 @@ select {
   font-size: 11px;
   gap: 7px 10px;
   margin-bottom: 9px;
+}
+
+.event-meta .degraded-badge {
+  background: #fff7e8;
+  border: 1px solid #e5c37c;
+  border-radius: 999px;
+  color: #76510d;
+  padding: 2px 7px;
 }
 
 .event-status {

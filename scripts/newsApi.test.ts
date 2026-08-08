@@ -62,7 +62,7 @@ describe("serverless report API", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, max-age=5");
+    expect(response.headers.get("vercel-cdn-cache-control")).toBeNull();
   });
 
   it("serves a compact cacheable representation for the web app", async () => {
@@ -84,7 +84,7 @@ describe("serverless report API", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, max-age=5");
+    expect(response.headers.get("vercel-cdn-cache-control")).toBeNull();
   });
 
   it("rejects unknown cache keys before reading durable storage", async () => {
@@ -111,7 +111,8 @@ describe("serverless report API", () => {
     const response = await handleHealthRequest(new Request("https://example.com/api/health"));
     const body = await response.json();
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
     expect(body.reportAvailable).toBe(true);
     expect(body.itemCount).toBeGreaterThan(0);
     expect(body.refreshStatus).toBe("stale");
@@ -150,9 +151,9 @@ describe("serverless report API", () => {
     const degradedHealthResponse = await handlers.handleHealthRequest(new Request("https://example.com/api/health"));
     const degradedHealth = await degradedHealthResponse.json();
 
-    expect(degradedHealthResponse.status).toBe(503);
+    expect(degradedHealthResponse.status).toBe(200);
     expect(degradedHealth).toMatchObject({
-      ok: false,
+      ok: true,
       storage: "bundled",
       reportAvailable: true,
       refreshStatus: "degraded",
@@ -221,8 +222,8 @@ describe("serverless report API", () => {
     expect(news.refresh.dataAsOf).toBe(news.generatedAt);
     expect(news.refresh.lastAttemptAt).toBeNull();
     expect(news.refresh.lastSuccessAt).toBeNull();
-    expect(healthResponse.status).toBe(503);
-    expect(health.ok).toBe(false);
+    expect(healthResponse.status).toBe(200);
+    expect(health.ok).toBe(true);
     expect(health.refreshStatus).toBe("stale");
   });
 
@@ -244,6 +245,7 @@ describe("serverless report API", () => {
           lastAttemptAt: now.toISOString(),
           lastSuccessAt: now.toISOString(),
           lastErrorCode: null,
+          publicationStateAt: "2026-07-13T12:01:00.000Z",
         },
         sources: [],
       }),
@@ -256,11 +258,12 @@ describe("serverless report API", () => {
     expect(news.refresh.status).toBe("stale");
     expect(news.refresh.dataAsOf).toBe(report.generatedAt);
     expect(news.refresh.lastSuccessAt).toBe(now.toISOString());
-    expect(health.status).toBe(503);
+    expect(news.refresh.publicationStateAt).toBe("2026-07-13T12:01:00.000Z");
+    expect(health.status).toBe(200);
     expect((await health.json()).dataAsOf).toBe(report.generatedAt);
   });
 
-  it("returns 503 when a fresh report has a degraded refresh state", async () => {
+  it("returns 200 with degraded metadata when a readable report exists", async () => {
     const report = { ...readBundledReport(), generatedAt: "2026-07-13T11:50:00.000Z" };
     const store = {
       kind: "memory",
@@ -286,8 +289,8 @@ describe("serverless report API", () => {
     const response = await handlers.handleHealthRequest(new Request("https://example.com/api/health"));
     const body = await response.json();
 
-    expect(response.status).toBe(503);
-    expect(body.ok).toBe(false);
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
     expect(body.refreshStatus).toBe("degraded");
   });
 
@@ -322,7 +325,7 @@ describe("serverless report API", () => {
     expect(refresh).toHaveBeenCalledOnce();
     expect(refresh.mock.calls[0][0]).toMatchObject({
       trigger: "cron",
-      idempotencyKey: "refresh:2026-07-13T12:00:00.000Z",
+      idempotencyKey: "refresh:2026-07-13T12:05:00.000Z",
     });
   });
 });

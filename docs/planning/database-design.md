@@ -45,7 +45,7 @@
 | `last_success_at` | 最近一次成功 |
 | `next_due_at` | 持久化公平轮转游标；到期来源优先被下一轮选择 |
 | `consecutive_failures` | 连续失败次数 |
-| `circuit_open_until` | 熔断截止时间 |
+| `circuit_open_until` | 兼容失败诊断时间；不得作为跳过 30 分钟覆盖尝试的调度门 |
 | `latency_ms_p50/p95` | 滚动延迟指标 |
 | `accepted_rate` | 候选通过质量门槛的比例 |
 | `last_error_code` | 归一化错误类型，不保存敏感错误正文 |

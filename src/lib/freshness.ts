@@ -12,6 +12,7 @@ export interface FreshnessReport {
   items?: Array<{
     publishedAt?: string | null;
     extractedAt?: string | null;
+    updatedAt?: string | null;
   }>;
 }
 
@@ -26,6 +27,8 @@ export interface FreshnessInput {
 
 export interface FreshnessResult {
   status: FreshnessStatus;
+  pipelineStatus: "healthy" | "degraded" | "failed";
+  contentStatus: "current" | "quiet" | "stale" | "unknown";
   dataAsOf: string | null;
   newestContentAt: string | null;
   ageMinutes: number | null;
@@ -40,6 +43,8 @@ export function evaluateFreshness(input: FreshnessInput, now: Date): FreshnessRe
   if (!input.report || dataAsOfTimestamp === undefined) {
     return {
       status: "unavailable",
+      pipelineStatus: "failed",
+      contentStatus: "unknown",
       dataAsOf: null,
       newestContentAt,
       ageMinutes: null,
@@ -48,15 +53,29 @@ export function evaluateFreshness(input: FreshnessInput, now: Date): FreshnessRe
   }
 
   const ageMinutes = Math.max(0, (now.getTime() - dataAsOfTimestamp) / 60_000);
+  const lastCheckedAt = validTimestamp(input.lastAttemptAt) ?? validTimestamp(input.lastSuccessAt);
+  const recentlyChecked =
+    lastCheckedAt !== undefined && Math.max(0, (now.getTime() - lastCheckedAt) / 60_000) <= staleAfterMinutes;
+  const contentTimestamp = validTimestamp(newestContentAt);
+  const contentAgeMinutes =
+    contentTimestamp === undefined ? null : Math.max(0, (now.getTime() - contentTimestamp) / 60_000);
+  const latestAttemptIsFailed = latestAttemptFailed(input, dataAsOfTimestamp);
   const status: FreshnessStatus =
     ageMinutes > staleAfterMinutes
       ? "stale"
-      : latestAttemptFailed(input, dataAsOfTimestamp)
+      : latestAttemptIsFailed
         ? "degraded"
         : "fresh";
 
   return {
     status,
+    pipelineStatus: latestAttemptIsFailed ? "degraded" : "healthy",
+    contentStatus:
+      contentAgeMinutes === null
+        ? recentlyChecked ? "quiet" : "unknown"
+        : contentAgeMinutes <= staleAfterMinutes
+          ? "current"
+          : recentlyChecked ? "quiet" : "stale",
     dataAsOf: new Date(dataAsOfTimestamp).toISOString(),
     newestContentAt,
     ageMinutes,
@@ -66,12 +85,8 @@ export function evaluateFreshness(input: FreshnessInput, now: Date): FreshnessRe
 
 export function findNewestContentAt(report: FreshnessReport): string | null {
   const timestamps = [
-    ...(report.stories ?? []).flatMap((story) => [
-      story.publishedAt,
-      story.updatedAt,
-      ...(story.evidence ?? []).map((evidence) => evidence.publishedAt),
-    ]),
-    ...(report.items ?? []).map((item) => item.publishedAt),
+    ...(report.stories ?? []).map((story) => story.updatedAt),
+    ...(report.items ?? []).map((item) => item.updatedAt),
   ]
     .map(validTimestamp)
     .filter((timestamp): timestamp is number => timestamp !== undefined);
