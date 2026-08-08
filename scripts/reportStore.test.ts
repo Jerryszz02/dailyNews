@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot";
+import { selectLatestStories } from "../src/lib/curation";
 import type { DailyNewsReport } from "../src/types";
-import { expandLegacyItems, InMemoryNewsReportStore, passesPublishGate, readBundledReport } from "./reportStore";
+import {
+  expandLegacyItems,
+  InMemoryNewsReportStore,
+  passesPublishGate,
+  readBundledReport,
+  validateReportInvariants,
+} from "./reportStore";
 import { newestContentTimestamp } from "./newsStore";
 
 describe("last-known-good report store", () => {
@@ -56,7 +63,7 @@ describe("last-known-good report store", () => {
     expect(expanded.map((entry) => entry.url)).toEqual(["https://www.news.cn/a", "https://apnews.com/a"]);
   });
 
-  it("rejects a refresh that loses all candidates for a previously covered core beat", () => {
+  it("does not block a structurally valid refresh when a core beat is temporarily quiet", () => {
     const current = readBundledReport();
     const regressed = {
       ...current,
@@ -69,10 +76,10 @@ describe("last-known-good report store", () => {
       },
     };
 
-    expect(passesPublishGate(regressed, current)).toBe(false);
+    expect(passesPublishGate(regressed, current)).toBe(true);
   });
 
-  it("still rejects an event-count regression when the candidate pool did not shrink", () => {
+  it("does not use relative event counts as a publication gate", () => {
     const current = readBundledReport();
     const regressed = {
       ...current,
@@ -82,31 +89,15 @@ describe("last-known-good report store", () => {
       },
     };
 
-    expect(passesPublishGate(regressed, current)).toBe(false);
+    expect(passesPublishGate(regressed, current)).toBe(true);
   });
 
-  it("scales the event-count comparison when a bounded candidate pool stays dense", () => {
-    const current = readBundledReport();
-    const candidateCount = Math.max(1, Math.floor(current.quality.candidateCount * 0.5));
-    const contracted = {
-      ...current,
-      quality: {
-        ...current.quality,
-        candidateCount,
-        acceptedCandidateCount: candidateCount,
-        rejectedCandidateCount: 0,
-        selectedEventCount: Math.max(10, Math.floor(current.quality.selectedEventCount * 0.4)),
-      },
-    };
-
-    expect(passesPublishGate(contracted, current)).toBe(true);
-  });
-
-  it("rejects a report that omits an available fresh confirmed core event", () => {
+  it("does not require fresh events to appear in a curated core section", () => {
     const current = readBundledReport();
     const staleAt = new Date(Date.parse(current.generatedAt) - 121 * 60_000).toISOString();
     const staleStory = (story: DailyNewsReport["stories"][number]) => ({
       ...story,
+      startedAt: staleAt,
       publishedAt: staleAt,
       updatedAt: staleAt,
       evidence: story.evidence.map((evidence) => ({ ...evidence, publishedAt: staleAt })),
@@ -114,26 +105,69 @@ describe("last-known-good report store", () => {
     const template = current.stories[0];
     const freshCore = {
       ...template,
-      id: "fresh-core-regression",
-      itemId: "fresh-core-regression",
       primaryBeat: "science" as const,
       status: "confirmed" as const,
       tier: "important" as const,
       updatedAt: current.generatedAt,
       evidence: template.evidence.map((evidence) => ({
         ...evidence,
-        sourceId: "fresh-core-source",
         publishedAt: current.generatedAt,
       })),
     };
+    const stories = [freshCore, ...current.stories.slice(1).map(staleStory)];
+    const storyById = new Map(stories.map((story) => [story.id, story]));
+    const latestStories = selectLatestStories(stories, new Date(current.generatedAt));
     const regressed = {
       ...current,
-      stories: [...current.stories.map(staleStory), freshCore],
-      topStories: current.topStories.map(staleStory).filter((story) => story.primaryBeat !== "science"),
-      importantStories: current.importantStories.map(staleStory).filter((story) => story.primaryBeat !== "science"),
+      stories,
+      latestStories,
+      topStories: current.topStories.filter((story) => story.id !== template.id).map((story) => storyById.get(story.id)!),
+      importantStories: current.importantStories.filter((story) => story.id !== template.id).map((story) => storyById.get(story.id)!),
+      watchlist: current.watchlist.filter((story) => story.id !== template.id).map((story) => storyById.get(story.id)!),
+      quality: { ...current.quality, latestEventCount: latestStories.length },
     };
 
-    expect(passesPublishGate(regressed)).toBe(false);
+    expect(passesPublishGate(regressed)).toBe(true);
+  });
+
+  it("rejects a report with a dangling selected story reference", () => {
+    const current = readBundledReport();
+    const dangling = { ...current.stories[0], id: "missing-story" };
+    expect(passesPublishGate({ ...current, latestStories: [dangling] })).toBe(false);
+  });
+
+  it("reports invalid event time, source URL, and duplicate candidate mappings", () => {
+    const current = readBundledReport();
+    const first = current.stories[0]!;
+    const second = current.stories[1]!;
+    const invalid = {
+      ...current,
+      stories: current.stories.map((story, index) => {
+        if (index === 0) {
+          return {
+            ...story,
+            startedAt: new Date(Date.parse(story.updatedAt) + 60_000).toISOString(),
+            evidence: story.evidence.map((evidence, evidenceIndex) =>
+              evidenceIndex === 0 ? { ...evidence, url: "https://example.com/out-of-scope" } : evidence),
+          };
+        }
+        if (index === 1 && first.evidence[0]) {
+          return {
+            ...story,
+            evidence: story.evidence.map((evidence, evidenceIndex) =>
+              evidenceIndex === 0 ? { ...evidence, candidateId: first.evidence[0].candidateId } : evidence),
+          };
+        }
+        return story;
+      }),
+    };
+
+    expect(second).toBeDefined();
+    expect(validateReportInvariants(invalid)).toEqual(expect.arrayContaining([
+      "invalid_story_time_relation",
+      "evidence_url_out_of_scope",
+      "duplicate_or_missing_candidate_mapping",
+    ]));
   });
 
   it("allows a fresh core event that is excluded by the publisher diversity limit", () => {
@@ -141,6 +175,7 @@ describe("last-known-good report store", () => {
     const staleAt = new Date(Date.parse(current.generatedAt) - 121 * 60_000).toISOString();
     const staleStory = (story: DailyNewsReport["stories"][number]) => ({
       ...story,
+      startedAt: staleAt,
       publishedAt: staleAt,
       updatedAt: staleAt,
       evidence: story.evidence.map((evidence) => ({ ...evidence, publishedAt: staleAt })),
@@ -149,29 +184,46 @@ describe("last-known-good report store", () => {
       ...staleStory(story),
       evidence: story.evidence.map((evidence) => ({
         ...evidence,
-        sourceId: "saturated-publisher",
+        sourceId: "xinhua",
+        sourceName: "新华网",
+        url: `https://www.news.cn/test/${evidence.candidateId}`,
         publishedAt: staleAt,
       })),
     });
     const template = current.stories[0];
     const freshCore = {
       ...template,
-      id: "fresh-core-diversity-limit",
-      itemId: "fresh-core-diversity-limit",
       status: "confirmed" as const,
       tier: "important" as const,
       updatedAt: current.generatedAt,
       evidence: template.evidence.map((evidence) => ({
         ...evidence,
-        sourceId: "saturated-publisher",
         publishedAt: current.generatedAt,
       })),
     };
+    const saturatedStoryIds = new Set(
+      current.topStories.filter((story) => story.id !== template.id).slice(0, 3).map((story) => story.id),
+    );
+    const stories = [
+      freshCore,
+      ...current.stories.slice(1).map((story) =>
+        saturatedStoryIds.has(story.id) ? withPublisher(story) : staleStory(story)),
+    ];
+    const storyById = new Map(stories.map((story) => [story.id, story]));
+    const latestStories = selectLatestStories(stories, new Date(current.generatedAt));
     const report = {
       ...current,
-      stories: [...current.stories.map(staleStory), freshCore],
-      topStories: current.topStories.map((story, index) => (index < 3 ? withPublisher(story) : staleStory(story))),
-      importantStories: current.importantStories.map(staleStory),
+      stories,
+      latestStories,
+      topStories: current.topStories
+        .filter((story) => story.id !== template.id)
+        .map((story) => storyById.get(story.id)!),
+      importantStories: current.importantStories
+        .filter((story) => story.id !== template.id)
+        .map((story) => storyById.get(story.id)!),
+      watchlist: current.watchlist.filter((story) => story.id !== template.id).map((story) => storyById.get(story.id)!),
+      sourceCount: new Set(stories.flatMap((story) => story.evidence.map((evidence) => evidence.sourceId))).size,
+      quality: { ...current.quality, latestEventCount: latestStories.length },
     };
 
     expect(passesPublishGate(report)).toBe(true);
@@ -182,38 +234,41 @@ describe("last-known-good report store", () => {
     const template = current.stories[0];
     const developing = {
       ...template,
-      id: "fresh-developing-event",
-      itemId: "fresh-developing-event",
       status: "developing" as const,
       tier: "important" as const,
       updatedAt: current.generatedAt,
       evidence: template.evidence.map((evidence) => ({ ...evidence, publishedAt: current.generatedAt })),
     };
+    const stories = [developing, ...current.stories.slice(1)];
     const report = {
       ...current,
-      stories: [...current.stories, developing],
-      watchlist: [...current.watchlist, developing],
+      stories,
+      latestStories: selectLatestStories(stories, new Date(current.generatedAt)),
+      topStories: current.topStories.filter((story) => story.id !== template.id),
+      importantStories: current.importantStories.filter((story) => story.id !== template.id),
+      watchlist: [...current.watchlist.filter((story) => story.id !== template.id), developing],
     };
 
     expect(passesPublishGate(report)).toBe(true);
   });
 
-  it("uses the newest evidence timestamp for public refresh metadata", () => {
+  it("uses event updatedAt rather than evidence publication time for refresh metadata", () => {
     const current = readBundledReport();
-    const evidenceTime = new Date(Date.parse(current.generatedAt) + 60_000).toISOString();
+    const updatedAt = new Date(Date.parse(current.generatedAt) + 60_000).toISOString();
+    const evidenceTime = new Date(Date.parse(current.generatedAt) + 120_000).toISOString();
     const report = {
       ...current,
       stories: current.stories.map((story, index) =>
         index === 0
           ? {
               ...story,
-              updatedAt: evidenceTime,
+              updatedAt,
               evidence: story.evidence.map((evidence) => ({ ...evidence, publishedAt: evidenceTime })),
             }
           : story,
       ),
     };
 
-    expect(newestContentTimestamp(report)).toBe(evidenceTime);
+    expect(newestContentTimestamp(report)).toBe(updatedAt);
   });
 });

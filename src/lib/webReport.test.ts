@@ -23,6 +23,8 @@ describe("web report representation", () => {
     expect(compact).not.toHaveProperty("items");
     expect(compact).not.toHaveProperty("topStories");
     expect(hydrated.stories.map((story) => story.id)).toEqual(full.stories.map((story) => story.id));
+    expect(compact.latestStoryIds).toEqual(full.latestStories?.map((story) => story.id));
+    expect(hydrated.latestStories?.map((story) => story.id)).toEqual(full.latestStories?.map((story) => story.id));
     expect(hydrated.topStories.map((story) => story.id)).toEqual(full.topStories.map((story) => story.id));
     expect(hydrated.importantStories.map((story) => story.id)).toEqual(full.importantStories.map((story) => story.id));
     expect(hydrated.watchlist.map((story) => story.id)).toEqual(full.watchlist.map((story) => story.id));
@@ -35,11 +37,21 @@ describe("web report representation", () => {
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length * 0.7);
   });
 
+  it("derives latest stories when hydrating an older compact report without latest IDs", () => {
+    const full = buildDailyReport(firecrawlSnapshotNews, defaultPreferences, new Date("2026-07-09T15:39:06.365Z"));
+    const { latestStoryIds: _latestStoryIds, ...legacyCompact } = compactDailyNewsReport(full);
+    const hydrated = hydrateWebDailyNewsReport(legacyCompact);
+
+    expect(hydrated.latestStories?.map((story) => story.id)).toEqual(full.latestStories?.map((story) => story.id));
+    expect(isWebDailyNewsReport(legacyCompact)).toBe(true);
+  });
+
   it("rejects malformed web representations before hydration", () => {
     const full = buildDailyReport(firecrawlSnapshotNews, defaultPreferences, new Date("2026-07-09T15:39:06.365Z"));
     const compact = compactDailyNewsReport(full);
 
     expect(isWebDailyNewsReport({ ...compact, generatedAt: "invalid" })).toBe(false);
+    expect(isWebDailyNewsReport({ ...compact, latestStoryIds: "invalid" })).toBe(false);
     expect(isWebDailyNewsReport({ ...compact, topStoryIds: ["missing-story"] })).toBe(false);
     expect(isWebDailyNewsReport({ ...compact, rankingMetadata: {} })).toBe(false);
   });

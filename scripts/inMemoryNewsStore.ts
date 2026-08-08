@@ -54,6 +54,7 @@ export class InMemoryNewsStore implements NewsStore {
       lastAttemptAt: this.latest?.dataAsOf ?? null,
       lastSuccessAt: this.latest?.dataAsOf ?? null,
       lastErrorCode: null,
+      publicationStateAt: this.latest?.publishedAt ?? this.now().toISOString(),
     };
   }
 
@@ -129,6 +130,7 @@ export class InMemoryNewsStore implements NewsStore {
     this.idempotencyRuns.set(input.idempotencyKey, runId);
     this.runs.set(runId, { runId, status: "running" });
     this.runtime.lastAttemptAt = input.scheduledAt;
+    this.runtime.publicationStateAt = input.scheduledAt;
 
     return {
       acquired: true,
@@ -151,7 +153,7 @@ export class InMemoryNewsStore implements NewsStore {
     for (const result of results) {
       const current = this.sourceStates.get(result.sourceId);
       if (!current) continue;
-      const succeeded = result.status !== "failed";
+      const succeeded = result.status === "success" || result.status === "empty";
       const attempts = succeeded ? 0 : current.consecutiveFailures + 1;
       const total = Math.max(1, result.discoveredCount);
       this.sourceStates.set(result.sourceId, {
@@ -160,7 +162,7 @@ export class InMemoryNewsStore implements NewsStore {
         lastSuccessAt: succeeded ? result.attemptedAt : current.lastSuccessAt,
         nextDueAt: result.nextDueAt,
         consecutiveFailures: attempts,
-        acceptedRate: succeeded ? result.acceptedCount / total : current.acceptedRate,
+        acceptedRate: result.discoveredCount > 0 ? result.acceptedCount / total : current.acceptedRate,
         circuitOpenUntil:
           !succeeded && attempts >= 3
             ? new Date(Date.parse(result.attemptedAt) + current.intervalMinutes * 2 * 60_000).toISOString()
@@ -175,21 +177,26 @@ export class InMemoryNewsStore implements NewsStore {
   async upsertCandidates(lease: LeaseIdentity, candidates: RawNewsItem[]): Promise<number> {
     this.assertLease(lease);
     for (const candidate of candidates) {
-      this.candidates.set(candidateKey(candidate), structuredClone(candidate));
+      const key = candidateKey(candidate);
+      const current = this.candidates.get(key);
+      this.candidates.set(key, structuredClone(current ? mergeStoredCandidate(current, candidate) : candidate));
     }
     return candidates.length;
   }
 
-  async readRecentCandidates(since: string, limit = 2_000): Promise<RawNewsItem[]> {
+  async readRecentCandidates(since: string, limit?: number): Promise<RawNewsItem[]> {
     const sinceMs = Date.parse(since);
-    return Array.from(this.candidates.values())
+    const candidates = Array.from(this.candidates.values())
       .filter((candidate) => {
-        const publishedAt = Date.parse(candidate.publishedAt ?? "");
-        return Number.isFinite(publishedAt) && publishedAt >= sinceMs;
+        const activityAt = Date.parse(
+          candidate.updatedAt ?? candidate.publishedAt ?? candidate.discoveredAt ?? candidate.extractedAt ?? "",
+        );
+        return Number.isFinite(activityAt) && activityAt >= sinceMs;
       })
-      .sort((left, right) => Date.parse(right.publishedAt ?? "") - Date.parse(left.publishedAt ?? ""))
-      .slice(0, limit)
-      .map((candidate) => structuredClone(candidate));
+      .sort((left, right) =>
+        Date.parse(right.updatedAt ?? right.publishedAt ?? right.discoveredAt ?? right.extractedAt ?? "") -
+        Date.parse(left.updatedAt ?? left.publishedAt ?? left.discoveredAt ?? left.extractedAt ?? ""));
+    return (limit === undefined ? candidates : candidates.slice(0, limit)).map((candidate) => structuredClone(candidate));
   }
 
   async publishRefresh(input: PublishRefreshInput): Promise<PublishRefreshResult> {
@@ -210,25 +217,55 @@ export class InMemoryNewsStore implements NewsStore {
     };
     this.reports.set(stored.reportId, stored);
     this.latest = stored;
-    this.runtime = { lastAttemptAt: input.dataAsOf, lastSuccessAt: input.dataAsOf, lastErrorCode: null };
+    const outcome = input.metrics.outcome === "partial" ? "partial" : "published";
+    this.runtime = {
+      lastAttemptAt: input.dataAsOf,
+      lastSuccessAt: input.dataAsOf,
+      lastErrorCode: null,
+      lastOutcomeCode: outcome,
+      publicationStateAt: publishedAt,
+    };
     this.runs.set(input.runId, { runId: input.runId, status: "published" });
     this.activeLease = null;
 
     return {
       published: true,
+      outcome,
       reportId: stored.reportId,
       previousReportId: previous?.reportId ?? null,
       lastSuccessAt: this.runtime.lastSuccessAt,
     };
   }
 
+  async commitRefresh(
+    input: PublishRefreshInput,
+    sourceResults: SourceCollectionResult[],
+    candidates: RawNewsItem[],
+  ): Promise<PublishRefreshResult> {
+    this.assertLease(input);
+    await this.recordSourceResults(input, sourceResults);
+    await this.upsertCandidates(input, candidates);
+    return this.publishRefresh(input);
+  }
+
   async completeRefreshWithoutPublish(
     lease: LeaseIdentity,
     _metrics: Record<string, unknown>,
+    sourceResults: SourceCollectionResult[] = [],
+    candidates: RawNewsItem[] = [],
   ): Promise<CompleteWithoutPublishResult> {
     this.assertLease(lease);
+    await this.recordSourceResults(lease, sourceResults);
+    await this.upsertCandidates(lease, candidates);
     const completedAt = this.now().toISOString();
-    this.runtime = { lastAttemptAt: completedAt, lastSuccessAt: completedAt, lastErrorCode: null };
+    const outcome = _metrics.outcome === "partial" ? "partial" : "unchanged";
+    this.runtime = {
+      lastAttemptAt: completedAt,
+      lastSuccessAt: completedAt,
+      lastErrorCode: null,
+      lastOutcomeCode: outcome,
+      publicationStateAt: completedAt,
+    };
     this.runs.set(lease.runId, { runId: lease.runId, status: "completed" });
     this.activeLease = null;
     return { completed: true, lastAttemptAt: completedAt, lastSuccessAt: completedAt };
@@ -236,7 +273,14 @@ export class InMemoryNewsStore implements NewsStore {
 
   async markRefreshFailed(lease: LeaseIdentity, errorCode: string): Promise<void> {
     if (!this.hasLease(lease)) return;
-    this.runtime = { ...this.runtime, lastAttemptAt: this.now().toISOString(), lastErrorCode: errorCode };
+    const failedAt = this.now().toISOString();
+    this.runtime = {
+      ...this.runtime,
+      lastAttemptAt: failedAt,
+      lastErrorCode: errorCode,
+      lastOutcomeCode: "failed",
+      publicationStateAt: failedAt,
+    };
     this.runs.set(lease.runId, { runId: lease.runId, status: "failed" });
     this.activeLease = null;
   }
@@ -245,6 +289,12 @@ export class InMemoryNewsStore implements NewsStore {
     const target = this.reports.get(reportId);
     if (!target) throw new Error("report_not_found");
     this.latest = target;
+    this.runtime = {
+      ...this.runtime,
+      lastErrorCode: `rollback:${_reasonCode}`,
+      lastOutcomeCode: "failed",
+      publicationStateAt: this.now().toISOString(),
+    };
     return target;
   }
 
@@ -276,6 +326,24 @@ function asPublishedReport(report: DailyNewsReport): PublishedNewsReport {
 
 function candidateKey(candidate: RawNewsItem): string {
   return `${candidate.sourceId}\n${canonicalUrl(candidate.url)}`;
+}
+
+function mergeStoredCandidate(current: RawNewsItem, candidate: RawNewsItem): RawNewsItem {
+  return {
+    ...candidate,
+    publishedAt: candidate.publishedAt ?? current.publishedAt,
+    updatedAt: candidate.updatedAt ?? current.updatedAt,
+    discoveredAt: earliestOptionalTimestamp(current.discoveredAt, candidate.discoveredAt ?? candidate.extractedAt),
+    extractedAt: earliestOptionalTimestamp(current.extractedAt, candidate.extractedAt) ?? candidate.extractedAt,
+  };
+}
+
+function earliestOptionalTimestamp(left?: string, right?: string): string | undefined {
+  const leftMs = Date.parse(left ?? "");
+  const rightMs = Date.parse(right ?? "");
+  if (!Number.isFinite(leftMs)) return Number.isFinite(rightMs) ? right : undefined;
+  if (!Number.isFinite(rightMs)) return left;
+  return leftMs <= rightMs ? left : right;
 }
 
 function canonicalUrl(value: string): string {

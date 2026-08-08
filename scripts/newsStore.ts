@@ -2,7 +2,7 @@ import type { DailyNewsReport, RawNewsItem } from "../src/types";
 
 export type NewsStoreKind = "memory" | "supabase";
 export type RefreshTrigger = "cron" | "manual" | "local";
-export type SourceResultStatus = "success" | "empty" | "failed";
+export type SourceResultStatus = "success" | "empty" | "partial" | "failed";
 
 export interface PublishedNewsReport {
   reportId: string;
@@ -17,6 +17,11 @@ export interface NewsRuntimeState {
   lastAttemptAt: string | null;
   lastSuccessAt: string | null;
   lastErrorCode: string | null;
+  lastOutcomeCode?: "published" | "unchanged" | "partial" | "failed" | null;
+  enabledSourceCount?: number;
+  recentlyAttemptedSourceCount?: number;
+  lastFullSweepAt?: string | null;
+  publicationStateAt?: string | null;
 }
 
 export interface NewsSourceState {
@@ -89,6 +94,7 @@ export interface PublishRefreshInput extends LeaseIdentity {
 
 export interface PublishRefreshResult {
   published: boolean;
+  outcome?: "published" | "unchanged" | "partial";
   reportId: string | null;
   previousReportId: string | null;
   lastSuccessAt: string | null;
@@ -104,6 +110,7 @@ export interface NewsStore {
   readonly kind: NewsStoreKind;
   readonly persistent: boolean;
   readState(): Promise<NewsStoreState>;
+  readPublicationState?(): Promise<NewsStoreState>;
   syncSources(lease: LeaseIdentity, sources: SourceDefinition[], observedAt: string): Promise<void>;
   tryAcquireRefresh(input: AcquireRefreshInput): Promise<RefreshLease>;
   renewRefresh(lease: LeaseIdentity, leaseSeconds: number): Promise<boolean>;
@@ -119,6 +126,8 @@ export interface NewsStore {
   completeRefreshWithoutPublish(
     lease: LeaseIdentity,
     metrics: Record<string, unknown>,
+    sourceResults?: SourceCollectionResult[],
+    candidates?: RawNewsItem[],
   ): Promise<CompleteWithoutPublishResult>;
   markRefreshFailed(lease: LeaseIdentity, errorCode: string, metrics?: Record<string, unknown>): Promise<void>;
   rollbackLatest(reportId: string, reasonCode: string): Promise<PublishedNewsReport>;
@@ -126,12 +135,8 @@ export interface NewsStore {
 
 export function newestContentTimestamp(report: DailyNewsReport): string | null {
   const timestamps = [
-    ...report.items.map((item) => item.publishedAt),
-    ...report.stories.flatMap((story) => [
-      story.publishedAt,
-      story.updatedAt,
-      ...story.evidence.map((evidence) => evidence.publishedAt),
-    ]),
+    ...report.items.map((item) => item.updatedAt),
+    ...report.stories.map((story) => story.updatedAt),
   ]
     .filter((value): value is string => typeof value === "string" && Number.isFinite(Date.parse(value)))
     .sort((left, right) => Date.parse(right) - Date.parse(left));

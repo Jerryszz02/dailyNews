@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { selectLatestStories } from "../src/lib/curation";
 import type { RawNewsItem } from "../src/types";
 import { InMemoryNewsStore } from "./inMemoryNewsStore";
 import type { LeaseIdentity } from "./newsStore";
@@ -17,6 +18,39 @@ describe("NewsStore contract", () => {
 
     expect(candidates).toHaveLength(1);
     expect(candidates[0].summary).toBe("更新后的摘要");
+  });
+
+  it("preserves first discovery and a known update across rediscovery", async () => {
+    const now = new Date("2026-08-03T12:00:00.000Z");
+    const store = new InMemoryNewsStore(readBundledReport(), () => now);
+    const lease = await acquire(store, now);
+    const firstDiscoveredAt = "2026-08-01T12:00:00.000Z";
+    const updatedAt = "2026-08-03T10:00:00.000Z";
+    const original = {
+      ...rawCandidate(),
+      publishedAt: undefined,
+      discoveredAt: firstDiscoveredAt,
+      extractedAt: firstDiscoveredAt,
+      updatedAt,
+    };
+    const rediscovered = {
+      ...original,
+      summary: "再次抓取后的摘要仍需保留首次发现时间和已有更新时间。",
+      discoveredAt: now.toISOString(),
+      extractedAt: now.toISOString(),
+      updatedAt: undefined,
+    };
+
+    await store.upsertCandidates(lease, [original]);
+    await store.upsertCandidates(lease, [rediscovered]);
+    const [stored] = await store.readRecentCandidates("2026-08-01T00:00:00.000Z");
+
+    expect(stored).toMatchObject({
+      summary: rediscovered.summary,
+      discoveredAt: firstDiscoveredAt,
+      extractedAt: firstDiscoveredAt,
+      updatedAt,
+    });
   });
 
   it("allows only one concurrent lease owner", async () => {
@@ -107,6 +141,7 @@ describe("NewsStore contract", () => {
     const report = {
       ...initial,
       generatedAt: now.toISOString(),
+      latestStories: selectLatestStories(initial.stories, now),
       notes: [...initial.notes, "contract publish"],
     };
     const reportId = randomUUID();

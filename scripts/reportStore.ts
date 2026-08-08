@@ -1,13 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { defaultPreferences } from "../src/config/preferences.js";
+import { newsSources } from "../src/config/sources.js";
 import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot.js";
+import { selectLatestStories } from "../src/lib/curation.js";
 import { buildDailyReport } from "../src/lib/newsPipeline.js";
-import {
-  freshCoreWindowMinutes,
-  isStoryActiveWithin,
-  selectionBeatLimit,
-  selectionPublisherLimit,
-} from "../src/lib/curation.js";
+import { isAllowedSourceUrl, isApprovedSource } from "../src/lib/sourceAdmission.js";
+import { compactDailyNewsReport, hydrateWebDailyNewsReport } from "../src/lib/webReport.js";
 import type { DailyNewsReport, RankedNewsItem, RawNewsItem } from "../src/types";
 
 export interface NewsReportStore {
@@ -38,7 +36,7 @@ export function readBundledReport(filePath: URL | string = new URL("../public/da
 
   try {
     const stored = JSON.parse(readFileSync(filePath, "utf8")) as Partial<DailyNewsReport>;
-    if (isV2Report(stored)) return stored;
+    if (isV2Report(stored)) return normalizeV2Report(stored);
     if (Array.isArray(stored.items) && stored.items.length > 0) {
       const items = expandLegacyItems(stored.items);
       return buildDailyReport(items, defaultPreferences, reportDate(stored.generatedAt, items));
@@ -75,78 +73,174 @@ export function expandLegacyItems(items: RankedNewsItem[] | RawNewsItem[]): RawN
   });
 }
 
-export function passesPublishGate(report: DailyNewsReport, previous: DailyNewsReport | null = null): boolean {
-  const selectedCount = report.topStories.length + report.importantStories.length + report.watchlist.length;
-  const passesAbsoluteGate =
-    report.version === 2 &&
-    report.items.length > 0 &&
-    report.stories.length > 0 &&
-    report.sourceCount > 0 &&
-    selectedCount > 0 &&
-    report.quality.acceptedCandidateCount > 0 &&
-    report.quality.rejectedCandidateCount < report.quality.candidateCount &&
-    selectsFreshCoreWhenAvailable(report);
-  if (!passesAbsoluteGate || !previous) return passesAbsoluteGate;
-
-  const previousCoreCount = previous.topStories.length + previous.importantStories.length;
-  const currentCoreCount = report.topStories.length + report.importantStories.length;
-  const candidatePoolRatio = Math.min(
-    1,
-    report.quality.candidateCount / Math.max(1, previous.quality.candidateCount),
-  );
-  const minimumSelectedEventCount = Math.max(
-    10,
-    Math.floor(previous.quality.selectedEventCount * candidatePoolRatio * 0.6),
-  );
-  if (report.quality.selectedEventCount < minimumSelectedEventCount) return false;
-  if (currentCoreCount < Math.max(5, Math.floor(previousCoreCount * 0.5))) return false;
-  if (report.sourceCount < Math.max(3, Math.floor(previous.sourceCount * 0.5))) return false;
-
-  const protectedBeats = new Set(["china", "international", "policy", "finance", "technology", "ai"]);
-  const currentCoverage = new Map(report.coverage.beats.map((beat) => [beat.beat, beat]));
-  return previous.coverage.beats.every((beat) => {
-    if (!protectedBeats.has(beat.beat) || beat.storyCount === 0) return true;
-    return (currentCoverage.get(beat.beat)?.candidateCount ?? 0) > 0;
-  });
+export function passesPublishGate(report: DailyNewsReport, _previous: DailyNewsReport | null = null): boolean {
+  return validateReportInvariants(report).length === 0;
 }
 
-function selectsFreshCoreWhenAvailable(report: DailyNewsReport): boolean {
-  const generatedAt = new Date(report.generatedAt);
-  if (!Number.isFinite(generatedAt.getTime())) return false;
-  const freshCoreCandidates = report.stories.filter(
-    (story) =>
-      story.status === "confirmed" &&
-      (story.tier === "must_know" || story.tier === "important") &&
-      isStoryActiveWithin(story, generatedAt, freshCoreWindowMinutes),
+export function validateReportInvariants(report: DailyNewsReport): string[] {
+  const errors: string[] = [];
+  if (report.version !== 2) errors.push("unsupported_schema_version");
+  if (!Number.isFinite(Date.parse(report.generatedAt))) errors.push("invalid_generated_at");
+  if (!Array.isArray(report.items) || report.items.length === 0) errors.push("empty_items");
+  if (!Array.isArray(report.stories) || report.stories.length === 0) errors.push("empty_stories");
+  if (!Number.isFinite(report.sourceCount) || report.sourceCount < 1) errors.push("empty_sources");
+  if (report.quality.unmappedCandidateCount !== 0) errors.push("unmapped_candidates");
+
+  const approvedSourceById = new Map(
+    newsSources.filter(isApprovedSource).map((source) => [source.source_id, source]),
   );
-  if (freshCoreCandidates.length === 0) return true;
-  const selectedCore = [...report.topStories, ...report.importantStories];
-  const selectedIds = new Set(selectedCore.map((story) => story.id));
-  if (freshCoreCandidates.some((story) => selectedIds.has(story.id))) return true;
-
-  const publisherCounts = countBy(selectedCore, (story) => story.evidence[0]?.sourceId ?? "unknown");
-  const topBeatCounts = countBy(report.topStories, (story) => story.primaryBeat);
-  const importantBeatCounts = countBy(report.importantStories, (story) => story.primaryBeat);
-  return freshCoreCandidates.every((story) => {
-    const publisher = story.evidence[0]?.sourceId ?? "unknown";
-    if ((publisherCounts.get(publisher) ?? 0) >= selectionPublisherLimit) return true;
-    if (story.tier === "important") {
-      return (importantBeatCounts.get(story.primaryBeat) ?? 0) >= selectionBeatLimit;
-    }
-    return (
-      (topBeatCounts.get(story.primaryBeat) ?? 0) >= selectionBeatLimit &&
-      (importantBeatCounts.get(story.primaryBeat) ?? 0) >= selectionBeatLimit
-    );
-  });
-}
-
-function countBy<T>(values: T[], keyFor: (value: T) => string): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const value of values) {
-    const key = keyFor(value);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+  const itemIds = new Set<string>();
+  for (const item of report.items) {
+    if (!item.id || itemIds.has(item.id)) errors.push("duplicate_or_missing_item_id");
+    itemIds.add(item.id);
   }
-  return counts;
+  const storyIds = new Set<string>();
+  const storyItemIds = new Set<string>();
+  const candidateIds = new Set<string>();
+  const evidenceSourceIds = new Set<string>();
+  for (const story of report.stories) {
+    if (!story.id || storyIds.has(story.id)) errors.push("duplicate_or_missing_story_id");
+    storyIds.add(story.id);
+    if (!story.itemId || storyItemIds.has(story.itemId) || !itemIds.has(story.itemId)) {
+      errors.push("invalid_story_item_reference");
+    }
+    storyItemIds.add(story.itemId);
+    const startedAt = Date.parse(story.startedAt ?? "");
+    const updatedAt = Date.parse(story.updatedAt);
+    if (!Number.isFinite(startedAt) || !Number.isFinite(updatedAt) || startedAt > updatedAt) {
+      errors.push("invalid_story_time_relation");
+    }
+    if (!Array.isArray(story.evidence) || story.evidence.length === 0) {
+      errors.push("missing_story_evidence");
+      continue;
+    }
+    for (const evidence of story.evidence) {
+      if (!evidence.candidateId || candidateIds.has(evidence.candidateId)) {
+        errors.push("duplicate_or_missing_candidate_mapping");
+      }
+      candidateIds.add(evidence.candidateId);
+      const source = approvedSourceById.get(evidence.sourceId);
+      if (!source) {
+        errors.push("unapproved_evidence_source");
+      } else if (!isAllowedSourceUrl(source, evidence.url)) {
+        errors.push("evidence_url_out_of_scope");
+      }
+      evidenceSourceIds.add(evidence.sourceId);
+      if (!isHttpUrl(evidence.url)) errors.push("invalid_story_url");
+      if (evidence.publishedAt) {
+        const evidencePublishedAt = Date.parse(evidence.publishedAt);
+        if (!Number.isFinite(evidencePublishedAt) || evidencePublishedAt > updatedAt) {
+          errors.push("invalid_evidence_time_relation");
+        }
+      }
+    }
+  }
+  if (storyItemIds.size !== itemIds.size) errors.push("unmapped_report_item");
+  if (candidateIds.size !== report.quality.acceptedCandidateCount) errors.push("candidate_mapping_count_mismatch");
+  if (evidenceSourceIds.size !== report.sourceCount) errors.push("source_count_mismatch");
+
+  const selected = [
+    ...(report.latestStories ?? []),
+    ...report.topStories,
+    ...report.importantStories,
+    ...report.watchlist,
+  ];
+  if (selected.some((story) => !storyIds.has(story.id))) errors.push("dangling_story_reference");
+  const storyById = new Map(report.stories.map((story) => [story.id, story]));
+  if (selected.some((story) => JSON.stringify(storyById.get(story.id)) !== JSON.stringify(story))) {
+    errors.push("inconsistent_story_reference");
+  }
+  if (report.sections.some((section) => section.storyIds.some((storyId) => !storyIds.has(storyId)))) {
+    errors.push("dangling_section_reference");
+  }
+  const expectedLatestIds = selectLatestStories(report.stories, new Date(report.generatedAt)).map((story) => story.id);
+  const actualLatestIds = (report.latestStories ?? []).map((story) => story.id);
+  if (JSON.stringify(actualLatestIds) !== JSON.stringify(expectedLatestIds)) errors.push("incomplete_latest_stories");
+
+  try {
+    const hydrated = hydrateWebDailyNewsReport(compactDailyNewsReport(report));
+    if (JSON.stringify(visibleReportProjection(hydrated)) !== JSON.stringify(visibleReportProjection(report))) {
+      errors.push("compact_round_trip_mismatch");
+    }
+  } catch {
+    errors.push("compact_round_trip_failed");
+  }
+  return [...new Set(errors)];
+}
+
+function visibleReportProjection(report: DailyNewsReport): unknown {
+  return {
+    version: report.version,
+    generatedAt: report.generatedAt,
+    window: report.window,
+    stories: report.stories,
+    latestStoryIds: (report.latestStories ?? []).map((story) => story.id),
+    topStoryIds: report.topStories.map((story) => story.id),
+    importantStoryIds: report.importantStories.map((story) => story.id),
+    watchlistIds: report.watchlist.map((story) => story.id),
+    sections: report.sections,
+    coverage: report.coverage,
+    quality: report.quality,
+    sourceCount: report.sourceCount,
+    notes: report.notes,
+    refresh: report.refresh,
+  };
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    return /^https?:$/.test(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+}
+
+function normalizeV2Report(report: DailyNewsReport): DailyNewsReport {
+  const stories = report.stories.map((story) => ({
+    ...story,
+    startedAt: story.startedAt ?? earliestTimestamp([
+      story.publishedAt,
+      ...story.evidence.map((evidence) => evidence.publishedAt),
+      story.updatedAt,
+    ]),
+  }));
+  const storyById = new Map(stories.map((story) => [story.id, story]));
+  const storyByItemId = new Map(stories.map((story) => [story.itemId, story]));
+  const resolveStories = (selected: DailyNewsReport["stories"]) =>
+    selected.flatMap((story) => {
+      const normalized = storyById.get(story.id);
+      return normalized ? [normalized] : [];
+    });
+  const generatedAt = new Date(report.generatedAt);
+  const latestStories = selectLatestStories(stories, generatedAt);
+
+  return {
+    ...report,
+    items: report.items.map((item) => {
+      const story = storyByItemId.get(item.id);
+      const updatedAt = item.updatedAt ?? story?.updatedAt ?? item.publishedAt ?? item.extractedAt;
+      return {
+        ...item,
+        startedAt: item.startedAt ?? story?.startedAt ?? item.publishedAt ?? updatedAt,
+        updatedAt,
+      };
+    }),
+    stories,
+    latestStories,
+    topStories: resolveStories(report.topStories),
+    importantStories: resolveStories(report.importantStories),
+    watchlist: resolveStories(report.watchlist),
+    quality: {
+      ...report.quality,
+      latestEventCount: latestStories.length,
+      unmappedCandidateCount: report.quality.unmappedCandidateCount ?? 0,
+    },
+  };
+}
+
+function earliestTimestamp(values: Array<string | undefined>): string {
+  const timestamps = values.map((value) => Date.parse(value ?? "")).filter(Number.isFinite);
+  return new Date(Math.min(...timestamps)).toISOString();
 }
 
 function isV2Report(value: Partial<DailyNewsReport>): value is DailyNewsReport {
