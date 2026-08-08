@@ -14,7 +14,7 @@ restart identity;
 insert into daily_news.runtime_state (singleton_id) values (true);
 insert into daily_news.refresh_lease (singleton_id) values (true);
 
-select plan(98);
+select plan(118);
 
 select has_schema('daily_news', 'private daily_news schema exists');
 select has_table('daily_news', 'refresh_run', 'refresh_run table exists');
@@ -427,7 +427,7 @@ select is(
         "discoveredAt":"2026-07-13T00:01:00Z",
         "contentFingerprint":"candidate-hash-2",
         "qualityStatus":"accepted",
-        "payload":{"id":"raw-1","url":"https://example.com/news/1"}
+        "payload":{"id":"raw-1","url":"https://example.com/news/1","qualityStatus":"degraded"}
       }]'::jsonb
     )
   ),
@@ -462,6 +462,22 @@ select is(
   ),
   0,
   'versioned candidate RPC advances past the first page without repeating rows'
+);
+select is(
+  (
+    select candidate ->> 'qualityStatus'
+    from public.daily_news_read_candidates_v2('2026-07-10T00:00:00Z'::timestamptz, 1, 0)
+  ),
+  'degraded',
+  'versioned candidate RPC preserves the display disposition stored in the payload'
+);
+select is(
+  (
+    select candidate ->> 'qualityStatus'
+    from public.daily_news_read_candidates_v2('2026-07-10T00:00:00Z'::timestamptz, 1, 1)
+  ),
+  'display_ready',
+  'versioned candidate RPC maps legacy accepted rows to the display-ready disposition'
 );
 
 create temporary table test_first_publish as
@@ -644,10 +660,26 @@ select ok(
 select throws_ok(
   $sql$
     select *
-    from public.daily_news_publish_refresh(
+    from public.daily_news_finish_refresh_v2(
       '77777777-7777-4777-8777-777777777777'::uuid,
       (select run_id from test_stale_lease),
       (select fencing_token from test_stale_lease),
+      '[{
+        "sourceId":"source-a",
+        "status":"success",
+        "attemptedAt":"2026-07-13T01:00:01Z",
+        "discoveredCount":1,
+        "acceptedCount":1
+      }]'::jsonb,
+      '[{
+        "candidateId":"99999999-1111-4111-8111-111111111111",
+        "sourceId":"source-a",
+        "canonicalUrl":"https://example.com/news/stale-worker",
+        "title":"Stale worker candidate",
+        "discoveredAt":"2026-07-13T01:00:01Z",
+        "qualityStatus":"accepted",
+        "payload":{"id":"stale-worker","qualityStatus":"display_ready"}
+      }]'::jsonb,
       '99999999-9999-4999-8999-999999999999'::uuid,
       '2026-07-13T01:00:01Z'::timestamptz,
       '2',
@@ -656,12 +688,99 @@ select throws_ok(
       'stale-input',
       '2026-07-13T01:00:01Z'::timestamptz,
       null,
-      '{}'::jsonb
+      '{}'::jsonb,
+      'published'
     )
   $sql$,
   '42501',
   'refresh lease is missing, expired, or fenced',
-  'stale worker cannot publish after fencing takeover'
+  'stale worker cannot execute the versioned atomic finish after fencing takeover'
+);
+select is(
+  (
+    select count(*)::integer
+    from daily_news.article_candidate
+    where canonical_url = 'https://example.com/news/stale-worker'
+  ),
+  0,
+  'stale versioned finish leaves no candidate writes'
+);
+select is(
+  (
+    select count(*)::integer
+    from daily_news.report_snapshot
+    where report_id = '99999999-9999-4999-8999-999999999999'::uuid
+  ),
+  0,
+  'stale versioned finish leaves no snapshot writes'
+);
+
+create temporary table test_atomic_rollback_baseline as
+select last_attempt_at
+from daily_news.source_state
+where source_id = 'source-a';
+
+select throws_ok(
+  $sql$
+    select *
+    from public.daily_news_finish_refresh_v2(
+      '88888888-8888-4888-8888-888888888888'::uuid,
+      (select run_id from test_takeover_lease),
+      (select fencing_token from test_takeover_lease),
+      '[{
+        "sourceId":"source-a",
+        "status":"success",
+        "attemptedAt":"2026-07-13T01:00:02Z",
+        "discoveredCount":1,
+        "acceptedCount":1
+      }]'::jsonb,
+      '[{
+        "candidateId":"99999999-2222-4222-8222-222222222222",
+        "sourceId":"source-a",
+        "canonicalUrl":"https://example.com/news/rolled-back",
+        "title":"Rolled back candidate",
+        "discoveredAt":"2026-07-13T01:00:02Z",
+        "qualityStatus":"accepted",
+        "payload":{"id":"rolled-back","qualityStatus":"display_ready"}
+      }]'::jsonb,
+      '99999999-2222-4222-8222-999999999999'::uuid,
+      '2026-07-13T01:00:02Z'::timestamptz,
+      '2',
+      '{"generatedAt":"2026-07-13T01:00:02Z","items":[]}'::jsonb,
+      'short',
+      'rollback-input',
+      '2026-07-13T01:00:02Z'::timestamptz,
+      null,
+      '{}'::jsonb,
+      'published'
+    )
+  $sql$,
+  '22023',
+  'content_hash must be 16..128 characters',
+  'versioned atomic finish rolls back earlier writes when publication validation fails'
+);
+select is(
+  (select last_attempt_at from daily_news.source_state where source_id = 'source-a'),
+  (select last_attempt_at from test_atomic_rollback_baseline),
+  'failed versioned finish rolls back its source-state update'
+);
+select is(
+  (
+    select count(*)::integer
+    from daily_news.article_candidate
+    where canonical_url = 'https://example.com/news/rolled-back'
+  ),
+  0,
+  'failed versioned finish rolls back its candidate insert'
+);
+select is(
+  (
+    select count(*)::integer
+    from daily_news.report_snapshot
+    where report_id = '99999999-2222-4222-8222-999999999999'::uuid
+  ),
+  0,
+  'failed versioned finish does not create a snapshot'
 );
 select ok(
   (
@@ -787,6 +906,9 @@ select is(
   'published',
   'the republishing refresh run is auditable as published'
 );
+create temporary table test_pre_rollback_state as
+select publication_state_at
+from public.daily_news_read_latest();
 select is(
   (
     select report_id
@@ -808,14 +930,127 @@ select is(
   3,
   'rollback preserves all three immutable snapshots for audit'
 );
+select ok(
+  (select publication_state_at from public.daily_news_read_latest())
+    > (select publication_state_at from test_pre_rollback_state),
+  'rollback advances the authoritative publication state timestamp'
+);
+select is(
+  (select last_outcome_code from public.daily_news_read_latest()),
+  'failed',
+  'rollback exposes a failed terminal outcome'
+);
+select is(
+  (select last_error_code from public.daily_news_read_latest()),
+  'rollback:test_rollback',
+  'rollback exposes its normalized error code'
+);
+
+create temporary table test_partial_publish_lease as
+select *
+from public.daily_news_try_acquire_refresh(
+  '14141414-1414-4414-8414-141414141414'::uuid,
+  'cron:2026-07-13T02:00Z',
+  'cron',
+  '2026-07-13T02:00:00Z'::timestamptz,
+  120
+);
+select ok((select acquired from test_partial_publish_lease), 'partial publisher acquires a refresh lease');
+
+create temporary table test_partial_publish as
+select *
+from public.daily_news_finish_refresh_v2(
+  '14141414-1414-4414-8414-141414141414'::uuid,
+  (select run_id from test_partial_publish_lease),
+  (select fencing_token from test_partial_publish_lease),
+  '[{
+    "sourceId":"source-a",
+    "status":"failed",
+    "attemptedAt":"2026-07-13T02:00:00Z",
+    "nextDueAt":"2026-07-13T02:30:00Z",
+    "discoveredCount":1,
+    "acceptedCount":1,
+    "errorCode":"source_partial"
+  }]'::jsonb,
+  '[{
+    "candidateId":"f1f1f1f1-f1f1-41f1-81f1-f1f1f1f1f1f1",
+    "sourceId":"source-a",
+    "canonicalUrl":"https://example.com/news/partial-published",
+    "title":"Partial published candidate",
+    "summary":"Visible candidate from a partially successful run",
+    "publishedAt":"2026-07-13T01:59:00Z",
+    "updatedAt":"2026-07-13T01:59:30Z",
+    "discoveredAt":"2026-07-13T02:00:00Z",
+    "language":"en-US",
+    "qualityStatus":"accepted",
+    "rejectionReasons":[],
+    "payload":{"id":"partial-published","qualityStatus":"degraded"}
+  }]'::jsonb,
+  'f0f0f0f0-f0f0-40f0-80f0-f0f0f0f0f0f0'::uuid,
+  '2026-07-13T02:01:00Z'::timestamptz,
+  '2',
+  '{"generatedAt":"2026-07-13T02:01:00Z","items":[{"id":"story-partial"}]}'::jsonb,
+  repeat('d', 64),
+  'partial-input',
+  '2026-07-13T02:01:00Z'::timestamptz,
+  '2026-07-13T01:59:30Z'::timestamptz,
+  '{"failedSources":1}'::jsonb,
+  'partial'
+);
+select ok(
+  (select published and outcome = 'partial' from test_partial_publish),
+  'partial finish publishes its new visible content with a partial outcome'
+);
+select is(
+  (select last_attempt_at from daily_news.source_state where source_id = 'source-a'),
+  '2026-07-13T02:00:00Z'::timestamptz,
+  'partial publishing atomically records source outcomes'
+);
+select is(
+  (
+    select count(*)::integer
+    from daily_news.article_candidate
+    where candidate_id = 'f1f1f1f1-f1f1-41f1-81f1-f1f1f1f1f1f1'
+  ),
+  1,
+  'partial publishing atomically stores candidates'
+);
+select ok(
+  (
+    select supersedes_report_id = '33333333-3333-4333-8333-333333333333'::uuid
+      and content_hash = repeat('d', 64)
+    from daily_news.report_snapshot
+    where report_id = 'f0f0f0f0-f0f0-40f0-80f0-f0f0f0f0f0f0'::uuid
+  ),
+  'partial publishing atomically creates the immutable snapshot chain entry'
+);
+select is(
+  (select report_id from public.daily_news_read_latest()),
+  'f0f0f0f0-f0f0-40f0-80f0-f0f0f0f0f0f0'::uuid,
+  'partial publishing atomically advances the latest pointer'
+);
+select ok(
+  (
+    select status = 'published'
+      and run_metrics #>> '{terminalResult,outcome}' = 'partial'
+    from daily_news.refresh_run
+    where run_id = (select run_id from test_partial_publish_lease)
+  ),
+  'partial publishing records the run terminal outcome'
+);
+select is(
+  (select last_outcome_code from daily_news.runtime_state where singleton_id),
+  'partial',
+  'partial publishing updates the runtime terminal outcome'
+);
 
 create temporary table test_partial_lease as
 select *
 from public.daily_news_try_acquire_refresh(
   '12121212-1212-4212-8212-121212121212'::uuid,
-  'cron:2026-07-13T02:00Z',
+  'cron:2026-07-13T02:05Z',
   'cron',
-  '2026-07-13T02:00:00Z'::timestamptz,
+  '2026-07-13T02:05:00Z'::timestamptz,
   120
 );
 create temporary table test_partial_finish as
@@ -827,8 +1062,8 @@ from public.daily_news_finish_without_publish_v2(
   '[{
     "sourceId":"source-a",
     "status":"failed",
-    "attemptedAt":"2026-07-13T02:00:00Z",
-    "nextDueAt":"2026-07-13T02:30:00Z",
+    "attemptedAt":"2026-07-13T02:05:00Z",
+    "nextDueAt":"2026-07-13T02:35:00Z",
     "discoveredCount":1,
     "acceptedCount":1,
     "errorCode":"source_partial"
@@ -839,9 +1074,9 @@ from public.daily_news_finish_without_publish_v2(
     "canonicalUrl":"https://source-a.example/partial-story",
     "title":"Partial run candidate",
     "summary":"Visible candidate from a partial run",
-    "publishedAt":"2026-07-13T01:59:00Z",
-    "updatedAt":"2026-07-13T01:59:00Z",
-    "discoveredAt":"2026-07-13T02:00:00Z",
+    "publishedAt":"2026-07-13T02:04:00Z",
+    "updatedAt":"2026-07-13T02:04:00Z",
+    "discoveredAt":"2026-07-13T02:05:00Z",
     "language":"en-US",
     "qualityStatus":"accepted",
     "rejectionReasons":[],
@@ -853,7 +1088,7 @@ from public.daily_news_finish_without_publish_v2(
 select ok((select completed from test_partial_finish), 'partial refresh completes successfully');
 select is(
   (select last_attempt_at from daily_news.source_state where source_id = 'source-a'),
-  '2026-07-13T02:00:00Z'::timestamptz,
+  '2026-07-13T02:05:00Z'::timestamptz,
   'partial finish atomically records source outcomes'
 );
 select is(
@@ -868,7 +1103,7 @@ select is(
 );
 select is(
   (select count(*)::integer from daily_news.report_snapshot),
-  3,
+  4,
   'partial refresh without content changes preserves immutable snapshots'
 );
 select is(
@@ -892,6 +1127,11 @@ select is(
   'legacy completed reconciliation does not borrow the global success time'
 );
 select is(
+  (select outcome from public.daily_news_read_refresh_result((select run_id from test_quiet_lease))),
+  'unchanged',
+  'legacy completed reconciliation maps a missing terminal outcome to unchanged'
+);
+select is(
   (select previous_report_id from public.daily_news_read_refresh_result((select run_id from test_second_publish_lease))),
   '33333333-3333-4333-8333-333333333333'::uuid,
   'legacy published reconciliation derives its previous report from its immutable snapshot'
@@ -909,9 +1149,9 @@ create temporary table test_error_preserving_lease as
 select *
 from public.daily_news_try_acquire_refresh_v2(
   '13131313-1313-4313-8313-131313131313'::uuid,
-  'cron:2026-07-13T02:05Z',
+  'cron:2026-07-13T02:10Z',
   'cron',
-  '2026-07-13T02:05:00Z'::timestamptz,
+  '2026-07-13T02:10:00Z'::timestamptz,
   120
 );
 select ok((select acquired from test_error_preserving_lease), 'versioned lease acquire succeeds');

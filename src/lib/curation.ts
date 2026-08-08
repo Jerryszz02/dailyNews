@@ -191,8 +191,14 @@ function candidateRejectionReason(item: RawNewsItem): string | undefined {
   const source = sourceById.get(item.sourceId);
   if (!source || !isApprovedSource(source)) return "unapproved_source";
   if (!isAllowedSourceUrl(source, item.url)) return "source_url_out_of_scope";
-  if (/(广告|推广|优惠|折扣|导购|sponsored|advertorial)/i.test(`${item.title} ${item.summary}`)) return "promotional";
+  if (isExplicitPromotion(`${item.title} ${item.summary}`)) return "promotional";
   return undefined;
+}
+
+function isExplicitPromotion(value: string): boolean {
+  return /\b(sponsored|advertorial)\b/i.test(value) ||
+    /(赞助内容|商业推广|广告合作|广告链接|推广链接|优惠券|折扣码|购物导购)/.test(value) ||
+    /(立即|点击|扫码|限时|下单|购买|领取|抢购).{0,12}(优惠|折扣|购买|下单|领取|咨询|活动)/.test(value);
 }
 
 function isNavigationUrl(url: URL): boolean {
@@ -221,7 +227,7 @@ function toStoryCard(item: RankedNewsItem, rawItems: RawNewsItem[], now: Date): 
   const entities = extractEntities(item.title);
 
   return {
-    id: stableEventId(item, entities),
+    id: stableEventId(item, evidenceItems),
     itemId: item.id,
     title: item.title,
     whatHappened: item.summary.trim() || "摘要待补全，请以来源原文为准。",
@@ -379,15 +385,42 @@ function nextWatch(eventType: EventType, status: StoryStatus): string {
   return "关注事件是否出现实质性后续进展。";
 }
 
-function stableEventId(item: RankedNewsItem, entities: string[]): string {
-  const day = item.startedAt.slice(0, 10);
-  const identity = `${item.primaryCategory}|${day}|${entities.slice(0, 5).join("|") || normalizeText(item.title)}`;
+function stableEventId(item: RankedNewsItem, evidenceItems: RawNewsItem[]): string {
+  const anchorUrl = [...evidenceItems]
+    .sort((left, right) => {
+      const timeDelta = candidateAnchorTimestamp(left) - candidateAnchorTimestamp(right);
+      return timeDelta || canonicalEventUrl(left.url).localeCompare(canonicalEventUrl(right.url));
+    })[0]?.url ?? item.url;
+  const identity = `${item.primaryCategory}|${canonicalEventUrl(anchorUrl)}`;
   let hash = 2166136261;
   for (let index = 0; index < identity.length; index += 1) {
     hash ^= identity.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
   return `event-${(hash >>> 0).toString(36)}`;
+}
+
+function candidateAnchorTimestamp(item: RawNewsItem): number {
+  for (const value of [item.publishedAt, item.discoveredAt, item.extractedAt]) {
+    const timestamp = Date.parse(value ?? "");
+    if (Number.isFinite(timestamp)) return timestamp;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function canonicalEventUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_.+|fbclid|gclid)$/i.test(key)) url.searchParams.delete(key);
+    }
+    url.searchParams.sort();
+    url.hostname = url.hostname.toLowerCase();
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return value;
+  }
 }
 
 interface FreshnessStage {

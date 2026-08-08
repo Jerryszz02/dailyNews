@@ -1,6 +1,7 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { evaluatePublishedContentFreshness } from "../src/lib/contentFreshness";
+import { pathToFileURL } from "node:url";
+import type { DailyNewsReport } from "../src/types";
 import { generateDailyNewsReport } from "./newsService";
 import { passesPublishGate, readBundledReport } from "./reportStore";
 
@@ -9,11 +10,8 @@ const temporaryOutputPath = `${outputPath}.tmp`;
 
 async function main() {
   const { report, mode, rawItemCount, usedLiveData } = await generateDailyNewsReport();
-  if (!usedLiveData) throw new Error("Live collection returned no publishable items; kept the existing report.");
-  if (!evaluatePublishedContentFreshness(report.items, new Date(report.generatedAt)).publishable) {
-    throw new Error("Live collection contains no news published within 120 minutes; kept the existing report.");
-  }
-  if (!passesPublishGate(report, readBundledReport())) throw new Error("Generated report did not pass the publish gate.");
+  const publicationError = generatedReportPublicationError(report, usedLiveData, readBundledReport());
+  if (publicationError) throw new Error(publicationError);
 
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(temporaryOutputPath, JSON.stringify(report, null, 2), "utf8");
@@ -23,8 +21,20 @@ async function main() {
   console.log(`Wrote ${outputPath}`);
 }
 
-main().catch((error) => {
-  void rm(temporaryOutputPath, { force: true });
-  console.error(error);
-  process.exitCode = 1;
-});
+export function generatedReportPublicationError(
+  report: DailyNewsReport,
+  usedLiveData: boolean,
+  previousReport: DailyNewsReport | null,
+): string | null {
+  if (!usedLiveData) return "Live collection returned no publishable items; kept the existing report.";
+  if (!passesPublishGate(report, previousReport)) return "Generated report did not pass the publish gate.";
+  return null;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  main().catch((error) => {
+    void rm(temporaryOutputPath, { force: true });
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

@@ -299,7 +299,7 @@ export function App() {
             {loadError ? <div className="page-note">{loadError}</div> : null}
 
             {activeView === "preferred" ? (
-              <BriefingHome preferences={preferences} query={searchQuery} report={report} />
+              <BriefingHome query={searchQuery} report={report} />
             ) : (
               <>
                 <section className="story-section category-story-section" aria-label={`${categoryLabel(activeView)}事件`}>
@@ -392,18 +392,12 @@ function FreshnessBanner({ freshness }: { freshness: ReportFreshnessView }) {
   );
 }
 
-function BriefingHome({ report, preferences, query }: { report: DailyNewsReport; preferences: UserPreferences; query: string }) {
+function BriefingHome({ report, query }: { report: DailyNewsReport; query: string }) {
   const [latestVisibleCount, setLatestVisibleCount] = useState(initialLatestVisibleCount);
-  const itemOrder = new Map(rankNews(report.items, preferences).map((item, index) => [item.id, index]));
   const latestStories = filterStories(resolveLatestStories(report), query);
   const visibleLatestStories = latestStories.slice(0, latestVisibleCount);
   const topStories = filterStories(report.topStories, query);
-  const importantStories = filterStories(
-    [...report.importantStories].sort(
-      (left, right) => (itemOrder.get(left.itemId) ?? Number.MAX_SAFE_INTEGER) - (itemOrder.get(right.itemId) ?? Number.MAX_SAFE_INTEGER),
-    ),
-    query,
-  );
+  const importantStories = selectBriefingImportantStories(report, query);
   const watchlist = filterStories(report.watchlist, query);
   const visibleStoryCount = latestStories.length + topStories.length + importantStories.length + watchlist.length;
 
@@ -478,7 +472,7 @@ function BriefingHome({ report, preferences, query }: { report: DailyNewsReport;
               <p className="eyebrow">值得掌握</p>
               <h2 id="important-title">重要进展</h2>
             </div>
-            <span>偏好只调整本层顺序</span>
+            <span>按报告精选顺序展示</span>
           </div>
           <div className="story-grid">
             {importantStories.map((story) => <EventCard key={story.id} story={story} variant="compact" />)}
@@ -808,6 +802,13 @@ function filterStories(stories: StoryCard[], query: string): StoryCard[] {
       `${story.title} ${story.whatHappened} ${story.whyItMatters} ${story.sourceNames.join(" ")} ${story.primaryBeat} ${story.eventType}`,
     ).includes(normalized),
   );
+}
+
+export function selectBriefingImportantStories(
+  report: Pick<DailyNewsReport, "importantStories">,
+  query: string,
+): StoryCard[] {
+  return filterStories(report.importantStories, query);
 }
 
 function viewTitle(view: ActiveView): string {

@@ -136,7 +136,14 @@ export async function runNewsRefresh(
     });
     plannedSourceIds = selectedSources.map((source) => source.source_id);
     const windowFrom = new Date(scheduledAt.getTime() - defaultMaxNewsAgeHours * 60 * 60_000).toISOString();
-    const [collection, storedCandidates] = await Promise.all([
+    const candidateWindowPromise = dependencies.store.readRecentCandidates(windowFrom)
+      .then((candidates) => ({ candidates, complete: true, errorCode: null as string | null }))
+      .catch((error) => ({
+        candidates: state.latest ? candidatesFromLastKnownGood(state.latest.report, configuredSources) : [],
+        complete: false,
+        errorCode: normalizeRefreshError(error),
+      }));
+    const [collection, candidateWindow] = await Promise.all([
       selectedSources.length > 0
         ? collect({
             sources: selectedSources,
@@ -152,8 +159,9 @@ export async function runNewsRefresh(
             mode: "No live data" as const,
             sourceOutcomes: [],
           }),
-      dependencies.store.readRecentCandidates(windowFrom),
+      candidateWindowPromise,
     ]);
+    const storedCandidates = candidateWindow.candidates;
     discoveredCount = collection.items.length;
     const outcomeSourceIds = new Set(collection.sourceOutcomes.map((outcome) => outcome.sourceId));
     missingSourceOutcomeIds = plannedSourceIds.filter((sourceId) => !outcomeSourceIds.has(sourceId));
@@ -164,7 +172,7 @@ export async function runNewsRefresh(
 
     const sourceResults = buildSourceResults(selectedSources, collection, scheduledAt, state.sources);
     selectedSourceIds = sourceResults.map((result) => result.sourceId);
-    const candidateWindowComplete = true;
+    const candidateWindowComplete = candidateWindow.complete;
     const partialRefresh =
       !candidateWindowComplete ||
       skippedSourceIds.length > 0 ||
@@ -200,6 +208,7 @@ export async function runNewsRefresh(
       candidate_count: candidateCount,
       candidate_window_limit: defaultRefreshCandidateLimit,
       candidate_window_complete: candidateWindowComplete,
+      candidate_window_error_code: candidateWindow.errorCode,
       translation_repaired_count: translationRepairs.length,
       outcome: partialRefresh ? "partial" : "published",
     };
@@ -378,6 +387,39 @@ export function mergeRefreshCandidates(
     .sort((left, right) =>
       candidateTimestamp(right) - candidateTimestamp(left) ||
       candidateKey(left).localeCompare(candidateKey(right)));
+}
+
+function candidatesFromLastKnownGood(report: DailyNewsReport, configuredSources: NewsSource[]): RawNewsItem[] {
+  const itemById = new Map(report.items.map((item) => [item.id, item]));
+  const sourceById = new Map(configuredSources.map((source) => [source.source_id, source]));
+  return report.stories.flatMap((story) => {
+    const item = itemById.get(story.itemId);
+    return story.evidence.map((evidence) => {
+      const source = sourceById.get(evidence.sourceId);
+      return {
+        id: evidence.candidateId,
+        title: evidence.title || story.title,
+        url: evidence.url,
+        sourceId: evidence.sourceId,
+        sourceName: evidence.sourceName,
+        language: source?.language ?? item?.language ?? "zh-CN",
+        region: source?.countryOrRegion ?? item?.region ?? story.scope,
+        categories: item?.categories?.length ? item.categories : [story.primaryBeat],
+        primaryCategory: item?.primaryCategory ?? story.primaryBeat,
+        summary: story.whatHappened,
+        publishedAt: evidence.publishedAt ?? story.publishedAt,
+        updatedAt: story.updatedAt,
+        discoveredAt: story.startedAt ?? evidence.publishedAt ?? story.updatedAt,
+        extractedAt: story.updatedAt,
+        mayHavePaywall: item?.mayHavePaywall ?? source?.mayHavePaywall,
+        qualityStatus: item?.qualityStatus ?? "display_ready",
+        rejectionReasons: item?.rejectionReasons,
+        translationStatus: story.translationStatus ?? item?.translationStatus,
+        summaryStatus: story.summaryStatus ?? item?.summaryStatus,
+        timeStatus: story.timeStatus ?? item?.timeStatus,
+      } satisfies RawNewsItem;
+    });
+  });
 }
 
 function uniqueCandidateUpdates(candidates: RawNewsItem[]): RawNewsItem[] {

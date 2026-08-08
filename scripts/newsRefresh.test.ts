@@ -235,6 +235,40 @@ describe("durable news refresh", () => {
     expect(completedWrites).toBe(2);
   });
 
+  it("publishes add-only from last-known-good when the candidate window cannot be read", async () => {
+    const initial = readBundledReport();
+    const now = new Date(initial.generatedAt);
+    const store = new InMemoryNewsStore(initial, () => now);
+    const template = expandLegacyItems(initial.items)[0]!;
+    const source = newsSources.find((candidate) => candidate.source_id === template.sourceId)!;
+    const liveUrl = new URL(template.url);
+    liveUrl.pathname = `${liveUrl.pathname.replace(/\/$/, "")}/candidate-window-recovery`;
+    liveUrl.search = "";
+    const liveCandidate: RawNewsItem = {
+      ...template,
+      id: `${template.id}-candidate-window-recovery`,
+      title: "候选池读取失败时新发现的独立实时事件仍然必须发布",
+      summary: "本轮采集发现了一条合法新事件，系统应保留上一份报告的全部内容并追加该事件。",
+      url: liveUrl.toString(),
+      publishedAt: new Date(now.getTime() - 60_000).toISOString(),
+      discoveredAt: now.toISOString(),
+      extractedAt: now.toISOString(),
+    };
+    vi.spyOn(store, "readRecentCandidates").mockRejectedValue(new Error("candidate_window_unavailable"));
+
+    const result = await runNewsRefresh(
+      { trigger: "cron", scheduledAt: now, idempotencyKey: "refresh:candidate-window-add-only", maxSources: 1 },
+      { store, now: () => now, sources: [source], collect: collection([liveCandidate]) },
+    );
+
+    const latest = (await store.readState()).latest?.report;
+    const previousUrls = new Set(initial.stories.flatMap((story) => story.evidence.map((evidence) => evidence.url)));
+    const currentUrls = new Set(latest?.stories.flatMap((story) => story.evidence.map((evidence) => evidence.url)) ?? []);
+    expect(result).toMatchObject({ status: "partial", errorCode: null });
+    expect(currentUrls.has(liveCandidate.url)).toBe(true);
+    expect([...previousUrls].every((url) => currentUrls.has(url))).toBe(true);
+  });
+
   it("uses the atomic store commit for a changed Supabase-style refresh", async () => {
     const initial = readBundledReport();
     const now = new Date("2026-07-23T09:15:00.000Z");
@@ -288,6 +322,52 @@ describe("durable news refresh", () => {
     expect(result.status).toBe("published");
     expect(result.reportId).not.toBeNull();
     expect((await store.readState()).latest?.report.generatedAt).toBe(now.toISOString());
+  });
+
+  it("publishes independent same-title events without story ID collisions", async () => {
+    const initial = readBundledReport();
+    const now = new Date("2026-08-03T03:00:00.000Z");
+    const store = new InMemoryNewsStore(initial, () => now);
+    const template = expandLegacyItems(initial.items).find((item) => item.sourceId === "xinhua")!;
+    const sameTitleCandidates: RawNewsItem[] = [
+      {
+        ...template,
+        id: "same-title-refresh-one",
+        title: "国务院新闻发布会",
+        url: "https://www.news.cn/politics/same-title-refresh-one.html",
+        summary: "发布会介绍财政预算执行、地方债安排、专项资金投向和下一阶段公开计划。",
+        publishedAt: "2026-08-03T01:00:00.000Z",
+        discoveredAt: "2026-08-03T01:05:00.000Z",
+        extractedAt: "2026-08-03T01:05:00.000Z",
+      },
+      {
+        ...template,
+        id: "same-title-refresh-two",
+        title: "国务院新闻发布会",
+        url: "https://www.news.cn/politics/same-title-refresh-two.html",
+        summary: "发布会介绍防汛救灾部署、应急队伍调度、受灾群众安置和天气风险预警。",
+        publishedAt: "2026-08-03T02:00:00.000Z",
+        discoveredAt: "2026-08-03T02:05:00.000Z",
+        extractedAt: "2026-08-03T02:05:00.000Z",
+      },
+    ];
+
+    const result = await runNewsRefresh(
+      { trigger: "cron", scheduledAt: now, idempotencyKey: "refresh:same-title-events", maxSources: 1 },
+      {
+        store,
+        now: () => now,
+        sources: [newsSources.find((source) => source.source_id === "xinhua")!],
+        collect: collection(sameTitleCandidates),
+      },
+    );
+
+    const matchingStories = (await store.readState()).latest?.report.stories.filter((story) =>
+      story.evidence.some((evidence) => sameTitleCandidates.some((candidate) => candidate.url === evidence.url)),
+    ) ?? [];
+    expect(result).toMatchObject({ status: "published", errorCode: null });
+    expect(matchingStories).toHaveLength(2);
+    expect(new Set(matchingStories.map((story) => story.id)).size).toBe(2);
   });
 
   it("keeps report identity and generatedAt when a successful scan finds no new content", async () => {

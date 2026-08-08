@@ -392,7 +392,10 @@ as $$
       refresh.run_metrics #>> '{terminalResult,outcome}',
       refresh.run_metrics ->> 'publishOutcome',
       refresh.run_metrics ->> 'outcome',
-      refresh.status
+      case
+        when refresh.status = 'completed' then 'unchanged'
+        else refresh.status
+      end
     ),
     coalesce(
       nullif(refresh.run_metrics #>> '{terminalResult,publishedReportId}', '')::uuid,
@@ -447,7 +450,11 @@ begin
       'discoveredAt', stored.discovered_at,
       'language', stored.language,
       'contentFingerprint', stored.content_fingerprint,
-      'qualityStatus', stored.quality_status,
+      'qualityStatus', case
+        when stored.payload ->> 'qualityStatus' in ('display_ready', 'degraded')
+          then stored.payload ->> 'qualityStatus'
+        else 'display_ready'
+      end,
       'rejectionReasons', to_jsonb(stored.rejection_reasons)
     )
     from daily_news.article_candidate as stored

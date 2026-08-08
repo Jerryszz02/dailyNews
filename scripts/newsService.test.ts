@@ -238,7 +238,10 @@ describe("collectNewsCandidates source outcomes", () => {
       { sourceId: "empty", status: "empty", discoveredCount: 0, errorCode: null },
       { sourceId: "failed", status: "failed", discoveredCount: 0, errorCode: "source_rate_limited" },
     ]);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(11);
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(expect.arrayContaining(
+      fetchedItems.map((item) => item.url),
+    ));
   });
 
   it("marks a source failed only when both keyless and direct attempts fail", async () => {
@@ -343,7 +346,7 @@ describe("collectNewsCandidates source outcomes", () => {
     }
   });
 
-  it("does not turn a keyless processing deadline plus direct failure into an empty source", async () => {
+  it("does not turn a validated keyless degraded item plus direct failure into an empty source", async () => {
     const source = testSource("keyless-deadline", "Keyless 后处理超时源");
     firecrawlSearchMock.mockResolvedValue({
       news: [
@@ -359,14 +362,14 @@ describe("collectNewsCandidates source outcomes", () => {
       if (String(input) === source.sections[0].url) {
         return Promise.resolve({ ok: false, status: 503, text: async () => "" } as Response);
       }
-      return new Promise<Response>(() => undefined);
+      return Promise.resolve(htmlResponse("<html><body></body></html>", String(input)));
     }));
 
     const result = await collectNewsCandidates({
       sources: [source],
       limitPerSection: 1,
       now: new Date("2026-07-18T07:00:00.000Z"),
-      collectionBudgetMs: 60,
+      collectionBudgetMs: 3_000,
       repairSummariesWithModel: false,
     });
 
@@ -384,6 +387,179 @@ describe("collectNewsCandidates source outcomes", () => {
         errorCode: "summary_missing",
       },
     ]);
+  });
+
+  it("rejects a Firecrawl result whose final redirect leaves the approved source domain", async () => {
+    const source = testSource("keyless-redirect", "Keyless 越域源");
+    const articleUrl = "https://keyless-redirect.example.com/news/article.html";
+    firecrawlSearchMock.mockResolvedValue({
+      news: [{
+        title: "已有日期和中文摘要的 Keyless 新闻仍需校验最终地址",
+        description: "即使结果字段完整，也不能跳过最终重定向域名校验。",
+        url: articleUrl,
+        publishedDate: "2026-08-03T00:00:00.000Z",
+      }],
+    });
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      if (String(input) === articleUrl) return Promise.resolve(redirectResponse("https://tracking.invalid/landing"));
+      return Promise.resolve({ ok: false, status: 503, url: String(input), text: async () => "" } as Response);
+    }));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      limitPerSection: 1,
+      now: new Date("2026-08-03T01:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toEqual([]);
+    expect(result.sourceOutcomes).toEqual([{
+      sourceId: source.source_id,
+      status: "failed",
+      discoveredCount: 0,
+      errorCode: "source_url_out_of_scope",
+    }]);
+  });
+
+  it("degrades a future publication date to discovered time instead of dropping the item", async () => {
+    const source = testSource("future-date", "未来日期源");
+    const articleUrl = "https://future-date.example.com/news/article.html";
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(htmlResponse(`
+          <rss><channel><item>
+            <title>发布时间异常但内容有效的新闻候选</title>
+            <link>${articleUrl}</link>
+            <description>候选包含明确主体、事实和后续安排，不应因为未来时间被删除。</description>
+            <pubDate>2099-01-01T00:00:00.000Z</pubDate>
+          </item></channel></rss>
+        `, url));
+      }
+      return Promise.resolve(htmlResponse(
+        '<meta property="article:published_time" content="2099-01-01T00:00:00.000Z">',
+        articleUrl,
+      ));
+    }));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-08-03T01:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      url: articleUrl,
+      publishedAt: undefined,
+      timeStatus: "estimated",
+      qualityStatus: "degraded",
+      rejectionReasons: ["published_at_missing"],
+    });
+    expect(result.sourceOutcomes).toEqual([{
+      sourceId: source.source_id,
+      status: "partial",
+      discoveredCount: 1,
+      errorCode: "published_at_missing",
+    }]);
+  });
+
+  it("bounds all direct work for one source without blocking a valid sibling", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-03T01:00:00.000Z"));
+    try {
+      const slow = testSource("slow-direct", "慢速直连源");
+      slow.sections.push({ ...slow.sections[0], label: "第二栏目", url: "https://slow-direct.example.com/second" });
+      const fast = testSource("fast-direct", "快速直连源");
+      const fastArticleUrl = "https://fast-direct.example.com/news/article.html";
+      const fetchMock = vi.fn((input: string | URL | Request) => {
+        const url = String(input);
+        if (url.startsWith("https://slow-direct.example.com/")) return new Promise<Response>(() => undefined);
+        if (url === fast.sections[0].url) {
+          return Promise.resolve(htmlResponse(`
+            <rss><channel><item>
+              <title>快速来源在相邻来源超时期间正常发布新闻</title>
+              <link>${fastArticleUrl}</link>
+              <description>快速来源包含明确事实、主体和后续安排。</description>
+              <pubDate>2026-08-03T00:30:00.000Z</pubDate>
+            </item></channel></rss>
+          `, url));
+        }
+        return Promise.resolve(htmlResponse("<p>快速来源文章正文提供额外事实。</p>", fastArticleUrl));
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const resultPromise = collectNewsCandidates({
+        sources: [slow, fast],
+        useFirecrawlKeyless: false,
+        limitPerSection: 1,
+        now: new Date("2026-08-03T01:00:00.000Z"),
+        collectionBudgetMs: 45_000,
+        repairSummariesWithModel: false,
+      });
+      await vi.advanceTimersByTimeAsync(8_000);
+      const result = await resultPromise;
+
+      expect(result.items.map((item) => item.sourceId)).toEqual([fast.source_id]);
+      expect(result.sourceOutcomes).toEqual([
+        { sourceId: slow.source_id, status: "failed", discoveredCount: 0, errorCode: "source_timeout" },
+        { sourceId: fast.source_id, status: "success", discoveredCount: 1, errorCode: null },
+      ]);
+      expect(fetchMock.mock.calls.some(([input]) => String(input) === slow.sections[1].url)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("marks malformed structured direct content as a parse failure", async () => {
+    const source = testSource("malformed-feed", "损坏 Feed 源");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(htmlResponse(
+      "<rss><channel><item><title>缺失闭合标签的损坏条目</title>",
+      source.sections[0].url,
+    )));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toEqual([]);
+    expect(result.sourceOutcomes).toEqual([{
+      sourceId: source.source_id,
+      status: "failed",
+      discoveredCount: 0,
+      errorCode: "source_parse_failed",
+    }]);
+  });
+
+  it("marks an unrecognized Firecrawl response shape as a parse failure", async () => {
+    const source = testSource("malformed-keyless", "损坏 Keyless 响应源");
+    firecrawlSearchMock.mockResolvedValue({ unexpected: [] });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      { ok: false, status: 503, text: async () => "" } as Response,
+    ));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      limitPerSection: 1,
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toEqual([]);
+    expect(result.sourceOutcomes).toEqual([{
+      sourceId: source.source_id,
+      status: "failed",
+      discoveredCount: 0,
+      errorCode: "source_parse_failed",
+    }]);
   });
 
   it("records sources whose listing requests hit the collection deadline as failed attempts", async () => {

@@ -461,4 +461,73 @@ describe("event-level curation", () => {
     expect(report.stories).toHaveLength(1);
     expect(report.quality.unmappedCandidateCount).toBe(0);
   });
+
+  it("assigns unique stable IDs to independent same-title events", () => {
+    const sharedTitle = "国务院新闻发布会";
+    const report = buildDailyReport(
+      [
+        candidate({
+          id: "same-title-one",
+          title: sharedTitle,
+          url: "https://www.news.cn/politics/same-title-one.html",
+          summary: "发布会介绍财政预算执行、地方债安排、专项资金投向和下一阶段公开计划。",
+          publishedAt: "2026-08-03T01:00:00.000Z",
+        }),
+        candidate({
+          id: "same-title-two",
+          title: sharedTitle,
+          url: "https://www.news.cn/politics/same-title-two.html",
+          summary: "发布会介绍防汛救灾部署、应急队伍调度、受灾群众安置和天气风险预警。",
+          publishedAt: "2026-08-03T02:00:00.000Z",
+        }),
+      ],
+      defaultPreferences,
+      now,
+    );
+
+    expect(report.stories).toHaveLength(2);
+    expect(new Set(report.stories.map((story) => story.id)).size).toBe(2);
+  });
+
+  it("keeps the event ID stable when the same URL is translated later", () => {
+    const original = candidate({
+      id: "translation-stable",
+      title: "New policy announcement",
+      summary: "The agency announced a policy implementation schedule and next steps.",
+      url: "https://www.news.cn/politics/translation-stable.html",
+      language: "en-US",
+      translationStatus: "pending",
+    });
+    const translated = {
+      ...original,
+      title: "新政策公布实施时间表",
+      summary: "有关机构公布政策实施时间表、适用范围以及下一阶段安排。",
+      language: "zh-CN" as const,
+      translationStatus: "translated" as const,
+    };
+
+    const originalId = buildDailyReport([original], defaultPreferences, now).stories[0]?.id;
+    const translatedId = buildDailyReport([translated], defaultPreferences, now).stories[0]?.id;
+    expect(translatedId).toBe(originalId);
+  });
+
+  it("keeps advertising-policy news while rejecting explicit sponsored calls to action", () => {
+    const result = applyCandidateQualityGate([
+      candidate({
+        id: "advertising-policy",
+        title: "市场监管总局发布互联网广告新规",
+        url: "https://www.news.cn/politics/advertising-policy.html",
+        summary: "新规明确互联网广告标识、平台责任、监管程序和正式实施时间。",
+      }),
+      candidate({
+        id: "sponsored-offer",
+        title: "赞助内容：限时活动",
+        url: "https://www.news.cn/politics/sponsored-offer.html",
+        summary: "立即领取优惠券并点击购买。",
+      }),
+    ]);
+
+    expect(result.accepted.map((item) => item.id)).toEqual(["advertising-policy"]);
+    expect(result.rejectionReasons).toEqual({ promotional: 1 });
+  });
 });

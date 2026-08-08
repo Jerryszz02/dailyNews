@@ -5,11 +5,13 @@ import {
   reportApiUrl,
   resolveLatestStories,
   resolveReportFreshness,
+  selectBriefingImportantStories,
   shouldReplaceReport,
   sourceLabel,
 } from "./App";
 import { newsSources } from "./config/sources";
-import type { DailyNewsReport } from "./types";
+import { rankNews } from "./lib/scoring";
+import type { DailyNewsReport, NewsCluster, UserPreferences } from "./types";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -70,6 +72,55 @@ describe("latest stories", () => {
     } as unknown as DailyNewsReport;
 
     expect(resolveLatestStories(report)).toEqual([]);
+  });
+});
+
+describe("briefing curation order", () => {
+  it("keeps the report's important-story order when user preferences reverse item ranking", () => {
+    const now = new Date("2026-08-09T12:00:00.000Z");
+    const cluster = (id: string, sourceId: string): NewsCluster => ({
+      id,
+      title: `重要新闻 ${id}`,
+      url: `https://www.news.cn/${id}.html`,
+      sourceId,
+      sourceName: sourceId,
+      language: "zh-CN",
+      region: "china",
+      categories: ["china"],
+      primaryCategory: "china",
+      summary: `这是用于验证精选顺序的完整新闻摘要 ${id}。`,
+      publishedAt: now.toISOString(),
+      extractedAt: now.toISOString(),
+      startedAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      sourceIds: [sourceId],
+      sourceNames: [sourceId],
+      relatedUrls: [`https://www.news.cn/${id}.html`],
+      primaryCategoryVotes: ["china"],
+    });
+    const clusters = [cluster("item-a", "source-a"), cluster("item-b", "source-b")];
+    const preferencesFor = (sourceId: string): UserPreferences => ({
+      topicWeights: {},
+      preferredSources: { [sourceId]: 100 },
+      blockedKeywords: [],
+      boostedKeywords: [],
+    });
+    const report = {
+      importantStories: [
+        { id: "story-b", itemId: "item-b", title: "重要新闻 B", sourceNames: [] },
+        { id: "story-a", itemId: "item-a", title: "重要新闻 A", sourceNames: [] },
+      ],
+    } as unknown as Pick<DailyNewsReport, "importantStories">;
+    const preferenceVariants = [preferencesFor("source-a"), preferencesFor("source-b")];
+
+    expect(preferenceVariants.map((preferences) => rankNews(clusters, preferences, now).map((item) => item.id))).toEqual([
+      ["item-a", "item-b"],
+      ["item-b", "item-a"],
+    ]);
+    expect(preferenceVariants.map(() => selectBriefingImportantStories(report, "").map((story) => story.id))).toEqual([
+      ["story-b", "story-a"],
+      ["story-b", "story-a"],
+    ]);
   });
 });
 

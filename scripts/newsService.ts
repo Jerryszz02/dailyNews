@@ -128,6 +128,7 @@ export async function collectNewsCandidates(options: NewsCollectionOptions = {})
           translationConfig,
           repairSummariesWithModel,
           deadlineAt,
+          now,
         });
   const directPromise = fetchDirectSources({
     limitPerSection,
@@ -284,6 +285,12 @@ function isRecentPublishedAt(publishedAt: string | undefined, now: Date, maxAgeH
   return ageMs >= 0 && ageMs <= maxAgeHours * 3_600_000;
 }
 
+function normalizeCandidatePublishedAt(value: string | undefined, now: Date): string | undefined {
+  const parsed = parsePublishedDate(value);
+  if (!parsed) return undefined;
+  return Date.parse(parsed) <= now.getTime() ? parsed : undefined;
+}
+
 function readGeneratedFallbackReport(): DailyNewsReport {
   const filePath = new URL("../public/daily-news.json", import.meta.url);
   if (!existsSync(filePath)) return buildSnapshotFallbackReport();
@@ -371,6 +378,7 @@ async function fetchWithFirecrawlKeyless(
     translationConfig?: TranslationConfig;
     repairSummariesWithModel: boolean;
     deadlineAt: number;
+    now: Date;
   },
 ): Promise<{ items: RawNewsItem[]; outcomes: NewsCollectionSourceOutcome[] }> {
   const app = new Firecrawl({ apiKey: "" });
@@ -444,8 +452,10 @@ async function fetchWithFirecrawlKeyless(
       for (const result of webResults) {
         try {
           let title = readString(result, "title").trim();
-          const url = readString(result, "url").trim();
-          if (!title || !url) continue;
+          const requestedUrl = readString(result, "url").trim();
+          if (!title || !requestedUrl) continue;
+          const document = await fetchSourceDocument(requestedUrl, deadlineAt, source, true);
+          const url = document.finalUrl;
           let summary = readString(result, "description") || title;
           const originalWasNonChinese = isNonChineseText({ title, summary });
           const preparedText = await prepareNewsTextForDisplay({
@@ -456,15 +466,19 @@ async function fetchWithFirecrawlKeyless(
             repairSummaryWithModel: options.repairSummariesWithModel,
             translationConfig: options.translationConfig,
             deadlineAt,
+            articleContext: extractArticleSummaryContext(document.text) ?? null,
             source,
           });
           title = preparedText.title;
           summary = preparedText.summary;
 
-          const publishedAt = await resolvePublishedAt(url, extractDate(result), deadlineAt, source);
+          const publishedAt = normalizeCandidatePublishedAt(
+            extractDate(result) ?? extractPublishedDateFromHtml(document.text) ?? inferPublishedDateFromUrl(url),
+            options.now,
+          );
           const degradationReasons = newsTextDegradationReasons(preparedText, publishedAt);
           if (degradationReasons.length > 0) lastErrorCode ??= degradationReasons[0];
-          const discoveredAt = new Date().toISOString();
+          const discoveredAt = options.now.toISOString();
           const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
           const categories = uniqueValues([primaryCategory, ...section.categories]);
 
@@ -481,7 +495,7 @@ async function fetchWithFirecrawlKeyless(
             summary,
             publishedAt,
             discoveredAt,
-            extractedAt: new Date().toISOString(),
+            extractedAt: options.now.toISOString(),
             mayHavePaywall: source.mayHavePaywall,
             qualityStatus: degradationReasons.length > 0 ? "degraded" : "display_ready",
             rejectionReasons: degradationReasons.length > 0 ? degradationReasons : undefined,
@@ -575,28 +589,35 @@ async function fetchDirectSources(
   const fetchGate = createAsyncTaskGate(concurrency);
 
   const sourceItems = await mapWithConcurrency(enabledSources, concurrency, async (source) => {
+    const sourceDeadlineAt = sourceAttemptDeadline(options.deadlineAt);
     const items: RawNewsItem[] = [];
     let successfulSections = 0;
     let attemptedSections = 0;
     let lastErrorCode: string | null = null;
     for (const section of source.sections) {
-      if (Date.now() >= options.deadlineAt) {
-        lastErrorCode = "collection_deadline";
+      if (Date.now() >= sourceDeadlineAt) {
+        lastErrorCode = Date.now() >= options.deadlineAt ? "collection_deadline" : "source_timeout";
         break;
       }
       try {
         attemptedSections += 1;
-        const html = await fetchGate.run(() => fetchText(section.url, options.deadlineAt, source));
+        const html = await fetchGate.run(() => fetchText(section.url, sourceDeadlineAt, source));
         successfulSections += 1;
         const candidates = await prioritizeDirectCandidates(
-          readDirectCandidates(html, section.url).filter((candidate) =>
-            isAllowedSourceUrl(source, candidate.url) &&
-            (!candidate.publishedAt || isRecentPublishedAt(candidate.publishedAt, options.now, options.maxNewsAgeHours)),
-          ),
+          readDirectCandidates(html, section.url)
+            .map((candidate) => ({
+              ...candidate,
+              publishedAt: normalizeCandidatePublishedAt(candidate.publishedAt, options.now),
+            }))
+            .filter((candidate) =>
+              isAllowedSourceUrl(source, candidate.url) &&
+              (!candidate.publishedAt || isRecentPublishedAt(candidate.publishedAt, options.now, options.maxNewsAgeHours)),
+            ),
           options.limitPerSection,
-          options.deadlineAt,
+          sourceDeadlineAt,
           fetchGate,
           source,
+          options.deadlineAt,
         );
         let accepted = 0;
 
@@ -606,7 +627,7 @@ async function fetchDirectSources(
             lastErrorCode ??= candidate.collectionErrorCode;
             if (candidate.collectionErrorCode === "source_url_out_of_scope") continue;
           }
-          const publishedAt = candidate.publishedAt;
+          const publishedAt = normalizeCandidatePublishedAt(candidate.publishedAt, options.now);
           const discoveredAt = options.now.toISOString();
           if (publishedAt && !isRecentPublishedAt(publishedAt, options.now, options.maxNewsAgeHours)) continue;
           let title = candidate.title.trim();
@@ -622,7 +643,7 @@ async function fetchDirectSources(
             allowTranslation: section.requireChinese === false,
             repairSummaryWithModel: options.repairSummariesWithModel,
             translationConfig: options.translationConfig,
-            deadlineAt: options.deadlineAt,
+            deadlineAt: sourceDeadlineAt,
             articleContext: candidate.articleContext,
             fetchGate,
             source,
@@ -659,8 +680,9 @@ async function fetchDirectSources(
           accepted += 1;
         }
       } catch (error) {
-        lastErrorCode = normalizeCollectionError(error);
+        lastErrorCode = normalizeCollectionError(error, options.deadlineAt);
         console.warn(`Direct source skipped ${source.name} ${section.label}: ${String(error)}`);
+        if (error instanceof CollectionDeadlineError) break;
       }
     }
     return {
@@ -694,9 +716,12 @@ async function fetchDirectSources(
   };
 }
 
-function normalizeCollectionError(error: unknown): string {
-  if (error instanceof CollectionDeadlineError) return "collection_deadline";
+function normalizeCollectionError(error: unknown, globalDeadlineAt?: number): string {
+  if (error instanceof CollectionDeadlineError) {
+    return globalDeadlineAt && Date.now() < globalDeadlineAt ? "source_timeout" : "collection_deadline";
+  }
   if (error instanceof SourceUrlOutOfScopeError) return "source_url_out_of_scope";
+  if (error instanceof SourceParseError) return "source_parse_failed";
   if (error instanceof DOMException && error.name === "AbortError") return "source_timeout";
   const message = String(error).toLowerCase();
   if (message.includes("insufficient credits") || message.includes("payment required") || message.includes("http 402")) {
@@ -765,6 +790,7 @@ function createAsyncTaskGate(concurrency: number): AsyncTaskGate {
 
 class CollectionDeadlineError extends Error {}
 class SourceUrlOutOfScopeError extends Error {}
+class SourceParseError extends Error {}
 
 export async function runWithinDeadline<T>(task: () => Promise<T>, deadlineAt: number): Promise<T> {
   const remainingMs = deadlineAt - Date.now();
@@ -783,6 +809,15 @@ export async function runWithinDeadline<T>(task: () => Promise<T>, deadlineAt: n
 }
 
 async function fetchText(url: string, deadlineAt?: number, source?: NewsSource): Promise<string> {
+  return (await fetchSourceDocument(url, deadlineAt, source)).text;
+}
+
+async function fetchSourceDocument(
+  url: string,
+  deadlineAt?: number,
+  source?: NewsSource,
+  allowHttpError = false,
+): Promise<{ text: string; finalUrl: string }> {
   if (source && !isAllowedSourceUrl(source, url)) {
     throw new SourceUrlOutOfScopeError("source_url_out_of_scope");
   }
@@ -815,12 +850,15 @@ async function fetchText(url: string, deadlineAt?: number, source?: NewsSource):
         currentUrl = nextUrl;
         continue;
       }
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const finalUrl = response.url?.trim() || currentUrl;
       if (source && !isAllowedSourceUrl(source, finalUrl)) {
         throw new SourceUrlOutOfScopeError("source_url_out_of_scope");
       }
-      return await response.text();
+      if (!response.ok && !allowHttpError) throw new Error(`HTTP ${response.status}`);
+      return {
+        text: response.ok ? await response.text() : "",
+        finalUrl,
+      };
     }
     throw new Error("source_redirect_invalid");
   } finally {
@@ -977,8 +1015,14 @@ export function extractArticleSummaryContext(html: string): string | undefined {
 function readDirectCandidates(html: string, baseUrl: string): DirectCandidate[] {
   const feedItems = readFeedCandidates(html, baseUrl);
   if (feedItems.length > 0) return feedItems;
+  if (/<(?:item|entry)\b/i.test(html)) {
+    throw new SourceParseError("source_parse_failed");
+  }
   const sitemapItems = readSitemapCandidates(html, baseUrl);
   if (sitemapItems.length > 0) return sitemapItems;
+  if (/<(?:url|sitemap)\b/i.test(html)) {
+    throw new SourceParseError("source_parse_failed");
+  }
   return readHtmlLinkCandidates(html, baseUrl);
 }
 
@@ -988,13 +1032,14 @@ async function prioritizeDirectCandidates(
   deadlineAt: number,
   fetchGate: AsyncTaskGate,
   source: NewsSource,
+  globalDeadlineAt: number,
 ): Promise<DirectCandidate[]> {
   const probeLimit = Math.max(3, limitPerSection * 2);
   if (candidates[0]?.kind === "sitemap") {
     const resolved: DirectCandidate[] = [];
     let validCount = 0;
     for (const candidate of candidates.slice(0, probeLimit)) {
-      const result = await resolveDirectCandidate(candidate, deadlineAt, fetchGate, source);
+      const result = await resolveDirectCandidate(candidate, deadlineAt, fetchGate, source, globalDeadlineAt);
       resolved.push(result);
       if (!result.collectionErrorCode) validCount += 1;
       if (validCount >= limitPerSection) break;
@@ -1005,14 +1050,14 @@ async function prioritizeDirectCandidates(
   if (candidates[0]?.kind === "feed") {
     const selected = selectFeedCandidatesForProbing(candidates, limitPerSection, probeLimit);
     const resolved = await mapWithConcurrency(selected, 3, async (candidate) =>
-      resolveDirectCandidate(candidate, deadlineAt, fetchGate, source),
+      resolveDirectCandidate(candidate, deadlineAt, fetchGate, source, globalDeadlineAt),
     );
     return sortDirectCandidatesByRecency(resolved);
   }
 
   const selected = selectHtmlCandidatesForProbing(candidates, probeLimit);
   const resolved = await mapWithConcurrency(selected, 3, async (candidate) =>
-    resolveDirectCandidate(candidate, deadlineAt, fetchGate, source),
+    resolveDirectCandidate(candidate, deadlineAt, fetchGate, source, globalDeadlineAt),
   );
   return sortDirectCandidatesByRecency(resolved);
 }
@@ -1067,6 +1112,7 @@ async function resolveDirectCandidate(
   deadlineAt: number,
   fetchGate: AsyncTaskGate,
   source: NewsSource,
+  globalDeadlineAt: number,
 ): Promise<DirectCandidate> {
   try {
     const html = await fetchGate.run(() => fetchText(candidate.url, deadlineAt, source));
@@ -1083,7 +1129,7 @@ async function resolveDirectCandidate(
       ...candidate,
       publishedAt: parsePublishedDate(candidate.publishedAt) ?? inferPublishedDateFromUrl(candidate.url),
       articleContext: null,
-      collectionErrorCode: normalizeCollectionError(error),
+      collectionErrorCode: normalizeCollectionError(error, globalDeadlineAt),
     };
   }
 }
@@ -1259,35 +1305,6 @@ function uniqueCandidates<T extends { url: string }>(items: T[]): T[] {
 
 function uniqueValues<T>(items: T[]): T[] {
   return Array.from(new Set(items));
-}
-
-async function resolvePublishedAt(
-  url: string,
-  candidateDate?: string,
-  deadlineAt?: number,
-  source?: NewsSource,
-): Promise<string | undefined> {
-  const parsedCandidate = parsePublishedDate(candidateDate);
-  if (parsedCandidate) return parsedCandidate;
-
-  const articleDate = await readArticlePublishedAt(url, deadlineAt, source);
-  if (articleDate) return articleDate;
-
-  return inferPublishedDateFromUrl(url);
-}
-
-async function readArticlePublishedAt(
-  url: string,
-  deadlineAt?: number,
-  source?: NewsSource,
-): Promise<string | undefined> {
-  try {
-    const html = await fetchText(url, deadlineAt, source);
-    return extractPublishedDateFromHtml(html);
-  } catch (error) {
-    if (error instanceof SourceUrlOutOfScopeError) throw error;
-    return undefined;
-  }
 }
 
 export function extractPublishedDateFromHtml(html: string): string | undefined {
@@ -1488,15 +1505,23 @@ function containsChinese(value: string): boolean {
 
 function readSearchResults(results: unknown, preferredSources: SearchSourceType[]): unknown[] {
   if (!results || typeof results !== "object") {
-    return [];
+    throw new SourceParseError("source_parse_failed");
   }
   const record = results as Record<string, unknown>;
-  const preferred = preferredSources.flatMap((source) => Array.isArray(record[source]) ? record[source] : []);
-  if (preferred.length > 0) return preferred;
-  if (Array.isArray(record.data)) return record.data;
-  if (Array.isArray(record.news)) return record.news;
-  if (Array.isArray(record.web)) return record.web;
-  return [];
+  let recognized = false;
+  const preferred = preferredSources.flatMap((source) => {
+    if (!Object.hasOwn(record, source)) return [];
+    recognized = true;
+    if (!Array.isArray(record[source])) throw new SourceParseError("source_parse_failed");
+    return record[source];
+  });
+  if (recognized) return preferred;
+  for (const key of ["data", "news", "web"] as const) {
+    if (!Object.hasOwn(record, key)) continue;
+    if (!Array.isArray(record[key])) throw new SourceParseError("source_parse_failed");
+    return record[key];
+  }
+  throw new SourceParseError("source_parse_failed");
 }
 
 function buildQueries(sourceName: string, section: SourceSection): string[] {
