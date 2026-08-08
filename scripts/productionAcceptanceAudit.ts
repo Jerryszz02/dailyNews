@@ -22,12 +22,17 @@ const RESPONSE_KEYS = [
 ];
 
 const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+export const timestampMs = (value: unknown): number => {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") return value;
+  return Date.parse(String(value ?? ""));
+};
 const iso = (value: unknown): string | null => {
-  const time = value instanceof Date ? value.getTime() : Date.parse(String(value ?? ""));
+  const time = timestampMs(value);
   return Number.isFinite(time) ? new Date(time).toISOString() : null;
 };
 const slot = (value: unknown): string => {
-  const time = new Date(String(value)).getTime();
+  const time = timestampMs(value);
   return new Date(Math.floor(time / SLOT_MS) * SLOT_MS).toISOString();
 };
 const normalize = (value: unknown): string =>
@@ -40,11 +45,15 @@ const duplicates = (values: unknown[]): number => {
   return [...counts.values()].reduce((sum, count) => sum + Math.max(0, count - 1), 0);
 };
 const maxIso = (values: unknown[]): string | null => {
-  const times = values.map((value) => Date.parse(String(value))).filter(Number.isFinite);
+  const times = values.map(timestampMs).filter(Number.isFinite);
   return times.length ? new Date(Math.max(...times)).toISOString() : null;
 };
+export const minIsoTimestamp = (values: unknown[]): string | null => {
+  const times = values.map(timestampMs).filter(Number.isFinite);
+  return times.length ? new Date(Math.min(...times)).toISOString() : null;
+};
 const ageMinutes = (now: string, then: string | null): number | null =>
-  then ? Math.round(((Date.parse(now) - Date.parse(then)) / 60_000) * 1000) / 1000 : null;
+  then ? Math.round(((timestampMs(now) - timestampMs(then)) / 60_000) * 1000) / 1000 : null;
 const percentile = (values: number[], value: number): number | null => {
   if (!values.length) return null;
   const sorted = [...values].sort((left, right) => left - right);
@@ -70,15 +79,15 @@ export function summarizePublicReport(
   now: string,
 ): Pick<SlotAudit["public"], "latest" | "unmappedCandidateCount"> {
   const stories = list(report.stories) as Array<Record<string, any>>;
-  const nowTime = Date.parse(now);
+  const nowTime = timestampMs(now);
   const recentThreshold = nowTime - 24 * 60 * 60_000;
   const fallbackThreshold = nowTime - 72 * 60 * 60_000;
   const eligible24h = stories.filter((story) => {
-    const updatedAt = Date.parse(String(story?.updatedAt ?? ""));
+    const updatedAt = timestampMs(story?.updatedAt);
     return Number.isFinite(updatedAt) && updatedAt >= recentThreshold && updatedAt <= nowTime;
   });
   const fallback72h = stories.filter((story) => {
-    const updatedAt = Date.parse(String(story?.updatedAt ?? ""));
+    const updatedAt = timestampMs(story?.updatedAt);
     return Number.isFinite(updatedAt) && updatedAt >= fallbackThreshold && updatedAt <= nowTime;
   });
   const explicitLatest = Array.isArray(report.latestStories)
@@ -338,7 +347,7 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
   }
 
   const from = new Date(options.targetSlot).toISOString();
-  const until = new Date(Date.parse(from) + SLOT_MS).toISOString();
+  const until = new Date(timestampMs(from) + SLOT_MS).toISOString();
   const { client, strictCert } = await connectReadOnly(env, ref, Client);
   let rolledBack = false;
 
@@ -402,7 +411,7 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
     const missingSourceStateIds = [...approvedSourceIds].filter(
       (sourceId) => !sources.some((row) => row.source_id === sourceId),
     );
-    const rollingFrom = new Date(Date.parse(from) - (SLOTS_PER_DAY - 1) * SLOT_MS).toISOString();
+    const rollingFrom = new Date(timestampMs(from) - (SLOTS_PER_DAY - 1) * SLOT_MS).toISOString();
     const rollingCron = options.includeRolling24h
       ? (
           await client.query(
@@ -456,7 +465,7 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
       const snapshot = snapshotByRun.get(row.run_id);
       const duration = row.finished_at
         ? Math.round(
-            ((new Date(row.finished_at).getTime() - new Date(row.started_at).getTime()) / 1000) *
+            ((timestampMs(row.finished_at) - timestampMs(row.started_at)) / 1000) *
               1000,
           ) / 1000
         : null;
@@ -507,32 +516,32 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
     const current = runRows.at(-1);
     const latestId = latest?.run_id ?? null;
     const bySource = new Map(sources.map((row) => [row.source_id, row]));
-    const nowTime = Date.parse(now);
+    const nowTime = timestampMs(now);
     const open = sources.filter(
-      (row) => row.circuit_open_until && Date.parse(row.circuit_open_until) > nowTime,
+      (row) => row.circuit_open_until && timestampMs(row.circuit_open_until) > nowTime,
     );
     const healthy = sources.filter(
-      (row) => !row.circuit_open_until || Date.parse(row.circuit_open_until) <= nowTime,
+      (row) => !row.circuit_open_until || timestampMs(row.circuit_open_until) <= nowTime,
     );
     const halfOpen = sources.filter(
       (row) =>
         row.circuit_open_until &&
-        Date.parse(row.circuit_open_until) <= nowTime &&
-        Date.parse(row.next_due_at) <= nowTime,
+        timestampMs(row.circuit_open_until) <= nowTime &&
+        timestampMs(row.next_due_at) <= nowTime,
     );
     const attemptWindowMs = SOURCE_ATTEMPT_WINDOW_MINUTES * 60_000;
     const rollingAttempted = sources.filter(
-      (row) => row.last_attempt_at && nowTime - Date.parse(row.last_attempt_at) <= attemptWindowMs,
+      (row) => row.last_attempt_at && nowTime - timestampMs(row.last_attempt_at) <= attemptWindowMs,
     );
     const rollingSucceeded = healthy.filter(
-      (row) => row.last_success_at && nowTime - Date.parse(row.last_success_at) <= attemptWindowMs,
+      (row) => row.last_success_at && nowTime - timestampMs(row.last_success_at) <= attemptWindowMs,
     );
     const overdue = sources.filter(
       (row) =>
         !row.last_attempt_at ||
-        nowTime - Date.parse(row.last_attempt_at) > attemptWindowMs,
+        nowTime - timestampMs(row.last_attempt_at) > attemptWindowMs,
     );
-    const backlog = healthy.filter((row) => Date.parse(row.next_due_at) <= nowTime);
+    const backlog = healthy.filter((row) => timestampMs(row.next_due_at) <= nowTime);
     const anthropic = bySource.get("anthropic");
 
     const [health, full, compact, reload, invalid] = await Promise.all([
@@ -594,11 +603,11 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
           ? health.body.lastOutcomeCode
           : null;
     const sourceAttemptTimes = sources
-      .map((row) => Date.parse(String(row.last_attempt_at ?? "")))
+      .map((row) => timestampMs(row.last_attempt_at))
       .filter(Number.isFinite);
     const expectedFullSweepAt =
       sources.length === approvedSourceIds.size && sourceAttemptTimes.length === sources.length
-        ? new Date(Math.min(...sourceAttemptTimes)).toISOString()
+        ? minIsoTimestamp(sourceAttemptTimes)
         : null;
     const runtimeRow = runtime[0] ?? {};
     const statusMetadataTruthful = Boolean(
@@ -627,7 +636,7 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
     const runSlots = runRows.map((row) => row.slot);
     const expectedRollingSlots = options.includeRolling24h
       ? Array.from({ length: SLOTS_PER_DAY }, (_, index) =>
-          new Date(Date.parse(rollingFrom) + index * SLOT_MS).toISOString(),
+          new Date(timestampMs(rollingFrom) + index * SLOT_MS).toISOString(),
         )
       : [];
     const rollingCronSlots = rollingCron.map((row) => slot(row.start_time));
@@ -637,12 +646,12 @@ export async function collectSlotAudit(options: CollectSlotAuditOptions): Promis
       .map(
         (row) =>
           Math.round(
-            ((Date.parse(row.finished_at) - Date.parse(row.started_at)) / 1000) * 1000,
+            ((timestampMs(row.finished_at) - timestampMs(row.started_at)) / 1000) * 1000,
           ) / 1000,
       );
     const rollingSuccessfulFinishes = rollingRuns
       .filter((row) => ["published", "completed"].includes(row.status) && row.finished_at)
-      .map((row) => Date.parse(row.finished_at))
+      .map((row) => timestampMs(row.finished_at))
       .sort((left, right) => left - right);
     const rollingGaps = rollingSuccessfulFinishes
       .slice(1)

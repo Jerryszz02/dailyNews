@@ -1,5 +1,11 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { summarizePublicReport } from "./productionAcceptanceAudit";
+import {
+  minIsoTimestamp,
+  summarizePublicReport,
+  timestampMs,
+} from "./productionAcceptanceAudit";
+import { buildLaunchAgentPlist } from "./productionAcceptanceLaunchAgent";
 
 const now = "2026-08-03T12:00:00.000Z";
 
@@ -12,6 +18,15 @@ function story(id: string, updatedAt: string) {
 }
 
 describe("production acceptance audit summaries", () => {
+  it("preserves PostgreSQL Date milliseconds when finding the earliest source attempt", () => {
+    const earliest = new Date("2026-08-08T16:30:01.712Z");
+    const later = new Date("2026-08-08T16:45:04.321Z");
+
+    expect(timestampMs(earliest)).toBe(earliest.getTime());
+    expect(timestampMs("2026-08-08T16:30:01.712+00:00")).toBe(earliest.getTime());
+    expect(minIsoTimestamp([later, earliest])).toBe("2026-08-08T16:30:01.712Z");
+  });
+
   it("detects a missing event in the explicit 24-hour latest list", () => {
     const recentA = story("recent-a", "2026-08-03T11:00:00.000Z");
     const recentB = story("recent-b", "2026-08-02T13:00:00.000Z");
@@ -120,5 +135,38 @@ describe("production acceptance audit summaries", () => {
         now,
       ).latest.missingFallback,
     ).toBe(1);
+  });
+});
+
+describe("production acceptance LaunchAgent plist", () => {
+  it("keeps logs outside Desktop, escapes XML, and restarts only failed exits", () => {
+    const home = "/Users/alice";
+    const desktopOutput = "/Users/alice/Desktop/acceptance & evidence";
+    const launchAgent = buildLaunchAgentPlist({
+      home,
+      cwd: "/Users/alice/Desktop/dailyNews <current>",
+      label: "com.jerryszz.dailynews.production-acceptance",
+      programArguments: ["monitor", "--output", desktopOutput, '<&>"\''],
+    });
+
+    expect(launchAgent.logDirectory).toBe(
+      path.join(home, "Library", "Logs", "dailyNews-production-acceptance"),
+    );
+    expect(launchAgent.stdoutPath).not.toContain("Desktop");
+    expect(launchAgent.stderrPath).not.toContain("Desktop");
+    expect(launchAgent.body).toContain("/Users/alice/Desktop/acceptance &amp; evidence");
+    expect(launchAgent.body).toContain("/Users/alice/Desktop/dailyNews &lt;current&gt;");
+    expect(launchAgent.body).toContain("&lt;&amp;&gt;&quot;&apos;");
+    expect(launchAgent.body).toContain(
+      [
+        "  <key>KeepAlive</key>",
+        "  <dict>",
+        "    <key>SuccessfulExit</key>",
+        "    <false/>",
+        "  </dict>",
+        "  <key>ThrottleInterval</key>",
+        "  <integer>60</integer>",
+      ].join("\n"),
+    );
   });
 });

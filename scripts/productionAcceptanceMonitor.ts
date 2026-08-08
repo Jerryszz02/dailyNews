@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { collectSlotAudit } from "./productionAcceptanceAudit";
+import { buildLaunchAgentPlist } from "./productionAcceptanceLaunchAgent";
 import {
   BURN_IN_STRICT_SLOTS,
   SOAK_DAYS,
@@ -424,15 +425,6 @@ async function stopMonitor(output: string): Promise<void> {
   process.stdout.write("MONITOR_STOP_REQUESTED\n");
 }
 
-function xml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
-}
-
 async function startMonitorAgent(options: CliOptions): Promise<void> {
   if (!options.deployment) throw new Error("DEPLOYMENT_ID_REQUIRED");
   process.umask(0o077);
@@ -478,42 +470,27 @@ async function startMonitorAgent(options: CliOptions): Promise<void> {
     ...(options.once ? ["--once"] : []),
     ...(options.keepAwake ? ["--keep-awake"] : []),
   ];
-  const plistBody = [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
-    '<plist version="1.0">',
-    "<dict>",
-    "  <key>Label</key>",
-    `  <string>${xml(label)}</string>`,
-    "  <key>ProgramArguments</key>",
-    "  <array>",
-    ...programArguments.map((argument) => `    <string>${xml(argument)}</string>`),
-    "  </array>",
-    "  <key>WorkingDirectory</key>",
-    `  <string>${xml(cwd)}</string>`,
-    "  <key>RunAtLoad</key>",
-    "  <true/>",
-    "  <key>KeepAlive</key>",
-    "  <false/>",
-    "  <key>ProcessType</key>",
-    "  <string>Background</string>",
-    "  <key>StandardOutPath</key>",
-    `  <string>${xml(path.join(output, "stdout.log"))}</string>`,
-    "  <key>StandardErrorPath</key>",
-    `  <string>${xml(path.join(output, "stderr.log"))}</string>`,
-    "</dict>",
-    "</plist>",
-    "",
-  ].join("\n");
-  fs.writeFileSync(plist, plistBody, { mode: 0o600 });
+  const launchAgent = buildLaunchAgentPlist({
+    home: os.homedir(),
+    cwd,
+    label,
+    programArguments,
+  });
+  fs.mkdirSync(launchAgent.logDirectory, { recursive: true, mode: 0o700 });
+  fs.chmodSync(launchAgent.logDirectory, 0o700);
+  for (const logFile of [launchAgent.stdoutPath, launchAgent.stderrPath]) {
+    fs.closeSync(fs.openSync(logFile, "a", 0o600));
+    fs.chmodSync(logFile, 0o600);
+  }
+  fs.writeFileSync(plist, launchAgent.body, { mode: 0o600 });
+  fs.chmodSync(plist, 0o600);
   fs.writeFileSync(path.join(output, "launch-agent-label.txt"), `${label}\n`, { mode: 0o600 });
   fs.writeFileSync(path.join(output, "launch-agent-plist.txt"), `${plist}\n`, { mode: 0o600 });
-  fs.writeFileSync(path.join(output, "stdout.log"), "", { mode: 0o600 });
-  fs.writeFileSync(path.join(output, "stderr.log"), "", { mode: 0o600 });
   atomicWriteJson(path.join(output, "launch-agent.json"), {
     label,
     expectedDeployment: options.deployment,
     alias: options.alias,
+    logDirectory: launchAgent.logDirectory,
     installedAt: new Date().toISOString(),
   });
 
