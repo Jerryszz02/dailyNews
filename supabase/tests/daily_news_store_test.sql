@@ -471,10 +471,13 @@ select is(
   'degraded',
   'versioned candidate RPC preserves the display disposition stored in the payload'
 );
+update daily_news.article_candidate
+set payload = payload - 'qualityStatus'
+where canonical_url = 'https://example.com/news/1';
 select is(
   (
     select candidate ->> 'qualityStatus'
-    from public.daily_news_read_candidates_v2('2026-07-10T00:00:00Z'::timestamptz, 1, 1)
+    from public.daily_news_read_candidates_v2('2026-07-10T00:00:00Z'::timestamptz, 1, 0)
   ),
   'display_ready',
   'versioned candidate RPC maps legacy accepted rows to the display-ready disposition'
