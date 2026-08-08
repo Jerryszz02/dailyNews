@@ -1,6 +1,7 @@
 import { gzipSync } from "node:zlib";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
+import { compactDailyNewsReport } from "../src/lib/webReport";
 import type { RawNewsItem } from "../src/types";
 import { readBundledReport } from "./reportStore";
 import { SupabaseNewsStore } from "./supabaseNewsStore";
@@ -694,6 +695,55 @@ describe("SupabaseNewsStore RPC mapping", () => {
       starting_report_id: currentId,
       max_depth: 10,
     });
+  });
+
+  it("falls back when the latest compact snapshot is shaped correctly but violates report invariants", async () => {
+    const report = readBundledReport();
+    const invalidCompact = structuredClone(compactDailyNewsReport(report));
+    invalidCompact.stories[0]!.evidence[0]!.url = "https://unapproved.invalid/story";
+    const currentId = "00000000-0000-4000-8000-000000000098";
+    const fallbackId = "00000000-0000-4000-8000-000000000003";
+    const currentRow = {
+      report_id: currentId,
+      payload: {
+        storageView: 2,
+        encoding: "gzip-base64",
+        data: gzipSync(JSON.stringify(invalidCompact)).toString("base64"),
+      },
+      generated_at: report.generatedAt,
+      published_at: report.generatedAt,
+      data_as_of: report.generatedAt,
+      newest_content_at: report.generatedAt,
+      last_attempt_at: report.generatedAt,
+      last_success_at: report.generatedAt,
+      last_error_code: null,
+    };
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "daily_news_read_latest") return { data: [currentRow], error: null };
+      if (name === "daily_news_read_snapshot_fallbacks") {
+        return {
+          data: [
+            currentRow,
+            {
+              report_id: fallbackId,
+              payload: report,
+              generated_at: report.generatedAt,
+              published_at: report.generatedAt,
+              data_as_of: report.generatedAt,
+              newest_content_at: report.generatedAt,
+            },
+          ],
+          error: null,
+        };
+      }
+      return { data: [], error: null };
+    });
+
+    const state = await new SupabaseNewsStore({ rpc } as unknown as SupabaseClient).readPublicationState();
+
+    expect(state.latest?.reportId).toBe(fallbackId);
+    expect(state.runtime.lastErrorCode).toBe("latest_snapshot_invalid");
+    expect(state.runtime.lastOutcomeCode).toBe("failed");
   });
 
   it("keeps reading legacy full-report gzip payloads", async () => {

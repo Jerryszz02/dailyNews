@@ -195,7 +195,7 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
-function normalizeV2Report(report: DailyNewsReport): DailyNewsReport {
+export function normalizeV2Report(report: DailyNewsReport): DailyNewsReport {
   const stories = report.stories.map((story) => ({
     ...story,
     startedAt: story.startedAt ?? earliestTimestamp([

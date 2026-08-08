@@ -103,7 +103,7 @@ export function App() {
     try {
       const apiReport = await readReport(reportApiUrl(Date.now(), bypassCache));
       if (apiReport) {
-        setServiceRefresh(apiReport.refresh ?? null);
+        setServiceRefresh((current) => mergeServiceRefresh(loadedReportRef.current, current, apiReport));
         if (shouldReplaceReport(loadedReportRef.current, apiReport)) {
           loadedReportRef.current = apiReport;
           setLoadedReport(apiReport);
@@ -653,6 +653,51 @@ export function shouldReplaceReport(current: DailyNewsReport | null, candidate: 
     }
   }
   return reportDataTimestamp(candidate) >= reportDataTimestamp(current);
+}
+
+export function mergeServiceRefresh(
+  currentReport: DailyNewsReport | null,
+  currentService: ReportRefreshMetadata | null,
+  candidateReport: DailyNewsReport,
+): ReportRefreshMetadata | null {
+  const candidate = candidateReport.refresh ?? null;
+  if (!candidate) return currentService;
+  const current = currentReport?.refresh || currentService
+    ? { ...currentReport?.refresh, ...currentService }
+    : null;
+  if (!current) return candidate;
+
+  const currentServingMode = currentReport?.refresh?.servingMode ?? current.servingMode;
+  const currentPublicationStateAt = Date.parse(
+    validTimestamp(currentReport?.refresh?.publicationStateAt ?? current.publicationStateAt) ?? "",
+  );
+  const candidatePublicationStateAt = Date.parse(validTimestamp(candidate.publicationStateAt) ?? "");
+  if (
+    currentServingMode === "durable" &&
+    candidate.servingMode === "durable" &&
+    Number.isFinite(currentPublicationStateAt) &&
+    Number.isFinite(candidatePublicationStateAt) &&
+    candidatePublicationStateAt < currentPublicationStateAt
+  ) {
+    return current;
+  }
+
+  if (currentServingMode === "durable" && candidate.servingMode !== "durable") {
+    return {
+      ...current,
+      servingMode: candidate.servingMode ?? "browser-cache",
+      pipelineStatus: candidate.pipelineStatus ?? "degraded",
+      coverageStatus: candidate.coverageStatus ?? current.coverageStatus,
+      status: candidate.status ?? current.status,
+      lastCheckedAt: candidate.lastCheckedAt ?? current.lastCheckedAt,
+      lastAttemptAt: candidate.lastAttemptAt ?? current.lastAttemptAt,
+      lastError: candidate.lastError ?? current.lastError,
+      lastOutcomeCode: candidate.lastOutcomeCode ?? current.lastOutcomeCode,
+      activeRunId: candidate.activeRunId ?? current.activeRunId,
+    };
+  }
+
+  return candidate;
 }
 
 function reportDataTimestamp(report: Pick<DailyNewsReport, "generatedAt" | "refresh">): number {

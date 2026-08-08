@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   formatRelativeTime,
+  mergeServiceRefresh,
   readReport,
   reportApiUrl,
   resolveLatestStories,
@@ -175,6 +176,68 @@ describe("report loading", () => {
       pipelineStatus: "degraded",
     };
     expect(shouldReplaceReport(rollback, bundledFallback)).toBe(false);
+  });
+
+  it("does not roll service status back with an older cached durable response", () => {
+    const rollback = reportAt("2026-07-13T11:00:00.000Z");
+    rollback.refresh = {
+      ...rollback.refresh,
+      reportId: "rollback",
+      servingMode: "durable",
+      pipelineStatus: "healthy",
+      contentStatus: "current",
+      publicationStateAt: "2026-07-13T12:02:00.000Z",
+    };
+    const staleResponse = reportAt("2026-07-13T13:00:00.000Z");
+    staleResponse.refresh = {
+      ...staleResponse.refresh,
+      reportId: "stale-cache",
+      servingMode: "durable",
+      pipelineStatus: "failed",
+      contentStatus: "stale",
+      publicationStateAt: "2026-07-13T12:00:00.000Z",
+    };
+
+    expect(mergeServiceRefresh(rollback, rollback.refresh ?? null, staleResponse)).toMatchObject({
+      reportId: "rollback",
+      pipelineStatus: "healthy",
+      contentStatus: "current",
+      publicationStateAt: "2026-07-13T12:02:00.000Z",
+    });
+  });
+
+  it("updates fallback degradation without replacing durable content metadata", () => {
+    const current = reportAt("2026-07-13T11:00:00.000Z");
+    current.refresh = {
+      ...current.refresh,
+      reportId: "durable-report",
+      servingMode: "durable",
+      pipelineStatus: "healthy",
+      contentStatus: "current",
+      publicationStateAt: "2026-07-13T12:02:00.000Z",
+      newestContentAt: "2026-07-13T10:59:00.000Z",
+    };
+    const fallback = reportAt("2026-07-13T13:00:00.000Z");
+    fallback.refresh = {
+      ...fallback.refresh,
+      reportId: "bundled-report",
+      servingMode: "bundled",
+      pipelineStatus: "degraded",
+      contentStatus: "stale",
+      lastCheckedAt: "2026-07-13T12:03:00.000Z",
+      lastError: "storage_unavailable",
+    };
+
+    expect(mergeServiceRefresh(current, current.refresh ?? null, fallback)).toMatchObject({
+      reportId: "durable-report",
+      servingMode: "bundled",
+      pipelineStatus: "degraded",
+      contentStatus: "current",
+      publicationStateAt: "2026-07-13T12:02:00.000Z",
+      newestContentAt: "2026-07-13T10:59:00.000Z",
+      lastCheckedAt: "2026-07-13T12:03:00.000Z",
+      lastError: "storage_unavailable",
+    });
   });
 
   it("aborts a hanging report request at the configured timeout", async () => {

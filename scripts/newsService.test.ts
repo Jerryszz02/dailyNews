@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { defaultPreferences } from "../src/config/preferences";
+import { newsSources } from "../src/config/sources";
+import { buildDailyReport } from "../src/lib/newsPipeline";
 import type { NewsSource, RawNewsItem } from "../src/types";
 
 const firecrawlSearchMock = vi.hoisted(() => vi.fn());
@@ -30,7 +33,7 @@ import {
   runWithinDeadline,
   translateNewsText,
 } from "./newsService";
-import { readBundledReport } from "./reportStore";
+import { readBundledReport, validateReportInvariants } from "./reportStore";
 
 const translationEnvNames = [
   "DAILY_NEWS_TRANSLATION_API_KEY",
@@ -203,6 +206,39 @@ describe("generateDailyNewsReport", () => {
 });
 
 describe("collectNewsCandidates source outcomes", () => {
+  it("uses collision-resistant IDs for distinct URLs with the same legacy 32-bit hash", async () => {
+    const source = structuredClone(newsSources.find((candidate) => candidate.source_id === "xinhua")!);
+    source.sections = [{ ...source.sections[0], url: "https://www.news.cn/" }];
+    const urls = ["https://www.news.cn/Aa", "https://www.news.cn/BB"];
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === source.sections[0].url) {
+        return Promise.resolve(htmlResponse(`
+          <rss><channel>
+            <item><title>第一条独立合法新闻事件</title><link>${urls[0]}</link><description>第一条事件包含财政安排、执行时间和公开计划。</description><pubDate>2026-08-03T00:00:00Z</pubDate></item>
+            <item><title>第二条独立合法新闻事件</title><link>${urls[1]}</link><description>第二条事件包含防汛部署、人员安置和风险预警。</description><pubDate>2026-08-03T00:01:00Z</pubDate></item>
+          </channel></rss>
+        `, url));
+      }
+      return Promise.resolve(htmlResponse("<p>正文包含完整事实和后续安排。</p>", url));
+    }));
+
+    const now = new Date("2026-08-03T01:00:00.000Z");
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 2,
+      now,
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+    const report = buildDailyReport(result.items, defaultPreferences, now);
+
+    expect(result.items.map((item) => item.url).sort()).toEqual(urls);
+    expect(new Set(result.items.map((item) => item.id)).size).toBe(2);
+    expect(validateReportInvariants(report)).toEqual([]);
+  });
+
   it("preserves keyless success, empty, and failed outcomes while direct fetch runs in parallel", async () => {
     const sources = [testSource("success", "成功源"), testSource("empty", "空结果源"), testSource("failed", "失败源")];
     const fetchedItems = Array.from({ length: 8 }, (_, index) => ({

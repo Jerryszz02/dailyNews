@@ -2,6 +2,7 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { compactDailyNewsReport, hydrateWebDailyNewsReport, isWebDailyNewsReport } from "../src/lib/webReport.js";
 import type { DailyNewsReport, RawNewsItem } from "../src/types";
+import { normalizeV2Report, validateReportInvariants } from "./reportStore.js";
 import type {
   AcquireRefreshInput,
   CompleteWithoutPublishResult,
@@ -489,7 +490,7 @@ function readOutcomeCode(value: unknown): NewsRuntimeState["lastOutcomeCode"] {
 }
 
 function readStoredReport(value: unknown): DailyNewsReport | null {
-  if (isDailyNewsReport(value)) return value;
+  if (isDailyNewsReport(value)) return validateStoredReport(value);
   if (
     !isRecord(value) ||
     (value.storageView !== 1 && value.storageView !== 2) ||
@@ -503,8 +504,17 @@ function readStoredReport(value: unknown): DailyNewsReport | null {
     const decoded: unknown = JSON.parse(
       gunzipSync(Buffer.from(value.data, "base64"), { maxOutputLength: maxStoredReportBytes }).toString("utf8"),
     );
-    if (isDailyNewsReport(decoded)) return decoded;
-    return isWebDailyNewsReport(decoded) ? hydrateWebDailyNewsReport(decoded) : null;
+    if (isDailyNewsReport(decoded)) return validateStoredReport(decoded);
+    return isWebDailyNewsReport(decoded) ? validateStoredReport(hydrateWebDailyNewsReport(decoded)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function validateStoredReport(report: DailyNewsReport): DailyNewsReport | null {
+  try {
+    const normalized = normalizeV2Report(report);
+    return validateReportInvariants(normalized).length === 0 ? normalized : null;
   } catch {
     return null;
   }
