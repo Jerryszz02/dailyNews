@@ -14,7 +14,7 @@ restart identity;
 insert into daily_news.runtime_state (singleton_id) values (true);
 insert into daily_news.refresh_lease (singleton_id) values (true);
 
-select plan(118);
+select plan(120);
 
 select has_schema('daily_news', 'private daily_news schema exists');
 select has_table('daily_news', 'refresh_run', 'refresh_run table exists');
@@ -214,7 +214,7 @@ select is(
       (select run_id from test_first_lease),
       (select fencing_token from test_first_lease),
       '[
-        {"sourceId":"source-a","enabled":true,"intervalMinutes":30},
+        {"sourceId":"source-a","enabled":true,"intervalMinutes":90},
         {"sourceId":"source-b","enabled":true,"intervalMinutes":90}
       ]'::jsonb,
       '2026-07-13T00:00:00Z'::timestamptz
@@ -253,7 +253,7 @@ select is(
         "sourceId":"source-a",
         "attemptedAt":"2026-07-13T00:00:05Z",
         "success":true,
-        "nextDueAt":"2026-07-13T00:30:05Z",
+        "nextDueAt":"2026-07-13T01:30:05Z",
         "latencyMs":100,
         "discoveredCount":1,
         "acceptedCount":1
@@ -266,6 +266,39 @@ select is(
 select ok(
   (select last_success_at is not null from daily_news.source_state where source_id = 'source-a'),
   'successful source result records last_success_at'
+);
+
+do $$
+declare
+  active_run_id uuid;
+  active_fencing_token bigint;
+begin
+  select run_id, fencing_token
+    into active_run_id, active_fencing_token
+    from test_first_lease;
+
+  perform public.daily_news_sync_sources(
+    '11111111-1111-4111-8111-111111111111'::uuid,
+    active_run_id,
+    active_fencing_token,
+    '[
+      {"sourceId":"source-a","enabled":true,"intervalMinutes":30},
+      {"sourceId":"source-b","enabled":true,"intervalMinutes":90}
+    ]'::jsonb,
+    '2026-07-13T00:05:00Z'::timestamptz
+  );
+end;
+$$;
+
+select is(
+  (select next_due_at from daily_news.source_state where source_id = 'source-a'),
+  '2026-07-13T00:30:05Z'::timestamptz,
+  'source interval reduction clamps the existing coverage deadline'
+);
+select is(
+  (select interval_minutes from daily_news.source_state where source_id = 'source-a'),
+  30,
+  'source interval reduction persists the current coverage interval'
 );
 
 do $$
@@ -330,12 +363,12 @@ select is(
   'the third failure opens the circuit for two source intervals'
 );
 select ok(
-  not exists (
+  exists (
     select 1
     from public.daily_news_list_due_sources('2026-07-13T02:00:00Z'::timestamptz, 10)
     where source_id = 'source-b'
   ),
-  'an open source circuit excludes the source from due work'
+  'an open source circuit does not suppress a due coverage attempt'
 );
 
 do $$
