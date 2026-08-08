@@ -68,23 +68,38 @@ export class InMemoryNewsStore implements NewsStore {
 
   async syncSources(lease: LeaseIdentity, sources: SourceDefinition[], observedAt: string): Promise<void> {
     this.assertLease(lease);
-    for (const [sourceId, current] of this.sourceStates) {
-      this.sourceStates.set(sourceId, { ...current, enabled: false });
-    }
+    const registeredSourceIds = new Set<string>();
     for (const source of sources) {
+      registeredSourceIds.add(source.sourceId);
       const current = this.sourceStates.get(source.sourceId);
+      let nextDueAt = current?.nextDueAt ?? observedAt;
+      if (current) {
+        const lastAttemptAt = Date.parse(current.lastAttemptAt ?? "");
+        const coverageDueAt = Number.isFinite(lastAttemptAt)
+          ? new Date(lastAttemptAt + source.intervalMinutes * 60_000).toISOString()
+          : observedAt;
+        nextDueAt = earlierTimestamp(nextDueAt, coverageDueAt);
+      }
+      if (current?.enabled === false && source.enabled) {
+        nextDueAt = observedAt;
+      }
       this.sourceStates.set(source.sourceId, {
         sourceId: source.sourceId,
         enabled: source.enabled,
         lastAttemptAt: current?.lastAttemptAt ?? null,
         lastSuccessAt: current?.lastSuccessAt ?? null,
-        nextDueAt: current?.nextDueAt ?? observedAt,
+        nextDueAt,
         intervalMinutes: source.intervalMinutes,
         consecutiveFailures: current?.consecutiveFailures ?? 0,
         acceptedRate: current?.acceptedRate,
         circuitOpenUntil: current?.circuitOpenUntil ?? null,
         lastErrorCode: current?.lastErrorCode ?? null,
       });
+    }
+    for (const [sourceId, current] of this.sourceStates) {
+      if (!registeredSourceIds.has(sourceId)) {
+        this.sourceStates.set(sourceId, { ...current, enabled: false });
+      }
     }
   }
 
@@ -311,6 +326,14 @@ export class InMemoryNewsStore implements NewsStore {
   private assertLease(lease: LeaseIdentity): void {
     if (!this.hasLease(lease)) throw new Error("refresh_lease_invalid");
   }
+}
+
+function earlierTimestamp(current: string | null, ceiling: string): string {
+  const currentTimestamp = Date.parse(current ?? "");
+  const ceilingTimestamp = Date.parse(ceiling);
+  if (!Number.isFinite(currentTimestamp)) return ceiling;
+  if (!Number.isFinite(ceilingTimestamp) || currentTimestamp <= ceilingTimestamp) return current!;
+  return ceiling;
 }
 
 function asPublishedReport(report: DailyNewsReport): PublishedNewsReport {

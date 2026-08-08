@@ -105,6 +105,30 @@ describe("source coverage scheduling", () => {
     expect(selected.map((source) => source.source_id)).toEqual([sources[2].source_id, sources[1].source_id]);
   });
 
+  it("does not let a stale 90-minute deadline exceed the current 30-minute interval", () => {
+    const source = newsSources.find((candidate) => candidate.source_id === "xinhua");
+    expect(source).toBeDefined();
+
+    const health = [{
+      sourceId: source!.source_id,
+      consecutiveFailures: 0,
+      lastAttemptAt: "2026-07-10T00:00:00.000Z",
+      nextDueAt: "2026-07-10T01:30:00.000Z",
+      intervalMinutes: defaultSourceIntervalMinutes,
+    }];
+
+    expect(selectSourcesForCoverage([source!], 1, {
+      now: new Date("2026-07-10T00:29:59.999Z"),
+      health,
+      defaultIntervalMinutes: defaultSourceIntervalMinutes,
+    })).toEqual([]);
+    expect(selectSourcesForCoverage([source!], 1, {
+      now: new Date("2026-07-10T00:30:00.000Z"),
+      health,
+      defaultIntervalMinutes: defaultSourceIntervalMinutes,
+    }).map((candidate) => candidate.source_id)).toEqual([source!.source_id]);
+  });
+
   it("attempts every approved enabled source in each rolling 30-minute window", () => {
     const enabledSources = newsSources.filter(
       (source) => source.enabled && source.admission === "approved",

@@ -4,6 +4,10 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { collectSlotAudit } from "./productionAcceptanceAudit";
 import {
+  bootoutLaunchAgent,
+  buildLaunchAgentPlist,
+} from "./productionAcceptanceLaunchAgent";
+import {
   BURN_IN_STRICT_SLOTS,
   SOAK_DAYS,
   SLOT_MS,
@@ -390,15 +394,16 @@ async function stopMonitor(output: string): Promise<void> {
   if (fs.existsSync(labelFile)) {
     const label = fs.readFileSync(labelFile, "utf8").trim();
     if (!/^com\.[A-Za-z0-9.-]+$/.test(label)) throw new Error("LAUNCH_AGENT_LABEL_INVALID");
-    try {
-      await runCommand(
-        "/bin/launchctl",
-        ["bootout", `gui/${process.getuid?.() ?? 0}/${label}`],
-        { cwd: process.cwd(), timeoutMs: 15_000 },
-      );
-    } catch {
-      // An already-exited job can still leave completed evidence to review.
-    }
+    await bootoutLaunchAgent(
+      `gui/${process.getuid?.() ?? 0}/${label}`,
+      async (arguments_) => {
+        await runCommand(
+          "/bin/launchctl",
+          arguments_,
+          { cwd: process.cwd(), timeoutMs: 15_000 },
+        );
+      },
+    );
     fs.rmSync(labelFile, { force: true });
     const plistPointer = path.join(output, "launch-agent-plist.txt");
     if (fs.existsSync(plistPointer)) {
@@ -422,15 +427,6 @@ async function stopMonitor(output: string): Promise<void> {
     if (Number.isInteger(pid) && processIsAlive(pid)) process.kill(pid, "SIGTERM");
   }
   process.stdout.write("MONITOR_STOP_REQUESTED\n");
-}
-
-function xml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
 }
 
 async function startMonitorAgent(options: CliOptions): Promise<void> {
@@ -478,54 +474,37 @@ async function startMonitorAgent(options: CliOptions): Promise<void> {
     ...(options.once ? ["--once"] : []),
     ...(options.keepAwake ? ["--keep-awake"] : []),
   ];
-  const plistBody = [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
-    '<plist version="1.0">',
-    "<dict>",
-    "  <key>Label</key>",
-    `  <string>${xml(label)}</string>`,
-    "  <key>ProgramArguments</key>",
-    "  <array>",
-    ...programArguments.map((argument) => `    <string>${xml(argument)}</string>`),
-    "  </array>",
-    "  <key>WorkingDirectory</key>",
-    `  <string>${xml(cwd)}</string>`,
-    "  <key>RunAtLoad</key>",
-    "  <true/>",
-    "  <key>KeepAlive</key>",
-    "  <false/>",
-    "  <key>ProcessType</key>",
-    "  <string>Background</string>",
-    "  <key>StandardOutPath</key>",
-    `  <string>${xml(path.join(output, "stdout.log"))}</string>`,
-    "  <key>StandardErrorPath</key>",
-    `  <string>${xml(path.join(output, "stderr.log"))}</string>`,
-    "</dict>",
-    "</plist>",
-    "",
-  ].join("\n");
-  fs.writeFileSync(plist, plistBody, { mode: 0o600 });
+  const launchAgent = buildLaunchAgentPlist({
+    home: os.homedir(),
+    cwd,
+    label,
+    programArguments,
+  });
+  fs.mkdirSync(launchAgent.logDirectory, { recursive: true, mode: 0o700 });
+  fs.chmodSync(launchAgent.logDirectory, 0o700);
+  for (const logFile of [launchAgent.stdoutPath, launchAgent.stderrPath]) {
+    fs.closeSync(fs.openSync(logFile, "a", 0o600));
+    fs.chmodSync(logFile, 0o600);
+  }
+  fs.writeFileSync(plist, launchAgent.body, { mode: 0o600 });
+  fs.chmodSync(plist, 0o600);
   fs.writeFileSync(path.join(output, "launch-agent-label.txt"), `${label}\n`, { mode: 0o600 });
   fs.writeFileSync(path.join(output, "launch-agent-plist.txt"), `${plist}\n`, { mode: 0o600 });
-  fs.writeFileSync(path.join(output, "stdout.log"), "", { mode: 0o600 });
-  fs.writeFileSync(path.join(output, "stderr.log"), "", { mode: 0o600 });
   atomicWriteJson(path.join(output, "launch-agent.json"), {
     label,
     expectedDeployment: options.deployment,
     alias: options.alias,
+    logDirectory: launchAgent.logDirectory,
     installedAt: new Date().toISOString(),
   });
 
-  try {
+  await bootoutLaunchAgent(`gui/${uid}/${label}`, async (arguments_) => {
     await runCommand(
       "/bin/launchctl",
-      ["bootout", `gui/${uid}/${label}`],
+      arguments_,
       { cwd, timeoutMs: 15_000 },
     );
-  } catch {
-    // The normal first-start case has no previously loaded job.
-  }
+  });
   await runCommand(
     "/bin/launchctl",
     ["bootstrap", `gui/${uid}`, plist],

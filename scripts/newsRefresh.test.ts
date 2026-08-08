@@ -3,7 +3,7 @@ import { defaultPreferences } from "../src/config/preferences";
 import { newsSources } from "../src/config/sources";
 import { buildDailyReport } from "../src/lib/newsPipeline";
 import { selectLatestStories } from "../src/lib/curation";
-import { selectSourcesForCoverage } from "../src/lib/sourceCoverage";
+import { defaultSourceIntervalMinutes, selectSourcesForCoverage } from "../src/lib/sourceCoverage";
 import type { RawNewsItem } from "../src/types";
 import { InMemoryNewsStore } from "./inMemoryNewsStore";
 import type { NewsStore } from "./newsStore";
@@ -647,6 +647,104 @@ describe("durable news refresh", () => {
     const sourceState = (await store.readState()).sources[0];
     expect(sourceState?.lastAttemptAt).toBe(scheduledAt.toISOString());
     expect(sourceState?.nextDueAt).toBe(new Date(scheduledAt.getTime() + 30 * 60_000).toISOString());
+  });
+
+  it("attempts a source at 30 minutes after replacing a legacy 90-minute interval", async () => {
+    const initial = readBundledReport();
+    const previousAttemptAt = new Date("2026-07-15T08:00:00.000Z");
+    const scheduledAt = new Date("2026-07-15T08:30:00.000Z");
+    let storeNow = previousAttemptAt;
+    const store = new InMemoryNewsStore(initial, () => storeNow);
+    const source = newsSources.find((candidate) => candidate.source_id === "xinhua")!;
+    const seedLease = await store.tryAcquireRefresh({
+      ownerId: "00000000-0000-4000-8000-000000000006",
+      idempotencyKey: "refresh:legacy-source-interval-seed",
+      trigger: "local",
+      scheduledAt: previousAttemptAt.toISOString(),
+      leaseSeconds: 120,
+    });
+    const seedIdentity = {
+      ownerId: seedLease.ownerId,
+      runId: seedLease.runId,
+      fencingToken: seedLease.fencingToken,
+    };
+    await store.syncSources(
+      seedIdentity,
+      [{ sourceId: source.source_id, enabled: true, intervalMinutes: 90 }],
+      previousAttemptAt.toISOString(),
+    );
+    await store.recordSourceResults(seedIdentity, [{
+      sourceId: source.source_id,
+      status: "empty",
+      attemptedAt: previousAttemptAt.toISOString(),
+      nextDueAt: new Date(previousAttemptAt.getTime() + 90 * 60_000).toISOString(),
+      discoveredCount: 0,
+      acceptedCount: 0,
+      errorCode: null,
+    }]);
+    await store.completeRefreshWithoutPublish(seedIdentity, { outcome: "legacy_source_interval_seed" });
+    storeNow = scheduledAt;
+    const collect = vi.fn(collection([]));
+
+    const result = await runNewsRefresh(
+      {
+        trigger: "cron",
+        scheduledAt,
+        idempotencyKey: "refresh:legacy-source-interval",
+        maxSources: 1,
+      },
+      { store, now: () => scheduledAt, sources: [source], collect },
+    );
+
+    expect(result.selectedSourceIds).toEqual([source.source_id]);
+    expect(collect).toHaveBeenCalledOnce();
+    expect((await store.readState()).sources[0]).toMatchObject({
+      intervalMinutes: defaultSourceIntervalMinutes,
+      lastAttemptAt: scheduledAt.toISOString(),
+      nextDueAt: new Date(scheduledAt.getTime() + defaultSourceIntervalMinutes * 60_000).toISOString(),
+    });
+  });
+
+  it("makes a re-enabled in-memory source due immediately", async () => {
+    const initial = readBundledReport();
+    const disabledAt = new Date("2026-07-15T08:00:00.000Z");
+    const reenabledAt = new Date("2026-07-15T08:05:00.000Z");
+    const store = new InMemoryNewsStore(initial, () => disabledAt);
+    const source = newsSources.find((candidate) => candidate.source_id === "xinhua")!;
+    const lease = await store.tryAcquireRefresh({
+      ownerId: "00000000-0000-4000-8000-000000000007",
+      idempotencyKey: "refresh:reenabled-source-seed",
+      trigger: "local",
+      scheduledAt: disabledAt.toISOString(),
+      leaseSeconds: 120,
+    });
+    const identity = {
+      ownerId: lease.ownerId,
+      runId: lease.runId,
+      fencingToken: lease.fencingToken,
+    };
+    await store.syncSources(
+      identity,
+      [{ sourceId: source.source_id, enabled: false, intervalMinutes: defaultSourceIntervalMinutes }],
+      disabledAt.toISOString(),
+    );
+    await store.recordSourceResults(identity, [{
+      sourceId: source.source_id,
+      status: "empty",
+      attemptedAt: disabledAt.toISOString(),
+      nextDueAt: new Date(disabledAt.getTime() - 30 * 60_000).toISOString(),
+      discoveredCount: 0,
+      acceptedCount: 0,
+      errorCode: null,
+    }]);
+
+    await store.syncSources(
+      identity,
+      [{ sourceId: source.source_id, enabled: true, intervalMinutes: defaultSourceIntervalMinutes }],
+      reenabledAt.toISOString(),
+    );
+
+    expect((await store.readState()).sources[0]?.nextDueAt).toBe(reenabledAt.toISOString());
   });
 
   it("fits a half-open recovery alongside a nine-source healthy cohort", () => {

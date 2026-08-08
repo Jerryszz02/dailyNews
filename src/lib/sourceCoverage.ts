@@ -174,13 +174,12 @@ function sourceDueAt(state: SourceHealthState | undefined, defaultIntervalMinute
   if (!state) return Number.NEGATIVE_INFINITY;
 
   const explicitNextDueAt = parseDate(state.nextDueAt);
-  if (explicitNextDueAt !== undefined) return explicitNextDueAt;
-
   const lastAttemptAt = parseDate(state.lastAttemptAt);
-  if (lastAttemptAt === undefined) return Number.NEGATIVE_INFINITY;
+  if (lastAttemptAt === undefined) return explicitNextDueAt ?? Number.NEGATIVE_INFINITY;
 
   const intervalMinutes = positiveNumber(state.intervalMinutes) ?? defaultIntervalMinutes;
-  return lastAttemptAt + intervalMinutes * 60_000;
+  const intervalDueAt = lastAttemptAt + intervalMinutes * 60_000;
+  return explicitNextDueAt === undefined ? intervalDueAt : Math.min(explicitNextDueAt, intervalDueAt);
 }
 
 function parseDate(value: string | null | undefined): number | undefined {
