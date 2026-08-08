@@ -25,6 +25,12 @@ export type Category =
 
 export type PreferenceStrength = "not-preferred" | "preferred";
 
+export type CandidateDisposition = "display_ready" | "degraded" | "rejected";
+
+export type SourceAdmission = "approved" | "blocked";
+
+export type SourcePublicationRole = "reporting" | "lead";
+
 export interface NewsSource {
   source_id: string;
   name: string;
@@ -36,6 +42,12 @@ export interface NewsSource {
   sections: SourceSection[];
   mayHavePaywall: boolean;
   enabled: boolean;
+  admission: SourceAdmission;
+  publicationRole: SourcePublicationRole;
+  allowedHosts: string[];
+  allowedPathPrefixes?: string[];
+  reviewedAt: string;
+  reviewNote: string;
 }
 
 export interface SourceSection {
@@ -69,8 +81,16 @@ export interface RawNewsItem {
   primaryCategory?: Category;
   summary: string;
   publishedAt?: string;
+  updatedAt?: string;
+  enrichmentUpdatedAt?: string;
+  discoveredAt?: string;
   extractedAt: string;
   mayHavePaywall?: boolean;
+  qualityStatus?: CandidateDisposition;
+  rejectionReasons?: string[];
+  translationStatus?: "translated" | "original" | "pending";
+  summaryStatus?: "complete" | "pending";
+  timeStatus?: "verified" | "estimated";
 }
 
 export interface NewsCluster extends RawNewsItem {
@@ -79,6 +99,8 @@ export interface NewsCluster extends RawNewsItem {
   sourceNames: string[];
   relatedUrls: string[];
   primaryCategoryVotes: Category[];
+  startedAt: string;
+  updatedAt: string;
 }
 
 export type TrustLevel = "low" | "medium" | "high";
@@ -86,6 +108,7 @@ export type TrustLevel = "low" | "medium" | "high";
 export interface TrustAssessment {
   score: number;
   level: TrustLevel;
+  /** @deprecated Source admission is the visibility boundary; this remains true for V2 compatibility. */
   shouldShow: boolean;
   reasons: string[];
 }
@@ -156,8 +179,12 @@ export interface StoryCard {
   entities: string[];
   status: StoryStatus;
   tier: ImportanceTier;
+  startedAt?: string;
   publishedAt?: string;
   updatedAt: string;
+  translationStatus?: "translated" | "original" | "pending";
+  summaryStatus?: "complete" | "pending";
+  timeStatus?: "verified" | "estimated";
   sourceNames: string[];
   evidence: StoryEvidence[];
   importance: ImportanceFeatures;
@@ -189,6 +216,8 @@ export interface PublicQualitySummary {
   maxPrimaryPublisherShare: number;
   weaklySourcedCoreShare: number;
   rejectionReasons: Record<string, number>;
+  latestEventCount?: number;
+  unmappedCandidateCount?: number;
 }
 
 export interface StorySection {
@@ -197,6 +226,19 @@ export interface StorySection {
 }
 
 export type ReportRefreshStatus = "fresh" | "stale" | "degraded" | "unavailable";
+
+export type ReportServingMode = "durable" | "bundled" | "browser-cache";
+export type PipelineStatus = "running" | "healthy" | "degraded" | "failed";
+export type ContentStatus = "current" | "quiet" | "stale" | "unknown";
+export type CoverageStatus = "current" | "stale" | "incomplete" | "unavailable";
+export type RefreshOutcomeCode =
+  | "published"
+  | "unchanged"
+  | "partial"
+  | "busy"
+  | "duplicate"
+  | "rejected"
+  | "failed";
 
 export interface ReportRefreshMetadata {
   reportId?: string | null;
@@ -208,6 +250,16 @@ export interface ReportRefreshMetadata {
   lastSuccessAt?: string | null;
   staleAfterMinutes?: number;
   lastError?: string | null;
+  servingMode?: ReportServingMode;
+  pipelineStatus?: PipelineStatus;
+  contentStatus?: ContentStatus;
+  coverageStatus?: CoverageStatus;
+  lastCheckedAt?: string | null;
+  lastFullSweepAt?: string | null;
+  lastPublishedAt?: string | null;
+  publicationStateAt?: string | null;
+  lastOutcomeCode?: RefreshOutcomeCode | null;
+  activeRunId?: string | null;
 }
 
 export interface DailyNewsReport {
@@ -215,6 +267,7 @@ export interface DailyNewsReport {
   generatedAt: string;
   window: { from: string; to: string };
   stories: StoryCard[];
+  latestStories?: StoryCard[];
   topStories: StoryCard[];
   importantStories: StoryCard[];
   watchlist: StoryCard[];
@@ -234,9 +287,10 @@ export interface WebReportRankingMetadata {
 
 export type WebDailyNewsReport = Omit<
   DailyNewsReport,
-  "items" | "topStories" | "importantStories" | "watchlist"
+  "items" | "latestStories" | "topStories" | "importantStories" | "watchlist"
 > & {
   webView: 1;
+  latestStoryIds?: string[];
   topStoryIds: string[];
   importantStoryIds: string[];
   watchlistIds: string[];

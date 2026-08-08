@@ -1,3 +1,4 @@
+import { defineApprovedSource, type SourceDefinition } from "../lib/sourceAdmission";
 import type { Category, NewsSource, SearchSourceType, SourceSection } from "../types";
 
 const newsOnly: SearchSourceType[] = ["news"];
@@ -15,7 +16,7 @@ function section(
   return { label, url, primaryCategory, categories, searchTerms, searchSources, requireChinese };
 }
 
-export const newsSources: NewsSource[] = [
+const configuredSources: SourceDefinition[] = [
   {
     source_id: "xinhua",
     name: "新华网",
@@ -680,3 +681,5 @@ export const newsSources: NewsSource[] = [
     sections: [section("X", "https://x.com/karpathy", "ai", ["ai", "technology"], ["site:x.com/karpathy AI", "Andrej Karpathy AI latest"], webAndNews, false)],
   },
 ];
+
+export const newsSources: NewsSource[] = configuredSources.map(defineApprovedSource);
