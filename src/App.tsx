@@ -24,6 +24,7 @@ import type {
   DailyNewsReport,
   PreferenceStrength,
   RawNewsItem,
+  ReportRefreshMetadata,
   ReportRefreshStatus,
   StoryCard,
   UserPreferences,
@@ -52,9 +53,10 @@ type LoadState = "idle" | "loading" | "ready" | "error";
 
 const initialVisibleCount = 18;
 const visibleStep = 18;
+const initialLatestVisibleCount = 20;
+const latestVisibleStep = 20;
 const preferencesStorageKey = "daily-news-preferences";
 const refreshIntervalMs = 30_000;
-const reportCacheWindowMs = 30_000;
 const reportRequestTimeoutMs = 8_000;
 const defaultStaleAfterMinutes = 30;
 const snapshotFallbackReport = buildDailyReport(
@@ -66,17 +68,23 @@ const snapshotFallbackReport = buildDailyReport(
 export interface ReportFreshnessView {
   status: ReportRefreshStatus;
   reportGeneratedAt: string | null;
+  lastPublishedAt: string | null;
   newestContentAt: string | null;
-  lastSuccessAt: string | null;
+  lastCheckedAt: string | null;
   pageCheckedAt: string | null;
   staleAfterMinutes: number;
   newestContentWasInferred: boolean;
-  lastSuccessWasInferred: boolean;
+  lastCheckedWasInferred: boolean;
   statusWasInferred: boolean;
+  servingMode: NonNullable<ReportRefreshMetadata["servingMode"]>;
+  pipelineStatus: NonNullable<ReportRefreshMetadata["pipelineStatus"]>;
+  contentStatus: NonNullable<ReportRefreshMetadata["contentStatus"]>;
+  coverageStatus: NonNullable<ReportRefreshMetadata["coverageStatus"]>;
 }
 
 export function App() {
   const [loadedReport, setLoadedReport] = useState<DailyNewsReport | null>(null);
+  const [serviceRefresh, setServiceRefresh] = useState<ReportRefreshMetadata | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(() => loadStoredPreferences());
   const [activeView, setActiveView] = useState<ActiveView>("preferred");
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,6 +103,7 @@ export function App() {
     try {
       const apiReport = await readReport(reportApiUrl(Date.now(), bypassCache));
       if (apiReport) {
+        setServiceRefresh((current) => mergeServiceRefresh(loadedReportRef.current, current, apiReport));
         if (shouldReplaceReport(loadedReportRef.current, apiReport)) {
           loadedReportRef.current = apiReport;
           setLoadedReport(apiReport);
@@ -106,6 +115,12 @@ export function App() {
       }
 
       if (loadedReportRef.current) {
+        setServiceRefresh((current) => ({
+          ...current,
+          servingMode: "browser-cache",
+          pipelineStatus: "degraded",
+          lastError: "public_api_unavailable",
+        }));
         setPageCheckedAt(new Date().toISOString());
         setLoadError("实时接口暂不可用，继续显示最近成功读取的报告。");
         setLoadState("error");
@@ -116,6 +131,13 @@ export function App() {
       if (staticReport) {
         loadedReportRef.current = staticReport;
         setLoadedReport(staticReport);
+        setServiceRefresh({
+          ...staticReport.refresh,
+          servingMode: "bundled",
+          pipelineStatus: "degraded",
+          contentStatus: staticReport.refresh?.contentStatus ?? "stale",
+          lastError: "public_api_unavailable",
+        });
         setPageCheckedAt(new Date().toISOString());
         setLoadError("实时接口暂不可用，当前显示静态兜底数据。");
         setLoadState("ready");
@@ -124,6 +146,13 @@ export function App() {
 
       loadedReportRef.current = snapshotFallbackReport;
       setLoadedReport(snapshotFallbackReport);
+      setServiceRefresh({
+        ...snapshotFallbackReport.refresh,
+        servingMode: "bundled",
+        pipelineStatus: "failed",
+        contentStatus: "stale",
+        lastError: "public_api_unavailable",
+      });
       setPageCheckedAt(new Date().toISOString());
       setLoadError("实时接口和静态新闻都暂不可用，当前显示本地兜底数据。");
       setLoadState("error");
@@ -135,9 +164,18 @@ export function App() {
   useEffect(() => {
     void refreshNews();
     const timer = window.setInterval(() => {
-      void refreshNews();
+      if (document.visibilityState === "visible" && navigator.onLine) void refreshNews();
     }, refreshIntervalMs);
-    return () => window.clearInterval(timer);
+    const refreshWhenAvailable = () => {
+      if (document.visibilityState === "visible" && navigator.onLine) void refreshNews();
+    };
+    document.addEventListener("visibilitychange", refreshWhenAvailable);
+    window.addEventListener("online", refreshWhenAvailable);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshWhenAvailable);
+      window.removeEventListener("online", refreshWhenAvailable);
+    };
   }, [refreshNews]);
 
   useEffect(() => {
@@ -150,8 +188,7 @@ export function App() {
 
   const fallbackReport = snapshotFallbackReport;
   const report = loadedReport ?? fallbackReport;
-  const freshness = resolveReportFreshness(report, pageCheckedAt);
-  const freshnessStatus = loadError ? "degraded" : freshness.status;
+  const freshness = resolveReportFreshness(report, pageCheckedAt, Date.now(), serviceRefresh);
   const personalizedOrder = useMemo(
     () => new Map(rankNews(report.items, preferences).map((item, index) => [item.id, index])),
     [preferences, report.items],
@@ -203,11 +240,16 @@ export function App() {
           </div>
           <div className="status-panel">
             <dl className="freshness-grid">
-              <FreshnessTime label="报告生成" value={freshness.reportGeneratedAt} />
+              <FreshnessTime label="报告发布" value={freshness.lastPublishedAt} />
               <FreshnessTime label="最新新闻" value={freshness.newestContentAt} wasInferred={freshness.newestContentWasInferred} />
-              <FreshnessTime label="上次成功检查" value={freshness.lastSuccessAt} wasInferred={freshness.lastSuccessWasInferred} />
+              <FreshnessTime label="最近检查" value={freshness.lastCheckedAt} wasInferred={freshness.lastCheckedWasInferred} />
               <FreshnessTime label="页面检查" value={freshness.pageCheckedAt} />
             </dl>
+            <div className="status-semantics" aria-label="新闻服务状态">
+              <span>服务：{pipelineStatusLabel(freshness.pipelineStatus)}</span>
+              <span>采集：{coverageStatusLabel(freshness.coverageStatus)}</span>
+              <span>内容：{contentStatusLabel(freshness.contentStatus)}</span>
+            </div>
             <button
               className="reload-button"
               disabled={loadState === "loading"}
@@ -221,7 +263,7 @@ export function App() {
           </div>
         </header>
 
-        <FreshnessBanner freshness={freshness} status={freshnessStatus} />
+        <FreshnessBanner freshness={freshness} />
 
         {activeView === "settings" ? (
           <PreferencesPanel preferences={preferences} setPreferences={setPreferences} />
@@ -257,7 +299,7 @@ export function App() {
             {loadError ? <div className="page-note">{loadError}</div> : null}
 
             {activeView === "preferred" ? (
-              <BriefingHome preferences={preferences} query={searchQuery} report={report} />
+              <BriefingHome query={searchQuery} report={report} />
             ) : (
               <>
                 <section className="story-section category-story-section" aria-label={`${categoryLabel(activeView)}事件`}>
@@ -314,16 +356,27 @@ function FreshnessTime({ label, value, wasInferred = false }: { label: string; v
   );
 }
 
-function FreshnessBanner({ freshness, status }: { freshness: ReportFreshnessView; status: ReportRefreshStatus }) {
-  if (status === "fresh") return null;
+function FreshnessBanner({ freshness }: { freshness: ReportFreshnessView }) {
+  const pipelineDegraded = freshness.pipelineStatus === "degraded" || freshness.pipelineStatus === "failed";
+  const unavailable = freshness.status === "unavailable";
+  const contentNeedsNotice = freshness.contentStatus === "quiet" || freshness.contentStatus === "stale";
+  if (!pipelineDegraded && !unavailable && !contentNeedsNotice) return null;
 
-  const heading = status === "stale" ? "当前报告已过期" : status === "degraded" ? "实时更新服务异常" : "暂时无法确认报告状态";
-  const message =
-    status === "stale"
-      ? `当前报告内容时间已超过 ${freshness.staleAfterMinutes} 分钟，页面继续保留最后一份可用报告。`
-      : status === "degraded"
-        ? "页面正在显示最后一份可用报告，重新加载页面不会触发新闻采集。"
-        : "目前没有足够的刷新元数据，请稍后重新加载报告。";
+  const status: ReportRefreshStatus = unavailable ? "unavailable" : pipelineDegraded ? "degraded" : "stale";
+  const heading = unavailable
+    ? "暂时无法确认报告状态"
+    : pipelineDegraded
+      ? "更新链路部分降级"
+      : freshness.contentStatus === "quiet"
+        ? "当前时段暂无新事件"
+        : "当前内容较旧";
+  const message = unavailable
+    ? "目前没有足够的刷新元数据，请稍后重新加载报告。"
+    : pipelineDegraded
+      ? "页面继续显示最近一份可用报告；部分来源或后台步骤将自动重试。"
+      : freshness.contentStatus === "quiet"
+        ? "后台检查仍在正常进行，只是当前来源没有发现新的可发布事件。"
+        : `内容活动时间已超过 ${freshness.staleAfterMinutes} 分钟，服务仍可用并保留最后一份有效报告。`;
 
   return (
     <section className={`freshness-banner ${status}`} role="status">
@@ -339,18 +392,18 @@ function FreshnessBanner({ freshness, status }: { freshness: ReportFreshnessView
   );
 }
 
-function BriefingHome({ report, preferences, query }: { report: DailyNewsReport; preferences: UserPreferences; query: string }) {
-  const itemOrder = new Map(rankNews(report.items, preferences).map((item, index) => [item.id, index]));
+function BriefingHome({ report, query }: { report: DailyNewsReport; query: string }) {
+  const [latestVisibleCount, setLatestVisibleCount] = useState(initialLatestVisibleCount);
+  const latestStories = filterStories(resolveLatestStories(report), query);
+  const visibleLatestStories = latestStories.slice(0, latestVisibleCount);
   const topStories = filterStories(report.topStories, query);
-  const importantStories = filterStories(
-    [...report.importantStories].sort(
-      (left, right) => (itemOrder.get(left.itemId) ?? Number.MAX_SAFE_INTEGER) - (itemOrder.get(right.itemId) ?? Number.MAX_SAFE_INTEGER),
-    ),
-    query,
-  );
+  const importantStories = selectBriefingImportantStories(report, query);
   const watchlist = filterStories(report.watchlist, query);
-  const recentStories = orderStoriesByActivity([...topStories, ...importantStories, ...watchlist]).slice(0, 3);
-  const visibleStoryCount = topStories.length + importantStories.length + watchlist.length;
+  const visibleStoryCount = latestStories.length + topStories.length + importantStories.length + watchlist.length;
+
+  useEffect(() => {
+    setLatestVisibleCount(initialLatestVisibleCount);
+  }, [query, report.generatedAt]);
 
   return (
     <div className="briefing-home">
@@ -367,30 +420,28 @@ function BriefingHome({ report, preferences, query }: { report: DailyNewsReport;
           <span>独立来源</span>
           <strong>{report.sourceCount}</strong>
         </div>
-        <p>同一事件只出现一次；未确认线索不会进入核心简报。</p>
+        <p>全部有效事件先进入最新流；事实状态和精选层级不会让新闻消失。</p>
       </section>
 
       {visibleStoryCount === 0 ? <div className="empty-state">没有匹配当前搜索的事件。</div> : null}
 
-      {recentStories.length > 0 ? (
-        <section className="latest-updates" aria-labelledby="latest-updates-title">
-          <div>
+      {visibleLatestStories.length > 0 ? (
+        <section className="story-section latest-news-section" aria-labelledby="latest-updates-title">
+          <div className="story-section-heading">
+            <div>
             <p className="eyebrow">按最新证据时间</p>
-            <h2 id="latest-updates-title">实时更新</h2>
+              <h2 id="latest-updates-title">全部最新</h2>
+            </div>
+            <span>{latestStories.length} 个最近事件</span>
           </div>
-          <ol>
-            {recentStories.map((story) => {
-              const activityAt = storyActivityTimestamp(story);
-              const activityAtValue = Number.isFinite(activityAt) ? new Date(activityAt).toISOString() : null;
-              return (
-                <li key={story.id}>
-                  <time dateTime={activityAtValue ?? undefined}>{activityAtValue ? formatCompactDateTime(activityAtValue) : "时间未知"}</time>
-                  <a href={`#story-${story.id}`}>{story.title}</a>
-                  <span className={`event-status ${story.status}`}>{storyStatusLabel(story.status)}</span>
-                </li>
-              );
-            })}
-          </ol>
+          <div className="story-grid">
+            {visibleLatestStories.map((story) => <EventCard anchor={false} key={story.id} story={story} variant="compact" />)}
+          </div>
+          {latestStories.length > visibleLatestStories.length ? (
+            <button className="show-more" type="button" onClick={() => setLatestVisibleCount((current) => current + latestVisibleStep)}>
+              展开更多 {Math.min(latestVisibleStep, latestStories.length - visibleLatestStories.length)} 个最新事件
+            </button>
+          ) : null}
         </section>
       ) : null}
 
@@ -421,7 +472,7 @@ function BriefingHome({ report, preferences, query }: { report: DailyNewsReport;
               <p className="eyebrow">值得掌握</p>
               <h2 id="important-title">重要进展</h2>
             </div>
-            <span>偏好只调整本层顺序</span>
+            <span>按报告精选顺序展示</span>
           </div>
           <div className="story-grid">
             {importantStories.map((story) => <EventCard key={story.id} story={story} variant="compact" />)}
@@ -447,17 +498,20 @@ function BriefingHome({ report, preferences, query }: { report: DailyNewsReport;
   );
 }
 
-function EventCard({ story, variant }: { story: StoryCard; variant: "lead" | "compact" | "watch" }) {
+function EventCard({ story, variant, anchor = true }: { story: StoryCard; variant: "lead" | "compact" | "watch"; anchor?: boolean }) {
   const primaryEvidence = story.evidence[0];
   const facts = story.keyFacts.filter((fact) => normalizeText(fact) !== normalizeText(story.whatHappened)).slice(0, 2);
 
   return (
-    <article className={`event-card ${variant}`} id={`story-${story.id}`}>
+    <article className={`event-card ${variant}`} id={anchor ? `story-${story.id}` : undefined}>
       <div className="event-meta">
         <span className={`event-status ${story.status}`}>{storyStatusLabel(story.status)}</span>
         <span>{categoryLabel(story.primaryBeat)}</span>
         <span>{story.evidence.length} 个证据来源</span>
         <span>{formatStoryAge(story)}</span>
+        {story.translationStatus === "pending" ? <span className="degraded-badge">待翻译</span> : null}
+        {story.summaryStatus === "pending" ? <span className="degraded-badge">摘要待补全</span> : null}
+        {story.timeStatus === "estimated" ? <span className="degraded-badge">时间待核验</span> : null}
       </div>
       <h3>
         <a href={primaryEvidence?.url} rel="noreferrer" target="_blank">{story.title}</a>
@@ -538,7 +592,7 @@ function PreferencesPanel({
       <div className="source-summary">
         <div>
           <Star size={18} />
-          <span>{newsSources.filter((source) => source.enabled).length} 个启用来源</span>
+          <span>{newsSources.filter((source) => source.enabled && source.admission === "approved").length} 个启用来源</span>
         </div>
       </div>
     </section>
@@ -569,7 +623,9 @@ export async function readReport(url: string, timeoutMs = reportRequestTimeoutMs
       candidate.coverage &&
       candidate.quality
     ) {
-      return candidate as DailyNewsReport;
+      const normalized = candidate as DailyNewsReport;
+      normalized.latestStories = resolveLatestStories(normalized);
+      return normalized;
     }
     const upgradedReport = buildDailyReport(
       candidate.items as RawNewsItem[],
@@ -587,66 +643,179 @@ export async function readReport(url: string, timeoutMs = reportRequestTimeoutMs
 
 export function shouldReplaceReport(current: DailyNewsReport | null, candidate: DailyNewsReport): boolean {
   if (!current) return true;
+  if (current.refresh?.servingMode === "durable" && candidate.refresh?.servingMode !== "durable") return false;
+  const candidatePublicationStateAt = Date.parse(validTimestamp(candidate.refresh?.publicationStateAt) ?? "");
+  const currentPublicationStateAt = Date.parse(validTimestamp(current.refresh?.publicationStateAt) ?? "");
+  if (candidate.refresh?.servingMode === "durable" && Number.isFinite(candidatePublicationStateAt)) {
+    if (current.refresh?.servingMode !== "durable" || !Number.isFinite(currentPublicationStateAt)) return true;
+    if (candidatePublicationStateAt !== currentPublicationStateAt) {
+      return candidatePublicationStateAt > currentPublicationStateAt;
+    }
+  }
   return reportDataTimestamp(candidate) >= reportDataTimestamp(current);
+}
+
+export function mergeServiceRefresh(
+  currentReport: DailyNewsReport | null,
+  currentService: ReportRefreshMetadata | null,
+  candidateReport: DailyNewsReport,
+): ReportRefreshMetadata | null {
+  const candidate = candidateReport.refresh ?? null;
+  if (!candidate) return currentService;
+  const current = currentReport?.refresh || currentService
+    ? { ...currentReport?.refresh, ...currentService }
+    : null;
+  if (!current) return candidate;
+
+  const currentServingMode = currentReport?.refresh?.servingMode ?? current.servingMode;
+  const currentPublicationStateAt = Date.parse(
+    validTimestamp(currentReport?.refresh?.publicationStateAt ?? current.publicationStateAt) ?? "",
+  );
+  const candidatePublicationStateAt = Date.parse(validTimestamp(candidate.publicationStateAt) ?? "");
+  if (
+    currentServingMode === "durable" &&
+    candidate.servingMode === "durable" &&
+    Number.isFinite(currentPublicationStateAt) &&
+    Number.isFinite(candidatePublicationStateAt) &&
+    candidatePublicationStateAt < currentPublicationStateAt
+  ) {
+    return current;
+  }
+
+  if (currentServingMode === "durable" && candidate.servingMode !== "durable") {
+    return {
+      ...current,
+      servingMode: candidate.servingMode ?? "browser-cache",
+      pipelineStatus: candidate.pipelineStatus ?? "degraded",
+      coverageStatus: candidate.coverageStatus ?? current.coverageStatus,
+      status: candidate.status ?? current.status,
+      lastCheckedAt: candidate.lastCheckedAt ?? current.lastCheckedAt,
+      lastAttemptAt: candidate.lastAttemptAt ?? current.lastAttemptAt,
+      lastError: candidate.lastError ?? current.lastError,
+      lastOutcomeCode: candidate.lastOutcomeCode ?? current.lastOutcomeCode,
+      activeRunId: candidate.activeRunId ?? current.activeRunId,
+    };
+  }
+
+  return candidate;
 }
 
 function reportDataTimestamp(report: Pick<DailyNewsReport, "generatedAt" | "refresh">): number {
   return Date.parse(validTimestamp(report.refresh?.dataAsOf) ?? report.generatedAt);
 }
 
-export function reportApiUrl(nowMs: number, bypassCache = false): string {
+export function reportApiUrl(_nowMs: number, bypassCache = false): string {
   if (bypassCache) return "/api/news?view=web&reload=1";
-  return `/api/news?view=web&window=${Math.floor(nowMs / reportCacheWindowMs)}`;
+  return "/api/news?view=web";
 }
 
 export function resolveReportFreshness(
   report: Pick<DailyNewsReport, "generatedAt" | "items" | "refresh">,
   pageCheckedAt: string | null,
   nowMs = Date.now(),
+  serviceRefresh: ReportRefreshMetadata | null = null,
 ): ReportFreshnessView {
+  const metadata = { ...report.refresh, ...serviceRefresh };
   const reportGeneratedAt = validTimestamp(report.generatedAt);
-  const explicitNewestContentAt = validTimestamp(report.refresh?.newestContentAt);
-  const newestContentAt = explicitNewestContentAt ?? newestPublishedAt(report.items);
-  const dataAsOf = validTimestamp(report.refresh?.dataAsOf) ?? reportGeneratedAt;
-  const explicitLastSuccessAt = validTimestamp(report.refresh?.lastSuccessAt);
-  const lastSuccessAt = explicitLastSuccessAt ?? reportGeneratedAt;
-  const configuredStaleAfterMinutes = report.refresh?.staleAfterMinutes;
+  const explicitNewestContentAt = validTimestamp(metadata.newestContentAt);
+  const newestContentAt = explicitNewestContentAt ?? newestUpdatedAt(report.items);
+  const dataAsOf = validTimestamp(metadata.dataAsOf) ?? reportGeneratedAt;
+  const explicitLastCheckedAt =
+    validTimestamp(metadata.lastCheckedAt) ??
+    validTimestamp(metadata.lastAttemptAt) ??
+    validTimestamp(metadata.lastSuccessAt);
+  const lastCheckedAt = explicitLastCheckedAt ?? reportGeneratedAt;
+  const lastPublishedAt = validTimestamp(metadata.lastPublishedAt) ?? reportGeneratedAt;
+  const configuredStaleAfterMinutes = metadata.staleAfterMinutes;
   const staleAfterMinutes =
     typeof configuredStaleAfterMinutes === "number" && Number.isFinite(configuredStaleAfterMinutes) && configuredStaleAfterMinutes > 0
       ? configuredStaleAfterMinutes
       : defaultStaleAfterMinutes;
   const inferredStatus = inferRefreshStatus(dataAsOf, staleAfterMinutes, nowMs);
-  const explicitStatus = isReportRefreshStatus(report.refresh?.status) ? report.refresh.status : null;
+  const explicitStatus = isReportRefreshStatus(metadata.status) ? metadata.status : null;
   const explicitFreshIsStale = explicitStatus === "fresh" && inferredStatus === "stale";
+  const pipelineStatus =
+    metadata.pipelineStatus ??
+    (explicitStatus === "unavailable"
+      ? "failed"
+      : explicitStatus === "degraded"
+        ? "degraded"
+        : "healthy");
+  const contentStatus = metadata.contentStatus ?? (inferredStatus === "stale" ? "stale" : "current");
+  const status: ReportRefreshStatus =
+    explicitStatus === "unavailable"
+      ? "unavailable"
+      : pipelineStatus === "degraded" || pipelineStatus === "failed"
+        ? "degraded"
+        : contentStatus === "stale"
+          ? "stale"
+          : (explicitFreshIsStale ? "stale" : (explicitStatus ?? inferredStatus));
 
   return {
-    status: explicitFreshIsStale ? "stale" : (explicitStatus ?? inferredStatus),
+    status,
     reportGeneratedAt,
+    lastPublishedAt,
     newestContentAt,
-    lastSuccessAt,
+    lastCheckedAt,
     pageCheckedAt: validTimestamp(pageCheckedAt),
     staleAfterMinutes,
     newestContentWasInferred: !explicitNewestContentAt && Boolean(newestContentAt),
-    lastSuccessWasInferred: !explicitLastSuccessAt && Boolean(lastSuccessAt),
+    lastCheckedWasInferred: !explicitLastCheckedAt && Boolean(lastCheckedAt),
     statusWasInferred: !explicitStatus || explicitFreshIsStale,
+    servingMode: metadata.servingMode ?? "bundled",
+    pipelineStatus,
+    contentStatus,
+    coverageStatus: metadata.coverageStatus ?? "unavailable",
   };
 }
 
-function newestPublishedAt(items: DailyNewsReport["items"]): string | null {
+export function resolveLatestStories(
+  report: Pick<DailyNewsReport, "generatedAt" | "stories" | "latestStories" | "refresh">,
+): StoryCard[] {
+  if (Array.isArray(report.latestStories)) return orderStoriesByActivity(report.latestStories);
+
+  const ordered = orderStoriesByActivity(report.stories);
+  const referenceAt = Date.parse(validTimestamp(report.refresh?.dataAsOf) ?? report.generatedAt);
+  if (!Number.isFinite(referenceAt)) return ordered;
+  const within24Hours = ordered.filter((story) => {
+    const ageMs = referenceAt - storyActivityTimestamp(story);
+    return ageMs >= 0 && ageMs <= 24 * 60 * 60_000;
+  });
+  if (within24Hours.length > 0) return within24Hours;
+  const within72Hours = ordered.filter((story) => {
+    const ageMs = referenceAt - storyActivityTimestamp(story);
+    return ageMs >= 0 && ageMs <= 72 * 60 * 60_000;
+  });
+  return within72Hours.length > 0 ? within72Hours : ordered;
+}
+
+function newestUpdatedAt(items: DailyNewsReport["items"]): string | null {
   let newest: string | null = null;
   let newestMs = Number.NEGATIVE_INFINITY;
 
   for (const item of items) {
-    const publishedAt = validTimestamp(item.publishedAt);
-    if (!publishedAt) continue;
-    const publishedAtMs = Date.parse(publishedAt);
-    if (publishedAtMs > newestMs) {
-      newest = publishedAt;
-      newestMs = publishedAtMs;
+    const updatedAt = validTimestamp(item.updatedAt);
+    if (!updatedAt) continue;
+    const updatedAtMs = Date.parse(updatedAt);
+    if (updatedAtMs > newestMs) {
+      newest = updatedAt;
+      newestMs = updatedAtMs;
     }
   }
 
   return newest;
+}
+
+function pipelineStatusLabel(status: NonNullable<ReportRefreshMetadata["pipelineStatus"]>): string {
+  return { running: "运行中", healthy: "正常", degraded: "部分降级", failed: "失败" }[status];
+}
+
+function coverageStatusLabel(status: NonNullable<ReportRefreshMetadata["coverageStatus"]>): string {
+  return { current: "完整", stale: "超时", incomplete: "未完成", unavailable: "未知" }[status];
+}
+
+function contentStatusLabel(status: NonNullable<ReportRefreshMetadata["contentStatus"]>): string {
+  return { current: "最新", quiet: "平静期", stale: "较旧", unknown: "未知" }[status];
 }
 
 function inferRefreshStatus(dataAsOf: string | null, staleAfterMinutes: number, nowMs: number): ReportRefreshStatus {
@@ -678,6 +847,13 @@ function filterStories(stories: StoryCard[], query: string): StoryCard[] {
       `${story.title} ${story.whatHappened} ${story.whyItMatters} ${story.sourceNames.join(" ")} ${story.primaryBeat} ${story.eventType}`,
     ).includes(normalized),
   );
+}
+
+export function selectBriefingImportantStories(
+  report: Pick<DailyNewsReport, "importantStories">,
+  query: string,
+): StoryCard[] {
+  return filterStories(report.importantStories, query);
 }
 
 function viewTitle(view: ActiveView): string {

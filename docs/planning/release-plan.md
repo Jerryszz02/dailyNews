@@ -2,13 +2,13 @@
 
 ## 目标
 
-把 Daily News 从 bundled JSON + 单进程内存刷新迁移到 Supabase 持久运行态，使公开网站能由后台每 15 分钟检查多个来源，并在跨 Vercel 实例、失败和冷启动情况下继续返回真实 last-known-good。
+在现有 Supabase 持久运行态上完成完整性优先重构，使后台每 5 分钟检查一批来源、30 分钟完成全轮，并在局部失败、冷启动和内容静默时继续返回真实 last-known-good。
 
 ## 发布前提
 
 - 数据模型、RPC、RLS 与 pgTAP 通过 [database-design.md](database-design.md) 和 [test-plan.md](test-plan.md) 的上线门；
 - `GET /api/news` 不抓取新闻源，`GET /api/cron` 与 `POST /api/refresh` 共用唯一刷新 orchestrator；
-- 正常健康状态下，49 个 enabled source 在持久 due-state 驱动下滚动 90 分钟全覆盖；circuit-open 来源按独立半开恢复标准验收；
+- 动态 enabled source 在持久 due-state 驱动下滚动 30 分钟全部尝试；partial/failed 来源优先重试但不能饿死正常来源；
 - 旧 fallback 不改写 `reportId`、`generatedAt`、`lastSuccessAt`；
 - 所有用户可见状态和错误为中文且不含 secret。
 
@@ -20,7 +20,7 @@
 | Vercel server | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | 仅 Production/Preview 中需要的 scope；不加 `VITE_` |
 | Vercel server | `CRON_SECRET`, `DAILY_NEWS_REFRESH_TOKEN` | cron 与人工刷新分开，可独立轮换 |
 | Supabase Vault | refresh URL 与 cron secret | 只保存值；migration 只引用约定 secret 名 |
-| Supabase Cron | `*/15 * * * *` | 通过 `pg_net` GET 生产 `/api/cron` |
+| Supabase Cron | `*/5 * * * *` | 通过 `pg_net` GET 生产 `/api/cron` |
 
 真实值不得写入文档、提交、命令输出或聊天。数据库 password/PAT 只用于 CLI 登录/迁移，不是应用 runtime 变量。
 
@@ -28,10 +28,11 @@
 
 ### 0. 代码与确定性验收
 
-1. 固定 Supabase CLI 和 `@supabase/supabase-js` 版本；
-2. 新增 migration、pgTAP、NewsStore contract、freshness、调度轮转、API 和前端测试；
-3. 运行 `npm test`、integration、Supabase database tests 和 `npm run build`；
-4. 保存测试数量、耗时和失败语义证据。
+1. 从 `origin/main` 创建隔离 `codex/news-pipeline-stability` worktree，不带入原工作区未提交改动；
+2. 新增向后兼容 migration、pgTAP、NewsStore contract、完整性、调度、API、前端与 GitHub Actions；
+3. 本地运行 unit、integration、build、database tests 和 diff-check；
+4. 推送 draft PR，独立自审全部 diff，修复 P0–P2，等待 `app-tests` 与 `database-tests` 全绿；
+5. 将 PR 标为 ready 后 squash merge 并删除远端分支。
 
 ### 1. Staging migration 与 shadow
 
@@ -54,12 +55,12 @@
 1. 使用受保护 endpoint 手动运行至少两轮，确认来源组发生轮转，第二份报告输入包含两轮候选；
 2. 查询 durable run/source/latest，确认无双 latest、无旧时间重盖、无敏感错误；
 3. 将生产 URL 与 `CRON_SECRET` 写入 Supabase Vault；
-4. 启用 15 分钟 Supabase Cron，观察至少两个真实时间槽和一次重复/并发调用；每个时槽同时核对 pg_net HTTP 与 durable refresh run，不能只看 Cron 入队成功；
+4. 启用 5 分钟 Supabase Cron，观察至少六个真实时间槽和一次重复/并发调用；每个时槽同时核对 pg_net HTTP 与 durable refresh run，不能只看 Cron 入队成功；
 5. 确认已打开网页在新报告发布后 60 秒内自动收敛。
 
 ### 4. 24 小时 burn-in
 
-保持 bundled fallback 和上一快照可回滚。每个自然槽结束 1–3 分钟内记录 Cron、pg_net 9 键响应摘要、durable run 的 planned/attempted/skipped/missing、snapshot/runtime 原子链接、source state 即时快照，以及公开 report ID、实际内容年龄和错误码。burn-in 期间监控必须按 15 分钟运行，不能只做每小时抽样；`pg_net` 响应有 6 小时 TTL，`source_state` 也会被后续槽覆盖。通过标准：96 个严格槽四层完整、最大成功间隔不超过 30 分钟、49 源轮转达标、无双发布/候选丢失/secret 泄漏。
+保持 bundled fallback 和上一快照可回滚。每个 5 分钟自然槽记录 Cron、pg_net、durable run、snapshot/runtime 原子链接、source state、公开 report ID、完整性指标和分轴状态。通过标准：动态 enabled 来源滚动 30 分钟全部尝试、`unmappedCandidateCount=0`、24 小时 latest recall=100%、无 selection-caused failed run、无双发布/secret 泄漏。
 
 ### 5. 7 天生产 soak
 

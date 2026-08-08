@@ -1,5 +1,4 @@
 import { categoryImportance, highImpactKeywords, scoringWeights } from "../config/scoring.js";
-import { newsSources } from "../config/sources.js";
 import type { Category, NewsCluster, RankedNewsItem, ScoreBreakdown, UserPreferences } from "../types";
 import { isInformativeText, normalizeText, textInformationLength } from "./text.js";
 import { assessTrust } from "./trust.js";
@@ -8,8 +7,6 @@ const preferencePoints = {
   "not-preferred": 0,
   preferred: 30,
 } as const;
-
-const sourceById = new Map(newsSources.map((source) => [source.source_id, source]));
 
 export function rankNews(items: NewsCluster[], preferences: UserPreferences, now = new Date()): RankedNewsItem[] {
   return items
@@ -60,9 +57,7 @@ function scorePublicImportance(item: NewsCluster): number {
   const text = normalizeText(`${item.title} ${item.summary}`);
   const keywordBoost = highImpactKeywords.some((keyword) => text.includes(normalizeText(keyword))) ? 12 : 0;
   const multiSourceBoost = Math.min(12, Math.max(0, item.sourceIds.length - 1) * 6);
-  const wireBoost = item.sourceIds.some((id) => sourceById.get(id)?.mediaType === "wire") ? 5 : 0;
-
-  return clamp(categoryBase + keywordBoost + multiSourceBoost + wireBoost);
+  return clamp(categoryBase + keywordBoost + multiSourceBoost);
 }
 
 function scoreUserPreference(item: NewsCluster, preferences: UserPreferences): number {
@@ -108,11 +103,8 @@ function scoreTimeliness(item: NewsCluster, now: Date): number {
 }
 
 function scoreSourceConfidence(item: NewsCluster): number {
-  const sourceScores = item.sourceIds.map((sourceId) => sourceById.get(sourceId)?.credibility ?? 55);
-  const average = sourceScores.reduce((sum, value) => sum + value, 0) / sourceScores.length;
   const confirmationBoost = Math.min(12, Math.max(0, item.sourceIds.length - 1) * 6);
-  const paywallPenalty = item.mayHavePaywall ? 5 : 0;
-  return clamp(Math.round(average + confirmationBoost - paywallPenalty));
+  return clamp(60 + confirmationBoost);
 }
 
 function scoreContentQuality(item: NewsCluster): number {
@@ -130,8 +122,7 @@ function explainRanking(item: NewsCluster, score: ScoreBreakdown): string {
   if (score.user_preference >= 80) reasons.push("匹配你的关注偏好");
   if (score.timeliness >= 85) reasons.push("发布时间较新");
   if (item.sourceIds.length > 1) reasons.push(`${item.sourceNames.length} 个来源相互印证`);
-  if (score.source_confidence >= 85) reasons.push("来源可信度高");
-  return reasons.length > 0 ? reasons.join("，") + "。" : "综合公共重要性、偏好、时效性和来源可信度排序。";
+  return reasons.length > 0 ? reasons.join("，") + "。" : "综合公共重要性、偏好、时效性和内容完整度排序。";
 }
 
 function clamp(value: number): number {

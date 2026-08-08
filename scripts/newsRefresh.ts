@@ -1,9 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { defaultPreferences } from "../src/config/preferences.js";
 import { newsSources } from "../src/config/sources.js";
-import { evaluatePublishedContentFreshness } from "../src/lib/contentFreshness.js";
 import { buildDailyReport } from "../src/lib/newsPipeline.js";
-import { storyActivityTimestamp } from "../src/lib/curation.js";
+import { isCollectibleSource } from "../src/lib/sourceAdmission.js";
 import { defaultSourceIntervalMinutes, selectSourcesForCoverage } from "../src/lib/sourceCoverage.js";
 import type { DailyNewsReport, NewsSource, RawNewsItem } from "../src/types";
 import {
@@ -12,18 +11,19 @@ import {
   defaultLimitPerSection,
   defaultMaxNewsAgeHours,
   readPositiveInteger,
+  retryPendingCandidateTranslations,
   type NewsCollectionOptions,
   type NewsCollectionResult,
 } from "./newsService.js";
-import type { LeaseIdentity, NewsStore, RefreshTrigger, SourceCollectionResult } from "./newsStore.js";
+import type { LeaseIdentity, NewsStore, RefreshLease, RefreshTrigger, SourceCollectionResult } from "./newsStore.js";
 import { newestContentTimestamp } from "./newsStore.js";
-import { passesPublishGate } from "./reportStore.js";
+import { validateReportInvariants } from "./reportStore.js";
 
 export const defaultServerlessMaxSources = 11;
 export const defaultRefreshLeaseSeconds = 120;
-export const defaultRefreshCandidateLimit = 500;
+export const defaultRefreshCandidateLimit = 5_000;
 
-export type NewsRefreshStatus = "published" | "unchanged" | "busy" | "duplicate" | "rejected" | "failed";
+export type NewsRefreshStatus = "published" | "unchanged" | "partial" | "busy" | "duplicate" | "rejected" | "failed";
 
 export interface NewsRefreshResult {
   ok: boolean;
@@ -64,7 +64,7 @@ export async function runNewsRefresh(
   const now = dependencies.now ?? (() => new Date());
   const scheduledAt = options.scheduledAt ?? now();
   const configuredSources = dependencies.sources ?? newsSources;
-  const enabledSources = configuredSources.filter((source) => source.enabled);
+  const enabledSources = configuredSources.filter(isCollectibleSource);
   const maxSources = options.maxSources ?? readPositiveInteger("DAILY_NEWS_MAX_SOURCES", defaultServerlessMaxSources);
   const limitPerSection = options.limitPerSection ?? readPositiveInteger("DAILY_NEWS_LIMIT_PER_SECTION", defaultLimitPerSection);
   const collectionBudgetMs =
@@ -73,28 +73,37 @@ export async function runNewsRefresh(
   const collect = dependencies.collect ?? collectNewsCandidates;
   const buildReport = dependencies.buildReport ?? ((items, reportNow) => buildDailyReport(items, defaultPreferences, reportNow));
   const ownerId = randomUUID();
+  const idempotencyKey = options.idempotencyKey ?? manualIdempotencyKey(options.trigger, scheduledAt);
   const sourceRegistry = configuredSources.map((source) => ({
     sourceId: source.source_id,
-    enabled: source.enabled,
+    enabled: isCollectibleSource(source),
     intervalMinutes: defaultSourceIntervalMinutes,
   }));
 
-  const [lease, initialState] = await Promise.all([
-    dependencies.store.tryAcquireRefresh({
+  let lease: RefreshLease;
+  try {
+    lease = await dependencies.store.tryAcquireRefresh({
       ownerId,
-      idempotencyKey: options.idempotencyKey ?? manualIdempotencyKey(options.trigger, scheduledAt),
+      idempotencyKey,
       trigger: options.trigger,
       scheduledAt: scheduledAt.toISOString(),
       leaseSeconds,
-    }),
-    dependencies.store.readState(),
-  ]);
+    });
+  } catch (error) {
+    return failedResult("failed", `unresolved:${idempotencyKey}`, null, [], 0, 0, normalizeRefreshError(error));
+  }
 
   if (!lease.acquired) {
+    let latestReportId: string | null = null;
+    try {
+      latestReportId = (await dependencies.store.readState()).latest?.reportId ?? null;
+    } catch {
+      // A busy or duplicate outcome remains authoritative even if diagnostics are temporarily unavailable.
+    }
     return emptyResult(
       lease.outcome === "duplicate" ? "duplicate" : "busy",
       lease.runId,
-      initialState.latest?.reportId ?? null,
+      latestReportId,
     );
   }
 
@@ -112,7 +121,7 @@ export async function runNewsRefresh(
   let latestReportId: string | null = null;
 
   try {
-    let state = initialState;
+    let state = await dependencies.store.readState();
     if (!sourceRegistryMatches(sourceRegistry, state.sources)) {
       await dependencies.store.syncSources(leaseIdentity, sourceRegistry, scheduledAt.toISOString());
       state = await dependencies.store.readState();
@@ -123,37 +132,36 @@ export async function runNewsRefresh(
       health: state.sources,
       now: sourceSelectionAt,
       defaultIntervalMinutes: defaultSourceIntervalMinutes,
-      lookaheadMinutes: options.trigger === "cron" ? 15 : 0,
+      lookaheadMinutes: options.trigger === "cron" ? 5 : 0,
     });
     plannedSourceIds = selectedSources.map((source) => source.source_id);
-    if (selectedSources.length === 0) {
-      await dependencies.store.completeRefreshWithoutPublish(leaseIdentity, {
-        outcome: "no_sources_due",
-        selected_source_ids: [],
-      });
-      return unchangedResult(
-        lease.runId,
-        state.latest?.reportId ?? null,
-        state.latest?.report.generatedAt ?? null,
-        [],
-        0,
-        0,
-      );
-    }
-
     const windowFrom = new Date(scheduledAt.getTime() - defaultMaxNewsAgeHours * 60 * 60_000).toISOString();
-    const [collection, storedCandidates] = await Promise.all([
-      collect({
-        sources: selectedSources,
-        maxSources: selectedSources.length,
-        limitPerSection,
-        collectionBudgetMs,
-        now: scheduledAt,
-        useFirecrawlKeyless: options.useFirecrawlKeyless ?? true,
-        repairSummariesWithModel: options.repairSummariesWithModel ?? true,
-      }),
-      dependencies.store.readRecentCandidates(windowFrom, defaultRefreshCandidateLimit),
+    const candidateWindowPromise = dependencies.store.readRecentCandidates(windowFrom)
+      .then((candidates) => ({ candidates, complete: true, errorCode: null as string | null }))
+      .catch((error) => ({
+        candidates: state.latest ? candidatesFromLastKnownGood(state.latest.report, configuredSources) : [],
+        complete: false,
+        errorCode: normalizeRefreshError(error),
+      }));
+    const [collection, candidateWindow] = await Promise.all([
+      selectedSources.length > 0
+        ? collect({
+            sources: selectedSources,
+            maxSources: selectedSources.length,
+            limitPerSection,
+            collectionBudgetMs,
+            now: scheduledAt,
+            useFirecrawlKeyless: options.useFirecrawlKeyless ?? true,
+            repairSummariesWithModel: options.repairSummariesWithModel ?? true,
+          })
+        : Promise.resolve({
+            items: [],
+            mode: "No live data" as const,
+            sourceOutcomes: [],
+          }),
+      candidateWindowPromise,
     ]);
+    const storedCandidates = candidateWindow.candidates;
     discoveredCount = collection.items.length;
     const outcomeSourceIds = new Set(collection.sourceOutcomes.map((outcome) => outcome.sourceId));
     missingSourceOutcomeIds = plannedSourceIds.filter((sourceId) => !outcomeSourceIds.has(sourceId));
@@ -164,25 +172,30 @@ export async function runNewsRefresh(
 
     const sourceResults = buildSourceResults(selectedSources, collection, scheduledAt, state.sources);
     selectedSourceIds = sourceResults.map((result) => result.sourceId);
-    const persistCollection = () => Promise.all([
-      dependencies.store.recordSourceResults(leaseIdentity, sourceResults),
-      collection.items.length > 0
-        ? dependencies.store.upsertCandidates(leaseIdentity, collection.items)
-        : Promise.resolve(0),
-    ]);
-    let persistence = dependencies.store.commitRefresh ? null : persistCollection();
-    const ensurePersisted = () => {
-      persistence ??= persistCollection();
-      return persistence;
-    };
-    const candidates = mergeRefreshCandidates(
+    const candidateWindowComplete = candidateWindow.complete;
+    const partialRefresh =
+      !candidateWindowComplete ||
+      skippedSourceIds.length > 0 ||
+      sourceResults.some((result) => result.status === "partial" || result.status === "failed");
+    const mergedCandidates = mergeRefreshCandidates(
       storedCandidates,
       collection.items,
       windowFrom,
-      defaultRefreshCandidateLimit,
     );
+    const candidates = await retryPendingCandidateTranslations(
+      mergedCandidates,
+      Date.now() + 4_000,
+      scheduledAt,
+    );
+    const mergedByKey = new Map(mergedCandidates.map((candidate) => [candidateKey(candidate), candidate]));
+    const translationRepairs = candidates.filter((candidate) => {
+      const previous = mergedByKey.get(candidateKey(candidate));
+      return previous?.translationStatus === "pending" && candidate.translationStatus === "translated";
+    });
+    const collectedKeys = new Set(collection.items.map(candidateKey));
+    const mergedCollectionUpdates = mergedCandidates.filter((candidate) => collectedKeys.has(candidateKey(candidate)));
+    const candidateUpdates = uniqueCandidateUpdates([...mergedCollectionUpdates, ...translationRepairs]);
     candidateCount = candidates.length;
-    const contentFreshness = evaluatePublishedContentFreshness(candidates, scheduledAt);
     const metrics: Record<string, unknown> = {
       mode: collection.mode,
       planned_source_ids: plannedSourceIds,
@@ -193,72 +206,46 @@ export async function runNewsRefresh(
       missing_source_outcome_count: missingSourceOutcomeIds.length,
       discovered_count: discoveredCount,
       candidate_count: candidateCount,
-      newest_published_at: contentFreshness.newestPublishedAt,
-      newest_content_age_minutes: contentFreshness.ageMinutes,
-      max_publish_content_age_minutes: contentFreshness.maxAgeMinutes,
+      candidate_window_limit: defaultRefreshCandidateLimit,
+      candidate_window_complete: candidateWindowComplete,
+      candidate_window_error_code: candidateWindow.errorCode,
+      translation_repaired_count: translationRepairs.length,
+      outcome: partialRefresh ? "partial" : "published",
     };
 
     if (candidates.length === 0) {
-      await ensurePersisted();
       if (state.latest) {
-        await dependencies.store.completeRefreshWithoutPublish(leaseIdentity, { ...metrics, outcome: "no_recent_candidates" });
-        return unchangedResult(lease.runId, state.latest.reportId, state.latest.report.generatedAt, selectedSourceIds, discoveredCount, 0);
+        await dependencies.store.completeRefreshWithoutPublish(
+          leaseIdentity,
+          {
+            ...metrics,
+            outcome: partialRefresh ? "partial" : "unchanged",
+            reason: "no_recent_candidates",
+          },
+          sourceResults,
+          candidateUpdates,
+        );
+        return successfulNoPublishResult(
+          partialRefresh,
+          lease.runId,
+          state.latest.reportId,
+          state.latest.report.generatedAt,
+          selectedSourceIds,
+          discoveredCount,
+          0,
+        );
       }
       await dependencies.store.markRefreshFailed(leaseIdentity, "no_recent_candidates", metrics);
       return failedResult("rejected", lease.runId, null, selectedSourceIds, discoveredCount, 0, "no_recent_candidates");
     }
 
-    if (!contentFreshness.publishable) {
-      await ensurePersisted();
-      await dependencies.store.markRefreshFailed(leaseIdentity, "stale_candidate_pool", {
+    const report: DailyNewsReport = buildReport(candidates, scheduledAt);
+    const invariantErrors = validateReportInvariants(report);
+    if (invariantErrors.length > 0) {
+      await dependencies.store.markRefreshFailed(leaseIdentity, "report_invariant_failed", {
         ...metrics,
-        outcome: "stale_candidate_pool",
+        invariant_errors: invariantErrors,
       });
-      return failedResult(
-        state.latest ? "failed" : "rejected",
-        lease.runId,
-        state.latest?.reportId ?? null,
-        selectedSourceIds,
-        discoveredCount,
-        candidateCount,
-        "stale_candidate_pool",
-      );
-    }
-
-    let report: DailyNewsReport;
-    try {
-      report = buildReport(candidates, scheduledAt);
-    } catch (error) {
-      await ensurePersisted().catch(() => {});
-      throw error;
-    }
-    const homepageFreshness = evaluatePublishedContentFreshness(
-      [...report.topStories, ...report.importantStories, ...report.watchlist].map((story) => ({
-        publishedAt: timestampString(storyActivityTimestamp(story)),
-      })),
-      scheduledAt,
-    );
-    metrics.homepage_newest_activity_at = homepageFreshness.newestPublishedAt;
-    metrics.homepage_newest_activity_age_minutes = homepageFreshness.ageMinutes;
-    if (!homepageFreshness.publishable) {
-      await ensurePersisted();
-      await dependencies.store.markRefreshFailed(leaseIdentity, "stale_homepage_selection", {
-        ...metrics,
-        outcome: "stale_homepage_selection",
-      });
-      return failedResult(
-        state.latest ? "failed" : "rejected",
-        lease.runId,
-        state.latest?.reportId ?? null,
-        selectedSourceIds,
-        discoveredCount,
-        candidateCount,
-        "stale_homepage_selection",
-      );
-    }
-    if (!passesPublishGate(report, state.latest?.report ?? null)) {
-      await ensurePersisted();
-      await dependencies.store.markRefreshFailed(leaseIdentity, "quality_gate_failed", metrics);
       return failedResult(
         "rejected",
         lease.runId,
@@ -266,16 +253,25 @@ export async function runNewsRefresh(
         selectedSourceIds,
         discoveredCount,
         candidateCount,
-        "quality_gate_failed",
+        "report_invariant_failed",
       );
     }
 
     const contentHash = hashReportContent(report);
     const previousContentHash = state.latest?.contentHash ?? (state.latest ? hashReportContent(state.latest.report) : null);
     if (state.latest && contentHash === previousContentHash) {
-      await ensurePersisted();
-      await dependencies.store.completeRefreshWithoutPublish(leaseIdentity, { ...metrics, outcome: "unchanged", content_hash: contentHash });
-      return unchangedResult(
+      await dependencies.store.completeRefreshWithoutPublish(
+        leaseIdentity,
+        {
+          ...metrics,
+          outcome: partialRefresh ? "partial" : "unchanged",
+          content_hash: contentHash,
+        },
+        sourceResults,
+        candidateUpdates,
+      );
+      return successfulNoPublishResult(
+        partialRefresh,
         lease.runId,
         state.latest.reportId,
         state.latest.report.generatedAt,
@@ -296,15 +292,11 @@ export async function runNewsRefresh(
       inputFingerprint: hashCandidates(candidates),
       metrics,
     };
-    let publication;
-    if (dependencies.store.commitRefresh) {
-      publication = await dependencies.store.commitRefresh(publishInput, sourceResults, collection.items);
-    } else {
-      await ensurePersisted();
-      publication = await dependencies.store.publishRefresh(publishInput);
-    }
+    if (!dependencies.store.commitRefresh) throw new Error("atomic_refresh_commit_unavailable");
+    const publication = await dependencies.store.commitRefresh(publishInput, sourceResults, candidateUpdates);
     if (!publication.published) {
-      return unchangedResult(
+      return successfulNoPublishResult(
+        partialRefresh || publication.outcome === "partial",
         lease.runId,
         publication.reportId ?? publication.previousReportId,
         state.latest?.report.generatedAt ?? null,
@@ -316,7 +308,7 @@ export async function runNewsRefresh(
 
     return {
       ok: true,
-      status: "published",
+      status: partialRefresh || publication.outcome === "partial" ? "partial" : "published",
       runId: lease.runId,
       reportId: publication.reportId,
       generatedAt: report.generatedAt,
@@ -370,7 +362,6 @@ export function mergeRefreshCandidates(
   storedCandidates: RawNewsItem[],
   collectedCandidates: RawNewsItem[],
   since: string,
-  limit: number,
 ): RawNewsItem[] {
   const bySourceAndUrl = new Map<string, RawNewsItem>();
   for (const candidate of storedCandidates) {
@@ -382,6 +373,8 @@ export function mergeRefreshCandidates(
     bySourceAndUrl.set(key, {
       ...candidate,
       publishedAt: candidate.publishedAt ?? stored?.publishedAt,
+      updatedAt: candidate.updatedAt ?? stored?.updatedAt,
+      discoveredAt: earliestTimestamp(stored?.discoveredAt, candidate.discoveredAt ?? candidate.extractedAt),
       extractedAt: earliestTimestamp(stored?.extractedAt, candidate.extractedAt),
     });
   }
@@ -393,12 +386,50 @@ export function mergeRefreshCandidates(
     })
     .sort((left, right) =>
       candidateTimestamp(right) - candidateTimestamp(left) ||
-      candidateKey(left).localeCompare(candidateKey(right)))
-    .slice(0, limit);
+      candidateKey(left).localeCompare(candidateKey(right)));
+}
+
+function candidatesFromLastKnownGood(report: DailyNewsReport, configuredSources: NewsSource[]): RawNewsItem[] {
+  const itemById = new Map(report.items.map((item) => [item.id, item]));
+  const sourceById = new Map(configuredSources.map((source) => [source.source_id, source]));
+  return report.stories.flatMap((story) => {
+    const item = itemById.get(story.itemId);
+    return story.evidence.map((evidence) => {
+      const source = sourceById.get(evidence.sourceId);
+      return {
+        id: evidence.candidateId,
+        title: evidence.title || story.title,
+        url: evidence.url,
+        sourceId: evidence.sourceId,
+        sourceName: evidence.sourceName,
+        language: source?.language ?? item?.language ?? "zh-CN",
+        region: source?.countryOrRegion ?? item?.region ?? story.scope,
+        categories: item?.categories?.length ? item.categories : [story.primaryBeat],
+        primaryCategory: item?.primaryCategory ?? story.primaryBeat,
+        summary: story.whatHappened,
+        publishedAt: evidence.publishedAt ?? story.publishedAt,
+        updatedAt: story.updatedAt,
+        discoveredAt: story.startedAt ?? evidence.publishedAt ?? story.updatedAt,
+        extractedAt: story.updatedAt,
+        mayHavePaywall: item?.mayHavePaywall ?? source?.mayHavePaywall,
+        qualityStatus: item?.qualityStatus ?? "display_ready",
+        rejectionReasons: item?.rejectionReasons,
+        translationStatus: story.translationStatus ?? item?.translationStatus,
+        summaryStatus: story.summaryStatus ?? item?.summaryStatus,
+        timeStatus: story.timeStatus ?? item?.timeStatus,
+      } satisfies RawNewsItem;
+    });
+  });
+}
+
+function uniqueCandidateUpdates(candidates: RawNewsItem[]): RawNewsItem[] {
+  const updates = new Map<string, RawNewsItem>();
+  for (const candidate of candidates) updates.set(candidateKey(candidate), candidate);
+  return [...updates.values()];
 }
 
 function candidateTimestamp(candidate: RawNewsItem): number {
-  return Date.parse(candidate.publishedAt ?? candidate.extractedAt ?? "");
+  return Date.parse(candidate.updatedAt ?? candidate.publishedAt ?? candidate.discoveredAt ?? candidate.extractedAt ?? "");
 }
 
 function earliestTimestamp(left: string | undefined, right: string): string {
@@ -426,58 +457,36 @@ function canonicalCandidateUrl(value: string): string {
   }
 }
 
-function timestampString(timestamp: number): string | null {
-  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
-}
-
-export function scheduledRefreshIdempotencyKey(date: Date, intervalMinutes = 15): string {
+export function scheduledRefreshIdempotencyKey(date: Date, intervalMinutes = 5): string {
   const intervalMs = intervalMinutes * 60_000;
   const slot = new Date(Math.floor(date.getTime() / intervalMs) * intervalMs).toISOString();
   return `refresh:${slot}`;
 }
 
 export function hashReportContent(report: DailyNewsReport): string {
-  const content = {
-    items: report.items
-      .map((item) => ({
-        id: item.id,
-        title: item.title,
-        url: item.url,
-        summary: item.summary,
-        publishedAt: item.publishedAt ?? null,
-        sourceIds: [...item.sourceIds].sort(),
-        relatedUrls: [...item.relatedUrls].sort(),
-        primaryCategory: item.primaryCategory,
-      }))
-      .sort((left, right) => left.id.localeCompare(right.id)),
-    stories: report.stories
-      .map((story) => ({
-        id: story.id,
-        updatedAt: story.updatedAt,
-        status: story.status,
-        tier: story.tier,
-        evidence: story.evidence
-          .map((evidence) => ({ url: evidence.url, publishedAt: evidence.publishedAt ?? null }))
-          .sort((left, right) => left.url.localeCompare(right.url)),
-      }))
-      .sort((left, right) => left.id.localeCompare(right.id)),
-    topStoryIds: report.topStories.map((story) => story.id),
-    importantStoryIds: report.importantStories.map((story) => story.id),
-    watchlistIds: report.watchlist.map((story) => story.id),
-  };
-  return sha256(content);
+  const {
+    generatedAt: _generatedAt,
+    refresh,
+    ...content
+  } = report;
+  const stableRefresh = refresh
+    ? omitKeys(refresh, new Set([
+        "reportId",
+        "activeRunId",
+        "dataAsOf",
+        "lastAttemptAt",
+        "lastSuccessAt",
+        "lastCheckedAt",
+        "lastFullSweepAt",
+        "lastPublishedAt",
+      ]))
+    : undefined;
+  return sha256({ ...content, ...(stableRefresh ? { refresh: stableRefresh } : {}) });
 }
 
 export function hashCandidates(candidates: RawNewsItem[]): string {
   const content = candidates
-    .map((candidate) => ({
-      id: candidate.id,
-      sourceId: candidate.sourceId,
-      url: candidate.url,
-      title: candidate.title,
-      summary: candidate.summary,
-      publishedAt: candidate.publishedAt ?? null,
-    }))
+    .map(({ extractedAt: _extractedAt, ...candidate }) => candidate)
     .sort((left, right) => `${left.sourceId}:${left.id}`.localeCompare(`${right.sourceId}:${right.id}`));
   return sha256(content);
 }
@@ -541,6 +550,26 @@ function unchangedResult(
   };
 }
 
+function successfulNoPublishResult(
+  partial: boolean,
+  runId: string,
+  reportId: string | null,
+  generatedAt: string | null,
+  selectedSourceIds: string[],
+  discoveredCount: number,
+  candidateCount: number,
+): NewsRefreshResult {
+  const result = unchangedResult(
+    runId,
+    reportId,
+    generatedAt,
+    selectedSourceIds,
+    discoveredCount,
+    candidateCount,
+  );
+  return partial ? { ...result, status: "partial" } : result;
+}
+
 function failedResult(
   status: "rejected" | "failed",
   runId: string,
@@ -571,10 +600,27 @@ function normalizeRefreshError(error: unknown): string {
   if (error && typeof error === "object" && "code" in error && typeof error.code === "string") return error.code;
   const message = String(error);
   if (/lease/i.test(message)) return "refresh_lease_invalid";
-  if (/quality/i.test(message)) return "quality_gate_failed";
+  if (/invariant/i.test(message)) return "report_invariant_failed";
   return "refresh_failed";
 }
 
 function sha256(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return createHash("sha256").update(JSON.stringify(stableValue(value))).digest("hex");
+}
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => [key, stableValue(entry)]),
+  );
+}
+
+function omitKeys<T extends object>(value: T, omitted: Set<string>): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(([key]) => !omitted.has(key)),
+  ) as Partial<T>;
 }

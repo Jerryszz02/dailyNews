@@ -5,6 +5,7 @@ import type {
   WebDailyNewsReport,
   WebReportRankingMetadata,
 } from "../types";
+import { selectLatestStories } from "./curation.js";
 
 export function compactDailyNewsReport(report: DailyNewsReport): WebDailyNewsReport {
   const itemById = new Map(report.items.map((item) => [item.id, item]));
@@ -20,11 +21,13 @@ export function compactDailyNewsReport(report: DailyNewsReport): WebDailyNewsRep
       ];
     }),
   );
-  const { items: _items, topStories, importantStories, watchlist, ...shared } = report;
+  const { items: _items, latestStories, topStories, importantStories, watchlist, ...shared } = report;
+  const latest = latestStories ?? selectLatestStories(report.stories, new Date(report.generatedAt));
 
   return {
     ...shared,
     webView: 1,
+    latestStoryIds: latest.map((story) => story.id),
     topStoryIds: topStories.map((story) => story.id),
     importantStoryIds: importantStories.map((story) => story.id),
     watchlistIds: watchlist.map((story) => story.id),
@@ -34,11 +37,23 @@ export function compactDailyNewsReport(report: DailyNewsReport): WebDailyNewsRep
 
 export function hydrateWebDailyNewsReport(report: WebDailyNewsReport): DailyNewsReport {
   const storyById = new Map(report.stories.map((story) => [story.id, story]));
-  const { webView: _webView, topStoryIds, importantStoryIds, watchlistIds, rankingMetadata, ...shared } = report;
+  const {
+    webView: _webView,
+    latestStoryIds,
+    topStoryIds,
+    importantStoryIds,
+    watchlistIds,
+    rankingMetadata,
+    ...shared
+  } = report;
+  const latestStories = latestStoryIds
+    ? storiesForIds(storyById, latestStoryIds)
+    : selectLatestStories(report.stories, new Date(report.generatedAt));
 
   return {
     ...shared,
     items: report.stories.map((story) => rankingItemFromStory(story, rankingMetadata[story.itemId])),
+    latestStories,
     topStories: storiesForIds(storyById, topStoryIds),
     importantStories: storiesForIds(storyById, importantStoryIds),
     watchlist: storiesForIds(storyById, watchlistIds),
@@ -58,6 +73,7 @@ export function isWebDailyNewsReport(value: unknown): value is WebDailyNewsRepor
     Array.isArray(report.topStoryIds) &&
     Array.isArray(report.importantStoryIds) &&
     Array.isArray(report.watchlistIds) &&
+    (report.latestStoryIds === undefined || Array.isArray(report.latestStoryIds)) &&
     Array.isArray(report.sections) &&
     Boolean(report.coverage) &&
     Boolean(report.quality) &&
@@ -69,6 +85,7 @@ export function isWebDailyNewsReport(value: unknown): value is WebDailyNewsRepor
   const storyIds = new Set(stories.map((story) => story.id));
   const rankingMetadata = report.rankingMetadata as Record<string, WebReportRankingMetadata>;
   const selectedIds = [
+    ...((report.latestStoryIds as string[] | undefined) ?? []),
     ...(report.topStoryIds as string[]),
     ...(report.importantStoryIds as string[]),
     ...(report.watchlistIds as string[]),
@@ -104,11 +121,16 @@ function rankingItemFromStory(story: StoryCard, metadata?: WebReportRankingMetad
     summary: story.whatHappened,
     publishedAt: story.publishedAt,
     extractedAt: story.updatedAt,
+    translationStatus: story.translationStatus,
+    summaryStatus: story.summaryStatus,
+    timeStatus: story.timeStatus,
     mayHavePaywall: metadata?.mayHavePaywall,
     sourceIds,
     sourceNames: story.sourceNames,
     relatedUrls,
     primaryCategoryVotes: [story.primaryBeat],
+    startedAt: story.startedAt ?? story.publishedAt ?? story.updatedAt,
+    updatedAt: story.updatedAt,
     score_breakdown: {
       final_score: 0,
       public_importance: 0,

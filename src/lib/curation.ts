@@ -13,6 +13,7 @@ import type {
   StorySection,
   StoryStatus,
 } from "../types";
+import { isAllowedSourceUrl, isApprovedSource } from "./sourceAdmission.js";
 import { hostnameFromUrl, normalizeText, tokenize } from "./text.js";
 
 const allBeats: Category[] = [
@@ -55,6 +56,7 @@ export interface QualityGateResult {
 export interface CurationFields {
   window: { from: string; to: string };
   stories: StoryCard[];
+  latestStories: StoryCard[];
   topStories: StoryCard[];
   importantStories: StoryCard[];
   watchlist: StoryCard[];
@@ -70,7 +72,21 @@ export function applyCandidateQualityGate(items: RawNewsItem[]): QualityGateResu
   for (const item of items) {
     const reason = candidateRejectionReason(item);
     if (!reason) {
-      accepted.push(item);
+      const degradationReasons = candidateDegradationReasons(item);
+      const hasPublishedAt = Boolean(item.publishedAt && Number.isFinite(Date.parse(item.publishedAt)));
+      accepted.push({
+        ...item,
+        publishedAt: hasPublishedAt ? item.publishedAt : undefined,
+        qualityStatus: degradationReasons.length > 0 ? "degraded" : "display_ready",
+        rejectionReasons: degradationReasons,
+        translationStatus: item.translationStatus ?? (item.language === "zh-CN" ? "original" : "pending"),
+        summaryStatus: item.summaryStatus ?? (
+          degradationReasons.some((reason) => reason === "insufficient_summary" || reason === "template_summary")
+            ? "pending"
+            : "complete"
+        ),
+        timeStatus: item.timeStatus ?? (hasPublishedAt ? "verified" : "estimated"),
+      });
       continue;
     }
     rejectionReasons[reason] = (rejectionReasons[reason] ?? 0) + 1;
@@ -86,10 +102,10 @@ export function buildCurationFields(
   now: Date,
 ): CurationFields {
   const stories = rankedItems.map((item) => toStoryCard(item, rawItems, now));
-  const formalStories = stories.filter((story) => story.tier !== "noise");
+  const latestStories = selectLatestStories(stories, now);
   const corePublisherCounts = new Map<string, number>();
   const topStories = selectDiverse(
-    formalStories.filter((story) => story.tier === "must_know" && story.status === "confirmed"),
+    stories.filter((story) => story.tier === "must_know"),
     10,
     now,
     [
@@ -100,11 +116,8 @@ export function buildCurationFields(
   );
   const topIds = new Set(topStories.map((story) => story.id));
   const importantStories = selectDiverse(
-    formalStories.filter(
-      (story) =>
-        !topIds.has(story.id) &&
-        story.status === "confirmed" &&
-        (story.tier === "must_know" || story.tier === "important"),
+    stories.filter(
+      (story) => !topIds.has(story.id) && (story.tier === "must_know" || story.tier === "important"),
     ),
     30,
     now,
@@ -129,8 +142,8 @@ export function buildCurationFields(
       { maxAgeMinutes: currentCoreWindowMinutes, slots: 8 },
     ],
   );
-  const sections = buildSections(formalStories);
-  const singleSourceCount = formalStories.filter((story) => independentSourceCount(story) <= 1).length;
+  const sections = buildSections(stories);
+  const singleSourceCount = stories.filter((story) => independentSourceCount(story) <= 1).length;
   const coreStories = [...topStories, ...importantStories];
   const publisherCounts = new Map<string, number>();
   for (const story of coreStories) {
@@ -141,36 +154,68 @@ export function buildCurationFields(
 
   return {
     window: reportWindow(rawItems, now),
-    stories: formalStories,
+    stories,
+    latestStories,
     topStories,
     importantStories,
     watchlist,
     sections,
-    coverage: buildCoverage(rawItems, formalStories, sections),
+    coverage: buildCoverage(rawItems, stories, sections),
     quality: {
       candidateCount: rawItems.length + sumValues(rejectionReasons),
       acceptedCandidateCount: rawItems.length,
       rejectedCandidateCount: sumValues(rejectionReasons),
       eventCount: stories.length,
-      selectedEventCount: formalStories.length,
+      selectedEventCount: stories.length,
       duplicateEventRate: ratio(rawItems.length - stories.length, rawItems.length),
-      singleSourceShare: ratio(singleSourceCount, formalStories.length),
-      singleIndependentSourceEventShare: ratio(singleSourceCount, formalStories.length),
+      singleSourceShare: ratio(singleSourceCount, stories.length),
+      singleIndependentSourceEventShare: ratio(singleSourceCount, stories.length),
       maxPrimaryPublisherShare: ratio(Math.max(0, ...publisherCounts.values()), coreStories.length),
       weaklySourcedCoreShare: ratio(weaklySourcedCoreCount, coreStories.length),
       rejectionReasons,
+      latestEventCount: latestStories.length,
+      unmappedCandidateCount: countUnmappedCandidates(rawItems, stories),
     },
   };
 }
 
 function candidateRejectionReason(item: RawNewsItem): string | undefined {
   if (!item.title.trim() || !item.url.trim()) return "missing_identity";
-  if (!/^https?:\/\//i.test(item.url)) return "invalid_url";
-  if (!item.publishedAt || !Number.isFinite(Date.parse(item.publishedAt))) return "missing_published_at";
-  if (!item.summary.trim() || normalizeText(item.summary) === normalizeText(item.title)) return "insufficient_summary";
-  if (/相关报道聚焦.+具体背景.+以原文披露为准/.test(item.summary)) return "template_summary";
-  if (/(广告|推广|优惠|折扣|导购|sponsored|advertorial)/i.test(`${item.title} ${item.summary}`)) return "promotional";
+  try {
+    const url = new URL(item.url);
+    if (!/^https?:$/.test(url.protocol) || !url.hostname) return "invalid_url";
+    if (isNavigationUrl(url)) return "navigation_page";
+  } catch {
+    return "invalid_url";
+  }
+  const source = sourceById.get(item.sourceId);
+  if (!source || !isApprovedSource(source)) return "unapproved_source";
+  if (!isAllowedSourceUrl(source, item.url)) return "source_url_out_of_scope";
+  if (isExplicitPromotion(`${item.title} ${item.summary}`)) return "promotional";
   return undefined;
+}
+
+function isExplicitPromotion(value: string): boolean {
+  return /\b(sponsored|advertorial)\b/i.test(value) ||
+    /(赞助内容|商业推广|广告合作|广告链接|推广链接|优惠券|折扣码|购物导购)/.test(value) ||
+    /(立即|点击|扫码|限时|下单|购买|领取|抢购).{0,12}(优惠|折扣|购买|下单|领取|咨询|活动)/.test(value);
+}
+
+function isNavigationUrl(url: URL): boolean {
+  const segments = url.pathname.split("/").filter(Boolean);
+  if (segments.length === 0) return true;
+  if (segments.length > 1) return false;
+  return /^(home|index(?:\.html?)?|news|latest|world|china|sports|technology|science|business|category|categories|tag|tags|search|topic|topics|section|sections)$/i.test(
+    segments[0],
+  );
+}
+
+function candidateDegradationReasons(item: RawNewsItem): string[] {
+  const reasons: string[] = [];
+  if (!item.publishedAt || !Number.isFinite(Date.parse(item.publishedAt))) reasons.push("missing_published_at");
+  if (!item.summary.trim() || normalizeText(item.summary) === normalizeText(item.title)) reasons.push("insufficient_summary");
+  if (/相关报道聚焦.+具体背景.+以原文披露为准/.test(item.summary)) reasons.push("template_summary");
+  return reasons;
 }
 
 function toStoryCard(item: RankedNewsItem, rawItems: RawNewsItem[], now: Date): StoryCard {
@@ -182,10 +227,10 @@ function toStoryCard(item: RankedNewsItem, rawItems: RawNewsItem[], now: Date): 
   const entities = extractEntities(item.title);
 
   return {
-    id: stableEventId(item, entities),
+    id: stableEventId(item, evidenceItems),
     itemId: item.id,
     title: item.title,
-    whatHappened: item.summary,
+    whatHappened: item.summary.trim() || "摘要待补全，请以来源原文为准。",
     whyItMatters: explainImportance(importance, status, evidence),
     keyFacts: keyFacts(evidenceItems),
     nextWatch: nextWatch(eventType, status),
@@ -194,9 +239,13 @@ function toStoryCard(item: RankedNewsItem, rawItems: RawNewsItem[], now: Date): 
     eventType,
     entities,
     status,
-    tier: importanceTier(importance, item.trust.level, item.primaryCategory),
+    tier: importanceTier(importance, item.primaryCategory),
+    startedAt: item.startedAt,
     publishedAt: item.publishedAt,
-    updatedAt: latestDate(evidenceItems.map((candidate) => candidate.publishedAt ?? candidate.extractedAt), now),
+    updatedAt: item.updatedAt,
+    translationStatus: item.translationStatus,
+    summaryStatus: item.summaryStatus,
+    timeStatus: item.timeStatus,
     sourceNames: item.sourceNames,
     evidence,
     importance,
@@ -240,17 +289,16 @@ function importanceFeatures(item: RankedNewsItem, evidence: StoryEvidence[], eve
   const sourceSignificance = item.score_breakdown.source_confidence;
   const independentSources = new Set(evidence.map((entry) => entry.independenceGroup)).size;
   const evidenceStrength = Math.min(100, item.trust.score + Math.max(0, independentSources - 1) * 8);
-  const total = clamp(publicImpact * 0.65 + urgency * 0.1 + sourceSignificance * 0.1 + evidenceStrength * 0.15);
+  const total = clamp(publicImpact * 0.8 + urgency * 0.2);
   return { publicImpact, urgency, sourceSignificance, evidenceStrength, total };
 }
 
 function importanceTier(
   importance: ImportanceFeatures,
-  trustLevel: RankedNewsItem["trust"]["level"],
   beat: Category,
 ): ImportanceTier {
-  if (importance.publicImpact >= 82 && importance.total >= 76 && trustLevel !== "low") return "must_know";
-  if (importance.publicImpact >= 58 && importance.total >= 58 && trustLevel !== "low") return "important";
+  if (importance.publicImpact >= 82 && importance.total >= 76) return "must_know";
+  if (importance.publicImpact >= 58 && importance.total >= 58) return "important";
   if (importance.publicImpact >= 36 && importance.total >= 40) return "special_interest";
   if ((beat === "sports" || beat === "entertainment") && importance.total >= 25) return "special_interest";
   return "noise";
@@ -269,9 +317,6 @@ function curationPublicImpact(item: RankedNewsItem, evidence: StoryEvidence[], e
   else if (eventType === "policy") score += 8;
   else if (eventType === "economy") score += 6;
   else if (eventType === "research") score += 4;
-
-  const independentSources = new Set(evidence.map((entry) => entry.independenceGroup)).size;
-  score += Math.min(10, Math.max(0, independentSources - 1) * 5);
 
   if (/(排名|盘点|评论|观点|前景预测|如何看|best chance|ranking|opinion|commentary)/.test(text)) score -= 15;
   if (/(选区|村庄|地方候选人|社区活动|constituency|local candidate)/.test(text) && eventType !== "disaster") score -= 8;
@@ -340,15 +385,42 @@ function nextWatch(eventType: EventType, status: StoryStatus): string {
   return "关注事件是否出现实质性后续进展。";
 }
 
-function stableEventId(item: RankedNewsItem, entities: string[]): string {
-  const day = (item.publishedAt ?? item.extractedAt).slice(0, 10);
-  const identity = `${item.primaryCategory}|${day}|${entities.slice(0, 5).join("|") || normalizeText(item.title)}`;
+function stableEventId(item: RankedNewsItem, evidenceItems: RawNewsItem[]): string {
+  const anchorUrl = [...evidenceItems]
+    .sort((left, right) => {
+      const timeDelta = candidateAnchorTimestamp(left) - candidateAnchorTimestamp(right);
+      return timeDelta || canonicalEventUrl(left.url).localeCompare(canonicalEventUrl(right.url));
+    })[0]?.url ?? item.url;
+  const identity = `${item.primaryCategory}|${canonicalEventUrl(anchorUrl)}`;
   let hash = 2166136261;
   for (let index = 0; index < identity.length; index += 1) {
     hash ^= identity.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
   return `event-${(hash >>> 0).toString(36)}`;
+}
+
+function candidateAnchorTimestamp(item: RawNewsItem): number {
+  for (const value of [item.publishedAt, item.discoveredAt, item.extractedAt]) {
+    const timestamp = Date.parse(value ?? "");
+    if (Number.isFinite(timestamp)) return timestamp;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function canonicalEventUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_.+|fbclid|gclid)$/i.test(key)) url.searchParams.delete(key);
+    }
+    url.searchParams.sort();
+    url.hostname = url.hostname.toLowerCase();
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return value;
+  }
 }
 
 interface FreshnessStage {
@@ -372,11 +444,11 @@ function selectDiverse(
     return storyActivityTimestamp(right) - storyActivityTimestamp(left);
   });
 
-  const trySelect = (story: StoryCard): boolean => {
+  const trySelect = (story: StoryCard, enforceDiversity = true): boolean => {
     if (selectedIds.has(story.id)) return false;
     const primarySource = story.evidence[0]?.sourceId ?? "unknown";
-    if ((beatCounts.get(story.primaryBeat) ?? 0) >= selectionBeatLimit) return false;
-    if ((sourceCounts.get(primarySource) ?? 0) >= selectionPublisherLimit) return false;
+    if (enforceDiversity && (beatCounts.get(story.primaryBeat) ?? 0) >= selectionBeatLimit) return false;
+    if (enforceDiversity && (sourceCounts.get(primarySource) ?? 0) >= selectionPublisherLimit) return false;
     selected.push(story);
     selectedIds.add(story.id);
     beatCounts.set(story.primaryBeat, (beatCounts.get(story.primaryBeat) ?? 0) + 1);
@@ -397,18 +469,17 @@ function selectDiverse(
     trySelect(story);
   }
 
+  for (const story of ordered) {
+    if (selected.length >= limit) break;
+    trySelect(story, false);
+  }
+
   return selected;
 }
 
 export function storyActivityTimestamp(story: Pick<StoryCard, "publishedAt" | "updatedAt" | "evidence">): number {
-  const timestamps = [
-    story.updatedAt,
-    story.publishedAt,
-    ...story.evidence.map((evidence) => evidence.publishedAt),
-  ]
-    .map((value) => Date.parse(value ?? ""))
-    .filter(Number.isFinite);
-  return timestamps.length > 0 ? Math.max(...timestamps) : Number.NEGATIVE_INFINITY;
+  const updatedAt = Date.parse(story.updatedAt);
+  return Number.isFinite(updatedAt) ? updatedAt : Number.NEGATIVE_INFINITY;
 }
 
 export function isStoryActiveWithin(
@@ -422,7 +493,19 @@ export function isStoryActiveWithin(
 }
 
 export function orderStoriesByActivity(stories: StoryCard[]): StoryCard[] {
-  return [...stories].sort((left, right) => storyActivityTimestamp(right) - storyActivityTimestamp(left));
+  return [...stories].sort((left, right) => {
+    const activityDelta = storyActivityTimestamp(right) - storyActivityTimestamp(left);
+    return activityDelta || left.id.localeCompare(right.id);
+  });
+}
+
+export function selectLatestStories(stories: StoryCard[], now: Date): StoryCard[] {
+  const current = stories.filter((story) => isStoryActiveWithin(story, now, currentCoreWindowMinutes));
+  return orderStoriesByActivity(
+    current.length > 0
+      ? current
+      : stories.filter((story) => isStoryActiveWithin(story, now, 72 * 60)),
+  );
 }
 
 function independentSourceCount(story: StoryCard): number {
@@ -463,7 +546,8 @@ function buildCoverage(rawItems: RawNewsItem[], stories: StoryCard[], sections: 
 
 function reportWindow(items: RawNewsItem[], now: Date): { from: string; to: string } {
   const timestamps = items
-    .map((item) => Date.parse(item.publishedAt ?? ""))
+    .flatMap((item) => [item.publishedAt, item.updatedAt, item.discoveredAt, item.extractedAt])
+    .map((value) => Date.parse(value ?? ""))
     .filter((value) => Number.isFinite(value));
   return {
     from: timestamps.length > 0 ? new Date(Math.min(...timestamps)).toISOString() : now.toISOString(),
@@ -471,9 +555,9 @@ function reportWindow(items: RawNewsItem[], now: Date): { from: string; to: stri
   };
 }
 
-function latestDate(values: string[], fallback: Date): string {
-  const timestamps = values.map(Date.parse).filter((value) => Number.isFinite(value));
-  return timestamps.length > 0 ? new Date(Math.max(...timestamps)).toISOString() : fallback.toISOString();
+function countUnmappedCandidates(items: RawNewsItem[], stories: StoryCard[]): number {
+  const mappedCandidateIds = new Set(stories.flatMap((story) => story.evidence.map((evidence) => evidence.candidateId)));
+  return items.filter((item) => !mappedCandidateIds.has(item.id)).length;
 }
 
 function sumValues(value: Record<string, number>): number {

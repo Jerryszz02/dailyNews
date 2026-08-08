@@ -4,7 +4,10 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { collectSlotAudit } from "./productionAcceptanceAudit";
 import {
+  BURN_IN_STRICT_SLOTS,
+  SOAK_DAYS,
   SLOT_MS,
+  SLOTS_PER_DAY,
   addSlots,
   advanceMonitorState,
   createMonitorState,
@@ -17,7 +20,7 @@ import {
 const DEFAULT_ALIAS = "https://daily-news-tau-taupe.vercel.app";
 const DEFAULT_OUTPUT = ".production-acceptance/current";
 const DEFAULT_SLOT_DELAY_SECONDS = 75;
-const MISSED_SLOT_TOLERANCE_MS = 13 * 60 * 1000;
+const MISSED_SLOT_TOLERANCE_MS = SLOT_MS - 60_000;
 
 interface CliOptions {
   command: "start" | "run" | "status" | "stop";
@@ -101,7 +104,7 @@ function resolveFirstSlot(value: string | null, now = new Date()): string {
   if (value === "latest") return floorSlot(now);
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime()) || floorSlot(parsed) !== parsed.toISOString()) {
-    throw new Error("FIRST_SLOT_MUST_BE_A_15_MINUTE_UTC_BOUNDARY");
+    throw new Error("FIRST_SLOT_MUST_BE_A_5_MINUTE_UTC_BOUNDARY");
   }
   return parsed.toISOString();
 }
@@ -185,12 +188,12 @@ function stateSummary(state: MonitorState) {
     burnIn: {
       baselinePassed: state.baselineSlot !== null,
       strictPassed: state.burnInStrictPassed,
-      strictRequired: 96,
+      strictRequired: BURN_IN_STRICT_SLOTS,
       passedAt: state.burnInPassedAt,
     },
     soak: {
       daysPassed: state.soakDaysPassed,
-      daysRequired: 7,
+      daysRequired: SOAK_DAYS,
       startedAt: state.soakStartedAt,
     },
     nextSlot: state.nextSlot,
@@ -276,7 +279,7 @@ function resetAfterRuntimeFailure(
       attempt: state.attempt + 1,
       soakDaysPassed: 0,
       soakStartedAt: null,
-      nextSlot: addSlots(targetSlot, 96),
+      nextSlot: addSlots(targetSlot, SLOTS_PER_DAY),
     };
   }
   return {

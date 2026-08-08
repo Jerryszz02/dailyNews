@@ -9,7 +9,7 @@ API 只负责读取或刷新已经生成的事件级报告。外部来源抓取�
 | Endpoint | Method | 作用 | 成功状态 |
 | --- | --- | --- | --- |
 | `/api/news` | `GET` | 立即返回 last-known-good V2 报告 | `200` |
-| `/api/health` | `GET` | 报告可用性和最近刷新状态 | 仅 `fresh` 返回 `200`；`degraded`、`stale`、`unavailable` 返回 `503` |
+| `/api/health` | `GET` | 报告可用性、管线状态、内容年龄和覆盖状态 | 有可服务报告返回 `200`；完全 unavailable 返回 `503` |
 | `/api/refresh` | `POST` | 运行一次受保护刷新，质量达标后切换 latest | `200` |
 | `/api/cron` | `GET` | 供生产调度器触发同一刷新流程 | `200` 或 `202` |
 
@@ -19,11 +19,11 @@ API 只负责读取或刷新已经生成的事件级报告。外部来源抓取�
 
 - 响应为 UTF-8 JSON。
 - 当前 CORS 为 `Access-Control-Allow-Origin: *`。
-- 成功 `/api/news` 默认保持完整 V2 兼容响应；网页使用 `view=web` 紧凑表示，在客户端水合回完整 V2。自动轮询用 30 秒时间桶共享 CDN；主动重载固定请求 `view=web&reload=1`，浏览器返回 `no-store`，Vercel 边缘只缓存 5 秒以限制公开直读 Supabase 的频率。
+- 成功 `/api/news` 保持 V2 兼容响应；网页使用 `view=web` 紧凑表示，在客户端水合回完整 V2。自动轮询固定请求 `/api/news?view=web` 并使用 30 秒 CDN 缓存；主动重载使用 `view=web&reload=1` 和 `no-store`。
 - `/api/health`、受保护 refresh/cron、错误与 unavailable 响应继续 `Cache-Control: no-store`；报告不包含用户个性化或敏感数据。
 - 公开错误只返回归一化信息，不返回外部响应正文、secret 或 translation 配置。
 
-`GET /api/news` 只接受有限组合：可选且唯一的 `view=web`；再配无 cache 参数、`window=<无前导零的规范整数>` 或 `reload=1` 三者之一。window 不得偏离当前超过 2 个桶；reload 使用固定 5 秒边缘键。未知、重复、冲突、非规范、过期或超前参数均在读取 durable storage 前返回 `400 + no-store`。
+`GET /api/news` 只接受可选且唯一的 `view=web` 和可选 `reload=1`；旧页面的整数 `window` 参数在兼容期被接受但不再校验客户端时钟。未知、重复或冲突参数在读取 durable storage 前返回 `400 + no-store`。
 
 ## `GET /api/news`
 
@@ -35,6 +35,7 @@ interface DailyNewsReportV2 {
   generatedAt: string;
   window: { from: string; to: string };
   stories: StoryCard[];
+  latestStories?: StoryCard[];
   topStories: StoryCard[];
   importantStories: StoryCard[];
   watchlist: StoryCard[];
@@ -47,7 +48,13 @@ interface DailyNewsReportV2 {
   refresh: {
     reportId: string | null;
     intervalMinutes: number;
-    status: "fresh" | "stale" | "degraded" | "unavailable";
+    status: "fresh" | "stale" | "degraded" | "unavailable"; // 兼容派生字段
+    servingMode?: "durable" | "bundled" | "browser-cache";
+    pipelineStatus?: "running" | "healthy" | "degraded" | "failed";
+    contentStatus?: "current" | "quiet" | "stale" | "unknown";
+    lastCheckedAt?: string | null;
+    lastFullSweepAt?: string | null;
+    lastPublishedAt?: string | null;
     dataAsOf: string | null;
     newestContentAt: string | null;
     lastAttemptAt: string | null;
@@ -60,14 +67,14 @@ interface DailyNewsReportV2 {
 
 契约：
 
-- `stories` 是规范事件集合；
+- `stories` 是完整规范事件集合；`latestStories` 引用最近 24 小时所有有效事件并按活动时间倒序；
 - 三个首页数组互不重复，且成员也来自同一事件模型；
 - 每个 `sections.storyIds` 必须能在 `stories` 中解析；
 - `items` 是迁移期 V1 兼容投影；
 - `coverage` 和 `quality` 只包含可公开聚合，不包含内部抓取错误或凭据；
 - `dataAsOf` 与报告真实 `generatedAt` 一致；fallback 不能把旧内容重写成当前时间；
 - `newestContentAt` 来自事件 `updatedAt`、`publishedAt` 与 evidence `publishedAt` 的最大活动时间；`lastAttemptAt` 和 `lastSuccessAt` 来自 Supabase durable state；
-- `fresh` 表示成功报告年龄不超过 30 分钟；超出即为 `stale`，数据库不可用但仍有 bundled 报告时为 `degraded`。
+- `servingMode` 表示响应来源，`pipelineStatus` 表示采集/存储健康，`contentStatus` 表示内容年龄；三者不能互相覆盖。
 
 若没有任何 bundled、memory 或 snapshot 报告，返回 `503`。正常部署和本地启动会先加载 bundled last-known-good，因此不需要等待首次外部刷新。
 
@@ -78,6 +85,9 @@ interface DailyNewsReportV2 {
   ok: boolean;
   reportAvailable: boolean;
   refreshStatus: "fresh" | "stale" | "degraded" | "unavailable";
+  servingMode: "durable" | "bundled";
+  pipelineStatus: "running" | "healthy" | "degraded" | "failed";
+  contentStatus: "current" | "quiet" | "stale" | "unknown";
   generatedAt: string | null;
   dataAsOf: string | null;
   latestReportId: string | null;
@@ -89,7 +99,7 @@ interface DailyNewsReportV2 {
 }
 ```
 
-响应只可包含归一化 `lastError`；刷新失败不会使已有报告变成不可读，但不能继续报告 healthy/fresh。健康判断必须基于持久时间，而不是某个函数进程中的 `lastRefreshError`。
+响应只可包含归一化 `lastError`；刷新失败不会使已有报告变成不可读。只要 durable/bundled 报告可读即返回 200，调用方根据分轴状态决定告警；完全无报告才返回 503。
 
 ## `POST /api/refresh`
 
@@ -109,9 +119,9 @@ Authorization: Bearer <token>
 | --- | ---: |
 | Vercel 未配置 token | `503` |
 | token 错误或缺失 | `401` |
-| 生成报告未通过发布门槛 | `422` |
+| 报告结构不变量失败 | `422` |
 | 刷新内部失败 | `500`，公开响应不含内部错误正文 |
-| 刷新并发布成功 | `200`，返回 `generatedAt` 和 `itemCount` |
+| published/unchanged/partial | `200`，返回 outcome、report ID 和公开计数 |
 
 发布门槛同时检查绝对有效性和相对防回退：事件/核心层/来源不能严重坍缩，之前已覆盖的核心 beat 不能突然没有任何候选。
 
@@ -129,7 +139,7 @@ Authorization: Bearer <CRON_SECRET>
 - 首先通过 Supabase RPC 获取有过期时间的刷新租约；已有活动 run 时返回 `202`，不重复抓取；
 - 获取租约后与手动 refresh 共用同一管线，不维护第二套生成逻辑；
 - 成功返回 run ID、`generatedAt` 和公开计数；失败只返回归一化错误码；
-- 调度器重试必须幂等，质量失败或无合格实时数据不得切换 latest。
+- 调度器重试必须幂等；无变化完成为 unchanged，局部来源失败为 partial，只有结构或基础设施错误才 failed/rejected。
 
 ## 前端兼容
 
@@ -144,7 +154,7 @@ Authorization: Bearer <CRON_SECRET>
 ## 验收
 
 - `GET /api/news` 不调用 `fetch`；
-- `GET /api/news` 返回浏览器立即重验证头，Vercel 同一 30 秒窗口出现 MISS→HIT；health、错误和写入口仍为 `no-store`；
+- `GET /api/news?view=web` 在同一 30 秒缓存周期出现 MISS→HIT；health、错误和写入口仍为 `no-store`；
 - `GET /api/news?view=web&reload=1` 对浏览器返回 `no-store` 且同边缘 5 秒内复用；非法 cache query 在读取 durable storage 前返回 `400 + no-store`；
 - 冷启动立即返回非空 V2；
 - health 区分 report availability 和 refresh health；
@@ -153,7 +163,7 @@ Authorization: Bearer <CRON_SECRET>
 - 质量失败不替换 last-known-good；
 - fallback 不改变 `generatedAt` 或 `lastSuccessAt`；
 - 两个冷进程读取同一个 `latestReportId`，发布后 60 秒内一致；
-- 报告超过 30 分钟时 `/api/news` 与 `/api/health` 均为 `stale`；
+- 报告内容陈旧但可读时 `/api/news` 与 `/api/health` 均返回 200，并明确 `contentStatus=stale/quiet`；
 - API 失败时浏览器继续静态 fallback。
 
 ## 待确认
@@ -162,4 +172,4 @@ Authorization: Bearer <CRON_SECRET>
 - `items` 兼容字段删除时间；
 - CORS 白名单和只读 endpoint 限流策略；
 - 是否公开历史日报 endpoint；
-- Supabase Cron/Vault 的运维 owner 和告警渠道；调度实现已固定为每 15 分钟调用受保护 `/api/cron`。
+- Supabase Cron/Vault 的运维 owner 和告警渠道；调度实现已固定为每 5 分钟调用受保护 `/api/cron`。

@@ -25,13 +25,15 @@ Phase 2 同时适用于 Supabase 数据一致性、生产调度、跨实例、�
 
 | 改动类型 | 最小验证 |
 | --- | --- |
-| 排序、去重、可信度、分类逻辑 | `npm test` |
+| 来源准入、候选 disposition、排序、去重、分类逻辑 | `npm test` |
 | TypeScript 类型、前端组件、构建路径 | `npm run build` |
 | 来源配置、生成逻辑、fallback 数据 | `npm run generate`，必要时检查 `public/daily-news.json` |
 | API 路由、刷新缓存、服务端 env | `npm run api` 后 curl `/api/health`、`/api/news`、必要时 `POST /api/refresh` |
 | UI 布局、中文文案、移动端 | `npm run dev` 后浏览器人工检查 |
 | 生产式本地服务 | `npm run serve` 后检查页面和 API |
 | 文档-only 改动 | 读文档自查链接、路径、命令和 `待确认` 是否准确 |
+
+GitHub Actions 在 pull request 与 main push 上强制运行两个 job：`app-tests` 执行 `npm ci`、unit、integration、build 和 diff-check；`database-tests` 启动隔离 Supabase 并执行 `supabase test db --local supabase/tests`。CI 不读取生产 secret、不触发部署或生产刷新。
 
 ## 自动化测试
 
@@ -161,11 +163,11 @@ http://127.0.0.1:5173/
 
 | 场景 | 为什么重要 |
 | --- | --- |
-| 同一事件来自多个来源 | 必须聚类，并提升可信度/公共重要性 |
-| 社交媒体单点爆料 | 可以显示但应为低可信，不能伪装成高可信 |
+| 同一事件来自多个来源 | 必须保守聚类并保留 evidence；来源数量不决定是否可见 |
+| 社交媒体单点线索 | 必须进入 stories/latest 并标记 unverified，不能被 trust 删除 |
 | 官方来源新闻 | 应提升可信度 |
 | 缺少标题或 URL | 不应进入展示列表 |
-| 英文-only 来源无翻译配置 | 应跳过或有中文兜底，不能破坏中文体验 |
+| 英文-only 来源无翻译配置 | 原文立即显示并标记待翻译，不能丢稿 |
 | 分类交叉新闻 | 只能进入一个主分类页，辅助分类只做标签 |
 | API 后台刷新失败 | 已有 last-known-good 仍返回 200，前端不应白屏 |
 | 生成 JSON 过旧 | 维护者应通过 `npm run generate` 重建而不是手改产物 |
@@ -181,13 +183,15 @@ http://127.0.0.1:5173/
 
 ## 性能和数据质量检查
 
-当前实现已有 12 秒采集硬截止、30 秒整轮目标、来源并发上限、V2 `coverage`/`quality` 摘要和相对发布门槛，但仍没有生产监控 dashboard。可做的检查：
+目标实现使用 45 秒采集预算、5 分钟调度、30 分钟全来源尝试、V2 `coverage`/`quality` 摘要和结构不变量发布门。必须检查：
 
 - `npm run generate` 不应因单个来源失败而整体失败；
 - API 刷新时日志应能说明使用 `Firecrawl keyless`、`Direct source fetch` 或 `Firecrawl snapshot`；
 - 报告 `sourceCount` 应合理反映启用来源覆盖；
 - 新闻 URL 不应重复；
 - `items` 中不应缺少 `trust` 或 `primaryCategory`。
+- 每个有效候选恰好映射一个 story，最近 24 小时 story 全部进入 latest；
+- 候选窗口不得静默截断，局部来源失败不得阻断其它新闻发布。
 
 ## V2 重构验证计划与状态
 
@@ -212,7 +216,7 @@ Golden dataset 不包含 secret、登录后正文或付费墙全文。
 
 | 领域 | 必须覆盖的场景 |
 | --- | --- |
-| 来源调度 | coverage matrix、健康降级、固定来源不垄断、熔断恢复 |
+| 来源调度 | coverage matrix、健康降级、固定来源不垄断、失败来源优先但不跳过覆盖 |
 | 标准化 | canonical URL、域名归因、三种时间语义、跨语言标题 |
 | 质量门槛 | 软文、列表页、旧闻、无事实摘要、单源社交爆料 |
 | 事件聚类 | 同事件跨来源、持续更新、同主题不同事件、错误过度合并 |
@@ -296,8 +300,8 @@ npm run build
 | C1 | 真跨实例 | 进程 A 发布并退出后，独立冷进程 B 从同一 Supabase 读取相同 `reportId`；本地不超过 5 秒，生产不超过 60 秒 |
 | C2 | 72 小时候选池 | A 轮采来源组 1、B 轮采来源组 2，B 报告输入同时含 A+B；超过 72 小时的候选被排除 |
 | C3 | 注册表对齐 | 49 个 enabled source 都有持久 state；代码与数据库没有孤儿 source ID |
-| C4 | 公平轮转 | 固定时钟模拟 15 分钟 cadence、每轮最多 10 源；正常健康状态下，滚动 90 分钟内所有 49 个 enabled source 都至少尝试一次 |
-| C5 | 熔断恢复 | 连续 3 次失败的 circuit-open 来源不计入 C4 健康源窗口；两个 interval（默认 180 分钟）后重新进入 due 队列并半开重试，低权重来源不会永久饥饿 |
+| C4 | 公平轮转 | 固定时钟模拟 5 分钟 cadence、每轮最多 11 源；动态 enabled source 在滚动 30 分钟内都至少尝试一次 |
+| C5 | 失败重试不抑制覆盖 | partial/failed 来源最多占两个优先槽；即使 `circuit_open_until` 仍有值，也必须继续参与 C4 的 30 分钟滚动尝试，不能永久饥饿 |
 | C6 | 单源故障隔离 | 401/429/timeout/无结果被归一化记录，不影响其他来源候选落库，不保存完整外部响应 |
 
 ### 上线门 D：Freshness、API 和 UI
@@ -314,16 +318,16 @@ npm run build
 | D6 | 按钮语义 | 浏览器按钮只 GET `/api/news?view=web&reload=1`，浏览器响应为 `no-store`、边缘 TTL 为 5 秒，文案为“重新加载报告”，不从浏览器触发采集 |
 | D7 | 自动收敛 | 前端每 30 秒请求共享 compact `view=web&window` URL；API 从报告 A 变为 B 后，已打开页面在 60 秒内显示 B |
 | D8 | 响应式 | 桌面与 390px 下 stale banner、时间状态和报告内容无关键遮挡，新增文案为中文 |
-| D9 | 内容发布门 | 候选活动时间取 `updatedAt`、`publishedAt`、evidence `publishedAt` 的最大值；候选池最新活动超过 120 分钟记 `stale_candidate_pool`，首页实际选择最新活动超过 120 分钟记 `stale_homepage_selection`。有 fresh confirmed 核心候选时 top/important 至少选中一条；任何失败都保留 last-known-good 的 `reportId`/`dataAsOf` |
+| D9 | 完整性门 | 每个 display_ready/degraded 候选恰好映射一个 story；最近 24 小时 story 进入 latest 的召回率 100%；内容年龄只改变 contentStatus，不阻断发布 |
 
 ### 上线门 E：调度、性能和生产 smoke
 
 | ID | 验收 | 证据与阈值 |
 | --- | --- | --- |
-| E1 | 真实调度 | Supabase Cron 每 15 分钟经 `pg_net` 调用受保护 GET；不是函数内定时器，也不是只展示 interval 字段 |
+| E1 | 真实调度 | Supabase Cron 每 5 分钟经 `pg_net` 调用受保护 GET；不是函数内定时器，也不是只展示 interval 字段 |
 | E2 | 调度鉴权 | cron secret 未配置为 503，错误/缺失为 401，正确调用运行或明确返回 busy/skipped |
 | E3 | 定时幂等 | 同一时间槽重试只产生一个有效 run 和至多一个 snapshot |
-| E4 | latest read | production 网页 compact `/api/news?view=web&window=...` 使用 30 秒 Vercel 边缘缓存；固定窗口、并发 5 的 100 请求样本 P95 不高于 750 ms、P99 不高于 1 秒、错误率为 0。`view=web&reload=1` 必须浏览器 `no-store` 且边缘 TTL 5 秒；非法 cache query 必须在 durable read 前返回 `400 + no-store`。阈值基于中国访问 iad1 与约 33 KB gzip payload 的实测校准 |
+| E4 | latest read | production compact `/api/news?view=web` 使用 30 秒 Vercel 边缘缓存；客户端时钟偏差不影响读取。`view=web&reload=1` 必须 `no-store` |
 | E5 | 单轮预算 | refresh run P95 不高于 30 秒；超时必须释放或允许 lease 到期且不发布半成品 |
 | E6 | 生产 smoke | migration、bootstrap、手动两轮刷新、冷实例读取、stale 演练、回滚演练全部留下时间戳与 report ID 证据 |
 
@@ -331,7 +335,7 @@ npm run build
 
 | 阶段 | 通过标准 |
 | --- | --- |
-| 24 小时 burn-in | 无双 latest、无候选丢失、成功检查最大间隔不超过 30 分钟、49 源轮转达标、无 secret/内部错误泄漏 |
+| 24 小时 burn-in | 无双 latest、`unmappedCandidateCount=0`、latest recall=100%、所有动态 enabled 来源 30 分钟轮转达标、无 selection-caused failure 或 secret 泄漏 |
 | 7 天生产 soak | 调度成功率不低于 99%；报告年龄 P95 不高于 20 分钟；冷实例 latest 收敛不超过 60 秒；healthy 来源 cadence 达标率 100% |
 | 内容延迟抽样 | 重大来源新闻发布到网站可见 P95 不高于 30 分钟；一般新闻 P95 不高于 2 小时 |
 | 内容质量 | must-know 召回不低于 90%、首页价值精确率不低于 85%、重复事件不高于 5%、模板摘要不高于 3%、错误来源归因和缺失发布时间为 0 |
@@ -368,6 +372,6 @@ npm run build
 | 项 | 需要确认的问题 |
 | --- | --- |
 | 是否需要浏览器自动化测试 | 当前只有人工 UI 检查建议，没有 E2E 配置 |
-| 是否把确定性验收接入 CI | 本轮先保证命令可重复执行；CI 平台和 secret scope 可在上线前确认 |
+| GitHub branch protection | 本轮新增 CI 并在 PR 流程中人工强制全绿；是否配置仓库 ruleset 另行确认 |
 | 浏览器自动化工具 | 若不新增 Playwright，则桌面/390px 与 stale/fallback 必须保存人工验收证据 |
 | 7 天观察的告警渠道 | 指标阈值已定义，但通知渠道仍需结合现有账号与成本确认 |

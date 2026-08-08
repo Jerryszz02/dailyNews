@@ -1,7 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatRelativeTime, readReport, reportApiUrl, resolveReportFreshness, shouldReplaceReport, sourceLabel } from "./App";
+import {
+  formatRelativeTime,
+  mergeServiceRefresh,
+  readReport,
+  reportApiUrl,
+  resolveLatestStories,
+  resolveReportFreshness,
+  selectBriefingImportantStories,
+  shouldReplaceReport,
+  sourceLabel,
+} from "./App";
 import { newsSources } from "./config/sources";
-import type { DailyNewsReport } from "./types";
+import { rankNews } from "./lib/scoring";
+import type { DailyNewsReport, NewsCluster, UserPreferences } from "./types";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -17,14 +28,100 @@ describe("sourceLabel", () => {
 });
 
 describe("reportApiUrl", () => {
-  it("shares one CDN key inside a 30-second polling window and rotates at the boundary", () => {
-    expect(reportApiUrl(30_001)).toBe("/api/news?view=web&window=1");
-    expect(reportApiUrl(59_999)).toBe("/api/news?view=web&window=1");
-    expect(reportApiUrl(60_000)).toBe("/api/news?view=web&window=2");
+  it("uses one stable CDN URL independent of the client clock", () => {
+    expect(reportApiUrl(30_001)).toBe("/api/news?view=web");
+    expect(reportApiUrl(59_999)).toBe("/api/news?view=web");
+    expect(reportApiUrl(Number.MAX_SAFE_INTEGER)).toBe("/api/news?view=web");
   });
 
   it("uses the fixed no-store reload key when the user explicitly reloads the report", () => {
     expect(reportApiUrl(30_001, true)).toBe("/api/news?view=web&reload=1");
+  });
+});
+
+describe("latest stories", () => {
+  const story = (id: string, updatedAt: string) =>
+    ({ id, updatedAt, evidence: [], sourceNames: [] }) as unknown as DailyNewsReport["stories"][number];
+
+  it("derives every story in the latest 24-hour window for legacy V2 reports", () => {
+    const report = {
+      generatedAt: "2026-08-03T12:00:00.000Z",
+      stories: [
+        story("older", "2026-08-02T11:59:59.000Z"),
+        story("newer", "2026-08-03T11:00:00.000Z"),
+        story("newest", "2026-08-03T11:30:00.000Z"),
+      ],
+    } as unknown as DailyNewsReport;
+
+    expect(resolveLatestStories(report).map((item) => item.id)).toEqual(["newest", "newer"]);
+  });
+
+  it("falls back to the 72-hour window when there is no 24-hour story", () => {
+    const report = {
+      generatedAt: "2026-08-03T12:00:00.000Z",
+      stories: [story("too-old", "2026-07-30T12:00:00.000Z"), story("fallback", "2026-08-01T12:00:00.000Z")],
+    } as DailyNewsReport;
+
+    expect(resolveLatestStories(report).map((item) => item.id)).toEqual(["fallback"]);
+  });
+
+  it("preserves an explicit empty latest selection from the serving report", () => {
+    const report = {
+      generatedAt: "2026-08-03T12:00:00.000Z",
+      stories: [story("old", "2026-08-03T11:00:00.000Z")],
+      latestStories: [],
+    } as unknown as DailyNewsReport;
+
+    expect(resolveLatestStories(report)).toEqual([]);
+  });
+});
+
+describe("briefing curation order", () => {
+  it("keeps the report's important-story order when user preferences reverse item ranking", () => {
+    const now = new Date("2026-08-09T12:00:00.000Z");
+    const cluster = (id: string, sourceId: string): NewsCluster => ({
+      id,
+      title: `重要新闻 ${id}`,
+      url: `https://www.news.cn/${id}.html`,
+      sourceId,
+      sourceName: sourceId,
+      language: "zh-CN",
+      region: "china",
+      categories: ["china"],
+      primaryCategory: "china",
+      summary: `这是用于验证精选顺序的完整新闻摘要 ${id}。`,
+      publishedAt: now.toISOString(),
+      extractedAt: now.toISOString(),
+      startedAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      sourceIds: [sourceId],
+      sourceNames: [sourceId],
+      relatedUrls: [`https://www.news.cn/${id}.html`],
+      primaryCategoryVotes: ["china"],
+    });
+    const clusters = [cluster("item-a", "source-a"), cluster("item-b", "source-b")];
+    const preferencesFor = (sourceId: string): UserPreferences => ({
+      topicWeights: {},
+      preferredSources: { [sourceId]: 100 },
+      blockedKeywords: [],
+      boostedKeywords: [],
+    });
+    const report = {
+      importantStories: [
+        { id: "story-b", itemId: "item-b", title: "重要新闻 B", sourceNames: [] },
+        { id: "story-a", itemId: "item-a", title: "重要新闻 A", sourceNames: [] },
+      ],
+    } as unknown as Pick<DailyNewsReport, "importantStories">;
+    const preferenceVariants = [preferencesFor("source-a"), preferencesFor("source-b")];
+
+    expect(preferenceVariants.map((preferences) => rankNews(clusters, preferences, now).map((item) => item.id))).toEqual([
+      ["item-a", "item-b"],
+      ["item-b", "item-a"],
+    ]);
+    expect(preferenceVariants.map(() => selectBriefingImportantStories(report, "").map((story) => story.id))).toEqual([
+      ["story-b", "story-a"],
+      ["story-b", "story-a"],
+    ]);
   });
 });
 
@@ -43,6 +140,104 @@ describe("report loading", () => {
     expect(shouldReplaceReport(newer, older)).toBe(false);
     expect(shouldReplaceReport(older, newer)).toBe(true);
     expect(shouldReplaceReport(newer, reportAt("2026-07-13T12:00:00.000Z"))).toBe(true);
+  });
+
+  it("accepts an authoritative durable rollback but rejects an older durable response", () => {
+    const current = reportAt("2026-07-13T12:00:00.000Z");
+    current.refresh = {
+      ...current.refresh,
+      reportId: "current",
+      servingMode: "durable",
+      publicationStateAt: "2026-07-13T12:01:00.000Z",
+    };
+    const rollback = reportAt("2026-07-13T11:00:00.000Z");
+    rollback.refresh = {
+      ...rollback.refresh,
+      reportId: "rollback",
+      servingMode: "durable",
+      publicationStateAt: "2026-07-13T12:02:00.000Z",
+    };
+    const staleResponse = reportAt("2026-07-13T13:00:00.000Z");
+    staleResponse.refresh = {
+      ...staleResponse.refresh,
+      reportId: "stale-cache",
+      servingMode: "durable",
+      publicationStateAt: "2026-07-13T12:00:00.000Z",
+    };
+
+    expect(shouldReplaceReport(current, rollback)).toBe(true);
+    expect(shouldReplaceReport(current, staleResponse)).toBe(false);
+
+    const bundledFallback = reportAt("2026-07-13T13:00:00.000Z");
+    bundledFallback.refresh = {
+      ...bundledFallback.refresh,
+      reportId: "bundled-fallback",
+      servingMode: "bundled",
+      pipelineStatus: "degraded",
+    };
+    expect(shouldReplaceReport(rollback, bundledFallback)).toBe(false);
+  });
+
+  it("does not roll service status back with an older cached durable response", () => {
+    const rollback = reportAt("2026-07-13T11:00:00.000Z");
+    rollback.refresh = {
+      ...rollback.refresh,
+      reportId: "rollback",
+      servingMode: "durable",
+      pipelineStatus: "healthy",
+      contentStatus: "current",
+      publicationStateAt: "2026-07-13T12:02:00.000Z",
+    };
+    const staleResponse = reportAt("2026-07-13T13:00:00.000Z");
+    staleResponse.refresh = {
+      ...staleResponse.refresh,
+      reportId: "stale-cache",
+      servingMode: "durable",
+      pipelineStatus: "failed",
+      contentStatus: "stale",
+      publicationStateAt: "2026-07-13T12:00:00.000Z",
+    };
+
+    expect(mergeServiceRefresh(rollback, rollback.refresh ?? null, staleResponse)).toMatchObject({
+      reportId: "rollback",
+      pipelineStatus: "healthy",
+      contentStatus: "current",
+      publicationStateAt: "2026-07-13T12:02:00.000Z",
+    });
+  });
+
+  it("updates fallback degradation without replacing durable content metadata", () => {
+    const current = reportAt("2026-07-13T11:00:00.000Z");
+    current.refresh = {
+      ...current.refresh,
+      reportId: "durable-report",
+      servingMode: "durable",
+      pipelineStatus: "healthy",
+      contentStatus: "current",
+      publicationStateAt: "2026-07-13T12:02:00.000Z",
+      newestContentAt: "2026-07-13T10:59:00.000Z",
+    };
+    const fallback = reportAt("2026-07-13T13:00:00.000Z");
+    fallback.refresh = {
+      ...fallback.refresh,
+      reportId: "bundled-report",
+      servingMode: "bundled",
+      pipelineStatus: "degraded",
+      contentStatus: "stale",
+      lastCheckedAt: "2026-07-13T12:03:00.000Z",
+      lastError: "storage_unavailable",
+    };
+
+    expect(mergeServiceRefresh(current, current.refresh ?? null, fallback)).toMatchObject({
+      reportId: "durable-report",
+      servingMode: "bundled",
+      pipelineStatus: "degraded",
+      contentStatus: "current",
+      publicationStateAt: "2026-07-13T12:02:00.000Z",
+      newestContentAt: "2026-07-13T10:59:00.000Z",
+      lastCheckedAt: "2026-07-13T12:03:00.000Z",
+      lastError: "storage_unavailable",
+    });
   });
 
   it("aborts a hanging report request at the configured timeout", async () => {
@@ -73,8 +268,8 @@ describe("report freshness", () => {
     const report = {
       generatedAt: "2026-07-13T10:00:00.000Z",
       items: [
-        { publishedAt: "2026-07-13T08:00:00.000Z" },
-        { publishedAt: "2026-07-13T09:30:00.000Z" },
+        { updatedAt: "2026-07-13T08:00:00.000Z" },
+        { updatedAt: "2026-07-13T09:30:00.000Z" },
       ] as DailyNewsReport["items"],
     };
 
@@ -83,10 +278,10 @@ describe("report freshness", () => {
     expect(freshness.status).toBe("stale");
     expect(freshness.reportGeneratedAt).toBe("2026-07-13T10:00:00.000Z");
     expect(freshness.newestContentAt).toBe("2026-07-13T09:30:00.000Z");
-    expect(freshness.lastSuccessAt).toBe("2026-07-13T10:00:00.000Z");
+    expect(freshness.lastCheckedAt).toBe("2026-07-13T10:00:00.000Z");
     expect(freshness.pageCheckedAt).toBe("2026-07-13T12:00:00.000Z");
     expect(freshness.newestContentWasInferred).toBe(true);
-    expect(freshness.lastSuccessWasInferred).toBe(true);
+    expect(freshness.lastCheckedWasInferred).toBe(true);
     expect(freshness.statusWasInferred).toBe(true);
   });
 
@@ -107,8 +302,27 @@ describe("report freshness", () => {
     expect(freshness.status).toBe("degraded");
     expect(freshness.staleAfterMinutes).toBe(45);
     expect(freshness.newestContentWasInferred).toBe(false);
-    expect(freshness.lastSuccessWasInferred).toBe(false);
+    expect(freshness.lastCheckedWasInferred).toBe(false);
     expect(freshness.statusWasInferred).toBe(false);
+    expect(freshness.pipelineStatus).toBe("degraded");
+  });
+
+  it("keeps a quiet content period separate from pipeline health", () => {
+    const report = {
+      generatedAt: "2026-07-13T10:00:00.000Z",
+      items: [] as DailyNewsReport["items"],
+      refresh: {
+        status: "fresh" as const,
+        pipelineStatus: "healthy" as const,
+        contentStatus: "quiet" as const,
+        lastCheckedAt: "2026-07-13T12:00:00.000Z",
+      },
+    };
+
+    const freshness = resolveReportFreshness(report, null, now);
+    expect(freshness.pipelineStatus).toBe("healthy");
+    expect(freshness.contentStatus).toBe("quiet");
+    expect(freshness.status).not.toBe("degraded");
   });
 
   it("does not show fresh when durable timestamps are already over the threshold", () => {

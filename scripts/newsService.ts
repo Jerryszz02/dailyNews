@@ -1,19 +1,21 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { Firecrawl } from "firecrawl";
 import { defaultPreferences } from "../src/config/preferences.js";
 import { newsSources } from "../src/config/sources.js";
 import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot.js";
 import { buildDailyReport } from "../src/lib/newsPipeline.js";
+import { isAllowedSourceUrl, isCollectibleSource } from "../src/lib/sourceAdmission.js";
 import { selectSourcesForCoverage } from "../src/lib/sourceCoverage.js";
 import { hostnameFromUrl } from "../src/lib/text.js";
 import type { Category, DailyNewsReport, NewsSource, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
 
 export const defaultLimitPerSection = 5;
-export const defaultMaxSources = newsSources.filter((source) => source.enabled).length;
-export const defaultRefreshIntervalMinutes = 15;
+export const defaultMaxSources = newsSources.filter(isCollectibleSource).length;
+export const defaultRefreshIntervalMinutes = 5;
 export const defaultMaxNewsAgeHours = 72;
 export const defaultSourceConcurrency = 11;
-export const defaultCollectionBudgetMs = 12_000;
+export const defaultCollectionBudgetMs = 45_000;
 
 export interface NewsGenerationOptions {
   limitPerSection?: number;
@@ -37,7 +39,7 @@ export interface NewsCollectionOptions extends NewsGenerationOptions {
 
 export interface NewsCollectionSourceOutcome {
   sourceId: string;
-  status: "success" | "empty" | "failed" | "skipped";
+  status: "success" | "partial" | "empty" | "failed" | "skipped";
   discoveredCount: number;
   errorCode: string | null;
 }
@@ -57,6 +59,10 @@ interface TranslationConfig {
 interface NewsText {
   title: string;
   summary: string;
+  qualityStatus?: RawNewsItem["qualityStatus"];
+  rejectionReasons?: string[];
+  translationStatus?: RawNewsItem["translationStatus"];
+  summaryStatus?: RawNewsItem["summaryStatus"];
 }
 
 interface NewsTextForDisplayOptions extends NewsText {
@@ -67,6 +73,7 @@ interface NewsTextForDisplayOptions extends NewsText {
   deadlineAt?: number;
   articleContext?: string | null;
   fetchGate?: AsyncTaskGate;
+  source?: NewsSource;
 }
 
 interface DirectCandidate extends NewsText {
@@ -74,6 +81,7 @@ interface DirectCandidate extends NewsText {
   publishedAt?: string;
   kind: "feed" | "html" | "sitemap";
   articleContext?: string | null;
+  collectionErrorCode?: string;
 }
 
 interface AsyncTaskGate {
@@ -83,13 +91,13 @@ interface AsyncTaskGate {
 const defaultTranslationBaseUrl = "https://api.deepseek.com";
 const defaultTranslationModel = "deepseek-v4-flash";
 const maxArticleContextLength = 3_200;
+const sourceAttemptTimeoutMs = 8_000;
+const maxRedirectHops = 5;
 
 export async function generateDailyNewsReport(options: NewsGenerationOptions = {}): Promise<NewsGenerationResult> {
-  const maxSources = options.maxSources ?? readPositiveInteger("DAILY_NEWS_MAX_SOURCES", defaultMaxSources);
   const now = options.now ?? new Date();
   const collection = await collectNewsCandidates(options);
-  const minimumLiveItems = Math.max(8, maxSources);
-  const usedLiveData = collection.items.length >= minimumLiveItems;
+  const usedLiveData = collection.items.length > 0;
   const fallbackReport = usedLiveData ? null : readGeneratedFallbackReport();
   const report = usedLiveData ? buildDailyReport(collection.items, defaultPreferences, now) : fallbackReport!;
 
@@ -111,7 +119,7 @@ export async function collectNewsCandidates(options: NewsCollectionOptions = {})
   const deadlineAt = Date.now() + collectionBudgetMs;
   const translationConfig = readTranslationConfig();
   const repairSummariesWithModel = options.repairSummariesWithModel ?? true;
-  const selectedSources = options.sources ?? selectSourcesForCoverage(newsSources, maxSources);
+  const selectedSources = (options.sources ?? selectSourcesForCoverage(newsSources, maxSources)).filter(isCollectibleSource);
   const keylessPromise =
     options.useFirecrawlKeyless === false
       ? Promise.resolve({ items: [], outcomes: [] })
@@ -120,7 +128,8 @@ export async function collectNewsCandidates(options: NewsCollectionOptions = {})
           sources: selectedSources,
           translationConfig,
           repairSummariesWithModel,
-          deadlineAt: Math.min(deadlineAt, Date.now() + Math.min(8_000, Math.floor(collectionBudgetMs / 3))),
+          deadlineAt,
+          now,
         });
   const directPromise = fetchDirectSources({
     limitPerSection,
@@ -160,13 +169,60 @@ export async function collectNewsCandidates(options: NewsCollectionOptions = {})
   };
 }
 
+export async function retryPendingCandidateTranslations(
+  items: RawNewsItem[],
+  deadlineAt = Date.now() + 4_000,
+  updatedAt = new Date(),
+): Promise<RawNewsItem[]> {
+  loadLocalEnv();
+  const translationConfig = readTranslationConfig();
+  if (!translationConfig || !items.some((item) => item.translationStatus === "pending")) return items;
+
+  return mapWithConcurrency(items, 2, async (item) => {
+    if (item.translationStatus !== "pending" || Date.now() >= deadlineAt) return item;
+    const prepared = await prepareNewsTextForDisplay({
+      title: item.title,
+      summary: item.summary,
+      url: item.url,
+      allowTranslation: true,
+      repairSummaryWithModel: false,
+      translationConfig,
+      deadlineAt,
+      articleContext: null,
+    });
+    if (prepared.translationStatus !== "translated") return item;
+
+    const rejectionReasons = (item.rejectionReasons ?? []).filter((reason) => !reason.startsWith("translation_"));
+    return {
+      ...item,
+      title: prepared.title,
+      summary: prepared.summary,
+      enrichmentUpdatedAt: updatedAt.toISOString(),
+      translationStatus: "translated",
+      summaryStatus: prepared.summaryStatus ?? "complete",
+      rejectionReasons,
+      qualityStatus: rejectionReasons.length === 0 && item.timeStatus !== "estimated" ? "display_ready" : "degraded",
+    };
+  });
+}
+
 function mergeSourceOutcomes(
   sourceId: string,
   discoveredCount: number,
   outcomes: Array<NewsCollectionSourceOutcome | undefined>,
   deadlineReached: boolean,
 ): NewsCollectionSourceOutcome {
-  if (discoveredCount > 0) return { sourceId, status: "success", discoveredCount, errorCode: null };
+  if (discoveredCount > 0) {
+    const incompleteOutcome = outcomes.find(
+      (outcome) => outcome?.status === "partial" || outcome?.status === "failed" || outcome?.status === "skipped",
+    );
+    return {
+      sourceId,
+      status: incompleteOutcome ? "partial" : "success",
+      discoveredCount,
+      errorCode: incompleteOutcome?.errorCode ?? null,
+    };
+  }
 
   const attemptedOutcomes = outcomes.filter((outcome): outcome is NewsCollectionSourceOutcome => Boolean(outcome));
   const completedOutcomes = attemptedOutcomes.filter((outcome) => outcome.status !== "skipped");
@@ -219,7 +275,7 @@ function uniqueItemsByUrl(items: RawNewsItem[]): RawNewsItem[] {
 }
 
 function filterRecentItems(items: RawNewsItem[], now: Date, maxAgeHours: number): RawNewsItem[] {
-  return items.filter((item) => isRecentPublishedAt(item.publishedAt, now, maxAgeHours));
+  return items.filter((item) => isRecentPublishedAt(item.publishedAt ?? item.discoveredAt ?? item.extractedAt, now, maxAgeHours));
 }
 
 function isRecentPublishedAt(publishedAt: string | undefined, now: Date, maxAgeHours: number): boolean {
@@ -228,6 +284,12 @@ function isRecentPublishedAt(publishedAt: string | undefined, now: Date, maxAgeH
   if (!Number.isFinite(publishedAtMs)) return false;
   const ageMs = now.getTime() - publishedAtMs;
   return ageMs >= 0 && ageMs <= maxAgeHours * 3_600_000;
+}
+
+function normalizeCandidatePublishedAt(value: string | undefined, now: Date): string | undefined {
+  const parsed = parsePublishedDate(value);
+  if (!parsed) return undefined;
+  return Date.parse(parsed) <= now.getTime() ? parsed : undefined;
 }
 
 function readGeneratedFallbackReport(): DailyNewsReport {
@@ -317,30 +379,23 @@ async function fetchWithFirecrawlKeyless(
     translationConfig?: TranslationConfig;
     repairSummariesWithModel: boolean;
     deadlineAt: number;
+    now: Date;
   },
 ): Promise<{ items: RawNewsItem[]; outcomes: NewsCollectionSourceOutcome[] }> {
   const app = new Firecrawl({ apiKey: "" });
-  const items: RawNewsItem[] = [];
-  const outcomes: NewsCollectionSourceOutcome[] = [];
-  const enabledSources = options.sources;
-  let warnedMissingTranslation = false;
-  let terminalErrorCode: string | null = null;
-
-  for (const source of enabledSources) {
-    if (terminalErrorCode) {
-      outcomes.push({ sourceId: source.source_id, status: "skipped", discoveredCount: 0, errorCode: terminalErrorCode });
-      continue;
-    }
-
+  const enabledSources = options.sources.filter(isCollectibleSource);
+  const concurrency = readPositiveInteger("DAILY_NEWS_SOURCE_CONCURRENCY", defaultSourceConcurrency);
+  const sourceResults = await mapWithConcurrency(enabledSources, concurrency, async (source) => {
+    const deadlineAt = sourceAttemptDeadline(options.deadlineAt);
     const sourceItems: RawNewsItem[] = [];
     let successfulSearches = 0;
     let attemptedSearches = 0;
     let lastErrorCode: string | null = null;
+    let sourceStopped = false;
 
     for (const section of source.sections) {
-      if (Date.now() >= options.deadlineAt) {
-        terminalErrorCode = "collection_deadline";
-        lastErrorCode = terminalErrorCode;
+      if (Date.now() >= deadlineAt) {
+        lastErrorCode = Date.now() >= options.deadlineAt ? "collection_deadline" : "source_timeout";
         break;
       }
 
@@ -358,7 +413,7 @@ async function fetchWithFirecrawlKeyless(
                 includeDomains: domain ? [domain] : undefined,
                 sources: section.searchSources ?? ["news"],
               } as never),
-            options.deadlineAt,
+            deadlineAt,
           );
           successfulSearches += 1;
           let searchResults = readSearchResults(results, section.searchSources ?? ["news"]);
@@ -370,7 +425,7 @@ async function fetchWithFirecrawlKeyless(
                   limit: options.limitPerSection,
                   sources: section.searchSources ?? ["news"],
                 } as never),
-              options.deadlineAt,
+              deadlineAt,
             );
             successfulSearches += 1;
             searchResults = readSearchResults(results, section.searchSources ?? ["news"]);
@@ -378,26 +433,32 @@ async function fetchWithFirecrawlKeyless(
 
           for (const result of searchResults) {
             const url = readString(result, "url").trim();
-            if (!url || seenUrls.has(url) || (domain && !matchesSourceDomain(url, domain))) continue;
+            if (!url || seenUrls.has(url) || !isAllowedSourceUrl(source, url)) continue;
             seenUrls.add(url);
             webResults.push(result);
           }
         } catch (error) {
-          lastErrorCode = normalizeCollectionError(error);
+          lastErrorCode = error instanceof CollectionDeadlineError
+            ? Date.now() >= options.deadlineAt ? "collection_deadline" : "source_timeout"
+            : normalizeCollectionError(error);
           console.warn(`Skipped ${source.name} ${section.label}: ${lastErrorCode}`);
-          if (error instanceof CollectionDeadlineError || isKeylessLimitError(error)) {
-            terminalErrorCode = lastErrorCode;
+          if (error instanceof CollectionDeadlineError) {
+            sourceStopped = true;
             break;
           }
+          if (isKeylessLimitError(error)) break;
         }
       }
 
-      try {
-        for (const result of webResults) {
+      for (const result of webResults) {
+        try {
           let title = readString(result, "title").trim();
-          const url = readString(result, "url").trim();
-          if (!title || !url) continue;
+          const requestedUrl = readString(result, "url").trim();
+          if (!title || !requestedUrl) continue;
+          const document = await fetchSourceDocument(requestedUrl, deadlineAt, source, true);
+          const url = document.finalUrl;
           let summary = readString(result, "description") || title;
+          const originalWasNonChinese = isNonChineseText({ title, summary });
           const preparedText = await prepareNewsTextForDisplay({
             title,
             summary,
@@ -405,22 +466,20 @@ async function fetchWithFirecrawlKeyless(
             allowTranslation: section.requireChinese === false,
             repairSummaryWithModel: options.repairSummariesWithModel,
             translationConfig: options.translationConfig,
-            deadlineAt: options.deadlineAt,
+            deadlineAt,
+            articleContext: extractArticleSummaryContext(document.text) ?? null,
+            source,
           });
-          if (!preparedText) {
-            if (isNonChineseText({ title, summary }) && section.requireChinese === false && !options.translationConfig) {
-              if (!warnedMissingTranslation) {
-                console.warn("Skipped non-Chinese results because DAILY_NEWS_TRANSLATION_API_KEY is not configured.");
-                warnedMissingTranslation = true;
-              }
-            }
-            continue;
-          }
           title = preparedText.title;
           summary = preparedText.summary;
 
-          const publishedAt = await resolvePublishedAt(url, extractDate(result), options.deadlineAt);
-          if (!publishedAt) continue;
+          const publishedAt = normalizeCandidatePublishedAt(
+            extractDate(result) ?? extractPublishedDateFromHtml(document.text) ?? inferPublishedDateFromUrl(url),
+            options.now,
+          );
+          const degradationReasons = newsTextDegradationReasons(preparedText, publishedAt);
+          if (degradationReasons.length > 0) lastErrorCode ??= degradationReasons[0];
+          const discoveredAt = options.now.toISOString();
           const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
           const categories = uniqueValues([primaryCategory, ...section.categories]);
 
@@ -436,41 +495,60 @@ async function fetchWithFirecrawlKeyless(
             primaryCategory,
             summary,
             publishedAt,
-            extractedAt: new Date().toISOString(),
+            discoveredAt,
+            extractedAt: options.now.toISOString(),
             mayHavePaywall: source.mayHavePaywall,
+            qualityStatus: degradationReasons.length > 0 ? "degraded" : "display_ready",
+            rejectionReasons: degradationReasons.length > 0 ? degradationReasons : undefined,
+            translationStatus: preparedText.translationStatus ?? (originalWasNonChinese ? "translated" : "original"),
+            summaryStatus: preparedText.summaryStatus ?? "complete",
+            timeStatus: publishedAt ? "verified" : "estimated",
           });
-        }
-      } catch (error) {
-        lastErrorCode = normalizeCollectionError(error);
-        console.warn(`Skipped ${source.name} ${section.label}: ${lastErrorCode}`);
-        if (error instanceof CollectionDeadlineError) {
-          terminalErrorCode = lastErrorCode;
+        } catch (error) {
+          const errorCode = error instanceof CollectionDeadlineError
+            ? Date.now() >= options.deadlineAt ? "collection_deadline" : "source_timeout"
+            : normalizeCollectionError(error);
+          lastErrorCode ??= errorCode;
+          console.warn(`Skipped one ${source.name} ${section.label} result: ${errorCode}`);
+          if (error instanceof CollectionDeadlineError) {
+            sourceStopped = true;
+            break;
+          }
         }
       }
 
-      if (terminalErrorCode) break;
+      if (sourceStopped) break;
     }
 
-    items.push(...sourceItems);
-    outcomes.push({
-      sourceId: source.source_id,
-      status:
-        sourceItems.length > 0
-          ? "success"
-          : attemptedSearches === 0 || lastErrorCode === "collection_deadline"
-              ? "skipped"
-              : successfulSearches > 0
-                ? "empty"
-                : "failed",
-      discoveredCount: sourceItems.length,
-      errorCode:
-        sourceItems.length > 0 || (successfulSearches > 0 && lastErrorCode !== "collection_deadline")
-          ? null
-          : (lastErrorCode ?? (attemptedSearches > 0 ? "source_unavailable" : "collection_deadline")),
-    });
-  }
+    return {
+      items: sourceItems,
+      outcome: {
+        sourceId: source.source_id,
+        status:
+          sourceItems.length > 0
+            ? lastErrorCode ? "partial" as const : "success" as const
+            : attemptedSearches === 0
+                ? "skipped" as const
+                : lastErrorCode
+                  ? "failed" as const
+                  : successfulSearches > 0
+                  ? "empty" as const
+                  : "failed" as const,
+        discoveredCount: sourceItems.length,
+        errorCode:
+          sourceItems.length > 0
+            ? lastErrorCode
+            : successfulSearches > 0 && !lastErrorCode
+              ? null
+            : (lastErrorCode ?? (attemptedSearches > 0 ? "source_unavailable" : "collection_deadline")),
+      },
+    };
+  });
 
-  return { items, outcomes };
+  return {
+    items: sourceResults.flatMap((result) => result.items),
+    outcomes: sourceResults.map((result) => result.outcome),
+  };
 }
 
 function isKeylessLimitError(error: unknown): boolean {
@@ -507,40 +585,58 @@ async function fetchDirectSources(
     maxNewsAgeHours: number;
   },
 ): Promise<{ items: RawNewsItem[]; outcomes: NewsCollectionSourceOutcome[] }> {
-  const enabledSources = options.sources;
+  const enabledSources = options.sources.filter(isCollectibleSource);
   const concurrency = readPositiveInteger("DAILY_NEWS_SOURCE_CONCURRENCY", defaultSourceConcurrency);
   const fetchGate = createAsyncTaskGate(concurrency);
-  let warnedMissingTranslation = false;
 
   const sourceItems = await mapWithConcurrency(enabledSources, concurrency, async (source) => {
+    const sourceDeadlineAt = sourceAttemptDeadline(options.deadlineAt);
     const items: RawNewsItem[] = [];
     let successfulSections = 0;
     let attemptedSections = 0;
     let lastErrorCode: string | null = null;
     for (const section of source.sections) {
-      if (Date.now() >= options.deadlineAt) break;
+      if (Date.now() >= sourceDeadlineAt) {
+        lastErrorCode = Date.now() >= options.deadlineAt ? "collection_deadline" : "source_timeout";
+        break;
+      }
       try {
         attemptedSections += 1;
-        const html = await fetchGate.run(() => fetchText(section.url, options.deadlineAt));
+        const html = await fetchGate.run(() => fetchText(section.url, sourceDeadlineAt, source));
         successfulSections += 1;
         const candidates = await prioritizeDirectCandidates(
-          readDirectCandidates(html, section.url),
+          readDirectCandidates(html, section.url)
+            .map((candidate) => ({
+              ...candidate,
+              publishedAt: normalizeCandidatePublishedAt(candidate.publishedAt, options.now),
+            }))
+            .filter((candidate) =>
+              isAllowedSourceUrl(source, candidate.url) &&
+              (!candidate.publishedAt || isRecentPublishedAt(candidate.publishedAt, options.now, options.maxNewsAgeHours)),
+            ),
           options.limitPerSection,
-          options.deadlineAt,
+          sourceDeadlineAt,
           fetchGate,
+          source,
+          options.deadlineAt,
         );
         let accepted = 0;
 
         for (const candidate of candidates) {
-          if (Date.now() >= options.deadlineAt) break;
           if (accepted >= options.limitPerSection) break;
-          const publishedAt = candidate.publishedAt;
-          if (!isRecentPublishedAt(publishedAt, options.now, options.maxNewsAgeHours)) continue;
+          if (candidate.collectionErrorCode) {
+            lastErrorCode ??= candidate.collectionErrorCode;
+            if (candidate.collectionErrorCode === "source_url_out_of_scope") continue;
+          }
+          const publishedAt = normalizeCandidatePublishedAt(candidate.publishedAt, options.now);
+          const discoveredAt = options.now.toISOString();
+          if (publishedAt && !isRecentPublishedAt(publishedAt, options.now, options.maxNewsAgeHours)) continue;
           let title = candidate.title.trim();
           const url = candidate.url.trim();
-          if (!title || !url) continue;
+          if (!title || !url || !isAllowedSourceUrl(source, url)) continue;
           let summary = candidate.summary || title;
 
+          const originalWasNonChinese = isNonChineseText({ title, summary });
           const preparedText = await prepareNewsTextForDisplay({
             title,
             summary,
@@ -548,24 +644,15 @@ async function fetchDirectSources(
             allowTranslation: section.requireChinese === false,
             repairSummaryWithModel: options.repairSummariesWithModel,
             translationConfig: options.translationConfig,
-            deadlineAt: options.deadlineAt,
+            deadlineAt: sourceDeadlineAt,
             articleContext: candidate.articleContext,
             fetchGate,
+            source,
           });
-          if (Date.now() >= options.deadlineAt) {
-            throw new CollectionDeadlineError("Collection deadline reached");
-          }
-          if (!preparedText) {
-            if (isNonChineseText({ title, summary }) && section.requireChinese === false && !options.translationConfig) {
-              if (!warnedMissingTranslation) {
-                console.warn("Skipped direct non-Chinese results because DAILY_NEWS_TRANSLATION_API_KEY is not configured.");
-                warnedMissingTranslation = true;
-              }
-            }
-            continue;
-          }
           title = preparedText.title;
           summary = preparedText.summary;
+          const degradationReasons = newsTextDegradationReasons(preparedText, publishedAt);
+          if (degradationReasons.length > 0) lastErrorCode ??= degradationReasons[0];
 
           const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
           const categories = uniqueValues([primaryCategory, ...section.categories]);
@@ -582,14 +669,21 @@ async function fetchDirectSources(
             primaryCategory,
             summary,
             publishedAt,
+            discoveredAt,
             extractedAt: new Date().toISOString(),
             mayHavePaywall: source.mayHavePaywall,
+            qualityStatus: degradationReasons.length > 0 ? "degraded" : "display_ready",
+            rejectionReasons: degradationReasons.length > 0 ? degradationReasons : undefined,
+            translationStatus: preparedText.translationStatus ?? (originalWasNonChinese ? "translated" : "original"),
+            summaryStatus: preparedText.summaryStatus ?? "complete",
+            timeStatus: publishedAt ? "verified" : "estimated",
           });
           accepted += 1;
         }
       } catch (error) {
-        lastErrorCode = normalizeCollectionError(error);
+        lastErrorCode = normalizeCollectionError(error, options.deadlineAt);
         console.warn(`Direct source skipped ${source.name} ${section.label}: ${String(error)}`);
+        if (error instanceof CollectionDeadlineError) break;
       }
     }
     return {
@@ -598,16 +692,20 @@ async function fetchDirectSources(
         sourceId: source.source_id,
         status:
           items.length > 0
-            ? "success" as const
-            : successfulSections > 0
-              ? "empty" as const
-              : lastErrorCode === "collection_deadline" || attemptedSections === 0
+            ? lastErrorCode ? "partial" as const : "success" as const
+            : attemptedSections === 0
                 ? "skipped" as const
-                : "failed" as const,
+                : lastErrorCode
+                  ? "failed" as const
+                  : successfulSections > 0
+                    ? "empty" as const
+                    : "failed" as const,
         discoveredCount: items.length,
         errorCode:
-          items.length > 0 || successfulSections > 0
-            ? null
+          items.length > 0
+            ? lastErrorCode
+            : successfulSections > 0 && !lastErrorCode
+              ? null
             : (lastErrorCode ?? (attemptedSections > 0 ? "source_unavailable" : "collection_deadline")),
       },
     };
@@ -619,8 +717,12 @@ async function fetchDirectSources(
   };
 }
 
-function normalizeCollectionError(error: unknown): string {
-  if (error instanceof CollectionDeadlineError) return "collection_deadline";
+function normalizeCollectionError(error: unknown, globalDeadlineAt?: number): string {
+  if (error instanceof CollectionDeadlineError) {
+    return globalDeadlineAt && Date.now() < globalDeadlineAt ? "source_timeout" : "collection_deadline";
+  }
+  if (error instanceof SourceUrlOutOfScopeError) return "source_url_out_of_scope";
+  if (error instanceof SourceParseError) return "source_parse_failed";
   if (error instanceof DOMException && error.name === "AbortError") return "source_timeout";
   const message = String(error).toLowerCase();
   if (message.includes("insufficient credits") || message.includes("payment required") || message.includes("http 402")) {
@@ -688,6 +790,8 @@ function createAsyncTaskGate(concurrency: number): AsyncTaskGate {
 }
 
 class CollectionDeadlineError extends Error {}
+class SourceUrlOutOfScopeError extends Error {}
+class SourceParseError extends Error {}
 
 export async function runWithinDeadline<T>(task: () => Promise<T>, deadlineAt: number): Promise<T> {
   const remainingMs = deadlineAt - Date.now();
@@ -705,63 +809,109 @@ export async function runWithinDeadline<T>(task: () => Promise<T>, deadlineAt: n
   }
 }
 
-async function fetchText(url: string, deadlineAt?: number): Promise<string> {
+async function fetchText(url: string, deadlineAt?: number, source?: NewsSource): Promise<string> {
+  return (await fetchSourceDocument(url, deadlineAt, source)).text;
+}
+
+async function fetchSourceDocument(
+  url: string,
+  deadlineAt?: number,
+  source?: NewsSource,
+  allowHttpError = false,
+): Promise<{ text: string; finalUrl: string }> {
+  if (source && !isAllowedSourceUrl(source, url)) {
+    throw new SourceUrlOutOfScopeError("source_url_out_of_scope");
+  }
   const controller = new AbortController();
-  const timeoutMs = deadlineAt ? Math.max(1, deadlineAt - Date.now()) : 8_000;
+  const timeoutMs = deadlineAt
+    ? Math.max(1, Math.min(sourceAttemptTimeoutMs, deadlineAt - Date.now()))
+    : sourceAttemptTimeoutMs;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await runWithinDeadline(
-      () =>
-        fetch(url, {
+    let currentUrl = url;
+    for (let redirectHop = 0; redirectHop <= maxRedirectHops; redirectHop += 1) {
+      const response = await runWithinDeadline(
+        () => fetch(currentUrl, {
           headers: {
             accept: "text/html, application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
             "user-agent": "DailyNewsBot/0.1 (+https://localhost)",
           },
+          redirect: "manual",
           signal: controller.signal,
         }),
-      deadlineAt ?? Date.now() + 8_000,
-    );
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.text();
+        deadlineAt ? sourceAttemptDeadline(deadlineAt) : Date.now() + sourceAttemptTimeoutMs,
+      );
+      if (isRedirectStatus(response.status)) {
+        const location = response.headers?.get("location");
+        if (!location || redirectHop === maxRedirectHops) throw new Error("source_redirect_invalid");
+        const nextUrl = new URL(location, currentUrl).toString();
+        if (source && !isAllowedSourceUrl(source, nextUrl)) {
+          throw new SourceUrlOutOfScopeError("source_url_out_of_scope");
+        }
+        currentUrl = nextUrl;
+        continue;
+      }
+      const finalUrl = response.url?.trim() || currentUrl;
+      if (source && !isAllowedSourceUrl(source, finalUrl)) {
+        throw new SourceUrlOutOfScopeError("source_url_out_of_scope");
+      }
+      if (!response.ok && !allowHttpError) throw new Error(`HTTP ${response.status}`);
+      return {
+        text: response.ok ? await response.text() : "",
+        finalUrl,
+      };
+    }
+    throw new Error("source_redirect_invalid");
   } finally {
     clearTimeout(timeout);
   }
 }
 
-export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptions): Promise<NewsText | null> {
+function isRedirectStatus(status: number): boolean {
+  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+function sourceAttemptDeadline(globalDeadlineAt: number): number {
+  return Math.min(globalDeadlineAt, Date.now() + sourceAttemptTimeoutMs);
+}
+
+export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptions): Promise<NewsText> {
   const nonChinese = isNonChineseText(options);
   if (nonChinese) {
-    if (!options.allowTranslation || !options.translationConfig) return null;
+    if (!options.allowTranslation || !options.translationConfig) return degradedOriginalText(options, "translation_unavailable");
 
     try {
       const articleContext =
         options.articleContext === undefined
-          ? await readArticleSummaryContext(options.url, options.deadlineAt, options.fetchGate)
+          ? await readArticleSummaryContext(options.url, options.deadlineAt, options.fetchGate, options.source)
           : (options.articleContext ?? undefined);
       const translated = await runWithinDeadline(
         () => translateNewsText({ title: options.title, summary: options.summary, articleContext }, options.translationConfig!),
         options.deadlineAt ?? Date.now() + 15_000,
       );
-      if (isNonChineseText(translated) || needsSummaryRepair(translated.title, translated.summary)) return null;
-      return translated;
+      if (isNonChineseText(translated) || needsSummaryRepair(translated.title, translated.summary)) {
+        return degradedOriginalText(options, "translation_invalid");
+      }
+      return { ...translated, translationStatus: "translated", summaryStatus: "complete" };
     } catch (error) {
-      rethrowCollectionDeadline(error, options.deadlineAt);
-      console.warn(`Skipped non-Chinese result after translation failed: ${String(error)}`);
-      return null;
+      console.warn(`Kept original non-Chinese result after translation failed: ${String(error)}`);
+      return degradedOriginalText(options, "translation_failed");
     }
   }
 
   if (!needsSummaryRepair(options.title, options.summary)) {
-    return { title: options.title, summary: options.summary };
+    return { title: options.title, summary: options.summary, summaryStatus: "complete" };
   }
 
   const articleContext =
     options.articleContext === undefined
-      ? await readArticleSummaryContext(options.url, options.deadlineAt, options.fetchGate)
+      ? await readArticleSummaryContext(options.url, options.deadlineAt, options.fetchGate, options.source)
       : (options.articleContext ?? undefined);
   if (!options.translationConfig || !options.repairSummaryWithModel) {
     const fallbackSummary = buildSummaryFromArticleContext(options.title, articleContext);
-    return { title: options.title, summary: fallbackSummary ?? buildMinimalSummary(options.title) };
+    return fallbackSummary
+      ? { title: options.title, summary: fallbackSummary, summaryStatus: "complete" }
+      : degradedSummaryText(options);
   }
 
   try {
@@ -770,19 +920,46 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
       options.deadlineAt ?? Date.now() + 15_000,
     );
     if (containsChinese(enriched.summary) && !needsSummaryRepair(options.title, enriched.summary)) {
-      return { title: options.title, summary: enriched.summary };
+      return { title: options.title, summary: enriched.summary, summaryStatus: "complete" };
     }
   } catch (error) {
-    rethrowCollectionDeadline(error, options.deadlineAt);
     console.warn(`Kept original summary after enrichment failed: ${String(error)}`);
   }
 
   const fallbackSummary = buildSummaryFromArticleContext(options.title, articleContext);
   if (fallbackSummary) {
-    return { title: options.title, summary: fallbackSummary };
+    return { title: options.title, summary: fallbackSummary, summaryStatus: "complete" };
   }
 
-  return { title: options.title, summary: buildMinimalSummary(options.title) };
+  return degradedSummaryText(options);
+}
+
+function degradedOriginalText(text: NewsText, reason: string): NewsText {
+  return {
+    title: text.title,
+    summary: text.summary,
+    qualityStatus: "degraded",
+    rejectionReasons: [reason],
+    translationStatus: "pending",
+    summaryStatus: needsSummaryRepair(text.title, text.summary) ? "pending" : "complete",
+  };
+}
+
+function degradedSummaryText(text: NewsText): NewsText {
+  return {
+    title: text.title,
+    summary: buildMinimalSummary(text.title),
+    qualityStatus: "degraded",
+    rejectionReasons: ["summary_missing"],
+    summaryStatus: "pending",
+  };
+}
+
+function newsTextDegradationReasons(text: NewsText, publishedAt?: string): string[] {
+  return uniqueValues([
+    ...(text.rejectionReasons ?? []),
+    ...(publishedAt ? [] : ["published_at_missing"]),
+  ]);
 }
 
 function isNonChineseText(text: NewsText): boolean {
@@ -817,21 +994,16 @@ async function readArticleSummaryContext(
   url: string,
   deadlineAt?: number,
   fetchGate?: AsyncTaskGate,
+  source?: NewsSource,
 ): Promise<string | undefined> {
   try {
     const html = fetchGate
-      ? await fetchGate.run(() => fetchText(url, deadlineAt))
-      : await fetchText(url, deadlineAt);
+      ? await fetchGate.run(() => fetchText(url, deadlineAt, source))
+      : await fetchText(url, deadlineAt, source);
     return extractArticleSummaryContext(html);
   } catch (error) {
-    rethrowCollectionDeadline(error, deadlineAt);
+    if (error instanceof SourceUrlOutOfScopeError) throw error;
     return undefined;
-  }
-}
-
-function rethrowCollectionDeadline(error: unknown, deadlineAt?: number): void {
-  if (error instanceof CollectionDeadlineError || (deadlineAt !== undefined && Date.now() >= deadlineAt)) {
-    throw new CollectionDeadlineError("Collection deadline reached");
   }
 }
 
@@ -844,8 +1016,14 @@ export function extractArticleSummaryContext(html: string): string | undefined {
 function readDirectCandidates(html: string, baseUrl: string): DirectCandidate[] {
   const feedItems = readFeedCandidates(html, baseUrl);
   if (feedItems.length > 0) return feedItems;
+  if (/<(?:item|entry)\b/i.test(html)) {
+    throw new SourceParseError("source_parse_failed");
+  }
   const sitemapItems = readSitemapCandidates(html, baseUrl);
   if (sitemapItems.length > 0) return sitemapItems;
+  if (/<(?:url|sitemap)\b/i.test(html)) {
+    throw new SourceParseError("source_parse_failed");
+  }
   return readHtmlLinkCandidates(html, baseUrl);
 }
 
@@ -854,23 +1032,33 @@ async function prioritizeDirectCandidates(
   limitPerSection: number,
   deadlineAt: number,
   fetchGate: AsyncTaskGate,
+  source: NewsSource,
+  globalDeadlineAt: number,
 ): Promise<DirectCandidate[]> {
   const probeLimit = Math.max(3, limitPerSection * 2);
   if (candidates[0]?.kind === "sitemap") {
-    return candidates.slice(0, 1);
+    const resolved: DirectCandidate[] = [];
+    let validCount = 0;
+    for (const candidate of candidates.slice(0, probeLimit)) {
+      const result = await resolveDirectCandidate(candidate, deadlineAt, fetchGate, source, globalDeadlineAt);
+      resolved.push(result);
+      if (!result.collectionErrorCode) validCount += 1;
+      if (validCount >= limitPerSection) break;
+    }
+    return sortDirectCandidatesByRecency(resolved);
   }
 
   if (candidates[0]?.kind === "feed") {
     const selected = selectFeedCandidatesForProbing(candidates, limitPerSection, probeLimit);
     const resolved = await mapWithConcurrency(selected, 3, async (candidate) =>
-      candidate.publishedAt ? candidate : resolveDirectCandidate(candidate, deadlineAt, fetchGate),
+      resolveDirectCandidate(candidate, deadlineAt, fetchGate, source, globalDeadlineAt),
     );
     return sortDirectCandidatesByRecency(resolved);
   }
 
   const selected = selectHtmlCandidatesForProbing(candidates, probeLimit);
   const resolved = await mapWithConcurrency(selected, 3, async (candidate) =>
-    candidate.publishedAt ? candidate : resolveDirectCandidate(candidate, deadlineAt, fetchGate),
+    resolveDirectCandidate(candidate, deadlineAt, fetchGate, source, globalDeadlineAt),
   );
   return sortDirectCandidatesByRecency(resolved);
 }
@@ -924,25 +1112,25 @@ async function resolveDirectCandidate(
   candidate: DirectCandidate,
   deadlineAt: number,
   fetchGate: AsyncTaskGate,
+  source: NewsSource,
+  globalDeadlineAt: number,
 ): Promise<DirectCandidate> {
   try {
-    const html = await fetchGate.run(() => fetchText(candidate.url, deadlineAt));
+    const html = await fetchGate.run(() => fetchText(candidate.url, deadlineAt, source));
     return {
       ...candidate,
       publishedAt:
-        extractPublishedDateFromHtml(html) ??
         parsePublishedDate(candidate.publishedAt) ??
+        extractPublishedDateFromHtml(html) ??
         inferPublishedDateFromUrl(candidate.url),
       articleContext: extractArticleSummaryContext(html) ?? null,
     };
   } catch (error) {
-    if (error instanceof CollectionDeadlineError || Date.now() >= deadlineAt) {
-      throw new CollectionDeadlineError("Collection deadline reached");
-    }
     return {
       ...candidate,
       publishedAt: parsePublishedDate(candidate.publishedAt) ?? inferPublishedDateFromUrl(candidate.url),
       articleContext: null,
+      collectionErrorCode: normalizeCollectionError(error, globalDeadlineAt),
     };
   }
 }
@@ -1118,25 +1306,6 @@ function uniqueCandidates<T extends { url: string }>(items: T[]): T[] {
 
 function uniqueValues<T>(items: T[]): T[] {
   return Array.from(new Set(items));
-}
-
-async function resolvePublishedAt(url: string, candidateDate?: string, deadlineAt?: number): Promise<string | undefined> {
-  const parsedCandidate = parsePublishedDate(candidateDate);
-  if (parsedCandidate) return parsedCandidate;
-
-  const articleDate = await readArticlePublishedAt(url, deadlineAt);
-  if (articleDate) return articleDate;
-
-  return inferPublishedDateFromUrl(url);
-}
-
-async function readArticlePublishedAt(url: string, deadlineAt?: number): Promise<string | undefined> {
-  try {
-    const html = await fetchText(url, deadlineAt);
-    return extractPublishedDateFromHtml(html);
-  } catch {
-    return undefined;
-  }
 }
 
 export function extractPublishedDateFromHtml(html: string): string | undefined {
@@ -1337,16 +1506,23 @@ function containsChinese(value: string): boolean {
 
 function readSearchResults(results: unknown, preferredSources: SearchSourceType[]): unknown[] {
   if (!results || typeof results !== "object") {
-    return [];
+    throw new SourceParseError("source_parse_failed");
   }
   const record = results as Record<string, unknown>;
-  for (const source of preferredSources) {
-    if (Array.isArray(record[source])) return record[source];
+  let recognized = false;
+  const preferred = preferredSources.flatMap((source) => {
+    if (!Object.hasOwn(record, source)) return [];
+    recognized = true;
+    if (!Array.isArray(record[source])) throw new SourceParseError("source_parse_failed");
+    return record[source];
+  });
+  if (recognized) return preferred;
+  for (const key of ["data", "news", "web"] as const) {
+    if (!Object.hasOwn(record, key)) continue;
+    if (!Array.isArray(record[key])) throw new SourceParseError("source_parse_failed");
+    return record[key];
   }
-  if (Array.isArray(record.data)) return record.data;
-  if (Array.isArray(record.news)) return record.news;
-  if (Array.isArray(record.web)) return record.web;
-  return [];
+  throw new SourceParseError("source_parse_failed");
 }
 
 function buildQueries(sourceName: string, section: SourceSection): string[] {
@@ -1601,12 +1777,7 @@ function normalizeForCategory(value: string): string {
 }
 
 function hashId(value: string): string {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash << 5) - hash + value.charCodeAt(index);
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
+  return createHash("sha256").update(value).digest("hex").slice(0, 24);
 }
 
 export function readTranslationConfig(): TranslationConfig | undefined {

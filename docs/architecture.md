@@ -4,15 +4,15 @@ Daily News is a Vite + React + TypeScript event-level news briefing with a serve
 
 ## Data Flow
 
-1. `src/config/sources.ts` defines enabled sources and sections. `src/lib/sourceCoverage.ts` selects sources by persistent `nextDueAt`, then balances beat gaps, source type, region, credibility and circuit state. Cron refreshes extend the selection cutoff through the next 15-minute scheduler slot so an idle run can stagger an oversized due cohort; manual refreshes select only sources due at the current time. Under healthy conditions, ten sources per 15-minute run cover all 49 enabled sources within a rolling 90-minute window; circuit-open sources re-enter after their cooldown.
-2. `scripts/newsService.ts` gives Firecrawl keyless about the first 4 seconds and at most 8 seconds, then uses bounded-concurrency direct page/feed fetches. The collection phase has a 12-second default deadline so persistent read retries and atomic publication retain margin inside the 30-second refresh target; it emits live candidates plus per-source outcomes and does not insert fallback content into the production candidate path.
-3. `src/lib/curation.ts` rejects missing identity/time, generic summaries and promotion; `src/lib/dedupe.ts` groups URL matches, rewritten titles and same-window shared-context updates into one event.
-4. Every event receives evidence entries, an independence group, fact status, event type, public-impact features and one tier: `must_know`, `important`, `special_interest` or `noise`. Personal preference cannot promote a story into `must_know`.
-5. `src/lib/newsPipeline.ts` emits `DailyNewsReport` V2 with canonical `stories`, homepage subsets, beat sections, public coverage/quality summaries and the legacy `items` projection.
-6. `scripts/newsRefresh.ts` acquires a fenced Supabase lease, reads the rolling 72-hour pool, applies absolute/relative quality gates and publishes only content changes. For a changed, publishable Supabase refresh, source outcomes, newly collected candidates and publication are committed together; rejected or unchanged runs persist collection results before recording their final status. Quiet success updates durable check time without changing `reportId/generatedAt`.
-7. `scripts/supabaseNewsStore.ts` accesses private tables only through service-role RPC. The repository migration `20260723093000_atomic_refresh_commit.sql` makes the successful changed-report path one transaction covering source outcomes, candidate upserts, snapshot insert, run completion and latest pointer switch; stale workers cannot publish with an old fencing token.
-8. `GET /api/news` reads the durable latest report and never fetches sources. If Supabase is unavailable it returns the bundled last-known-good with stale/degraded metadata.
-9. `src/App.tsx` renders event-level briefing sections and distinct report/content/check times, falling back from `/api/news` to `/daily-news.json` and then a snapshot whose original time is preserved.
+1. `src/config/sources.ts` separates collection (`enabled`) from publication admission (`approved`) and records allowed hosts, review notes and publication roles. `src/lib/sourceCoverage.ts` selects at most eleven due sources per five-minute run: nine normal rotation slots and up to two partial/failed retries. Open circuits never suppress the rolling 30-minute attempt invariant.
+2. `scripts/newsService.ts` runs Firecrawl keyless web/news search and bounded direct page/feed/sitemap collection concurrently within a 45-second budget. Each source request has an independent timeout, sitemap limits are honored, and both requested and redirect-final URLs must remain inside the source allowlist.
+3. Candidate identity and original text survive enrichment independently and are persisted in the same atomic terminal commit. Translation failures keep the original text visible with `translationStatus: pending`; missing summaries and publication times degrade to explicit pending/estimated states instead of deleting the candidate.
+4. `src/lib/curation.ts` rejects only unapproved/out-of-domain sources, invalid or missing identity, navigation pages and explicit promotion. Trust and credibility do not affect inclusion, tier or ranking.
+5. `src/lib/dedupe.ts` always merges the same canonical URL. Cross-URL items merge only inside the same primary category and 24-hour window when title overlap is at least 0.8 and combined similarity is at least 0.85. Events expose distinct `startedAt` and `updatedAt`.
+6. `src/lib/newsPipeline.ts` emits `DailyNewsReport` V2. `stories` contains every valid event; `latestStories` contains every event updated in the last 24 hours, with a 72-hour fallback when that window is quiet. Curated sections are soft reorders and cannot remove events from latest or category pages.
+7. `scripts/newsRefresh.ts` acquires a fenced lease, paginates the complete rolling 72-hour candidate pool and validates schema, IDs, admission, URLs, time relationships, evidence references, one-to-one candidate mapping and compact/full round trips. Business selection thresholds are not publication gates.
+8. `scripts/supabaseNewsStore.ts` uses the versioned atomic finish RPC to commit source results, candidates, run metrics, an optional immutable snapshot and the latest pointer in one transaction for published, unchanged and partial outcomes. Timeout reconciliation queries by run/idempotency key; the previous RPC remains available for rollback.
+9. `GET /api/news` reads publication state independently of source-health RPCs and falls back through older valid snapshots before the bundled report. `src/App.tsx` updates report content and service status independently so an older fallback cannot overwrite a newer report.
 
 ## Runtime Shape
 
@@ -21,14 +21,14 @@ Daily News is a Vite + React + TypeScript event-level news briefing with a serve
 - Production-style local service: `npm run serve`, which builds `dist/` and serves both static files and API.
 - Local runtime without Supabase: async in-memory NewsStore with the same lease/candidate/publish contract.
 - Production runtime: Supabase stores source state, refresh runs, fenced lease, 72-hour candidates, immutable snapshots and the singleton latest pointer.
-- Scheduler: Supabase Cron runs every 15 minutes through `pg_net` and calls authenticated `GET /api/cron`; it does not rely on a Vercel function timer.
+- Scheduler: Supabase Cron runs every 5 minutes through `pg_net` and calls authenticated `GET /api/cron`; it does not rely on a Vercel function timer.
 
 ## API Routes
 
 - `GET /api/news`: immediately returns the current V2 report plus refresh metadata; it does not fetch external news.
 - `POST /api/refresh`: triggers refresh. Vercel requires `DAILY_NEWS_REFRESH_TOKEN`; an unconfigured production endpoint returns `503`.
 - `GET /api/cron`: Supabase Cron trigger protected by `CRON_SECRET`; the database lease makes retries and overlap idempotent.
-- `GET /api/health`: separates report availability from durable refresh health; stale/unavailable returns `503` while `/api/news` can still return last-known-good.
+- `GET /api/health`: returns independent `servingMode`, `pipelineStatus` and `contentStatus` axes plus check/sweep/publish/content timestamps. Any valid last-known-good remains HTTP 200; 503 means no report is serviceable.
 
 ## Security Boundaries
 

@@ -45,10 +45,12 @@
 | `last_success_at` | 最近一次成功 |
 | `next_due_at` | 持久化公平轮转游标；到期来源优先被下一轮选择 |
 | `consecutive_failures` | 连续失败次数 |
-| `circuit_open_until` | 熔断截止时间 |
+| `circuit_open_until` | 兼容失败诊断时间；不得作为跳过 30 分钟覆盖尝试的调度门 |
 | `latency_ms_p50/p95` | 滚动延迟指标 |
 | `accepted_rate` | 候选通过质量门槛的比例 |
 | `last_error_code` | 归一化错误类型，不保存敏感错误正文 |
+| `last_content_at` / `consecutive_empty` | 区分正常静默、解析漂移与来源断流 |
+| `raw_count` / `display_ready_count` / `degraded_count` / `rejected_count` | 分阶段真实计数，替代 discovered=accepted 的伪成功 |
 
 ### `daily_news.article_candidate`
 
@@ -64,8 +66,9 @@
 | `language` | 原文语言，仅用于处理 |
 | `content_fingerprint` | 去重摘要，不保存整篇正文 |
 | `extracted_facts` | 结构化事实 JSON，保留字段级来源 |
-| `quality_status` | accepted/rejected/pending |
+| `quality_status` | display_ready/degraded/rejected |
 | `rejection_reasons` | 归一化拒绝原因数组 |
+| `translation_status` / `time_status` | enrichment 是否待补；不得因此删除候选 |
 
 唯一约束：`canonical_url + source_id`。同一 URL 的更新时间变化应更新候选版本，而不是无限新增重复记录。
 
@@ -112,7 +115,7 @@
 | `input_candidate_count` / `event_count` | 规模 |
 | `filter_counts` | 各拒绝原因数量 |
 | `quality_metrics` | 覆盖、重复、来源集中度等 |
-| `status` | running/published/rejected/failed |
+| `status` | running/published/unchanged/partial/rejected/failed |
 | `rejection_reasons` | 未发布原因 |
 
 ### `daily_news.report_snapshot`
@@ -142,8 +145,10 @@
 | `last_attempt_at` / `last_success_at` | 持久化健康语义，不依赖函数进程 |
 | `active_run_id` / `lease_expires_at` | 刷新租约；并发或重复调度只能有一个拥有者 |
 | `last_error_code` | 归一化最近错误，不保存敏感正文 |
+| `last_checked_at` / `last_full_sweep_at` / `last_published_at` | 分离成功检查、全来源尝试和报告发布 |
+| `last_outcome` | published/unchanged/partial/failed/rejected |
 
-数据库函数负责三项原子操作：`daily_news_try_start_refresh` 获取带过期时间的租约，`daily_news_publish_refresh` 在同一事务写入快照并切换 latest，`daily_news_fail_refresh` 结束失败运行但保留旧 latest。函数只授权服务端角色执行。
+新增版本化 `daily_news_finish_refresh`：在一个事务中写来源结果、候选、运行指标和可选 snapshot/latest，覆盖 published、unchanged、partial。旧 RPC 保留供旧部署回滚；客户端写超时后必须按 `run_id/idempotency_key` 查询真实终态。函数只授权服务端角色执行。
 
 ## 索引和约束
 
@@ -177,15 +182,15 @@
 
 - 采集候选可重复执行，写入必须幂等；
 - 聚类更新需要版本或事务，避免并发任务把同一候选放入多个活动事件；
-- 选题运行读取一个稳定时间窗口，不在发布中途混入新候选；
+- 选题运行按来源分页读取稳定的 72 小时窗口并记录 `complete`；不允许全局静默截断；
 - 报告 snapshot 不可原地修改，更正通过新版本替代；
 - 数据库不可用时 API 继续返回内存或静态 last-known-good；
-- 写入失败、质量门槛失败或摘要校验失败都不能切换 latest；
+- 写入失败或结构不变量失败不能切换 latest；摘要、翻译、内容年龄和覆盖告警不能冻结其它合法事件；
 - 所有错误日志必须使用归一化代码，不记录 secret 或完整外部响应。
 
 ## 迁移和回滚
 
-1. 在 `supabase/migrations/` 新增可重复审查的 SQL；先执行本地 reset/lint，再对目标项目执行 `db push --dry-run` 和 `db push`；
+1. 在 `supabase/migrations/` 新增向后兼容 SQL，不修改旧 migration/RPC；先执行本地 reset/test，再对目标项目执行 `db push --dry-run` 和 `db push`；
 2. 从现有 `public/daily-news.json` 导入一份基准 snapshot，但保留它真实的 `generatedAt`，不把旧内容伪装成新候选；
 3. 先以 shadow 模式写 Supabase，验证跨实例读取和原子发布，再让 `/api/news` 优先读取 Supabase；
 4. 通过兼容 `items` 字段服务现有前端；失败时仍可退回 bundled last-known-good，但响应必须标记 stale/degraded；
@@ -198,9 +203,9 @@
 - 同一候选重复采集不会产生重复记录；
 - 同一事件可跨刷新追加 evidence，候选聚合窗口为最近 72 小时；
 - 并发刷新最多一个取得有效租约，重复调度不产生双重发布；
-- 质量失败、无合格实时候选或数据库写入失败都不会替换 latest，也不会改写 `last_success_at`；
+- published/unchanged/partial 通过同一原子终态；结构失败或数据库失败不产生部分 source/candidate 推进；
 - 快照 payload 与 latest pointer 在一个事务内切换，不允许读到半写入报告；
-- 所有 enabled 且未熔断的健康来源在 15 分钟调度下滚动 90 分钟内都至少尝试一次；连续 3 次失败的来源熔断两个 interval，截止后自动半开重试；
+- 所有 enabled 来源在 5 分钟调度下滚动 30 分钟内都至少尝试一次；partial/failed 优先重试且不能饿死正常来源；
 - 正常运行时报告年龄 P95 不高于 20 分钟，超过 30 分钟必须标记 stale；
 - `GET /api/news` 通过 30 秒 Vercel 时间桶缓存读取 latest，生产小流量 P95 不高于 750 ms、P99 不高于 1 秒；
 - 任一已发布事件可追溯到具体来源 URL；

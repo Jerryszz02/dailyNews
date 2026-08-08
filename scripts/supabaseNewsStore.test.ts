@@ -1,6 +1,7 @@
 import { gzipSync } from "node:zlib";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
+import { compactDailyNewsReport } from "../src/lib/webReport";
 import type { RawNewsItem } from "../src/types";
 import { readBundledReport } from "./reportStore";
 import { SupabaseNewsStore } from "./supabaseNewsStore";
@@ -141,26 +142,45 @@ describe("SupabaseNewsStore RPC mapping", () => {
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 
-  it("times out a hanging write RPC without retrying it", async () => {
+  it("reconciles a timed-out lease acquisition by idempotency key without retrying the write", async () => {
     vi.useFakeTimers();
     try {
-      const rpc = vi.fn(() => new Promise(() => undefined));
+      const rpc = vi.fn((name: string) => {
+        if (name === "daily_news_try_acquire_refresh_v2") return new Promise(() => undefined);
+        if (name === "daily_news_read_acquire_result") {
+          return Promise.resolve({
+            data: [{
+              acquired: true,
+              outcome: "acquired",
+              run_id: "00000000-0000-4000-8000-000000000002",
+              fencing_token: 4,
+              lease_expires_at: "2026-07-13T08:02:00.000Z",
+            }],
+            error: null,
+          });
+        }
+        throw new Error(`Unexpected RPC: ${name}`);
+      });
       const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
 
-      const rejection = expect(store.tryAcquireRefresh({
+      const acquisition = store.tryAcquireRefresh({
         ownerId: "00000000-0000-4000-8000-000000000001",
         idempotencyKey: "refresh:2026-07-13T08:00:00.000Z",
         trigger: "cron",
         scheduledAt: "2026-07-13T08:00:00.000Z",
         leaseSeconds: 120,
-      })).rejects.toMatchObject({
-        code: "supabase_request_failed",
-        sourceCode: "write_timeout",
       });
-      await vi.runAllTimersAsync();
+      await vi.advanceTimersByTimeAsync(8_000);
 
-      await rejection;
-      expect(rpc).toHaveBeenCalledTimes(1);
+      await expect(acquisition).resolves.toMatchObject({
+        acquired: true,
+        runId: "00000000-0000-4000-8000-000000000002",
+        fencingToken: 4,
+      });
+      expect(rpc.mock.calls.map(([name]) => name)).toEqual([
+        "daily_news_try_acquire_refresh_v2",
+        "daily_news_read_acquire_result",
+      ]);
     } finally {
       vi.useRealTimers();
     }
@@ -260,6 +280,14 @@ describe("SupabaseNewsStore RPC mapping", () => {
       discoveredCount: 1,
       acceptedCount: 1,
       errorCode: null,
+    }, {
+      sourceId: "ap",
+      status: "partial" as const,
+      attemptedAt: report.generatedAt,
+      nextDueAt: report.generatedAt,
+      discoveredCount: 1,
+      acceptedCount: 1,
+      errorCode: "collection_deadline",
     }];
 
     const result = await store.commitRefresh({
@@ -270,7 +298,7 @@ describe("SupabaseNewsStore RPC mapping", () => {
       newestContentAt: report.generatedAt,
       contentHash: "0123456789abcdef",
       inputFingerprint: "input-fingerprint",
-      metrics: { planned_source_ids: ["xinhua"] },
+      metrics: { planned_source_ids: ["xinhua", "ap"], outcome: "partial" },
     }, sourceResults, [candidate()]);
 
     expect(result).toEqual({
@@ -280,11 +308,16 @@ describe("SupabaseNewsStore RPC mapping", () => {
       lastSuccessAt: report.generatedAt,
     });
     expect(rpc).toHaveBeenCalledOnce();
-    expect(rpc).toHaveBeenCalledWith("daily_news_commit_refresh", expect.objectContaining({
+    expect(rpc).toHaveBeenCalledWith("daily_news_finish_refresh_v2", expect.objectContaining({
+      refresh_outcome: "partial",
       source_results: [expect.objectContaining({
         source_id: "xinhua",
         status: "success",
         success: true,
+      }), expect.objectContaining({
+        source_id: "ap",
+        status: "partial",
+        success: false,
       })],
       candidates: [expect.objectContaining({
         source_id: "xinhua",
@@ -294,35 +327,217 @@ describe("SupabaseNewsStore RPC mapping", () => {
     }));
   });
 
+  it("finishes unchanged or partial runs with source results and candidates in one RPC", async () => {
+    const report = readBundledReport();
+    const rpc = vi.fn(async () => ({
+      data: [{
+        completed: true,
+        last_attempt_at: report.generatedAt,
+        last_success_at: report.generatedAt,
+      }],
+      error: null,
+    }));
+    const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
+    const lease = {
+      ownerId: "00000000-0000-4000-8000-000000000001",
+      runId: "00000000-0000-4000-8000-000000000002",
+      fencingToken: 4,
+    };
+    const sourceResults = [{
+      sourceId: "xinhua",
+      status: "partial" as const,
+      attemptedAt: report.generatedAt,
+      nextDueAt: report.generatedAt,
+      discoveredCount: 1,
+      acceptedCount: 1,
+      errorCode: "collection_deadline",
+    }];
+
+    await store.completeRefreshWithoutPublish(
+      lease,
+      { outcome: "partial" },
+      sourceResults,
+      [candidate()],
+    );
+
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("daily_news_finish_without_publish_v2", expect.objectContaining({
+      refresh_outcome: "partial",
+      source_results: [expect.objectContaining({ source_id: "xinhua", status: "partial" })],
+      candidates: [expect.objectContaining({
+        source_id: "xinhua",
+        canonical_url: "https://example.com/article",
+      })],
+    }));
+  });
+
+  it("reconciles an uncertain atomic write by run ID without retrying the write", async () => {
+    const report = readBundledReport();
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "daily_news_read_refresh_result") {
+        return {
+          data: [{
+            status: "published",
+            outcome: "partial",
+            published_report_id: "00000000-0000-4000-8000-000000000003",
+            previous_report_id: "00000000-0000-4000-8000-000000000004",
+            last_success_at: report.generatedAt,
+          }],
+          error: null,
+        };
+      }
+      return { data: null, error: { code: "PGRST000" } };
+    });
+    const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
+    const lease = {
+      ownerId: "00000000-0000-4000-8000-000000000001",
+      runId: "00000000-0000-4000-8000-000000000002",
+      fencingToken: 4,
+    };
+
+    const result = await store.commitRefresh({
+      ...lease,
+      reportId: "00000000-0000-4000-8000-000000000003",
+      report,
+      dataAsOf: report.generatedAt,
+      newestContentAt: report.generatedAt,
+      contentHash: "0123456789abcdef",
+      inputFingerprint: "input-fingerprint",
+      metrics: { outcome: "partial" },
+    }, [], []);
+
+    expect(result).toEqual({
+      published: true,
+      outcome: "partial",
+      reportId: "00000000-0000-4000-8000-000000000003",
+      previousReportId: "00000000-0000-4000-8000-000000000004",
+      lastSuccessAt: report.generatedAt,
+    });
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual([
+      "daily_news_finish_refresh_v2",
+      "daily_news_read_refresh_result",
+    ]);
+  });
+
+  it("polls the same run when a timed-out transaction is not terminal yet", async () => {
+    const report = readBundledReport();
+    let reconciliationReads = 0;
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "daily_news_read_refresh_result") {
+        reconciliationReads += 1;
+        return reconciliationReads === 1
+          ? { data: [], error: null }
+          : {
+              data: [{
+                status: "published",
+                outcome: "published",
+                published_report_id: "00000000-0000-4000-8000-000000000003",
+                previous_report_id: "00000000-0000-4000-8000-000000000004",
+                last_success_at: report.generatedAt,
+              }],
+              error: null,
+            };
+      }
+      return { data: null, error: { code: "PGRST000" } };
+    });
+    const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
+
+    const result = await store.commitRefresh({
+      ownerId: "00000000-0000-4000-8000-000000000001",
+      runId: "00000000-0000-4000-8000-000000000002",
+      fencingToken: 4,
+      reportId: "00000000-0000-4000-8000-000000000003",
+      report,
+      dataAsOf: report.generatedAt,
+      newestContentAt: report.generatedAt,
+      contentHash: "0123456789abcdef",
+      inputFingerprint: "input-fingerprint",
+      metrics: { outcome: "published" },
+    }, [], []);
+
+    expect(result.published).toBe(true);
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual([
+      "daily_news_finish_refresh_v2",
+      "daily_news_read_refresh_result",
+      "daily_news_read_refresh_result",
+    ]);
+  });
+
   it("pages candidate reads beyond the PostgREST max_rows boundary", async () => {
     const available = Array.from({ length: 1_250 }, (_, index) => ({
       candidate: { ...candidate(), id: `candidate-${index}`, url: `https://example.com/article/${index}` },
     }));
-    const ranges: Array<[number, number]> = [];
+    const pages: Array<[number, number]> = [];
     let secondPageAttempts = 0;
-    const rpc = vi.fn((_name: string, _args?: Record<string, unknown>) => ({
-      range: async (from: number, to: number) => {
-        ranges.push([from, to]);
-        if (from === 1_000 && secondPageAttempts++ === 0) {
-          return { data: null, error: { code: "PGRST003" } };
-        }
-        return { data: available.slice(from, to + 1), error: null };
-      },
-    }));
+    const rpc = vi.fn(async (name: string, args?: Record<string, unknown>) => {
+      expect(name).toBe("daily_news_read_candidates_v2");
+      const offset = Number(args?.page_offset);
+      const pageLimit = Number(args?.page_limit);
+      pages.push([offset, pageLimit]);
+      if (offset === 1_000 && secondPageAttempts++ === 0) {
+        return { data: null, error: { code: "PGRST003" } };
+      }
+      return { data: available.slice(offset, offset + pageLimit), error: null };
+    });
     const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
 
-    const result = await store.readRecentCandidates("2026-07-12T00:00:00.000Z", 2_000);
+    const result = await store.readRecentCandidates("2026-07-12T00:00:00.000Z");
 
     expect(result).toHaveLength(1_250);
-    expect(ranges).toEqual([
-      [0, 999],
-      [1_000, 1_999],
-      [1_000, 1_999],
+    expect(pages).toEqual([
+      [0, 1_000],
+      [1_000, 1_000],
+      [1_000, 1_000],
     ]);
     expect(rpc).toHaveBeenCalledTimes(3);
-    expect(rpc).toHaveBeenLastCalledWith("daily_news_read_candidates", {
+    expect(rpc).toHaveBeenLastCalledWith("daily_news_read_candidates_v2", {
       since: "2026-07-12T00:00:00.000Z",
-      candidate_limit: 2_000,
+      page_limit: 1_000,
+      page_offset: 1_000,
+    });
+  });
+
+  it("pages the legacy candidate RPC when the v2 migration is not available", async () => {
+    const available = Array.from({ length: 1_250 }, (_, index) => ({
+      candidate: { ...candidate(), id: `legacy-${index}`, url: `https://example.com/legacy/${index}` },
+    }));
+    const ranges: Array<[number, number]> = [];
+    const rpc = vi.fn((name: string) => {
+      if (name === "daily_news_read_candidates_v2") {
+        return Promise.resolve({ data: null, error: { code: "PGRST202" } });
+      }
+      return {
+        range: (from: number, to: number) => {
+          ranges.push([from, to]);
+          return Promise.resolve({ data: available.slice(from, to + 1), error: null });
+        },
+      };
+    });
+    const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
+
+    const result = await store.readRecentCandidates("2026-07-12T00:00:00.000Z");
+
+    expect(result).toHaveLength(1_250);
+    expect(ranges).toEqual([[0, 999], [1_000, 1_999]]);
+  });
+
+  it("fails closed when the legacy RPC reaches its unobservable 5000-row cap", async () => {
+    const available = Array.from({ length: 5_000 }, (_, index) => ({
+      candidate: { ...candidate(), id: `legacy-cap-${index}`, url: `https://example.com/legacy-cap/${index}` },
+    }));
+    const rpc = vi.fn((name: string) => {
+      if (name === "daily_news_read_candidates_v2") {
+        return Promise.resolve({ data: null, error: { code: "PGRST202" } });
+      }
+      return {
+        range: (from: number, to: number) =>
+          Promise.resolve({ data: available.slice(from, to + 1), error: null }),
+      };
+    });
+    const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
+
+    await expect(store.readRecentCandidates("2026-07-12T00:00:00.000Z")).rejects.toMatchObject({
+      code: "candidate_window_incomplete",
     });
   });
 
@@ -354,6 +569,10 @@ describe("SupabaseNewsStore RPC mapping", () => {
             last_attempt_at: report.generatedAt,
             last_success_at: report.generatedAt,
             last_error_code: null,
+            enabled_source_count: 49,
+            recently_attempted_source_count: 47,
+            last_full_sweep_at: report.generatedAt,
+            publication_state_at: "2026-08-03T12:00:00.000Z",
           }],
           error: null,
         };
@@ -384,6 +603,147 @@ describe("SupabaseNewsStore RPC mapping", () => {
     expect(state.latest?.report.stories).toEqual(report.stories);
     expect(state.latest?.report.topStories.map((story) => story.id)).toEqual(report.topStories.map((story) => story.id));
     expect(state.latest?.contentHash).toBe("0123456789abcdef");
+  });
+
+  it("keeps the latest publication readable when source diagnostics fail", async () => {
+    const report = readBundledReport();
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "daily_news_read_latest") {
+        return {
+          data: [{
+            report_id: "00000000-0000-4000-8000-000000000003",
+            payload: report,
+            generated_at: report.generatedAt,
+            published_at: report.generatedAt,
+            data_as_of: report.generatedAt,
+            newest_content_at: report.generatedAt,
+            last_attempt_at: report.generatedAt,
+            last_success_at: report.generatedAt,
+            last_error_code: null,
+            enabled_source_count: 49,
+            recently_attempted_source_count: 47,
+            last_full_sweep_at: report.generatedAt,
+            publication_state_at: "2026-08-03T12:00:00.000Z",
+          }],
+          error: null,
+        };
+      }
+      return { data: null, error: { code: "42501" } };
+    });
+
+    const state = await new SupabaseNewsStore({ rpc } as unknown as SupabaseClient).readState();
+
+    expect(state.latest?.reportId).toBe("00000000-0000-4000-8000-000000000003");
+    expect(state.sources).toEqual([]);
+    expect(state.runtime).toMatchObject({
+      enabledSourceCount: 49,
+      recentlyAttemptedSourceCount: 47,
+      lastFullSweepAt: report.generatedAt,
+      publicationStateAt: "2026-08-03T12:00:00.000Z",
+    });
+
+    rpc.mockClear();
+    const publication = await new SupabaseNewsStore({ rpc } as unknown as SupabaseClient).readPublicationState();
+    expect(publication.latest?.reportId).toBe("00000000-0000-4000-8000-000000000003");
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("daily_news_read_latest", {});
+  });
+
+  it("falls back through the immutable snapshot chain when latest is damaged", async () => {
+    const report = readBundledReport();
+    const currentId = "00000000-0000-4000-8000-000000000099";
+    const fallbackId = "00000000-0000-4000-8000-000000000003";
+    const currentRow = {
+      report_id: currentId,
+      payload: { storageView: 2, encoding: "gzip-base64", data: "damaged" },
+      generated_at: report.generatedAt,
+      published_at: report.generatedAt,
+      data_as_of: report.generatedAt,
+      newest_content_at: report.generatedAt,
+      last_attempt_at: report.generatedAt,
+      last_success_at: report.generatedAt,
+      last_error_code: null,
+    };
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "daily_news_read_latest") return { data: [currentRow], error: null };
+      if (name === "daily_news_read_snapshot_fallbacks") {
+        return {
+          data: [
+            currentRow,
+            {
+              report_id: fallbackId,
+              payload: report,
+              generated_at: report.generatedAt,
+              published_at: report.generatedAt,
+              data_as_of: report.generatedAt,
+              newest_content_at: report.generatedAt,
+            },
+          ],
+          error: null,
+        };
+      }
+      return { data: [], error: null };
+    });
+
+    const state = await new SupabaseNewsStore({ rpc } as unknown as SupabaseClient).readPublicationState();
+
+    expect(state.latest?.reportId).toBe(fallbackId);
+    expect(state.latest?.report.stories).toEqual(report.stories);
+    expect(state.runtime.lastErrorCode).toBe("latest_snapshot_invalid");
+    expect(state.runtime.lastOutcomeCode).toBe("failed");
+    expect(rpc).toHaveBeenCalledWith("daily_news_read_snapshot_fallbacks", {
+      starting_report_id: currentId,
+      max_depth: 10,
+    });
+  });
+
+  it("falls back when the latest compact snapshot is shaped correctly but violates report invariants", async () => {
+    const report = readBundledReport();
+    const invalidCompact = structuredClone(compactDailyNewsReport(report));
+    invalidCompact.stories[0]!.evidence[0]!.url = "https://unapproved.invalid/story";
+    const currentId = "00000000-0000-4000-8000-000000000098";
+    const fallbackId = "00000000-0000-4000-8000-000000000003";
+    const currentRow = {
+      report_id: currentId,
+      payload: {
+        storageView: 2,
+        encoding: "gzip-base64",
+        data: gzipSync(JSON.stringify(invalidCompact)).toString("base64"),
+      },
+      generated_at: report.generatedAt,
+      published_at: report.generatedAt,
+      data_as_of: report.generatedAt,
+      newest_content_at: report.generatedAt,
+      last_attempt_at: report.generatedAt,
+      last_success_at: report.generatedAt,
+      last_error_code: null,
+    };
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "daily_news_read_latest") return { data: [currentRow], error: null };
+      if (name === "daily_news_read_snapshot_fallbacks") {
+        return {
+          data: [
+            currentRow,
+            {
+              report_id: fallbackId,
+              payload: report,
+              generated_at: report.generatedAt,
+              published_at: report.generatedAt,
+              data_as_of: report.generatedAt,
+              newest_content_at: report.generatedAt,
+            },
+          ],
+          error: null,
+        };
+      }
+      return { data: [], error: null };
+    });
+
+    const state = await new SupabaseNewsStore({ rpc } as unknown as SupabaseClient).readPublicationState();
+
+    expect(state.latest?.reportId).toBe(fallbackId);
+    expect(state.runtime.lastErrorCode).toBe("latest_snapshot_invalid");
+    expect(state.runtime.lastOutcomeCode).toBe("failed");
   });
 
   it("keeps reading legacy full-report gzip payloads", async () => {

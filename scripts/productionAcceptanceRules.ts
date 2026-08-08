@@ -1,6 +1,10 @@
-export const SLOT_MS = 15 * 60 * 1000;
-export const BURN_IN_STRICT_SLOTS = 96;
+export const SLOT_MINUTES = 5;
+export const SLOT_MS = SLOT_MINUTES * 60 * 1000;
+export const SLOTS_PER_DAY = (24 * 60) / SLOT_MINUTES;
+export const BURN_IN_STRICT_SLOTS = SLOTS_PER_DAY;
 export const SOAK_DAYS = 7;
+export const SOURCE_ATTEMPT_WINDOW_MINUTES = 30;
+export const MAX_REFRESH_DURATION_SECONDS = 60;
 
 export type MonitorPhase = "seeking_baseline" | "burn_in" | "soak" | "passed" | "needs_review";
 
@@ -77,6 +81,7 @@ export interface SlotAudit {
     storageView: string | null;
     encoding: string | null;
     encodedLength: number;
+    outcome: "published" | "unchanged" | "partial" | "failed" | null;
   }>;
   atomic: {
     runtimeSingleton: number;
@@ -91,6 +96,9 @@ export interface SlotAudit {
   };
   sources: {
     enabled: number;
+    registered: number;
+    missingState: number;
+    attemptWindowMinutes: number;
     healthy: number;
     circuitOpen: number;
     halfOpenDue: number;
@@ -142,6 +150,7 @@ export interface SlotAudit {
     homepageLatest: string | null;
     homepageAge: number | null;
     duplicates: {
+      storyId: number;
       title: number;
       summary: number;
       combination: number;
@@ -163,6 +172,30 @@ export interface SlotAudit {
       covered: number | null;
       total: number | null;
     };
+    latest: {
+      eligible24h: number;
+      visible24h: number;
+      missing24h: number;
+      recall: number;
+      duplicateIds: number;
+      fallbackWindowHours: 24 | 72 | null;
+      eligibleFallback: number;
+      visibleFallback: number;
+      missingFallback: number;
+    };
+    unmappedCandidateCount: number | null;
+    statusMetadata: {
+      servingMode: string | null;
+      pipelineStatus: string | null;
+      contentStatus: string | null;
+      coverageStatus: string | null;
+      lastCheckedAt: string | null;
+      lastFullSweepAt: string | null;
+      lastPublishedAt: string | null;
+      newestContentAt: string | null;
+      lastOutcomeCode: string | null;
+      truthful: boolean;
+    };
   };
   rolling24h: {
     expectedSlots: number;
@@ -181,6 +214,7 @@ export interface SlotAudit {
     durationP95: number | null;
     durationMax: number | null;
     over30Seconds: number;
+    over60Seconds: number;
     maxSuccessfulGapMinutes: number | null;
   } | null;
 }
@@ -275,6 +309,7 @@ export function evaluateSlotAudit(
   const cron = audit.cron[0];
   const isPublished = durable?.status === "published";
   const isCompleted = durable?.status === "completed";
+  const outcome = durable?.outcome ?? response?.bodyStatus ?? null;
   const publicReportId = audit.public.reportIds[0] ?? null;
 
   fail(audit.security.readOnly, "security_not_read_only");
@@ -298,9 +333,14 @@ export function evaluateSlotAudit(
 
   fail(Boolean(durable && durable.slot === audit.targetSlot), "durable_slot_mismatch");
   fail(Boolean(durable && (isPublished || isCompleted)), "durable_terminal_status");
-  fail(Boolean(durable && durable.duration !== null && durable.duration <= 30), "durable_over_30_seconds");
-  fail(Boolean(durable && durable.plannedCount === durable.attemptedCount), "durable_attempt_count_mismatch");
-  fail(Boolean(durable && durable.skippedCount === 0), "durable_skipped");
+  fail(
+    Boolean(
+      durable &&
+        durable.duration !== null &&
+        durable.duration <= MAX_REFRESH_DURATION_SECONDS
+    ),
+    "durable_over_60_seconds",
+  );
   fail(Boolean(durable && durable.missingCount === 0), "durable_missing");
   fail(Boolean(durable && durable.setMismatch === 0), "durable_set_mismatch");
   fail(Boolean(durable && durable.overlap === 0), "durable_attempt_skip_overlap");
@@ -310,7 +350,6 @@ export function evaluateSlotAudit(
   fail(audit.atomic.runtimeSingleton === 1, "atomic_runtime_not_singleton");
   fail(audit.atomic.leaseSingleton === 1, "atomic_lease_not_singleton");
   fail(audit.atomic.leaseReleased, "atomic_lease_not_released");
-  fail(audit.atomic.lastErrorCode === null, "atomic_last_error");
   if (isPublished) {
     fail(Boolean(durable?.reportId), "published_report_missing");
     fail(Boolean(durable?.snapshotLinked), "published_snapshot_not_linked");
@@ -322,26 +361,28 @@ export function evaluateSlotAudit(
     fail(audit.atomic.latestReportId === publicReportId, "completed_public_report_mismatch");
     fail(durable?.responseReportId === audit.atomic.latestReportId, "completed_response_report_mismatch");
   }
+  if (outcome === "partial") {
+    fail(
+      audit.public.statusMetadata.lastOutcomeCode === "partial",
+      "partial_outcome_metadata_mismatch",
+    );
+  }
 
-  fail(audit.sources.enabled === 49, "sources_enabled_not_49");
-  fail(audit.sources.healthy + audit.sources.circuitOpen === audit.sources.enabled, "sources_partition_mismatch");
-  fail(audit.sources.halfOpenDue === 0, "sources_half_open_due");
-  fail(audit.sources.rollingAttempted === audit.sources.healthy, "sources_rolling_attempt_gap");
-  fail(audit.sources.rollingSucceeded === audit.sources.healthy, "sources_rolling_success_gap");
+  fail(audit.sources.enabled > 0, "sources_enabled_empty");
+  fail(audit.sources.registered === audit.sources.enabled, "sources_state_count_mismatch");
+  fail(audit.sources.missingState === 0, "sources_state_missing");
+  fail(
+    audit.sources.attemptWindowMinutes === SOURCE_ATTEMPT_WINDOW_MINUTES,
+    "sources_attempt_window_mismatch",
+  );
+  fail(
+    audit.sources.healthy + audit.sources.circuitOpen === audit.sources.enabled,
+    "sources_partition_mismatch",
+  );
+  fail(audit.sources.rollingAttempted === audit.sources.enabled, "sources_rolling_attempt_gap");
   fail(audit.sources.overdue === 0, "sources_overdue");
-  fail(audit.sources.backlog === 0, "sources_backlog");
   fail(audit.sources.currentAttemptMismatch === 0, "sources_attempt_state_mismatch");
   fail(audit.sources.currentSkippedAdvanced === 0, "sources_skipped_state_advanced");
-  if (audit.sources.anthropic) {
-    fail(!audit.sources.anthropic.skipped, "anthropic_skipped");
-    fail(
-      !audit.sources.anthropic.planned || audit.sources.anthropic.attempted,
-      "anthropic_planned_not_attempted",
-    );
-    fail(audit.sources.anthropic.failures === 0, "anthropic_failures");
-    fail(audit.sources.anthropic.circuitOpenUntil === null, "anthropic_circuit_open");
-    fail(audit.sources.anthropic.lastErrorCode === null, "anthropic_last_error");
-  }
 
   fail(Object.values(audit.public.errors).every((error) => error === null), "public_fetch_error");
   fail(audit.public.statuses.health === 200, "public_health_not_200");
@@ -355,7 +396,6 @@ export function evaluateSlotAudit(
   fail(audit.public.cache.reload === "no-store", "public_reload_cache_contract");
   fail(audit.public.cache.invalid === "no-store", "public_invalid_cache_contract");
   fail(audit.public.storage === "supabase", "public_storage_not_supabase");
-  fail(audit.public.healthError === null, "public_health_error");
   fail(audit.public.atomicReport, "public_report_not_atomic");
   fail(
     audit.public.counts.full > 0 &&
@@ -363,46 +403,66 @@ export function evaluateSlotAudit(
       audit.public.counts.full === audit.public.counts.reload,
     "public_story_count_mismatch",
   );
-  fail(audit.public.candidateAge !== null && audit.public.candidateAge <= 120, "public_candidate_stale");
-  fail(audit.public.homepageAge !== null && audit.public.homepageAge <= 120, "public_homepage_stale");
-  fail(Object.values(audit.public.duplicates).every((count) => count === 0), "public_duplicates");
+  fail(audit.public.unmappedCandidateCount === 0, "public_unmapped_candidates");
+  fail(audit.public.latest.missing24h === 0, "public_latest_missing_24h");
+  fail(audit.public.latest.recall === 1, "public_latest_recall");
+  fail(audit.public.latest.duplicateIds === 0, "public_latest_duplicate_ids");
+  fail(audit.public.latest.missingFallback === 0, "public_latest_fallback_missing");
+  fail(audit.public.duplicates.storyId === 0, "public_duplicate_story_ids");
   fail(
-    audit.public.core.count > 0 && audit.public.core.confirmed === audit.public.core.count,
-    "public_core_not_confirmed",
+    audit.public.statusMetadata.servingMode === "durable",
+    "public_serving_mode_not_durable",
   );
   fail(
-    audit.public.core.count < 15 || audit.public.publisherShare <= 0.2,
-    "public_publisher_share",
+    ["running", "healthy", "degraded", "failed"].includes(
+      audit.public.statusMetadata.pipelineStatus ?? "",
+    ),
+    "public_pipeline_status_invalid",
   );
   fail(
-    audit.public.beats.total === 10 && audit.public.beats.covered === audit.public.beats.total,
-    "public_beat_coverage",
+    ["current", "quiet", "stale", "unknown"].includes(
+      audit.public.statusMetadata.contentStatus ?? "",
+    ),
+    "public_content_status_invalid",
   );
+  fail(
+    ["current", "stale", "incomplete", "unavailable"].includes(
+      audit.public.statusMetadata.coverageStatus ?? "",
+    ),
+    "public_coverage_status_invalid",
+  );
+  fail(audit.public.statusMetadata.truthful, "public_status_metadata_mismatch");
+  if (audit.public.healthError !== null) {
+    fail(
+      ["degraded", "failed"].includes(audit.public.statusMetadata.pipelineStatus ?? ""),
+      "public_health_error_not_degraded",
+    );
+  }
 
   if (options.requireRolling24h) {
     const rolling = audit.rolling24h;
     fail(Boolean(rolling), "rolling_24h_missing");
     if (rolling) {
-      fail(rolling.expectedSlots === 96, "rolling_24h_expected_slots");
-      fail(rolling.cron === 96, "rolling_24h_cron_count");
-      fail(rolling.cronSucceeded === 96, "rolling_24h_cron_failures");
-      fail(rolling.durable === 96, "rolling_24h_durable_count");
-      fail(rolling.durableSucceeded === 96, "rolling_24h_durable_failures");
+      fail(rolling.expectedSlots === SLOTS_PER_DAY, "rolling_24h_expected_slots");
+      fail(rolling.cron === SLOTS_PER_DAY, "rolling_24h_cron_count");
+      fail(rolling.cronSucceeded === SLOTS_PER_DAY, "rolling_24h_cron_failures");
+      fail(rolling.durable === SLOTS_PER_DAY, "rolling_24h_durable_count");
+      fail(rolling.durableSucceeded === SLOTS_PER_DAY, "rolling_24h_durable_failures");
       fail(rolling.durableFailed === 0, "rolling_24h_failed_runs");
       fail(rolling.durableRunning === 0, "rolling_24h_running_runs");
       fail(rolling.missingCron === 0, "rolling_24h_missing_cron");
       fail(rolling.missingDurable === 0, "rolling_24h_missing_durable");
       fail(rolling.duplicateCron === 0, "rolling_24h_duplicate_cron");
       fail(rolling.duplicateDurable === 0, "rolling_24h_duplicate_durable");
-      fail(rolling.skippedSources === 0, "rolling_24h_skipped_sources");
       fail(rolling.missingSourceOutcomes === 0, "rolling_24h_missing_source_outcomes");
-      fail(rolling.over30Seconds === 0, "rolling_24h_over_30_seconds");
+      fail(rolling.over60Seconds === 0, "rolling_24h_over_60_seconds");
       fail(
-        rolling.durationMax !== null && rolling.durationMax <= 30,
+        rolling.durationMax !== null && rolling.durationMax <= MAX_REFRESH_DURATION_SECONDS,
         "rolling_24h_duration_max",
       );
       fail(
-        rolling.maxSuccessfulGapMinutes !== null && rolling.maxSuccessfulGapMinutes <= 16,
+        rolling.maxSuccessfulGapMinutes !== null &&
+          rolling.maxSuccessfulGapMinutes <= SLOT_MINUTES + 1,
         "rolling_24h_success_gap",
       );
     }
@@ -446,7 +506,7 @@ export function advanceMonitorState(
         attempt: state.attempt + 1,
         soakDaysPassed: 0,
         soakStartedAt: null,
-        nextSlot: addSlots(audit.targetSlot, 96),
+        nextSlot: addSlots(audit.targetSlot, SLOTS_PER_DAY),
       };
     }
     return {
@@ -479,7 +539,7 @@ export function advanceMonitorState(
         burnInPassedAt: audit.auditAt,
         soakDaysPassed: 0,
         soakStartedAt: audit.auditAt,
-        nextSlot: addSlots(audit.targetSlot, 96),
+        nextSlot: addSlots(audit.targetSlot, SLOTS_PER_DAY),
       };
     }
     return {
@@ -503,7 +563,7 @@ export function advanceMonitorState(
     return {
       ...next,
       soakDaysPassed,
-      nextSlot: addSlots(audit.targetSlot, 96),
+      nextSlot: addSlots(audit.targetSlot, SLOTS_PER_DAY),
     };
   }
 

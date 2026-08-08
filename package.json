@@ -11,7 +11,7 @@
     "serve": "npm run build && tsx scripts/newsServer.ts",
     "test": "vitest run",
     "test:integration": "vitest run scripts/newsStore.contract.test.ts scripts/supabaseNewsStore.test.ts scripts/newsRefresh.test.ts scripts/newsApi.test.ts src/lib/sourceCoverage.test.ts src/lib/freshness.test.ts src/lib/contentFreshness.test.ts",
-    "test:db": "supabase test db",
+    "test:db": "sh -c 'status=0; supabase start && supabase test db --local supabase/tests || status=$?; supabase stop --no-backup >/dev/null 2>&1 || true; exit $status'",
     "bootstrap:supabase": "tsx scripts/bootstrapSupabase.ts",
     "generate": "tsx scripts/generateDailyNews.ts",
     "monitor:production": "tsx scripts/productionAcceptanceMonitor.ts",

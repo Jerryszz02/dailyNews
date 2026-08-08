@@ -2,10 +2,12 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { compactDailyNewsReport, hydrateWebDailyNewsReport, isWebDailyNewsReport } from "../src/lib/webReport.js";
 import type { DailyNewsReport, RawNewsItem } from "../src/types";
+import { normalizeV2Report, validateReportInvariants } from "./reportStore.js";
 import type {
   AcquireRefreshInput,
   CompleteWithoutPublishResult,
   LeaseIdentity,
+  NewsRuntimeState,
   NewsSourceState,
   NewsStore,
   NewsStoreState,
@@ -19,6 +21,7 @@ import type {
 type DatabaseRow = Record<string, unknown>;
 const candidatePageSize = 1_000;
 const readRetryDelaysMs = [250, 750] as const;
+const reconciliationPollDelaysMs = [0, 250, 750] as const;
 const readAttemptTimeoutMs = 4_000;
 const writeAttemptTimeoutMs = 8_000;
 const storedReportEncoding = "gzip-base64";
@@ -31,31 +34,63 @@ export class SupabaseNewsStore implements NewsStore {
   constructor(private readonly client: SupabaseClient) {}
 
   async readState(): Promise<NewsStoreState> {
-    const [latestData, sourceData] = await Promise.all([
-      this.readRpc("daily_news_read_latest"),
-      this.readRpc("daily_news_list_source_states"),
+    const [publication, sourceData] = await Promise.all([
+      this.readPublicationState(),
+      this.readRpc("daily_news_list_source_states").catch(() => []),
     ]);
-    const latest = firstRow(latestData);
-    const report = readStoredReport(latest?.payload);
+    return { ...publication, sources: rows(sourceData).map(readSourceState) };
+  }
+
+  async readPublicationState(): Promise<NewsStoreState> {
+    const latestData = await this.readRpc("daily_news_read_latest");
+    const latestPointer = firstRow(latestData);
+    let selectedSnapshot = latestPointer;
+    let report = readStoredReport(selectedSnapshot?.payload);
+    let snapshotFallbackUsed = false;
+    if (!report && typeof latestPointer?.report_id === "string") {
+      try {
+        const fallbackRows = rows(await this.readRpc("daily_news_read_snapshot_fallbacks", {
+          starting_report_id: latestPointer.report_id,
+          max_depth: 10,
+        }));
+        for (const fallback of fallbackRows) {
+          const candidateReport = readStoredReport(fallback.payload);
+          if (!candidateReport) continue;
+          selectedSnapshot = fallback;
+          report = candidateReport;
+          snapshotFallbackUsed = fallback.report_id !== latestPointer.report_id;
+          break;
+        }
+      } catch {
+        // The caller can still serve the bundled last-known-good report.
+      }
+    }
+    const storedErrorCode = readNullableString(latestPointer?.last_error_code);
+    const lastErrorCode = storedErrorCode ?? (snapshotFallbackUsed ? "latest_snapshot_invalid" : null);
 
     return {
       latest:
-        latest && typeof latest.report_id === "string" && report
+        selectedSnapshot && typeof selectedSnapshot.report_id === "string" && report
           ? {
-              reportId: latest.report_id,
+              reportId: selectedSnapshot.report_id,
               report,
-              contentHash: readNullableString(latest.content_hash) ?? undefined,
-              dataAsOf: readTimestamp(latest.data_as_of) ?? readTimestamp(latest.generated_at)!,
-              newestContentAt: readTimestamp(latest.newest_content_at),
-              publishedAt: readTimestamp(latest.published_at) ?? readTimestamp(latest.generated_at)!,
+              contentHash: readNullableString(selectedSnapshot.content_hash) ?? undefined,
+              dataAsOf: readTimestamp(selectedSnapshot.data_as_of) ?? readTimestamp(selectedSnapshot.generated_at)!,
+              newestContentAt: readTimestamp(selectedSnapshot.newest_content_at),
+              publishedAt: readTimestamp(selectedSnapshot.published_at) ?? readTimestamp(selectedSnapshot.generated_at)!,
             }
           : null,
       runtime: {
-        lastAttemptAt: readTimestamp(latest?.last_attempt_at),
-        lastSuccessAt: readTimestamp(latest?.last_success_at),
-        lastErrorCode: readNullableString(latest?.last_error_code),
+        lastAttemptAt: readTimestamp(latestPointer?.last_attempt_at),
+        lastSuccessAt: readTimestamp(latestPointer?.last_success_at),
+        lastErrorCode,
+        lastOutcomeCode: lastErrorCode ? "failed" : readOutcomeCode(latestPointer?.last_outcome_code),
+        enabledSourceCount: readOptionalNumber(latestPointer?.enabled_source_count),
+        recentlyAttemptedSourceCount: readOptionalNumber(latestPointer?.recently_attempted_source_count),
+        lastFullSweepAt: readTimestamp(latestPointer?.last_full_sweep_at),
+        publicationStateAt: readTimestamp(latestPointer?.publication_state_at),
       },
-      sources: rows(sourceData).map(readSourceState),
+      sources: [],
     };
   }
 
@@ -74,25 +109,23 @@ export class SupabaseNewsStore implements NewsStore {
   }
 
   async tryAcquireRefresh(input: AcquireRefreshInput): Promise<RefreshLease> {
-    const row = requiredFirstRow(
-      await this.rpc("daily_news_try_acquire_refresh", {
-        lease_owner: input.ownerId,
-        idempotency_key: input.idempotencyKey,
-        trigger_kind: input.trigger,
-        scheduled_at: input.scheduledAt,
-        lease_seconds: input.leaseSeconds,
-      }),
-      "refresh_lease_missing",
-    );
-    const outcome = readString(row.outcome);
-    return {
-      acquired: Boolean(row.acquired),
-      outcome: outcome === "duplicate" || outcome === "busy" ? outcome : "acquired",
-      runId: readString(row.run_id),
-      ownerId: input.ownerId,
-      fencingToken: readNumber(row.fencing_token),
-      leaseExpiresAt: readTimestamp(row.lease_expires_at),
+    const args = {
+      lease_owner: input.ownerId,
+      idempotency_key: input.idempotencyKey,
+      trigger_kind: input.trigger,
+      scheduled_at: input.scheduledAt,
+      lease_seconds: input.leaseSeconds,
     };
+    try {
+      return readRefreshLease(
+        requiredFirstRow(await this.rpc("daily_news_try_acquire_refresh_v2", args), "refresh_lease_missing"),
+        input.ownerId,
+      );
+    } catch (error) {
+      const reconciled = await this.reconcileAcquire(input);
+      if (reconciled) return reconciled;
+      throw error;
+    }
   }
 
   async renewRefresh(lease: LeaseIdentity, leaseSeconds: number): Promise<boolean> {
@@ -126,17 +159,25 @@ export class SupabaseNewsStore implements NewsStore {
     return readNumber(firstRow(data)?.upserted_count);
   }
 
-  async readRecentCandidates(since: string, limit = 2_000): Promise<RawNewsItem[]> {
+  async readRecentCandidates(since: string, limit?: number): Promise<RawNewsItem[]> {
+    try {
+      return await this.readRecentCandidatesV2(since, limit);
+    } catch (error) {
+      if (!(error instanceof NewsStoreError) || error.code !== "supabase_rpc_missing") throw error;
+      return this.readRecentCandidatesLegacy(since, limit);
+    }
+  }
+
+  private async readRecentCandidatesV2(since: string, limit?: number): Promise<RawNewsItem[]> {
     const candidates: RawNewsItem[] = [];
     let offset = 0;
-    while (offset < limit) {
-      const pageLimit = Math.min(candidatePageSize, limit - offset);
-      const data = await this.readRpcRange(
-        "daily_news_read_candidates",
-        { since, candidate_limit: limit },
-        offset,
-        offset + pageLimit - 1,
-      );
+    while (limit === undefined || offset < limit) {
+      const pageLimit = Math.min(candidatePageSize, limit === undefined ? candidatePageSize : limit - offset);
+      const data = await this.readRpc("daily_news_read_candidates_v2", {
+        since,
+        page_limit: pageLimit,
+        page_offset: offset,
+      });
       const pageRows = rows(data);
       const page = pageRows
         .map((row) => row.payload ?? row.candidate ?? row)
@@ -148,43 +189,99 @@ export class SupabaseNewsStore implements NewsStore {
     return candidates;
   }
 
+  private async readRecentCandidatesLegacy(since: string, limit?: number): Promise<RawNewsItem[]> {
+    const legacyLimit = Math.min(limit ?? 5_000, 5_000);
+    const candidates: RawNewsItem[] = [];
+    let offset = 0;
+    while (offset < legacyLimit) {
+      const pageLimit = Math.min(candidatePageSize, legacyLimit - offset);
+      const data = await this.readRpcRange(
+        "daily_news_read_candidates",
+        { since, candidate_limit: legacyLimit },
+        offset,
+        offset + pageLimit - 1,
+      );
+      const pageRows = rows(data);
+      candidates.push(...pageRows
+        .map((row) => row.payload ?? row.candidate ?? row)
+        .filter(isRecord) as unknown as RawNewsItem[]);
+      offset += pageRows.length;
+      if (pageRows.length < pageLimit) break;
+    }
+    if (limit === undefined && candidates.length === 5_000) {
+      throw new NewsStoreError("candidate_window_incomplete");
+    }
+    return candidates;
+  }
+
   async commitRefresh(
     input: PublishRefreshInput,
     sourceResults: SourceCollectionResult[],
     candidates: RawNewsItem[],
   ): Promise<PublishRefreshResult> {
-    return readPublishRefreshResult(
-      requiredFirstRow(
-        await this.rpc("daily_news_commit_refresh", {
-          ...publishRefreshArgs(input),
-          source_results: sourceResultsPayload(sourceResults),
-          candidates: candidatesPayload(candidates),
-        }),
-        "commit_result_missing",
-      ),
-    );
+    const args = {
+      ...publishRefreshArgs(input),
+      source_results: sourceResultsPayload(sourceResults),
+      candidates: candidatesPayload(candidates),
+      refresh_outcome: input.metrics.outcome === "partial" ? "partial" : "published",
+    };
+    try {
+      return readPublishRefreshResult(
+        requiredFirstRow(await this.rpc("daily_news_finish_refresh_v2", args), "commit_result_missing"),
+      );
+    } catch (error) {
+      const reconciled = await this.reconcileRefresh(input.runId);
+      if (reconciled) return reconciled;
+      throw error;
+    }
   }
 
   async publishRefresh(input: PublishRefreshInput): Promise<PublishRefreshResult> {
-    return readPublishRefreshResult(
-      requiredFirstRow(
-        await this.rpc("daily_news_publish_refresh", publishRefreshArgs(input)),
-        "publish_result_missing",
-      ),
-    );
+    try {
+      return readPublishRefreshResult(
+        requiredFirstRow(
+          await this.rpc("daily_news_publish_refresh", publishRefreshArgs(input)),
+          "publish_result_missing",
+        ),
+      );
+    } catch (error) {
+      const reconciled = await this.reconcileRefresh(input.runId);
+      if (reconciled) return reconciled;
+      throw error;
+    }
   }
 
   async completeRefreshWithoutPublish(
     lease: LeaseIdentity,
     metrics: Record<string, unknown>,
+    sourceResults: SourceCollectionResult[] = [],
+    candidates: RawNewsItem[] = [],
   ): Promise<CompleteWithoutPublishResult> {
-    const row = requiredFirstRow(
-      await this.rpc("daily_news_complete_refresh_without_publish", {
+    const refreshOutcome = metrics.outcome === "partial" ? "partial" : "unchanged";
+    let data: unknown;
+    try {
+      data = await this.rpc("daily_news_finish_without_publish_v2", {
         lease_owner: lease.ownerId,
         run_id: lease.runId,
         fencing_token: lease.fencingToken,
+        source_results: sourceResultsPayload(sourceResults),
+        candidates: candidatesPayload(candidates),
         run_metrics: metrics,
-      }),
+        refresh_outcome: refreshOutcome,
+      });
+    } catch (error) {
+      const reconciled = await this.reconcileRefresh(lease.runId);
+      if (reconciled && !reconciled.published) {
+        return {
+          completed: true,
+          lastAttemptAt: reconciled.lastSuccessAt,
+          lastSuccessAt: reconciled.lastSuccessAt,
+        };
+      }
+      throw error;
+    }
+    const row = requiredFirstRow(
+      data,
       "complete_result_missing",
     );
     return {
@@ -268,6 +365,42 @@ export class SupabaseNewsStore implements NewsStore {
       throw new NewsStoreError("supabase_request_failed");
     }
   }
+
+  private async reconcileRefresh(runId: string): Promise<PublishRefreshResult | null> {
+    for (const pollDelayMs of reconciliationPollDelaysMs) {
+      if (pollDelayMs > 0) await delay(pollDelayMs);
+      try {
+        const row = firstRow(await this.readRpc("daily_news_read_refresh_result", { target_run_id: runId }));
+        if (
+          row &&
+          (row.status === "published" || row.status === "completed") &&
+          readPublishOutcome(row.outcome)
+        ) {
+          return readPublishRefreshResult(row);
+        }
+      } catch {
+        // A timed-out write may still be committing; retry only this idempotent read.
+      }
+    }
+    return null;
+  }
+
+  private async reconcileAcquire(input: AcquireRefreshInput): Promise<RefreshLease | null> {
+    for (const pollDelayMs of reconciliationPollDelaysMs) {
+      if (pollDelayMs > 0) await delay(pollDelayMs);
+      try {
+        const row = firstRow(await this.readRpc("daily_news_read_acquire_result", {
+          target_idempotency_key: input.idempotencyKey,
+          expected_owner: input.ownerId,
+        }));
+        if (row) return readRefreshLease(row, input.ownerId);
+      } catch {
+        // The acquisition may still be committing; retry only the read by idempotency key.
+      }
+    }
+    return null;
+  }
+
 }
 
 function storeReport(report: DailyNewsReport): DatabaseRow {
@@ -282,7 +415,7 @@ function sourceResultsPayload(results: SourceCollectionResult[]): DatabaseRow[] 
   return results.map((result) => ({
     source_id: result.sourceId,
     status: result.status,
-    success: result.status !== "failed",
+    success: result.status === "success" || result.status === "empty",
     attempted_at: result.attemptedAt,
     next_due_at: result.nextDueAt,
     discovered_count: result.discoveredCount,
@@ -298,8 +431,11 @@ function candidatesPayload(candidates: RawNewsItem[]): DatabaseRow[] {
     title: candidate.title,
     summary: candidate.summary,
     published_at: candidate.publishedAt,
-    discovered_at: candidate.extractedAt,
+    updated_at: candidate.updatedAt,
+    discovered_at: candidate.discoveredAt ?? candidate.extractedAt,
     language: candidate.language,
+    quality_status: "accepted",
+    rejection_reasons: candidate.rejectionReasons ?? [],
     payload: candidate,
   }));
 }
@@ -324,14 +460,37 @@ function publishRefreshArgs(input: PublishRefreshInput): DatabaseRow {
 function readPublishRefreshResult(row: DatabaseRow): PublishRefreshResult {
   return {
     published: typeof row.published_report_id === "string",
+    outcome: readPublishOutcome(row.outcome),
     reportId: readNullableString(row.published_report_id),
     previousReportId: readNullableString(row.previous_report_id),
     lastSuccessAt: readTimestamp(row.last_success_at),
   };
 }
 
+function readRefreshLease(row: DatabaseRow, ownerId: string): RefreshLease {
+  const outcome = readString(row.outcome);
+  return {
+    acquired: Boolean(row.acquired),
+    outcome: outcome === "duplicate" || outcome === "busy" ? outcome : "acquired",
+    runId: readString(row.run_id),
+    ownerId,
+    fencingToken: readNumber(row.fencing_token),
+    leaseExpiresAt: readTimestamp(row.lease_expires_at),
+  };
+}
+
+function readPublishOutcome(value: unknown): "published" | "unchanged" | "partial" | undefined {
+  return value === "published" || value === "unchanged" || value === "partial" ? value : undefined;
+}
+
+function readOutcomeCode(value: unknown): NewsRuntimeState["lastOutcomeCode"] {
+  return value === "published" || value === "unchanged" || value === "partial" || value === "failed"
+    ? value
+    : null;
+}
+
 function readStoredReport(value: unknown): DailyNewsReport | null {
-  if (isDailyNewsReport(value)) return value;
+  if (isDailyNewsReport(value)) return validateStoredReport(value);
   if (
     !isRecord(value) ||
     (value.storageView !== 1 && value.storageView !== 2) ||
@@ -345,8 +504,17 @@ function readStoredReport(value: unknown): DailyNewsReport | null {
     const decoded: unknown = JSON.parse(
       gunzipSync(Buffer.from(value.data, "base64"), { maxOutputLength: maxStoredReportBytes }).toString("utf8"),
     );
-    if (isDailyNewsReport(decoded)) return decoded;
-    return isWebDailyNewsReport(decoded) ? hydrateWebDailyNewsReport(decoded) : null;
+    if (isDailyNewsReport(decoded)) return validateStoredReport(decoded);
+    return isWebDailyNewsReport(decoded) ? validateStoredReport(hydrateWebDailyNewsReport(decoded)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function validateStoredReport(report: DailyNewsReport): DailyNewsReport | null {
+  try {
+    const normalized = normalizeV2Report(report);
+    return validateReportInvariants(normalized).length === 0 ? normalized : null;
   } catch {
     return null;
   }
@@ -428,6 +596,10 @@ function readNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function readOptionalNumber(value: unknown): number | undefined {
+  return value === null || value === undefined ? undefined : readNumber(value);
 }
 
 function readTimestamp(value: unknown): string | null {
