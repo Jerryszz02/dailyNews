@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { newsSources } from "../config/sources";
 import {
@@ -9,6 +10,15 @@ import {
 } from "./sourceAdmission";
 
 describe("source admission", () => {
+  it("uses explicit extensions for runtime imports consumed by Node ESM", () => {
+    const sourceModule = readFileSync(new URL("../config/sources.ts", import.meta.url), "utf8");
+    const runtimeRelativeImports = [...sourceModule.matchAll(/^import(?!\s+type\b)[\s\S]*?from\s+["'](\.{1,2}\/[^"']+)["'];/gm)]
+      .map((match) => match[1]);
+
+    expect(runtimeRelativeImports.length).toBeGreaterThan(0);
+    expect(runtimeRelativeImports.every((specifier) => /\.(?:[cm]?js|json)$/.test(specifier))).toBe(true);
+  });
+
   it("migrates every configured source through an explicit reviewed admission boundary", () => {
     expect(validateSourceAdmission(newsSources)).toEqual([]);
     expect(newsSources.every((source) => source.admission === "approved")).toBe(true);
