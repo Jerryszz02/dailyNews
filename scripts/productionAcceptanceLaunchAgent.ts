@@ -14,6 +14,32 @@ export interface LaunchAgentPlist {
   stderrPath: string;
 }
 
+type LaunchctlRunner = (arguments_: string[]) => Promise<void>;
+
+function commandExitCode(error: unknown): string | null {
+  const code = (error as { code?: unknown })?.code;
+  return typeof code === "string" ? code : null;
+}
+
+export async function bootoutLaunchAgent(
+  target: string,
+  runLaunchctl: LaunchctlRunner,
+): Promise<void> {
+  try {
+    await runLaunchctl(["bootout", target]);
+    return;
+  } catch (bootoutError) {
+    if (commandExitCode(bootoutError) !== "COMMAND_EXIT_3") throw bootoutError;
+    try {
+      await runLaunchctl(["print", target]);
+    } catch (printError) {
+      if (commandExitCode(printError) === "COMMAND_EXIT_113") return;
+      throw printError;
+    }
+    throw bootoutError;
+  }
+}
+
 function xml(value: string): string {
   return value
     .replaceAll("&", "&amp;")

@@ -1,11 +1,14 @@
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   minIsoTimestamp,
   summarizePublicReport,
   timestampMs,
 } from "./productionAcceptanceAudit";
-import { buildLaunchAgentPlist } from "./productionAcceptanceLaunchAgent";
+import {
+  bootoutLaunchAgent,
+  buildLaunchAgentPlist,
+} from "./productionAcceptanceLaunchAgent";
 
 const now = "2026-08-03T12:00:00.000Z";
 
@@ -168,5 +171,44 @@ describe("production acceptance LaunchAgent plist", () => {
         "  <integer>60</integer>",
       ].join("\n"),
     );
+  });
+
+  it("stops cleanly when bootout succeeds", async () => {
+    const runLaunchctl = vi.fn(async () => {});
+
+    await expect(bootoutLaunchAgent("gui/501/example", runLaunchctl)).resolves.toBeUndefined();
+    expect(runLaunchctl).toHaveBeenCalledTimes(1);
+    expect(runLaunchctl).toHaveBeenCalledWith(["bootout", "gui/501/example"]);
+  });
+
+  it("accepts only a confirmed missing LaunchAgent", async () => {
+    const runLaunchctl = vi.fn(async (arguments_: string[]) => {
+      throw Object.assign(new Error("missing"), {
+        code: arguments_[0] === "bootout" ? "COMMAND_EXIT_3" : "COMMAND_EXIT_113",
+      });
+    });
+
+    await expect(bootoutLaunchAgent("gui/501/example", runLaunchctl)).resolves.toBeUndefined();
+    expect(runLaunchctl).toHaveBeenNthCalledWith(2, ["print", "gui/501/example"]);
+  });
+
+  it("fails closed when bootout does not remove the LaunchAgent", async () => {
+    const bootoutError = Object.assign(new Error("still loaded"), { code: "COMMAND_EXIT_3" });
+    const runLaunchctl = vi.fn(async (arguments_: string[]) => {
+      if (arguments_[0] === "bootout") throw bootoutError;
+    });
+
+    await expect(bootoutLaunchAgent("gui/501/example", runLaunchctl)).rejects.toBe(bootoutError);
+    expect(runLaunchctl).toHaveBeenNthCalledWith(2, ["print", "gui/501/example"]);
+  });
+
+  it("fails closed immediately when bootout times out", async () => {
+    const timeoutError = Object.assign(new Error("timeout"), { code: "COMMAND_TIMEOUT" });
+    const runLaunchctl = vi.fn(async () => {
+      throw timeoutError;
+    });
+
+    await expect(bootoutLaunchAgent("gui/501/example", runLaunchctl)).rejects.toBe(timeoutError);
+    expect(runLaunchctl).toHaveBeenCalledTimes(1);
   });
 });

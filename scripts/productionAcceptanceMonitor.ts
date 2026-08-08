@@ -3,7 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { collectSlotAudit } from "./productionAcceptanceAudit";
-import { buildLaunchAgentPlist } from "./productionAcceptanceLaunchAgent";
+import {
+  bootoutLaunchAgent,
+  buildLaunchAgentPlist,
+} from "./productionAcceptanceLaunchAgent";
 import {
   BURN_IN_STRICT_SLOTS,
   SOAK_DAYS,
@@ -391,15 +394,16 @@ async function stopMonitor(output: string): Promise<void> {
   if (fs.existsSync(labelFile)) {
     const label = fs.readFileSync(labelFile, "utf8").trim();
     if (!/^com\.[A-Za-z0-9.-]+$/.test(label)) throw new Error("LAUNCH_AGENT_LABEL_INVALID");
-    try {
-      await runCommand(
-        "/bin/launchctl",
-        ["bootout", `gui/${process.getuid?.() ?? 0}/${label}`],
-        { cwd: process.cwd(), timeoutMs: 15_000 },
-      );
-    } catch {
-      // An already-exited job can still leave completed evidence to review.
-    }
+    await bootoutLaunchAgent(
+      `gui/${process.getuid?.() ?? 0}/${label}`,
+      async (arguments_) => {
+        await runCommand(
+          "/bin/launchctl",
+          arguments_,
+          { cwd: process.cwd(), timeoutMs: 15_000 },
+        );
+      },
+    );
     fs.rmSync(labelFile, { force: true });
     const plistPointer = path.join(output, "launch-agent-plist.txt");
     if (fs.existsSync(plistPointer)) {
@@ -494,15 +498,13 @@ async function startMonitorAgent(options: CliOptions): Promise<void> {
     installedAt: new Date().toISOString(),
   });
 
-  try {
+  await bootoutLaunchAgent(`gui/${uid}/${label}`, async (arguments_) => {
     await runCommand(
       "/bin/launchctl",
-      ["bootout", `gui/${uid}/${label}`],
+      arguments_,
       { cwd, timeoutMs: 15_000 },
     );
-  } catch {
-    // The normal first-start case has no previously loaded job.
-  }
+  });
   await runCommand(
     "/bin/launchctl",
     ["bootstrap", `gui/${uid}`, plist],
