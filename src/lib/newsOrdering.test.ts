@@ -26,6 +26,8 @@ function item(
     sourceNames: ["Reuters"],
     relatedUrls: [`https://example.com/${id}`],
     primaryCategoryVotes: [categories[0]],
+    startedAt: publishedAt,
+    updatedAt: publishedAt,
     score_breakdown: {
       final_score: score.final_score ?? 50,
       public_importance: score.public_importance ?? 50,

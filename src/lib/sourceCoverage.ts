@@ -17,6 +17,7 @@ export interface SourceHealthState {
   sourceId: string;
   consecutiveFailures: number;
   acceptedRate?: number;
+  lastErrorCode?: string | null;
   circuitOpenUntil?: string | null;
   lastAttemptAt?: string | null;
   lastSuccessAt?: string | null;
@@ -31,7 +32,9 @@ export interface CoverageSelectionOptions {
   lookaheadMinutes?: number;
 }
 
-export const defaultSourceIntervalMinutes = 90;
+export const defaultSourceIntervalMinutes = 30;
+export const normalRotationSlots = 9;
+export const retrySlots = 2;
 
 const mediaRoleScore: Record<MediaType, number> = {
   wire: 28,
@@ -50,7 +53,11 @@ export function selectSourcesForCoverage(
 ): NewsSource[] {
   const now = options.now ?? new Date();
   const healthById = new Map((options.health ?? []).map((state) => [state.sourceId, state]));
-  const available = sources.filter((source) => source.enabled && !isCircuitOpen(healthById.get(source.source_id), now));
+  const available = sources.filter(
+    (source) =>
+      source.enabled &&
+      source.admission === "approved",
+  );
   const defaultIntervalMinutes = positiveNumber(options.defaultIntervalMinutes) ?? defaultSourceIntervalMinutes;
   const lookaheadMinutes = positiveNumber(options.lookaheadMinutes) ?? 0;
   const selectionCutoff = now.getTime() + lookaheadMinutes * 60_000;
@@ -58,13 +65,56 @@ export function selectSourcesForCoverage(
     options.health === undefined
       ? available
       : available.filter((source) => sourceDueAt(healthById.get(source.source_id), defaultIntervalMinutes) <= selectionCutoff);
-  if (options.health === undefined && maxSources >= candidates.length) return candidates;
+  const effectiveLimit = Math.min(
+    maxSources,
+    options.health === undefined ? candidates.length : normalRotationSlots + retrySlots,
+  );
+  if (options.health === undefined) {
+    return effectiveLimit >= candidates.length
+      ? candidates
+      : selectFairSources(candidates, effectiveLimit, healthById, defaultIntervalMinutes);
+  }
+
+  const retryCandidates = candidates.filter((source) =>
+    shouldPrioritizeRetry(healthById.get(source.source_id)),
+  );
+  const normalCandidates = candidates.filter((source) => !retryCandidates.includes(source));
+  const reservedRetrySlots = Math.min(retrySlots, retryCandidates.length, effectiveLimit);
+  const normal = selectFairSources(
+    normalCandidates,
+    Math.min(normalRotationSlots, Math.max(0, effectiveLimit - reservedRetrySlots)),
+    healthById,
+    defaultIntervalMinutes,
+  );
+  const retries = selectFairSources(
+    retryCandidates,
+    Math.min(retrySlots, Math.max(0, effectiveLimit - normal.length)),
+    healthById,
+    defaultIntervalMinutes,
+  );
+  const backfill = selectFairSources(
+    candidates.filter((source) => !normal.includes(source) && !retries.includes(source)),
+    Math.max(0, effectiveLimit - normal.length - retries.length),
+    healthById,
+    defaultIntervalMinutes,
+  );
+
+  return [...normal, ...backfill, ...retries];
+}
+
+function selectFairSources(
+  candidates: NewsSource[],
+  limit: number,
+  healthById: Map<string, SourceHealthState>,
+  defaultIntervalMinutes: number,
+): NewsSource[] {
+  if (limit <= 0 || candidates.length === 0) return [];
 
   const selected: NewsSource[] = [];
   const beatCounts = new Map<Category, number>();
   const coveredRegions = new Set<string>();
 
-  while (selected.length < Math.min(maxSources, candidates.length)) {
+  while (selected.length < Math.min(limit, candidates.length)) {
     const remaining = candidates.filter((source) => !selected.includes(source));
     const earliestDueAt = Math.min(
       ...remaining.map((source) => sourceDueAt(healthById.get(source.source_id), defaultIntervalMinutes)),
@@ -83,6 +133,10 @@ export function selectSourcesForCoverage(
   }
 
   return selected;
+}
+
+function shouldPrioritizeRetry(state: SourceHealthState | undefined): boolean {
+  return (state?.consecutiveFailures ?? 0) > 0 || Boolean(state?.lastErrorCode);
 }
 
 export function sourceBeats(source: NewsSource): Category[] {
@@ -110,17 +164,10 @@ function coverageScore(
     uncoveredBeatScore +
     regionScore +
     mediaRoleScore[source.mediaType] +
-    source.credibility +
     Math.round(source.defaultWeight * 10) +
     acceptedRateScore -
     failurePenalty
   );
-}
-
-function isCircuitOpen(state: SourceHealthState | undefined, now: Date): boolean {
-  if (!state?.circuitOpenUntil) return false;
-  const until = Date.parse(state.circuitOpenUntil);
-  return Number.isFinite(until) && until > now.getTime();
 }
 
 function sourceDueAt(state: SourceHealthState | undefined, defaultIntervalMinutes: number): number {

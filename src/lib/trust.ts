@@ -56,7 +56,7 @@ export function assessTrust(item: NewsCluster): TrustAssessment {
   return {
     score: roundedScore,
     level: trustLevel(roundedScore),
-    shouldShow: roundedScore >= 25,
+    shouldShow: true,
     reasons: reasons.length > 0 ? reasons : ["基础来源信息可用"],
   };
 }

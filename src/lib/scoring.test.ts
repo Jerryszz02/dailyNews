@@ -8,6 +8,7 @@ import { scoreNewsItem } from "./scoring";
 const now = new Date("2026-06-29T12:00:00.000Z");
 
 function cluster(item: RawNewsItem): NewsCluster {
+  const timestamp = item.publishedAt ?? item.extractedAt;
   return {
     ...item,
     primaryCategory: item.primaryCategory ?? item.categories[0],
@@ -15,6 +16,8 @@ function cluster(item: RawNewsItem): NewsCluster {
     sourceNames: [item.sourceName],
     relatedUrls: [item.url],
     primaryCategoryVotes: [item.primaryCategory ?? item.categories[0]],
+    startedAt: timestamp,
+    updatedAt: item.updatedAt ?? timestamp,
   };
 }
 
@@ -62,7 +65,7 @@ describe("scoring", () => {
         {
           id: "tech",
           title: "AI model regulation proposal affects enterprise deployments",
-          url: "https://example.com/tech",
+          url: "https://techcrunch.com/tech",
           sourceId: "techcrunch",
           sourceName: "TechCrunch",
           language: "en-US",
@@ -76,7 +79,7 @@ describe("scoring", () => {
         {
           id: "society",
           title: "City announces new transit schedule for summer",
-          url: "https://example.com/transit",
+          url: "https://bbc.com/transit",
           sourceId: "bbc",
           sourceName: "BBC",
           language: "en-US",
@@ -100,7 +103,7 @@ describe("scoring", () => {
       {
         id: "ai",
         title: "AI model platform launches a new coding workflow",
-        url: "https://example.com/ai",
+        url: "https://techcrunch.com/ai",
         sourceId: "techcrunch",
         sourceName: "TechCrunch",
         language: "en-US",
@@ -114,7 +117,7 @@ describe("scoring", () => {
       {
         id: "finance",
         title: "Central bank rules change enterprise financing plans",
-        url: "https://example.com/finance",
+        url: "https://cnbc.com/finance",
         sourceId: "cnbc",
         sourceName: "CNBC",
         language: "en-US",
@@ -265,7 +268,7 @@ describe("scoring", () => {
 });
 
 describe("dedupe", () => {
-  it("clusters the same event from multiple sources", () => {
+  it("clusters cross-source URLs only when title and context are both strongly equivalent", () => {
     const items: RawNewsItem[] = [
       {
         id: "one",
@@ -283,7 +286,7 @@ describe("dedupe", () => {
       },
       {
         id: "two",
-        title: "Advanced AI chip supply chain rules intensify",
+        title: "Advanced AI chip supply chain regulation intensifies",
         url: "https://example.com/two",
         sourceId: "bbc",
         sourceName: "BBC",
@@ -291,7 +294,7 @@ describe("dedupe", () => {
         region: "global",
         categories: ["ai", "technology", "international"],
         primaryCategory: "ai",
-        summary: "New rules target advanced AI chip supply chains and related computing infrastructure.",
+        summary: "Governments are increasing regulation of advanced AI chip supply chains and cloud computing access.",
         publishedAt: now.toISOString(),
         extractedAt: now.toISOString(),
       },
@@ -304,7 +307,7 @@ describe("dedupe", () => {
     expect(clusters[0].relatedUrls).toHaveLength(2);
   });
 
-  it("clusters a breaking event with a differently worded follow-up", () => {
+  it("keeps differently worded follow-ups separate when equivalence is uncertain", () => {
     const clusters = clusterNews([
       {
         id: "fire-main",
@@ -333,6 +336,84 @@ describe("dedupe", () => {
         summary: "福建晋江一鞋厂发生火灾并造成人员伤亡，应急管理部和消防救援部门派工作组到现场指导救援处置。",
         publishedAt: now.toISOString(),
         extractedAt: now.toISOString(),
+      },
+    ]);
+
+    expect(clusters).toHaveLength(2);
+    expect(clusters.every((item) => item.relatedUrls.length === 1)).toBe(true);
+  });
+
+  it("does not merge similar headlines across different primary categories", () => {
+    const base: RawNewsItem = {
+      id: "policy",
+      title: "全国人工智能发展计划正式发布",
+      url: "https://example.com/policy",
+      sourceId: "xinhua",
+      sourceName: "新华网",
+      language: "zh-CN",
+      region: "china",
+      categories: ["policy", "ai"],
+      primaryCategory: "policy",
+      summary: "全国人工智能发展计划正式发布，明确实施范围、时间安排和后续工作。",
+      publishedAt: now.toISOString(),
+      extractedAt: now.toISOString(),
+    };
+
+    expect(
+      clusterNews([
+        base,
+        { ...base, id: "ai", url: "https://example.com/ai", primaryCategory: "ai" },
+      ]),
+    ).toHaveLength(2);
+  });
+
+  it("preserves event start and latest update timestamps when merging", () => {
+    const startedAt = new Date(now.getTime() - 3_600_000).toISOString();
+    const updatedAt = now.toISOString();
+    const base: RawNewsItem = {
+      id: "one",
+      title: "Advanced AI chip supply chain regulation intensifies",
+      url: "https://example.com/one",
+      sourceId: "xinhua",
+      sourceName: "新华网",
+      language: "en-US",
+      region: "global",
+      categories: ["ai"],
+      primaryCategory: "ai",
+      summary: "Governments are increasing regulation of advanced AI chip supply chains and cloud computing access.",
+      publishedAt: startedAt,
+      extractedAt: startedAt,
+    };
+    const clusters = clusterNews([
+      base,
+      { ...base, id: "two", url: "https://example.com/two", sourceId: "bbc", sourceName: "BBC", publishedAt: updatedAt, extractedAt: updatedAt },
+    ]);
+
+    expect(clusters[0]).toMatchObject({ startedAt, updatedAt });
+  });
+
+  it("treats tracking parameters and query ordering as the same canonical URL", () => {
+    const base: RawNewsItem = {
+      id: "one",
+      title: "First report title",
+      url: "https://example.com/story?article=1&utm_source=test&lang=zh",
+      sourceId: "xinhua",
+      sourceName: "新华网",
+      language: "en-US",
+      region: "global",
+      categories: ["international"],
+      primaryCategory: "international",
+      summary: "First report summary with enough concrete details for the event.",
+      publishedAt: now.toISOString(),
+      extractedAt: now.toISOString(),
+    };
+    const clusters = clusterNews([
+      base,
+      {
+        ...base,
+        id: "two",
+        title: "Completely different follow-up title",
+        url: "https://example.com/story?lang=zh&article=1",
       },
     ]);
 

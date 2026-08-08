@@ -1,5 +1,5 @@
 import type { Category, NewsCluster, RawNewsItem } from "../types";
-import { normalizeText, tokenize, tokenOverlap } from "./text.js";
+import { normalizeText, tokenOverlap } from "./text.js";
 
 const categoryPriority: Category[] = [
   "sports",
@@ -33,6 +33,7 @@ export function clusterNews(items: RawNewsItem[]): NewsCluster[] {
   for (const item of items) {
     const duplicate = clusters.find((cluster) => isSameStory(cluster, item));
     if (!duplicate) {
+      const startedAt = itemStartedAt(item);
       clusters.push({
         ...item,
         primaryCategory: item.primaryCategory ?? item.categories[0] ?? "society",
@@ -40,6 +41,8 @@ export function clusterNews(items: RawNewsItem[]): NewsCluster[] {
         sourceNames: [item.sourceName],
         relatedUrls: [item.url],
         primaryCategoryVotes: [item.primaryCategory ?? item.categories[0] ?? "society"],
+        startedAt,
+        updatedAt: itemUpdatedAt(item),
       });
       continue;
     }
@@ -50,8 +53,30 @@ export function clusterNews(items: RawNewsItem[]): NewsCluster[] {
     duplicate.categories = unique([...duplicate.categories, ...item.categories]);
     duplicate.primaryCategoryVotes = [...duplicate.primaryCategoryVotes, item.primaryCategory ?? item.categories[0] ?? "society"];
     duplicate.primaryCategory = choosePrimaryCategory(duplicate);
-    duplicate.summary = chooseLongerSummary(duplicate.summary, item.summary);
+    duplicate.summary = chooseSummary(duplicate, item);
     duplicate.publishedAt = earliestDate(duplicate.publishedAt, item.publishedAt);
+    duplicate.startedAt = earliestDate(duplicate.startedAt, itemStartedAt(item)) ?? duplicate.startedAt;
+    duplicate.updatedAt = latestDate(duplicate.updatedAt, itemUpdatedAt(item));
+    duplicate.translationStatus = preferredTranslationStatus(duplicate.translationStatus, item.translationStatus);
+    duplicate.summaryStatus =
+      duplicate.summaryStatus === "complete" || item.summaryStatus === "complete"
+        ? "complete"
+        : duplicate.summaryStatus === "pending" || item.summaryStatus === "pending"
+          ? "pending"
+          : undefined;
+    duplicate.timeStatus =
+      duplicate.timeStatus === "verified" || item.timeStatus === "verified"
+        ? "verified"
+        : duplicate.timeStatus === "estimated" || item.timeStatus === "estimated"
+          ? "estimated"
+          : undefined;
+    duplicate.qualityStatus =
+      duplicate.qualityStatus === "display_ready" || item.qualityStatus === "display_ready"
+        ? "display_ready"
+        : duplicate.qualityStatus === "degraded" || item.qualityStatus === "degraded"
+          ? "degraded"
+          : undefined;
+    duplicate.rejectionReasons = unique([...(duplicate.rejectionReasons ?? []), ...(item.rejectionReasons ?? [])]);
   }
 
   return clusters.map((cluster) => ({ ...cluster, primaryCategory: choosePrimaryCategory(cluster) }));
@@ -62,68 +87,39 @@ function isSameStory(cluster: NewsCluster, item: RawNewsItem): boolean {
     return true;
   }
 
-  if (!withinEventWindow(cluster.publishedAt, item.publishedAt)) return false;
-  if (!cluster.categories.some((category) => item.categories.includes(category))) return false;
+  if (!withinEventWindow(cluster.updatedAt, itemUpdatedAt(item))) return false;
+  if (cluster.primaryCategory !== (item.primaryCategory ?? item.categories[0] ?? "society")) return false;
 
   const titleOverlap = tokenOverlap(cluster.title, item.title);
   const combinedOverlap = tokenOverlap(`${cluster.title} ${cluster.summary}`, `${item.title} ${item.summary}`);
-  const sharedTerms = significantSharedTerms(cluster.title, item.title);
-  const sharedContextTerms = significantSharedTerms(`${cluster.title} ${cluster.summary}`, `${item.title} ${item.summary}`);
-  const cjkOverlap = longestCommonTextRatio(cluster.title, item.title);
-  return (
-    titleOverlap >= 0.52 ||
-    combinedOverlap >= 0.7 ||
-    cjkOverlap >= 0.28 ||
-    (titleOverlap >= 0.34 && sharedTerms >= 3) ||
-    (combinedOverlap >= 0.2 && sharedContextTerms >= 12)
-  );
+  return titleOverlap >= 0.8 && combinedOverlap >= 0.85;
 }
 
 function canonicalUrl(value: string): string {
   try {
     const url = new URL(value);
     url.hash = "";
-    url.search = "";
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_.+|fbclid|gclid)$/i.test(key)) url.searchParams.delete(key);
+    }
+    url.searchParams.sort();
+    url.hostname = url.hostname.toLowerCase();
     return url.toString().replace(/\/$/, "");
   } catch {
     return value;
   }
 }
 
-function withinEventWindow(left?: string, right?: string): boolean {
-  if (!left || !right) return true;
+function withinEventWindow(left: string, right: string): boolean {
   const leftTime = Date.parse(left);
   const rightTime = Date.parse(right);
-  if (!Number.isFinite(leftTime) || !Number.isFinite(rightTime)) return true;
-  return Math.abs(leftTime - rightTime) <= 120 * 60 * 60 * 1_000;
+  return Number.isFinite(leftTime) && Number.isFinite(rightTime) && Math.abs(leftTime - rightTime) <= 24 * 60 * 60 * 1_000;
 }
 
-function significantSharedTerms(left: string, right: string): number {
-  const ignored = new Set(["news", "latest", "update", "report", "报道", "消息", "最新", "宣布", "发布"]);
-  const leftTerms = new Set(tokenize(left).filter((token) => token.length >= 2 && !ignored.has(token)));
-  return new Set(tokenize(right).filter((token) => leftTerms.has(token) && !ignored.has(token))).size;
-}
-
-function longestCommonTextRatio(left: string, right: string): number {
-  const normalizedLeft = normalizeText(left).replace(/\s+/g, "");
-  const normalizedRight = normalizeText(right).replace(/\s+/g, "");
-  if (!/[\u3400-\u9fff]/.test(`${normalizedLeft}${normalizedRight}`)) return 0;
-  if (!normalizedLeft || !normalizedRight) return 0;
-
-  const lengths = new Array(normalizedRight.length + 1).fill(0);
-  let longest = 0;
-  for (let leftIndex = 1; leftIndex <= normalizedLeft.length; leftIndex += 1) {
-    for (let rightIndex = normalizedRight.length; rightIndex >= 1; rightIndex -= 1) {
-      lengths[rightIndex] =
-        normalizedLeft[leftIndex - 1] === normalizedRight[rightIndex - 1] ? lengths[rightIndex - 1] + 1 : 0;
-      longest = Math.max(longest, lengths[rightIndex]);
-    }
-  }
-  return longest / Math.min(normalizedLeft.length, normalizedRight.length);
-}
-
-function chooseLongerSummary(left: string, right: string): string {
-  return right.length > left.length ? right : left;
+function chooseSummary(left: NewsCluster, right: RawNewsItem): string {
+  if (left.summaryStatus === "complete" && right.summaryStatus === "pending") return left.summary;
+  if (left.summaryStatus === "pending" && right.summaryStatus === "complete") return right.summary;
+  return right.summary.length > left.summary.length ? right.summary : left.summary;
 }
 
 function earliestDate(left?: string, right?: string): string | undefined {
@@ -132,8 +128,40 @@ function earliestDate(left?: string, right?: string): string | undefined {
   return Date.parse(right) < Date.parse(left) ? right : left;
 }
 
+function latestDate(left: string, right: string): string {
+  return Date.parse(right) > Date.parse(left) ? right : left;
+}
+
+function itemStartedAt(item: RawNewsItem): string {
+  return earliestValidDate([item.publishedAt, item.discoveredAt, item.extractedAt]);
+}
+
+function itemUpdatedAt(item: RawNewsItem): string {
+  return firstValidDate([item.updatedAt, item.publishedAt, item.discoveredAt, item.extractedAt]);
+}
+
+function earliestValidDate(values: Array<string | undefined>): string {
+  const timestamps = values.map((value) => Date.parse(value ?? "")).filter(Number.isFinite);
+  return timestamps.length > 0
+    ? new Date(Math.min(...timestamps)).toISOString()
+    : "1970-01-01T00:00:00.000Z";
+}
+
+function firstValidDate(values: Array<string | undefined>): string {
+  const value = values.find((candidate) => Number.isFinite(Date.parse(candidate ?? "")));
+  return new Date(Date.parse(value ?? "1970-01-01T00:00:00.000Z")).toISOString();
+}
+
 function unique<T>(items: T[]): T[] {
   return Array.from(new Set(items));
+}
+
+function preferredTranslationStatus(
+  left?: RawNewsItem["translationStatus"],
+  right?: RawNewsItem["translationStatus"],
+): RawNewsItem["translationStatus"] {
+  const priority: NonNullable<RawNewsItem["translationStatus"]>[] = ["translated", "original", "pending"];
+  return priority.find((status) => status === left || status === right);
 }
 
 function choosePrimaryCategory(item: NewsCluster): Category {
