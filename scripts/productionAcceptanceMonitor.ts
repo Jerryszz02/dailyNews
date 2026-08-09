@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { collectSlotAudit } from "./productionAcceptanceAudit";
+import { runCommand } from "./productionAcceptanceCommand";
 import {
   bootoutLaunchAgent,
   buildLaunchAgentPlist,
@@ -129,40 +130,6 @@ function safeCode(error: unknown): string {
     (error as { message?: unknown })?.message ??
     "UNKNOWN";
   return String(raw).toUpperCase().replace(/[^A-Z0-9_]/g, "_").slice(0, 120);
-}
-
-function runCommand(
-  command: string,
-  args: string[],
-  options: { cwd: string; capture?: boolean; timeoutMs?: number },
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: options.cwd,
-      env: process.env,
-      stdio: ["ignore", options.capture ? "pipe" : "ignore", "ignore"],
-    });
-    let output = "";
-    if (options.capture) {
-      child.stdout?.setEncoding("utf8");
-      child.stdout?.on("data", (chunk) => {
-        if (output.length < 2_000_000) output += chunk;
-      });
-    }
-    const timer = setTimeout(() => {
-      child.kill("SIGTERM");
-      reject(Object.assign(new Error("COMMAND_TIMEOUT"), { code: "COMMAND_TIMEOUT" }));
-    }, options.timeoutMs ?? 60_000);
-    child.once("error", (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-    child.once("exit", (code) => {
-      clearTimeout(timer);
-      if (code === 0) resolve(output);
-      else reject(Object.assign(new Error("COMMAND_FAILED"), { code: `COMMAND_EXIT_${code}` }));
-    });
-  });
 }
 
 function executable(name: "npm" | "npx"): string {
@@ -336,13 +303,13 @@ async function auditSlot(options: {
         "--environment=production",
         "--yes",
       ],
-      { cwd: options.cwd, timeoutMs: 60_000 },
+      { cwd: options.cwd, timeoutMs: 60_000, maxAttempts: 2 },
     );
     fs.chmodSync(envFile, 0o600);
     const inspectOutput = await runCommand(
       executable("npx"),
       ["--yes", "vercel", "inspect", options.state.alias, "--format=json"],
-      { cwd: options.cwd, capture: true, timeoutMs: 45_000 },
+      { cwd: options.cwd, capture: true, timeoutMs: 45_000, maxAttempts: 2 },
     );
     const inspect = JSON.parse(inspectOutput) as {
       id?: unknown;

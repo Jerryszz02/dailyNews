@@ -112,7 +112,7 @@ Expected behavior:
 
 ## Token-free production acceptance monitor
 
-Use the deterministic local monitor instead of an AI heartbeat for the 24-hour burn-in and seven-day soak. It audits each burn-in slot at the 5-minute boundary plus 75 seconds, writes secret-free JSONL evidence immediately, automatically starts a fresh candidate window after a failed slot, and changes to one rolling 24-hour check per day after all 288 strict burn-in slots pass. Each audit requires all enabled/approved sources to have an attempt within 30 minutes, `unmappedCandidateCount=0` and 100% recall from valid recent events into `latestStories`.
+Use the deterministic local monitor instead of an AI heartbeat for the 24-hour burn-in and seven-day soak. It audits each burn-in slot at the 5-minute boundary plus 75 seconds, writes secret-free JSONL evidence immediately, retries a transient exit from the read-only Vercel setup commands once before treating the observer as failed, automatically starts a fresh candidate window after a failed slot, and changes to one rolling 24-hour check per day after all 288 strict burn-in slots pass. Each audit requires all enabled/approved sources to have an attempt within 30 minutes, `unmappedCandidateCount=0` and 100% recall from valid recent events into `latestStories`.
 
 ```bash
 npm run monitor:production -- start \
