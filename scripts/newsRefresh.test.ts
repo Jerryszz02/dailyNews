@@ -544,7 +544,9 @@ describe("durable news refresh", () => {
     storeNow = scheduledAt;
 
     const previousKey = process.env.DAILY_NEWS_TRANSLATION_API_KEY;
+    const previousRefreshInterval = process.env.DAILY_NEWS_REFRESH_INTERVAL_MINUTES;
     process.env.DAILY_NEWS_TRANSLATION_API_KEY = "test-key";
+    process.env.DAILY_NEWS_REFRESH_INTERVAL_MINUTES = "5";
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -582,6 +584,8 @@ describe("durable news refresh", () => {
     } finally {
       if (previousKey === undefined) delete process.env.DAILY_NEWS_TRANSLATION_API_KEY;
       else process.env.DAILY_NEWS_TRANSLATION_API_KEY = previousKey;
+      if (previousRefreshInterval === undefined) delete process.env.DAILY_NEWS_REFRESH_INTERVAL_MINUTES;
+      else process.env.DAILY_NEWS_REFRESH_INTERVAL_MINUTES = previousRefreshInterval;
       vi.unstubAllGlobals();
     }
   });

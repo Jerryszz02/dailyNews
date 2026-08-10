@@ -10,6 +10,7 @@ import {
   defaultCollectionBudgetMs,
   defaultLimitPerSection,
   defaultMaxNewsAgeHours,
+  defaultRefreshIntervalMinutes,
   readPositiveInteger,
   retryPendingCandidateTranslations,
   type NewsCollectionOptions,
@@ -69,6 +70,10 @@ export async function runNewsRefresh(
   const limitPerSection = options.limitPerSection ?? readPositiveInteger("DAILY_NEWS_LIMIT_PER_SECTION", defaultLimitPerSection);
   const collectionBudgetMs =
     options.collectionBudgetMs ?? readPositiveInteger("DAILY_NEWS_COLLECTION_BUDGET_MS", defaultCollectionBudgetMs);
+  const refreshIntervalMinutes = readPositiveInteger(
+    "DAILY_NEWS_REFRESH_INTERVAL_MINUTES",
+    defaultRefreshIntervalMinutes,
+  );
   const leaseSeconds = options.leaseSeconds ?? defaultRefreshLeaseSeconds;
   const collect = dependencies.collect ?? collectNewsCandidates;
   const buildReport = dependencies.buildReport ?? ((items, reportNow) => buildDailyReport(items, defaultPreferences, reportNow));
@@ -132,7 +137,7 @@ export async function runNewsRefresh(
       health: state.sources,
       now: sourceSelectionAt,
       defaultIntervalMinutes: defaultSourceIntervalMinutes,
-      lookaheadMinutes: options.trigger === "cron" ? 5 : 0,
+      lookaheadMinutes: options.trigger === "cron" ? refreshIntervalMinutes : 0,
     });
     plannedSourceIds = selectedSources.map((source) => source.source_id);
     const windowFrom = new Date(scheduledAt.getTime() - defaultMaxNewsAgeHours * 60 * 60_000).toISOString();
@@ -457,7 +462,10 @@ function canonicalCandidateUrl(value: string): string {
   }
 }
 
-export function scheduledRefreshIdempotencyKey(date: Date, intervalMinutes = 5): string {
+export function scheduledRefreshIdempotencyKey(
+  date: Date,
+  intervalMinutes = defaultRefreshIntervalMinutes,
+): string {
   const intervalMs = intervalMinutes * 60_000;
   const slot = new Date(Math.floor(date.getTime() / intervalMs) * intervalMs).toISOString();
   return `refresh:${slot}`;

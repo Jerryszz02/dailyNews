@@ -2,7 +2,11 @@ import { evaluateFreshness } from "../src/lib/freshness.js";
 import { compactDailyNewsReport } from "../src/lib/webReport.js";
 import type { DailyNewsReport } from "../src/types";
 import { runNewsRefresh, scheduledRefreshIdempotencyKey, type NewsRefreshResult } from "./newsRefresh.js";
-import { defaultRefreshIntervalMinutes, readPositiveInteger } from "./newsService.js";
+import {
+  defaultRefreshIntervalMinutes,
+  defaultSourceCoverageWindowMinutes,
+  readPositiveInteger,
+} from "./newsService.js";
 import type { NewsStore, NewsStoreState, PublishedNewsReport } from "./newsStore.js";
 import { getDefaultNewsStore, hasCompleteSupabaseConfiguration } from "./newsStoreFactory.js";
 import { readBundledReport } from "./reportStore.js";
@@ -338,7 +342,9 @@ function coverageStatus(state: NewsStoreState, now: Date): "current" | "stale" |
   const enabled = state.sources.filter((source) => source.enabled !== false);
   if (enabled.length === 0) return "unavailable";
   if (enabled.some((source) => !source.lastAttemptAt)) return "incomplete";
-  return enabled.every((source) => now.getTime() - Date.parse(source.lastAttemptAt!) <= 30 * 60_000)
+  return enabled.every(
+    (source) => now.getTime() - Date.parse(source.lastAttemptAt!) <= defaultSourceCoverageWindowMinutes * 60_000,
+  )
     ? "current"
     : "stale";
 }

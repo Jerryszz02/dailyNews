@@ -132,8 +132,8 @@ function testSource(sourceId: string, name: string): NewsSource {
 }
 
 describe("generateDailyNewsReport", () => {
-  it("uses the five-minute refresh cadence and leaves ten seconds for publishing", () => {
-    expect(defaultRefreshIntervalMinutes).toBe(5);
+  it("uses the two-hour refresh cadence and leaves ten seconds for publishing", () => {
+    expect(defaultRefreshIntervalMinutes).toBe(120);
     expect(defaultCollectionBudgetMs).toBe(45_000);
   });
 

@@ -4,11 +4,11 @@
 
 记录当前事件级 V2 的实现契约。修改来源、采集、选题、API、静态报告或前端时，应以本文和 [news-curation-refactor-plan.md](news-curation-refactor-plan.md) 的实施状态为准。
 
-## 2026-08-03 目标不变量
+## 2026-08-10 目标不变量
 
 1. `approved` 是来源发布边界，`enabled` 只控制是否采集；运行时 trust/credibility 不得删除或降出可见集合。
 2. 每个 `display_ready/degraded` 候选恰好映射一个 story；最近 24 小时 story 全部进入 `latestStories`。
-3. 全部启用来源滚动 30 分钟内至少尝试一次；局部失败返回 partial 并优先重试。
+3. Hobby 成本控制模式每 2 小时最多尝试 11 个到期来源，约 10 小时完成全部启用来源轮转；局部失败返回 partial 并优先重试。
 4. 发布只阻断结构损坏、引用错误、未知来源和不可确认的存储失败；精选、内容年龄和覆盖波动只产生 warning。
 5. `/api/news` 读取 publication state，不依赖 source state；服务、管线、内容状态分轴公开。
 
@@ -34,7 +34,7 @@ src/config/sources.ts
 ## 当前生产架构（Supabase）
 
 ```text
-5 分钟外部调度器
+2 小时外部调度器
   -> GET /api/cron（CRON_SECRET）
   -> Supabase RPC 获取刷新租约
   -> 按 next_due_at 公平选择本轮来源
@@ -49,8 +49,8 @@ src/config/sources.ts
 关键决定：
 
 - Supabase 是唯一生产运行态来源；`public/daily-news.json` 只保留为部署包内的紧急 last-known-good。
-- 生产调度由 Supabase Cron 每 5 分钟通过 `pg_net` 调用受保护 endpoint，不能依赖 Vercel 套餐频率或函数内 `setInterval`。
-- 每轮最多 11 个来源，其中至少 9 个位置按最久未尝试时间保证正常轮转，最多 2 个位置优先重试 partial/failed；空位回填正常来源。来源数量从注册表动态推导，滚动 30 分钟内全部尝试。
+- 生产调度由 Supabase Cron 每 2 小时通过 `pg_net` 调用受保护 endpoint，不能依赖 Vercel 套餐频率或函数内 `setInterval`。
+- 每轮最多 11 个来源，其中至少 9 个位置按最久未尝试时间保证正常轮转，最多 2 个位置优先重试 partial/failed；空位回填正常来源。来源数量从注册表动态推导，49 个来源约 10 小时完成轮转。
 - 候选按 canonical URL 幂等写入，报告从最近 72 小时候选池构建，使分片采集不会只看到本轮少数来源。
 - 旧 bundled/snapshot 只能原样返回。无合格实时数据时不得以当前时间重写 `generatedAt`、`last_success_at` 或内容新鲜度。
 - 发布由事务 RPC 完成；刷新失败只更新 `last_attempt_at` 和非敏感错误码，不动 latest。
@@ -107,7 +107,7 @@ src/config/sources.ts
 - 采集阶段默认预算为 `DAILY_NEWS_COLLECTION_BUDGET_MS=45000`；60 秒函数上限中至少预留 10 秒用于构建、验证和原子终结。
 - Firecrawl 与 direct fetch 按来源独立截止并发运行；一个来源的 terminal/timeout 不能跳过其它已选来源。
 - 直连来源并发默认 `DAILY_NEWS_SOURCE_CONCURRENCY=11`，与单轮最大来源数一致，确保所有 selected source 在 12 秒 deadline 内都有 worker；单请求最长 8 秒且受整轮 deadline 约束。
-- deadline 前尚未真正发起请求的来源不写入 `source_state`，保留 due 状态并在下个时槽继续优先；错误/circuit 诊断不得抑制滚动 30 分钟尝试。
+- deadline 前尚未真正发起请求的来源不写入 `source_state`，保留 due 状态并在下个时槽继续优先；错误/circuit 诊断不得抑制后续到期轮转。
 - 事件/核心层/来源数量回退只记 warning；完整候选窗口下的合法变化可发布，窗口不完整时只增不减并保留 last-known-good 内容。
 - `GET /api/news` 不允许触发外部抓取。
 - `generatedAt` 只表示该报告成功发布的时间；`newestContentAt` 表示报告中最新新闻时间；浏览器 `lastLoadedAt` 只表示客户端检查时间，三者不得互相替代。
@@ -139,20 +139,18 @@ src/config/sources.ts
 - 迁移可在本地 clean database 重放，RLS 阻止 anon/authenticated 访问 server-only 表；
 - 独立进程读取同一 latest，并发刷新只有一个有效租约；
 - 失败/无实时数据不会发布，也不会刷新旧报告时间；
-- 调度模拟证明所有启用来源在 30 分钟内被尝试；
+- 调度模拟证明 2 小时 cadence 下每轮不超过 11 源，约 10 小时完成全部启用来源轮转；
 - `/api/news` 和 `/api/health` 分别计算 serving、pipeline 和 content status；有可读报告时 stale/quiet 仍返回 200；
 - 72 小时候选池按来源分页完整读取；每个有效候选恰好映射 story，最近 24 小时 story 全部进入 latest；不再存在 `stale_candidate_pool`/`stale_homepage_selection` 发布硬门；
 - 测试、构建、本地 Supabase 集成、生产部署 smoke 全部通过。
 
-## Phase 2 运行门
+## Phase 2 历史运行门（已取消）
 
-- 先连续观察 24 小时，确认调度、跨实例可见性、来源轮转和 stale 告警；
-- 再连续观察 7 天：调度成功率不低于 99%，报告年龄 P95 不高于 20 分钟，固定 30 秒 CDN 窗口的 API P95 不高于 750 ms、P99 不高于 1 秒；
-- 运行门通过前只能称为“已上线观察”，不能称为实时更新目标最终验收完成。
+- 原方案先连续观察 24 小时，再连续观察 7 天；其五分钟 cadence、滚动覆盖和报告年龄阈值不适用于当前两小时成本控制模式。
+- 当前不要求完成该运行门；若未来重新启用，必须重新定义调度成功率、内容年龄、来源轮转和 API 延迟阈值，并以独立新窗口验收。
 
 ## 仍未完成
 
-- 形式化 24 小时 burn-in 与连续 7 天 soak 当前暂停；重新启用时只以 monitor 的 `final-report.json` 为完成依据；
 - 7–14 天人工 golden dataset 与 must-know 召回/精确率校准；
 - 连续 7 天 shadow 对比和生产灰度；
 - 历史日报用户界面、独立事件/evidence 查询表和人工更正后台；
@@ -167,5 +165,5 @@ src/config/sources.ts
 - `curl /api/news` 返回 V2 且读取路径不访问外部网络；
 - 浏览器检查桌面和 390px：三层首页、分类引用、空分类、搜索、设置、fallback 与控制台。
 - Supabase clean reset/lint、远端 migration dry-run、跨实例/并发 store contract；
-- 生产 cron smoke、冷实例 60 秒可见、分轴 stale 演练和来源 30 分钟轮转；
-- 按 [test-plan.md](test-plan.md) 保存上线门与 24 小时/7 天运行门证据。
+- 生产 cron smoke、冷实例 60 秒可见、分轴 stale 演练和来源 10 小时轮转；
+- 按 [test-plan.md](test-plan.md) 保存上线门证据；24 小时/7 天运行门只有在未来明确批准并重新设计后才执行。

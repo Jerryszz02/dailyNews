@@ -172,4 +172,4 @@ Authorization: Bearer <CRON_SECRET>
 - `items` 兼容字段删除时间；
 - CORS 白名单和只读 endpoint 限流策略；
 - 是否公开历史日报 endpoint；
-- Supabase Cron/Vault 的运维 owner 和告警渠道；调度实现已固定为每 5 分钟调用受保护 `/api/cron`。
+- Supabase Cron/Vault 的运维 owner 和告警渠道；成本控制调度为每 2 小时调用受保护 `/api/cron`。
