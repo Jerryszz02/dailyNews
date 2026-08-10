@@ -1,6 +1,6 @@
 # Supabase 生产验收记录（2026-07-13）
 
-> 本文是 2026-07-13 至 2026-07-24 的历史证据日志，不是当前 deployment 或监控状态源。当前状态只读取 `.production-acceptance/<run>/summary.json` 并用 `vercel inspect` 核对 alias；没有 `final-report.json` 就不能宣称运行门通过。2026-07-30 审查时，旧 `current` 运行因 `deployment_alias_mismatch` 处于 `needs_review`。
+> 本文是 2026-07-13 至 2026-07-24 的历史证据日志，不是当前 deployment 或监控状态源。当前验收阶段、进度和判定读取 `.production-acceptance/<run>/summary.json`，observer 存活状态读取 `monitor:production status` 返回的 `monitorProcess.running`，并用 `vercel inspect` 核对 alias；没有 `final-report.json` 就不能宣称运行门通过。2026-07-30 审查时，旧 `current` 运行因 `deployment_alias_mismatch` 处于 `needs_review`。
 
 ## 历史记录结论
 

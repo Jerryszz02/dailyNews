@@ -83,7 +83,7 @@
 
 每次发布至少记录：commit/deployment、migration version、bootstrap report ID、两轮手动 run ID、cron 首次成功时间、冷实例可见耗时、回滚演练结果、24 小时与 7 天指标。记录只保存标识和聚合指标，不保存 secret 或外部完整响应。
 
-历史生产执行与失败窗口证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。当前运行状态只读取 `.production-acceptance/<run>/summary.json`；`final-report.json` 不存在就表示运行门尚未完成。验收目录绑定一个不可变 deployment：alias 切换后旧窗口必须进入 `needs_review`，保留原证据，并为新 deployment 使用新的输出目录重新建立基线。
+历史生产执行与失败窗口证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。当前验收阶段、进度和判定读取 `.production-acceptance/<run>/summary.json`，observer 是否仍在运行则以 `npm run monitor:production -- status --output <run-dir>` 返回的 `monitorProcess.running` 为准；`final-report.json` 不存在就表示运行门尚未完成。验收目录绑定一个不可变 deployment：alias 切换后旧窗口必须进入 `needs_review`，保留原证据，并为新 deployment 使用新的输出目录重新建立基线。
 
 ## 待确认
 

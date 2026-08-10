@@ -32,7 +32,7 @@ Use `npm test` for core logic changes, `npm run test:integration` for API/store/
 - Do not paste Firecrawl keys or `.env.local` values into code, logs, commits, or responses.
 - `dist/` is build output. Update it only when a verified build is part of the requested change.
 - Keep `/api/news`, `/api/health`, `/api/refresh`, and `/api/cron` server-only; do not move collection or refresh calls into browser code.
-- Treat `.production-acceptance/current/summary.json` as the local acceptance status source. A deployment alias mismatch invalidates the active window; verify the alias before claiming the monitor is running.
+- Treat `.production-acceptance/current/summary.json` as the local acceptance progress and verdict source, not proof that the observer process is alive. Before claiming the monitor is running, run `npm run monitor:production -- status --output .production-acceptance/current`, require `monitorProcess.running: true`, and verify that the deployment alias still matches the active window.
 - Category pages filter by `primaryCategory`; auxiliary `categories` are explanatory tags and must not make one story appear in multiple category tabs.
 - Source admission is decided when configuring a source. `trust.shouldShow` is compatibility-only and must not filter, tier or rank stories.
 - Reuters, Bloomberg, FT, WSJ, and The Athletic are disabled because direct visitor verification is unreliable due to 401/paywall behavior.

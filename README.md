@@ -97,7 +97,7 @@ Supabase 首次部署顺序见 [发布计划](docs/planning/release-plan.md)：m
 npm run monitor:production -- status --output .production-acceptance/current
 ```
 
-完整启动、停止和重建基线命令见 [运维手册](docs/runbook.md)。监控状态以输出目录中的 `summary.json` 为准；生产 alias 切换到新 deployment 后，旧窗口必须停止并用新的 deployment 建立独立证据目录，不能续接旧窗口。
+完整启动、停止和重建基线命令见 [运维手册](docs/runbook.md)。输出目录中的 `summary.json` 记录验收阶段、进度和判定，但不能单独证明后台进程仍在运行；报告 observer 正在运行前，必须执行上述 `status` 命令并确认 `monitorProcess.running` 为 `true`。生产 alias 切换到新 deployment 后，旧窗口必须停止并用新的 deployment 建立独立证据目录，不能续接旧窗口。
 
 ## 中文化边界
 
