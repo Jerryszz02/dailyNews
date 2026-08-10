@@ -6,13 +6,15 @@ import { newsSources } from "../src/config/sources.js";
 import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot.js";
 import { buildDailyReport } from "../src/lib/newsPipeline.js";
 import { isAllowedSourceUrl, isCollectibleSource } from "../src/lib/sourceAdmission.js";
-import { selectSourcesForCoverage } from "../src/lib/sourceCoverage.js";
+import { normalRotationSlots, selectSourcesForCoverage } from "../src/lib/sourceCoverage.js";
 import { hostnameFromUrl } from "../src/lib/text.js";
 import type { Category, DailyNewsReport, NewsSource, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
 
 export const defaultLimitPerSection = 5;
 export const defaultMaxSources = newsSources.filter(isCollectibleSource).length;
 export const defaultRefreshIntervalMinutes = 120;
+export const defaultSourceCoverageWindowMinutes =
+  defaultRefreshIntervalMinutes * Math.ceil(defaultMaxSources / normalRotationSlots);
 export const defaultMaxNewsAgeHours = 72;
 export const defaultSourceConcurrency = 11;
 export const defaultCollectionBudgetMs = 45_000;

@@ -14,7 +14,7 @@ restart identity;
 insert into daily_news.runtime_state (singleton_id) values (true);
 insert into daily_news.refresh_lease (singleton_id) values (true);
 
-select plan(121);
+select plan(123);
 
 select has_schema('daily_news', 'private daily_news schema exists');
 select has_table('daily_news', 'refresh_run', 'refresh_run table exists');
@@ -1183,6 +1183,23 @@ select is(
   (select last_success_at from public.daily_news_read_refresh_result((select run_id from test_second_publish_lease))),
   '2026-07-13T01:16:00Z'::timestamptz,
   'legacy published reconciliation derives its success time from its immutable snapshot'
+);
+
+update daily_news.source_state
+set last_attempt_at = clock_timestamp() - interval '11 hours'
+where source_id = 'source-a';
+select is(
+  (select recently_attempted_source_count from public.daily_news_read_latest()),
+  (select enabled_source_count from public.daily_news_read_latest()),
+  'the cost-control coverage window includes a full rotation plus one scheduler slot'
+);
+update daily_news.source_state
+set last_attempt_at = clock_timestamp() - interval '13 hours'
+where source_id = 'source-a';
+select is(
+  (select recently_attempted_source_count from public.daily_news_read_latest()),
+  (select enabled_source_count - 1 from public.daily_news_read_latest()),
+  'the cost-control coverage window excludes a source older than twelve hours'
 );
 
 update daily_news.runtime_state

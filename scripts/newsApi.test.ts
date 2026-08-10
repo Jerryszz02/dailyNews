@@ -118,6 +118,49 @@ describe("serverless report API", () => {
     expect(body.refreshStatus).toBe("stale");
   });
 
+  it("allows one two-hour slot beyond the ten-hour in-memory source rotation", async () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    const report = { ...readBundledReport(), generatedAt: now.toISOString() };
+    const state = (oldestAttemptHours: number) => ({
+      latest: {
+        reportId: "coverage-report",
+        report,
+        dataAsOf: report.generatedAt,
+        newestContentAt: report.generatedAt,
+        publishedAt: report.generatedAt,
+      },
+      runtime: {
+        lastAttemptAt: now.toISOString(),
+        lastSuccessAt: now.toISOString(),
+        lastErrorCode: null,
+      },
+      sources: [
+        {
+          sourceId: "source-a",
+          enabled: true,
+          lastAttemptAt: new Date(now.getTime() - oldestAttemptHours * 60 * 60_000).toISOString(),
+        },
+        {
+          sourceId: "source-b",
+          enabled: true,
+          lastAttemptAt: now.toISOString(),
+        },
+      ],
+    });
+    const store = {
+      kind: "memory",
+      persistent: false,
+      readState: vi.fn().mockResolvedValueOnce(state(11)).mockResolvedValueOnce(state(13)),
+    } as unknown as NewsStore;
+    const handlers = createNewsApiHandlers({ store, now: () => now });
+
+    const current = await handlers.handleHealthRequest(new Request("https://example.com/api/health"));
+    const stale = await handlers.handleHealthRequest(new Request("https://example.com/api/health"));
+
+    expect((await current.json()).coverageStatus).toBe("current");
+    expect((await stale.json()).coverageStatus).toBe("stale");
+  });
+
   it("recovers from a transient durable read failure without sticking to bundled fallback", async () => {
     const now = new Date("2026-07-15T11:40:00.000Z");
     const bundledReport = { ...readBundledReport(), generatedAt: "2026-07-15T11:35:00.000Z" };
