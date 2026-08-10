@@ -14,7 +14,7 @@ Phase 2 同时适用于 Supabase 数据一致性、生产调度、跨实例、�
 
 | 证据 | 测试事实 |
 | --- | --- |
-| `package.json` | 可运行 `npm test`、`npm run build`、`npm run generate`、`npm run api`、`npm run dev`、`npm run serve` |
+| `package.json` | 可运行 unit、integration、database、build、generate、local API/site 和 production monitor 命令 |
 | `README.md` | 推荐 `npm test`、`npm run build`，页面改动需人工检查 |
 | `docs/runbook.md` | smoke check 包含 `/api/health` 和 `/api/news` |
 | `src/lib/scoring.test.ts` | 覆盖排序、偏好影响、可信度、低质量过滤和去重 |
@@ -27,10 +27,12 @@ Phase 2 同时适用于 Supabase 数据一致性、生产调度、跨实例、�
 | --- | --- |
 | 来源准入、候选 disposition、排序、去重、分类逻辑 | `npm test` |
 | TypeScript 类型、前端组件、构建路径 | `npm run build` |
-| 来源配置、生成逻辑、fallback 数据 | `npm run generate`，必要时检查 `public/daily-news.json` |
-| API 路由、刷新缓存、服务端 env | `npm run api` 后 curl `/api/health`、`/api/news`、必要时 `POST /api/refresh` |
+| 来源配置、生成逻辑、fallback 数据 | `npm test` 后按需运行 `npm run generate`；无合格实时结果时应失败并保留原 JSON |
+| API 路由、NewsStore、刷新 orchestrator、服务端 env | `npm run test:integration`；必要时 `npm run api` 后 curl `/api/health`、`/api/news`、`POST /api/refresh` |
 | UI 布局、中文文案、移动端 | `npm run dev` 后浏览器人工检查 |
 | 生产式本地服务 | `npm run serve` 后检查页面和 API |
+| Supabase schema/RPC/RLS | `npm run test:db`，并按 release plan 做 migration dry-run |
+| 生产连续运行门 | `npm run monitor:production -- status --output <run-dir>`；deployment 改变后新建证据目录 |
 | 文档-only 改动 | 读文档自查链接、路径、命令和 `待确认` 是否准确 |
 
 GitHub Actions 在 pull request 与 main push 上强制运行两个 job：`app-tests` 执行 `npm ci`、unit、integration、build 和 diff-check；`database-tests` 启动隔离 Supabase 并执行 `supabase test db --local supabase/tests`。CI 不读取生产 secret、不触发部署或生产刷新。
@@ -41,12 +43,15 @@ GitHub Actions 在 pull request 与 main push 上强制运行两个 job：`app-t
 
 目的：验证核心纯逻辑。
 
-当前覆盖：
+当前覆盖按职责分组：
 
-| 文件 | 覆盖点 |
+| 代表文件 | 覆盖点 |
 | --- | --- |
-| `src/lib/scoring.test.ts` | 公共重要性优先于纯偏好、偏好改变排序、官方/多信源高可信、社交单点低可信、无标题/URL 过滤、同事件聚类 |
-| `src/lib/newsOrdering.test.ts` | 常规列表按时间排序、偏好类别筛选和时间排序、热点排序不使用用户偏好分 |
+| `src/lib/*.test.ts`, `src/App.test.ts` | 选题、排序、来源覆盖、freshness、compact web report、客户端缓存 URL 和 fallback |
+| `scripts/newsService.test.ts`, `scripts/reportStore.test.ts` | 采集 deadline、来源 outcome、日期/摘要处理、发布绝对/相对门槛 |
+| `scripts/newsRefresh.test.ts`, `scripts/newsApi.test.ts` | durable 刷新、鉴权、API cache/query、fresh/stale/degraded 与原子发布 |
+| `scripts/newsStore.contract.test.ts`, `scripts/supabaseNewsStore.test.ts` | InMemory/Supabase contract、fencing、RPC 映射和重试边界 |
+| `scripts/productionAcceptanceRules.test.ts` | burn-in/soak 槽判定、失败重置和 deployment 连续性 |
 
 适用场景：
 
@@ -79,9 +84,9 @@ GitHub Actions 在 pull request 与 main push 上强制运行两个 job：`app-t
 
 验收：
 
-- 命令完成；
+- 有足够合格实时结果时命令完成；没有实时结果或质量门不通过时应以非零退出且保留原文件；
 - `public/daily-news.json` 是合法 JSON；
-- `items` 非空；
+- `version=2`，`stories` 与兼容 `items` 非空且引用完整；
 - 每条新闻有 `primaryCategory` 和 `trust`；
 - 不包含 secret 或 `.env.local` 值。
 
@@ -185,8 +190,8 @@ http://127.0.0.1:5173/
 
 目标实现使用 45 秒采集预算、5 分钟调度、30 分钟全来源尝试、V2 `coverage`/`quality` 摘要和结构不变量发布门。必须检查：
 
-- `npm run generate` 不应因单个来源失败而整体失败；
-- API 刷新时日志应能说明使用 `Firecrawl keyless`、`Direct source fetch` 或 `Firecrawl snapshot`；
+- 单个来源失败不应阻断其他来源 outcome；整轮没有足够实时结果时不得发布；
+- API 刷新时日志应能说明使用 `Firecrawl keyless`、`Direct source fetch` 或混合采集；生产候选池不得混入 snapshot；
 - 报告 `sourceCount` 应合理反映启用来源覆盖；
 - 新闻 URL 不应重复；
 - `items` 中不应缺少 `trust` 或 `primaryCategory`。
@@ -195,13 +200,13 @@ http://127.0.0.1:5173/
 
 ## V2 重构验证计划与状态
 
-本节对应 [news-curation-refactor-plan.md](news-curation-refactor-plan.md)。核心自动化与浏览器验证已具备；7–14 天 golden dataset、连续 7 天 shadow 和生产 P95 仍未完成。
+本节对应 [news-curation-refactor-plan.md](news-curation-refactor-plan.md)。核心自动化与浏览器验证已具备；7–14 天 golden dataset、完整 24 小时 burn-in 与连续 7 天 soak 仍未完成。
 
 当前已覆盖：来源覆盖与双入口、并发上限、整轮 deadline、过期实时数据 fallback、域名归因、中文信息量、事件持续更新聚类、低价值国际/体育降级、单源社交线索、V2 引用完整性、last-known-good、防回退发布门槛、只读 API、刷新鉴权、桌面/390px 布局和分类空状态。
 
 ### Golden dataset
 
-生产默认切换前仍需建立 7–14 天人工标注数据集，每个事件至少标注：
+持续内容质量校准仍需建立 7–14 天人工标注数据集，每个事件至少标注：
 
 - 是否属于 must-know、important、special-interest 或 noise；
 - 哪些文章属于同一事件，哪些只是同主题；
@@ -252,7 +257,7 @@ V2 已成为本地、静态和生产默认结构，但 Phase 2 发布门与 7 �
 - 分类覆盖是否来自真实合格事件，而不是为了填数；
 - V2 失败时 V1 或 last-known-good 是否仍可用。
 
-Shadow 未达到量化门槛时，不进入默认切换阶段。
+V2 已是默认结构；本节的人工对比继续用于内容质量校准，不再承担生产切换开关。
 
 ## Phase 2 Supabase 实时更新验收
 

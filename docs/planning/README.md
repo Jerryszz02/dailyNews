@@ -19,6 +19,8 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 
 事件级 V2 API/UI、Supabase last-known-good、租约、候选池和不可变快照已经存在，但 2026-08-02 的生产审计证明“候选新鲜”与“首页精选新鲜”使用不同集合，导致有效新稿被 `stale_homepage_selection` 阻断；运行时 trust、全局 500 候选截断、翻译失败丢稿和 compact 水合丢事件进一步破坏完整性。本轮以“所有已准入有效候选可见”为首要不变量：生产改为 5 分钟调度、30 分钟全来源尝试，首页新增 24 小时全量 latest lane，局部来源或内容质量告警不再冻结整份报告。
 
+形式化 24 小时 burn-in 与七天 soak 当前暂停，不作为日常代码同步的发布门槛；历史证据继续保留，生产 Supabase Cron 与本地 observer 仍相互独立。
+
 项目由四条主要链路组成：
 
 | 链路 | 作用 | 主要入口 |
@@ -50,7 +52,8 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | `src/lib/newsOrdering.ts` | 偏好列表、热点列表和分类列表排序方式 |
 | `scripts/newsService.ts` | 生成链路、Firecrawl keyless、直接来源抓取、翻译配置、fallback 读取 |
 | `scripts/newsApi.ts`, `scripts/reportStore.ts` | Serverless 只读 API、刷新鉴权、last-known-good 和发布门槛 |
-| `scripts/newsServer.ts` | API 路由、刷新缓存、静态文件服务和健康检查 |
+| `scripts/newsRefresh.ts`, `scripts/newsServer.ts` | durable 刷新 orchestrator、本地 API、静态文件服务和健康检查 |
+| `scripts/productionAcceptanceMonitor.ts` | 固定 deployment 的 24 小时 burn-in 与七天 soak 证据采集 |
 | `public/daily-news.json` | 当前报告的来源、分类和摘要质量基线；仅用于审计，不作为编辑源 |
 | `src/lib/scoring.test.ts`, `src/lib/newsOrdering.test.ts` | 已有自动化验证覆盖点 |
 | Google News、Reuters、AP 官方原则 | 用于约束显著性、权威性、新鲜度、独立性、准确性和来源归因，不代表引入外部付费 API |
@@ -67,7 +70,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | [security-privacy.md](security-privacy.md) | 记录 secrets、外部抓取、浏览器边界、公开数据和剩余风险 |
 | [test-plan.md](test-plan.md) | 定义行为、API、生成、前端和人工验证方式 |
 | [release-plan.md](release-plan.md) | 定义 Supabase migration、bootstrap、部署、调度、灰度、回滚和连续运行验收 |
-| [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md) | 保存本次生产 deployment、数据库、刷新、API smoke 与运行门待观察证据 |
+| [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md) | 保存 2026-07-13 至 2026-07-24 的生产验收历史；不作为当前 deployment/status 来源 |
 
 ## 已跳过目录文档
 
@@ -88,7 +91,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 5. 修改 `/api/*` 路由或响应字段前读 [api-design.md](api-design.md)。
 6. 涉及 `.env.local`、翻译密钥、Firecrawl、外部抓取或浏览器数据边界时先读 [security-privacy.md](security-privacy.md)。
 7. 实现完成后按 [test-plan.md](test-plan.md) 验证数据库事务、跨实例、来源轮转、freshness、API/UI 和内容质量。
-8. 生产变更严格按 [release-plan.md](release-plan.md) 走独立分支、GitHub CI、向后兼容 migration、部署、5 分钟 cron 和 24 小时 burn-in。
+8. 生产变更严格按 [release-plan.md](release-plan.md) 走独立分支、GitHub CI、向后兼容 migration、部署和 5 分钟 cron；形式化 burn-in/soak 仅在重新启用验收时执行。
 
 ## 待确认
 

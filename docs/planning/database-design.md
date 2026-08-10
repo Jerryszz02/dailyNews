@@ -4,9 +4,9 @@
 
 定义新闻来源与选题重构所需的逻辑持久状态，使采集任务、事件聚类、持续更新、last-known-good 报告和质量审计不再依赖单个进程内存。
 
-本文定义逻辑实体、生命周期和一致性要求，并选定 Supabase 托管 PostgreSQL 作为 Phase 2 的生产持久层。数据库结构只通过 `supabase/migrations/` 迁移文件维护；服务端使用 Supabase secret key，浏览器不直连这些表。
+本文定义逻辑实体、生命周期和一致性要求。Supabase 托管 PostgreSQL 已作为生产持久层落地；数据库结构只通过 `supabase/migrations/` 维护，服务端使用 Supabase secret key，浏览器不直连这些表。
 
-实施前基线：`scripts/reportStore.ts` 只有 bundled JSON + 单进程内存 latest pointer，Serverless 实例之间不能共享刷新结果；`DailyNewsReportV2` 只把事件与 evidence 保存在静态报告中。目标状态是由 Supabase 持久化来源调度、候选、刷新运行、不可变报告和 runtime pointer，API 冷启动也能读取同一个 last-known-good。
+当前 migration 实现 6 张内部表：`refresh_run`、`report_snapshot`、`runtime_state`、`refresh_lease`、`source_state` 和 `article_candidate`。事件与 evidence 目前保存在不可变 report payload 中，尚未拆成独立可查询表。早期 bundled JSON + 单进程内存 latest pointer 仅是迁移动机，不是当前生产架构。
 
 ## 适用范围
 
@@ -18,11 +18,11 @@
 
 | 证据 | 设计影响 |
 | --- | --- |
-| 当前 `scripts/newsServer.ts` 只使用内存缓存 | 重启或 Serverless 实例变化后无法保留上次成功报告 |
-| 当前 `public/daily-news.json` 是生成产物 | 不能作为并发更新的运行时数据库 |
-| 新计划需要跨刷新事件聚类和持续更新 | 需要稳定的事件 ID、证据关系和更新时间 |
-| 新计划要求抓取与用户请求解耦 | 采集任务和只读 API 必须通过持久 snapshot 交换结果 |
-| 新计划要求可回滚和质量门槛 | 需要不可变报告版本和原子 latest 指针 |
+| `scripts/newsStoreFactory.ts` | 生产只接受完整 Supabase 配置；本地无 Supabase 时使用 `InMemoryNewsStore` |
+| `public/daily-news.json` 是生成产物 | 只作 bundled last-known-good，不能作为并发更新数据库 |
+| `scripts/newsRefresh.ts` | 刷新与用户读取解耦，通过候选池、租约和 snapshot 交换状态 |
+| `20260723093000_atomic_refresh_commit.sql` | changed-report 成功路径在一次事务中提交来源结果、候选、快照、run 与 latest |
+| `DailyNewsReportV2` | 事件与 evidence 仍在 report payload；独立事件查询表尚未实现 |
 
 ## 非目标
 
@@ -72,7 +72,7 @@
 
 唯一约束：`canonical_url + source_id`。同一 URL 的更新时间变化应更新候选版本，而不是无限新增重复记录。
 
-### `story_event`
+### `story_event`（逻辑模型，尚未独立建表）
 
 表示一个现实事件，而不是一篇文章。
 
@@ -89,7 +89,7 @@
 | `impact_features` | 重要性特征，不只保存最终分数 |
 | `cluster_explanation` | 为什么这些候选属于同一事件 |
 
-### `story_evidence`
+### `story_evidence`（逻辑模型，尚未独立建表）
 
 连接事件与候选，记录证据独立性和用途。
 

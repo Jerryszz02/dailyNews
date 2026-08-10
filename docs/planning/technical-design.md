@@ -23,14 +23,15 @@ src/config/sources.ts
   -> src/lib/dedupe.ts 事件聚类
   -> evidence / status / public impact / tier / diversity
   -> DailyNewsReport V2
-  -> scripts/reportStore.ts 发布门槛与 last-known-good
+  -> scripts/newsRefresh.ts + NewsStore 发布门槛与 last-known-good
+  -> Supabase 原子提交（本地无 Supabase 时使用 InMemoryNewsStore）
   -> GET /api/news 只读
   -> src/App.tsx 事件级首页与分类引用
 ```
 
-迁移前基线只能在单个常驻 Node 进程中定时刷新；Vercel Functions 的内存缓存和定时器不构成生产持久状态，生产 `/api/news` 只能读 bundled/单实例内存，刷新失败后旧内容还可能被重新包装成新的 `generatedAt`。这就是网页曾连续两三天不更新、手动刷新无效的主要原因；下述 Supabase Phase 2 已替换这条生产运行链路。
+生产运行链路已由 Supabase 取代早期 bundled JSON + 单进程内存刷新。旧架构只作为迁移动机保留在 Git 历史和生产验收记录中，不再是当前实现。
 
-## Phase 2 目标架构（Supabase）
+## 当前生产架构（Supabase）
 
 ```text
 5 分钟外部调度器
@@ -66,20 +67,21 @@ src/config/sources.ts
 | 信任与兼容排序 | `src/lib/trust.ts`, `src/lib/scoring.ts` | 保留兼容字段和解释；不得参与 visibility、tier 或 latest 排序 |
 | 事件选题 | `src/lib/curation.ts` | evidence、independence group、status、event type、公共影响、四级 tier 和多样性选择 |
 | 报告管线 | `src/lib/newsPipeline.ts` | 输出 V2 `stories`、首页三层、sections、coverage、quality 和兼容 `items` |
-| 报告存储 | `scripts/reportStore.ts` | bundled report 读取、V1→V2 升级、内存 latest、绝对/相对发布门槛 |
+| 报告存储 | `scripts/newsStoreFactory.ts`, `scripts/supabaseNewsStore.ts`, `scripts/inMemoryNewsStore.ts`, `scripts/reportStore.ts` | 生产 durable state、本地内存适配、bundled 读取、V1→V2 升级和发布门槛 |
 | API | `scripts/newsApi.ts`, `scripts/newsServer.ts` | 只读 `/api/news`、健康状态、受保护刷新和静态服务 |
 | 静态发布 | `scripts/generateDailyNews.ts`, `scripts/upgradeDailyNewsReport.ts` | 质量门槛后原子替换；离线 V1→V2 迁移 |
 | 前端 | `src/App.tsx` | 今日必知、重要进展、持续关注、分类深读、搜索、偏好与三级 fallback |
 
-Phase 2 新增职责：
+持久运行职责：
 
-| 子系统 | 目标职责 |
+| 子系统 | 当前职责 |
 | --- | --- |
 | Supabase NewsStore | 候选、来源状态、刷新运行、租约、不可变快照和 latest pointer |
 | 公平调度 | 以持久 `next_due_at` 选择来源；失败退避但不永久饿死来源 |
 | Cron 入口 | GET、secret 鉴权、幂等获取租约；不向调用方返回内部错误或凭据 |
 | Durable API | 冷实例读取同一 latest，按 durable 时间计算 fresh/stale/degraded/unavailable |
 | 前端新鲜度 | 显示“内容更新时间”和“页面检查时间”两个不同概念；stale 时给明确警告 |
+| 生产验收 | 固定 deployment 的本地只读 monitor 保存 burn-in/soak 证据；deployment 变化即重建窗口 |
 
 ## 关键契约
 
@@ -150,6 +152,7 @@ Phase 2 新增职责：
 
 ## 仍未完成
 
+- 形式化 24 小时 burn-in 与连续 7 天 soak 当前暂停；重新启用时只以 monitor 的 `final-report.json` 为完成依据；
 - 7–14 天人工 golden dataset 与 must-know 召回/精确率校准；
 - 连续 7 天 shadow 对比和生产灰度；
 - 历史日报用户界面、独立事件/evidence 查询表和人工更正后台；
