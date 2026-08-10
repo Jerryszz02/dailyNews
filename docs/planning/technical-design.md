@@ -23,14 +23,15 @@ src/config/sources.ts
   -> src/lib/dedupe.ts 事件聚类
   -> evidence / status / public impact / tier / diversity
   -> DailyNewsReport V2
-  -> scripts/reportStore.ts 发布门槛与 last-known-good
+  -> scripts/newsRefresh.ts + NewsStore 发布门槛与 last-known-good
+  -> Supabase 原子提交（本地无 Supabase 时使用 InMemoryNewsStore）
   -> GET /api/news 只读
   -> src/App.tsx 事件级首页与分类引用
 ```
 
-迁移前基线只能在单个常驻 Node 进程中定时刷新；Vercel Functions 的内存缓存和定时器不构成生产持久状态，生产 `/api/news` 只能读 bundled/单实例内存，刷新失败后旧内容还可能被重新包装成新的 `generatedAt`。这就是网页曾连续两三天不更新、手动刷新无效的主要原因；下述 Supabase Phase 2 已替换这条生产运行链路。
+生产运行链路已由 Supabase 取代早期 bundled JSON + 单进程内存刷新。旧架构只作为迁移动机保留在 Git 历史和生产验收记录中，不再是当前实现。
 
-## Phase 2 目标架构（Supabase）
+## 当前生产架构（Supabase）
 
 ```text
 2 小时外部调度器
@@ -66,20 +67,21 @@ src/config/sources.ts
 | 信任与兼容排序 | `src/lib/trust.ts`, `src/lib/scoring.ts` | 保留兼容字段和解释；不得参与 visibility、tier 或 latest 排序 |
 | 事件选题 | `src/lib/curation.ts` | evidence、independence group、status、event type、公共影响、四级 tier 和多样性选择 |
 | 报告管线 | `src/lib/newsPipeline.ts` | 输出 V2 `stories`、首页三层、sections、coverage、quality 和兼容 `items` |
-| 报告存储 | `scripts/reportStore.ts` | bundled report 读取、V1→V2 升级、内存 latest、绝对/相对发布门槛 |
+| 报告存储 | `scripts/newsStoreFactory.ts`, `scripts/supabaseNewsStore.ts`, `scripts/inMemoryNewsStore.ts`, `scripts/reportStore.ts` | 生产 durable state、本地内存适配、bundled 读取、V1→V2 升级和发布门槛 |
 | API | `scripts/newsApi.ts`, `scripts/newsServer.ts` | 只读 `/api/news`、健康状态、受保护刷新和静态服务 |
 | 静态发布 | `scripts/generateDailyNews.ts`, `scripts/upgradeDailyNewsReport.ts` | 质量门槛后原子替换；离线 V1→V2 迁移 |
 | 前端 | `src/App.tsx` | 今日必知、重要进展、持续关注、分类深读、搜索、偏好与三级 fallback |
 
-Phase 2 新增职责：
+持久运行职责：
 
-| 子系统 | 目标职责 |
+| 子系统 | 当前职责 |
 | --- | --- |
 | Supabase NewsStore | 候选、来源状态、刷新运行、租约、不可变快照和 latest pointer |
 | 公平调度 | 以持久 `next_due_at` 选择来源；失败退避但不永久饿死来源 |
 | Cron 入口 | GET、secret 鉴权、幂等获取租约；不向调用方返回内部错误或凭据 |
 | Durable API | 冷实例读取同一 latest，按 durable 时间计算 fresh/stale/degraded/unavailable |
 | 前端新鲜度 | 显示“内容更新时间”和“页面检查时间”两个不同概念；stale 时给明确警告 |
+| 生产验收 | 固定 deployment 的本地只读 monitor 保存 burn-in/soak 证据；deployment 变化即重建窗口 |
 
 ## 关键契约
 
@@ -142,11 +144,10 @@ Phase 2 新增职责：
 - 72 小时候选池按来源分页完整读取；每个有效候选恰好映射 story，最近 24 小时 story 全部进入 latest；不再存在 `stale_candidate_pool`/`stale_homepage_selection` 发布硬门；
 - 测试、构建、本地 Supabase 集成、生产部署 smoke 全部通过。
 
-## Phase 2 运行门
+## Phase 2 历史运行门（已取消）
 
-- 先连续观察 24 小时，确认调度、跨实例可见性、来源轮转和 stale 告警；
-- 再连续观察 7 天：调度成功率不低于 99%，报告年龄 P95 不高于 20 分钟，固定 30 秒 CDN 窗口的 API P95 不高于 750 ms、P99 不高于 1 秒；
-- 运行门通过前只能称为“已上线观察”，不能称为实时更新目标最终验收完成。
+- 原方案先连续观察 24 小时，再连续观察 7 天；其五分钟 cadence、滚动覆盖和报告年龄阈值不适用于当前两小时成本控制模式。
+- 当前不要求完成该运行门；若未来重新启用，必须重新定义调度成功率、内容年龄、来源轮转和 API 延迟阈值，并以独立新窗口验收。
 
 ## 仍未完成
 
@@ -165,4 +166,4 @@ Phase 2 新增职责：
 - 浏览器检查桌面和 390px：三层首页、分类引用、空分类、搜索、设置、fallback 与控制台。
 - Supabase clean reset/lint、远端 migration dry-run、跨实例/并发 store contract；
 - 生产 cron smoke、冷实例 60 秒可见、分轴 stale 演练和来源 10 小时轮转；
-- 按 [test-plan.md](test-plan.md) 保存上线门与 24 小时/7 天运行门证据。
+- 按 [test-plan.md](test-plan.md) 保存上线门证据；24 小时/7 天运行门只有在未来明确批准并重新设计后才执行。

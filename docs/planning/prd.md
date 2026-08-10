@@ -8,7 +8,7 @@
 
 适用于修改 Daily News 前端展示、事件选题、分类筛选、偏好设置、搜索、证据状态、数据 fallback 体验和中文化边界的工作。
 
-不适用于数据库、生产部署、商业化、账号体系、通知系统或历史归档，因为当前仓库没有这些能力的证据。
+数据库与生产部署的实现约束分别由 [database-design.md](database-design.md)、[technical-design.md](technical-design.md) 和 [release-plan.md](release-plan.md) 维护。本文不定义商业化、账号体系、通知系统或用户可见历史归档。
 
 ## Plan 或项目证据
 
@@ -48,6 +48,7 @@ Daily News 要解决的问题是：让用户在 10–15 分钟内掌握当天最
 | 新闻阅读者 | `src/App.tsx` 的事件首页、分类、搜索和偏好设置 | 先读今日必知，再按需要查看重要进展、持续关注或某个分类 |
 | 本地维护者 | `README.md`, `docs/runbook.md`, npm scripts | 配置来源、生成静态日报、启动本地 API、验证排序和展示 |
 | 来源维护者 | `src/config/sources.ts` | 新增、禁用或调整来源、栏目、查询词、主分类和可信度 |
+| 生产维护者 | `scripts/productionAcceptanceMonitor.ts`, `supabase/migrations/`, `docs/runbook.md` | 迁移、部署、调度、回滚和连续运行验收 |
 
 目标用户是否是单人自用、内部工具还是公开产品：待确认。
 
@@ -95,7 +96,7 @@ Daily News 要解决的问题是：让用户在 10–15 分钟内掌握当天最
 ## 非目标
 
 - 不实现账号、登录、权限、跨设备同步或服务端保存偏好。
-- 不实现数据库、历史日报归档或长期检索。
+- 生产数据库只服务刷新运行态与 last-known-good；不提供用户可见历史日报、全文归档或长期检索。
 - 不绕过付费墙；付费墙来源只使用公开标题、导语和元数据。
 - 不把 Firecrawl 或翻译密钥暴露给浏览器。
 - 不把 `public/daily-news.json` 当作编辑源数据。

@@ -22,6 +22,7 @@ Daily News is a Vite + React + TypeScript event-level news briefing with a serve
 - Local runtime without Supabase: async in-memory NewsStore with the same lease/candidate/publish contract.
 - Production runtime: Supabase stores source state, refresh runs, fenced lease, 72-hour candidates, immutable snapshots and the singleton latest pointer.
 - Scheduler: Supabase Cron runs every 2 hours through `pg_net` and calls authenticated `GET /api/cron`; it does not rely on a Vercel function timer.
+- Historical acceptance observer: `scripts/productionAcceptanceMonitor.ts` is a local read-only LaunchAgent that is currently stopped. It never drives production refreshes; formal burn-in/soak is canceled, and any future explicitly approved run must invalidate its active window when the deployment alias changes.
 
 ## API Routes
 

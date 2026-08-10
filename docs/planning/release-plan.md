@@ -1,5 +1,7 @@
 # Supabase 实时更新发布计划
 
+> 当前决策（2026-08-02）：生产 Supabase Cron 继续运行，但用户不再要求执行形式化 24 小时 burn-in 与 7 天 soak；对应本地 LaunchAgent 和 Codex 检查任务已停止。下文运行门保留为可复用的验收方案，不代表当前仍有待运行的任务。
+
 ## 目标
 
 在现有 Supabase 持久运行态上保持完整性优先行为，同时把后台改为每 2 小时检查一批来源、约 10 小时完成全轮，以控制 Vercel Fluid Active CPU，并在局部失败、冷启动和内容静默时继续返回真实 last-known-good。
@@ -79,13 +81,12 @@
 
 ## 发布验收记录
 
-每次发布至少记录：commit/deployment、migration version、bootstrap report ID、两轮手动 run ID、cron 首次成功时间、冷实例可见耗时、回滚演练结果、24 小时与 7 天指标。记录只保存标识和聚合指标，不保存 secret 或外部完整响应。
+每次发布至少记录：commit/deployment、migration version、bootstrap report ID、两轮手动 run ID、cron 首次成功时间、冷实例可见耗时和回滚演练结果。记录只保存标识和聚合指标，不保存 secret 或外部完整响应。24 小时与 7 天指标只有在未来明确批准并重新设计正式验收后才记录。
 
-本次生产执行与未关闭的门禁证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。前八次 24 小时窗口分别因调度、来源 cadence、读恢复、容量、deployment 连续性或 P95 硬门失败/被取代。第九次窗口只保存了前 30/96 个严格槽的完整 Cron、pg_net、durable 与 runtime 证据；其余 66 个槽没有在 pg_net 的 6 小时 TTL 内落盘，不能判定通过。`2026-07-18` 第一版直连排序修复仍在同日/无日期 HTML 与逆序 feed 上触发 stale 硬失败。第二版用有界文章 metadata 探测、feed 补日期后重排、全局 HTTP 闸门和严格 deadline 语义修复，已通过 unit 145/145、integration 64/64、build 1711 modules、真实两来源与 11 来源只读 canary，并发布为 production deployment `dpl_2rrwW4zspHmJCk77T1kBcwzAP8Cy`。用户授权生产只读查询后，09:45 自然槽完成四层与公开内容门闭环，但 10:00 首个严格槽中 Anthropic 连续第二槽 `planned→skipped`，健康来源真实尝试间隔达到 108.104 分钟，第十次窗口按 cadence 硬门判失败。针对 HTML anchor 日期遗漏、陈旧候选过晚过滤和 self-link 重复抓取的最小修复通过 unit 146/146、integration 64/64、build 1711 modules、diff-check 与精确 11-source 不写库 canary，并作为唯一 production deployment `dpl_BPP9QWt15YZ5ERshpUu3Zh44S1zd` 发布。10:30 自然槽四层闭环，2/2 来源 attempted、0 skipped/missing，Anthropic state 正确推进；第十一次窗口从 `2026-07-18T10:30:23.044Z` 起算，严格槽从 10:45 开始。只有完整 24 小时通过后才能进入 7 天 soak。
+历史生产执行与失败窗口证据见 [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md)。`.production-acceptance/<run>/summary.json` 和 `monitor:production status` 只描述历史 observer，不是当前发布门或生产状态源；当前 deployment、配额和 Cron 状态必须从 Vercel 与 Supabase 重新验证。若未来恢复正式验收，验收目录仍须绑定一个不可变 deployment，alias 切换后保留旧证据并新建独立窗口。
 
 ## 待确认
 
 - Supabase production project 的区域、长期配额和维护责任；
 - 独立 staging project 是否作为后续 migration 的强制前置；本次生产远端 pgTAP 与空库兼容运行时已通过，但没有长期 staging 环境；
-- 7 天观察异常由谁接收通知；
 - 生产 source-to-site 抽样由人工还是脚本保存。

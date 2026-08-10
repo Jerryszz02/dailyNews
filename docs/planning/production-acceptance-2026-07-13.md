@@ -1,12 +1,14 @@
 # Supabase 生产验收记录（2026-07-13）
 
+> 本文是 2026-07-13 至 2026-07-24 的历史证据日志，不是当前 deployment 或监控状态源。当前验收阶段、进度和判定读取 `.production-acceptance/<run>/summary.json`，observer 存活状态读取 `monitor:production status` 返回的 `monitorProcess.running`，并用 `vercel inspect` 核对 alias；没有 `final-report.json` 就不能宣称运行门通过。2026-07-30 审查时，旧 `current` 运行因 `deployment_alias_mismatch` 处于 `needs_review`。
+
 ## 历史结论
 
 状态：**历史记录；正式 24 小时 burn-in 与 7 天 soak 已取消。本文件只保留 2026-07 的逐次证据，不证明当前 deployment、Cron、配额或生产健康。当前状态应以 Vercel Observability、Supabase `cron.job`/`refresh_run` 与 `docs/runbook.md` 为准。**
 
 Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 分钟 Supabase Cron 已部署。当前 production deployment `dpl_8GswEGG1CfUn3K2WAdeVPvG7zrpL` 来自 `main@65f9989`，在原有 12 秒总采集预算、maxSources 11、直连并发 11 与 keyless 路径不变的前提下，并发启动 keyless/direct，规范来源失败优先级，使用 Anthropic 官方 sitemap，并对 Supabase 中的大型报告采用向后兼容的 gzip/base64 传输层编码。前十一轮已依次暴露调度丢槽、到期边界、deadline cadence、Supabase 瞬时读失败、半开容量、P95、证据留存、来源 starvation 与报告发布尾延迟问题。24 小时与随后 7 天 soak 完成前，仍不能把本记录解释为“实时更新最终验收完成”。
 
-## 发布标识
+## 历史发布标识
 
 | 项 | 值 |
 | --- | --- |

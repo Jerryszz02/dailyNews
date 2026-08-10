@@ -91,6 +91,14 @@ curl http://127.0.0.1:4173/api/health
 
 Supabase 首次部署顺序见 [发布计划](docs/planning/release-plan.md)：migration dry-run/push 后运行 `npm run bootstrap:supabase`，再配置 Vault 并安装 2 小时 cron。bootstrap 保留 bundled 报告原始时间，因此旧基准不会被标成 fresh。
 
+历史生产验收证据由确定性本地脚本记录，不依赖 AI heartbeat。正式 burn-in/soak 已取消且本地 observer 当前停止；下面的只读命令只用于确认已有 observer 状态，不能用来恢复验收：
+
+```bash
+npm run monitor:production -- status --output .production-acceptance/current
+```
+
+历史启动、停止和重建基线命令见 [运维手册](docs/runbook.md)。输出目录中的 `summary.json` 记录验收阶段、进度和判定，但不能单独证明后台进程仍在运行；报告 observer 正在运行前，必须执行上述 `status` 命令并确认 `monitorProcess.running` 为 `true`。生产 alias 切换到新 deployment 后，旧窗口必须停止，且未经明确批准不得新建或续接验收窗口。
+
 ## 中文化边界
 
 面向用户展示的新闻标题、摘要、来源名和页面固定文案应保持中文。英文来源名如果来自外部抓取结果，显示层会在 `src/App.tsx` 的 `sourceLabel` 中兜底映射；随项目保存的快照和示例数据也应尽量直接保存中文标题、摘要和来源名。
