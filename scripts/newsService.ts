@@ -12,7 +12,7 @@ import type { Category, DailyNewsReport, NewsSource, RawNewsItem, SearchSourceTy
 
 export const defaultLimitPerSection = 5;
 export const defaultMaxSources = newsSources.filter(isCollectibleSource).length;
-export const defaultRefreshIntervalMinutes = 5;
+export const defaultRefreshIntervalMinutes = 120;
 export const defaultMaxNewsAgeHours = 72;
 export const defaultSourceConcurrency = 11;
 export const defaultCollectionBudgetMs = 45_000;

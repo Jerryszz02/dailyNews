@@ -49,7 +49,7 @@ npx supabase db push --dry-run
 ```bash
 DAILY_NEWS_MAX_SOURCES=11
 DAILY_NEWS_LIMIT_PER_SECTION=5
-DAILY_NEWS_REFRESH_INTERVAL_MINUTES=5
+DAILY_NEWS_REFRESH_INTERVAL_MINUTES=120
 DAILY_NEWS_COLLECTION_BUDGET_MS=45000
 DAILY_NEWS_SOURCE_CONCURRENCY=11
 DAILY_NEWS_MAX_AGE_HOURS=72
@@ -65,7 +65,7 @@ PORT=4173
 
 Keep `.env` and `.env.local` local. Do not commit or paste their values.
 
-Production defaults to eleven due sources per run: nine normal rotation slots and up to two priority retries for partial/failed sources. Persistent `next_due_at` rotation covers every enabled and approved source with at least one attempt in each rolling 30-minute window; an open circuit does not suppress that coverage attempt.
+Production defaults to eleven due sources per run: nine normal rotation slots and up to two priority retries for partial/failed sources. At the two-hour cost-control cadence, persistent `next_due_at` rotation covers all 49 enabled and approved sources in about ten hours; an open circuit does not suppress a due coverage attempt.
 
 `DAILY_NEWS_COLLECTION_BUDGET_MS` is the hard wall-clock deadline for one collection round. Production defaults to 45 seconds inside the 60-second function limit, leaving about 10 seconds for candidate paging, report construction and atomic commit. Firecrawl and direct source work run concurrently; each request is independently bounded to eight seconds. Sources that have not started before the deadline remain due for the next slot instead of being recorded as healthy empty.
 
@@ -107,12 +107,12 @@ Expected behavior:
 - If candidate paging or report validation fails, the refresh keeps last-known-good. Source count, beat continuity, trust and curated selection are not publication gates; a valid visible change from the complete candidate window should publish.
 - If NBA, FIFA, FIBA or AI company blog items are missing, check whether `DAILY_NEWS_TRANSLATION_API_KEY` is configured; many of those sources return English-only title and summary text.
 - Preferences only reorder important/category stories; they never hide or promote `must_know` events.
-- Refresh is polling-based: Supabase Cron checks every 5 minutes and the frontend reloads the published report every 30 seconds. The app does not receive source-side webhooks.
+- Refresh is polling-based: Supabase Cron checks every 2 hours and the frontend reloads the published report every 30 seconds. The app does not receive source-side webhooks.
 - If `/api/news` is readable but `/api/health` is stale, check Supabase `refresh_run`, `runtime_state`, source due-state, Cron/Vault configuration and Vercel `/api/cron` logs in that order.
 
 ## Token-free production acceptance monitor
 
-Use the deterministic local monitor instead of an AI heartbeat for the 24-hour burn-in and seven-day soak. It audits each burn-in slot at the 5-minute boundary plus 75 seconds, writes secret-free JSONL evidence immediately, retries a transient exit from the read-only Vercel setup commands once before treating the observer as failed, automatically starts a fresh candidate window after a failed slot, and changes to one rolling 24-hour check per day after all 288 strict burn-in slots pass. Each audit requires all enabled/approved sources to have an attempt within 30 minutes, `unmappedCandidateCount=0` and 100% recall from valid recent events into `latestStories`.
+The deterministic monitor was calibrated for the former five-minute cadence and rolling 30-minute source-coverage gate. Do not start a new formal burn-in after the two-hour cost-control change until its slot and coverage rules are redesigned; preserve existing output only as historical evidence.
 
 ```bash
 npm run monitor:production -- start \

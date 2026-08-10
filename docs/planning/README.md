@@ -8,23 +8,23 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 请求 | 以完整性优先重构来源准入、采集、选取、发布、公开状态与 CI |
-| 更新时间 | 2026-08-03 |
-| 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews-news-pipeline-stability` |
-| 工作模式 | `codex/news-pipeline-stability` 隔离分支；先更新规划，再实施、PR 自审、CI、合并和生产验收 |
+| 请求 | 降低 Vercel Fluid Active CPU：把生产刷新从每 5 分钟降到每 2 小时 |
+| 更新时间 | 2026-08-10 |
+| 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews-reduce-refresh-frequency` |
+| 工作模式 | `agent/reduce-refresh-frequency` 已实现并通过本地测试；生产 Supabase Cron 已远端确认启用且为 `0 */2 * * *`，仓库 migration 尚待 PR 合并后发布 |
 
 ## 项目概览
 
 Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配置化来源发现候选，经过质量门槛、事件聚类、证据状态、公共影响分级和集合级多样性选择，在网页中展示今日必知、重要进展、持续关注、分类深读、搜索和偏好设置。
 
-事件级 V2 API/UI、Supabase last-known-good、租约、候选池和不可变快照已经存在，但 2026-08-02 的生产审计证明“候选新鲜”与“首页精选新鲜”使用不同集合，导致有效新稿被 `stale_homepage_selection` 阻断；运行时 trust、全局 500 候选截断、翻译失败丢稿和 compact 水合丢事件进一步破坏完整性。本轮以“所有已准入有效候选可见”为首要不变量：生产改为 5 分钟调度、30 分钟全来源尝试，首页新增 24 小时全量 latest lane，局部来源或内容质量告警不再冻结整份报告。
+事件级 V2 API/UI、Supabase last-known-good、租约、候选池和不可变快照已经存在。2026-08-10 的 Vercel Functions 证据显示 `/api/cron` 在 12 小时内以 87 次调用消耗 27 分钟 Active CPU，而 `/api/news` 228 次只消耗 29 秒；Hobby Team 已因滚动用量超限暂停。本轮不改变内容完整性不变量，只把生产调度降为每 2 小时一次；每轮仍最多 11 源，49 个已准入来源约 10 小时完成一轮覆盖，以牺牲实时性换取可持续的免费额度。
 
 项目由四条主要链路组成：
 
 | 链路 | 作用 | 主要入口 |
 | --- | --- | --- |
 | 来源配置 | 定义新闻来源、栏目、查询词、主分类、语言、地区、可信度、付费墙提示和启用状态 | `src/config/sources.ts` |
-| 报告生成 | 5 分钟覆盖调度、Firecrawl/直连候选、准入校验、保守聚类、完整 stories/latest 与精选软重排 | `src/lib/sourceCoverage.ts`, `src/lib/curation.ts`, `scripts/newsService.ts` |
+| 报告生成 | 2 小时成本控制调度、Firecrawl/直连候选、准入校验、保守聚类、完整 stories/latest 与精选软重排 | `src/lib/sourceCoverage.ts`, `src/lib/curation.ts`, `scripts/newsService.ts` |
 | API 与静态服务 | 启动即读取 last-known-good，读请求不抓取；结构不变量通过即原子发布，质量告警独立上报 | `scripts/reportStore.ts`, `scripts/newsApi.ts`, `scripts/newsServer.ts` |
 | 前端体验 | 优先读取 V2 API，首页先展示 24 小时“全部最新”，精选和分类引用完整 stories | `src/App.tsx` |
 | Phase 2 持久更新 | Supabase 候选池/租约/不可变快照、受保护 cron、公平来源轮转和 durable freshness | [database-design.md](database-design.md), [release-plan.md](release-plan.md) |
@@ -67,7 +67,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | [security-privacy.md](security-privacy.md) | 记录 secrets、外部抓取、浏览器边界、公开数据和剩余风险 |
 | [test-plan.md](test-plan.md) | 定义行为、API、生成、前端和人工验证方式 |
 | [release-plan.md](release-plan.md) | 定义 Supabase migration、bootstrap、部署、调度、灰度、回滚和连续运行验收 |
-| [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md) | 保存本次生产 deployment、数据库、刷新、API smoke 与运行门待观察证据 |
+| [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md) | 历史运行记录；正式 burn-in/soak 已取消，不作为当前生产状态来源 |
 
 ## 已跳过目录文档
 
@@ -88,7 +88,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 5. 修改 `/api/*` 路由或响应字段前读 [api-design.md](api-design.md)。
 6. 涉及 `.env.local`、翻译密钥、Firecrawl、外部抓取或浏览器数据边界时先读 [security-privacy.md](security-privacy.md)。
 7. 实现完成后按 [test-plan.md](test-plan.md) 验证数据库事务、跨实例、来源轮转、freshness、API/UI 和内容质量。
-8. 生产变更严格按 [release-plan.md](release-plan.md) 走独立分支、GitHub CI、向后兼容 migration、部署、5 分钟 cron 和 24 小时 burn-in。
+8. 生产变更严格按 [release-plan.md](release-plan.md) 走独立分支、GitHub CI、向后兼容 migration、部署和 2 小时 cron；正式 burn-in/soak 已取消。
 
 ## 待确认
 

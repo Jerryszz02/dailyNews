@@ -325,7 +325,7 @@ describe("serverless report API", () => {
     expect(refresh).toHaveBeenCalledOnce();
     expect(refresh.mock.calls[0][0]).toMatchObject({
       trigger: "cron",
-      idempotencyKey: "refresh:2026-07-13T12:05:00.000Z",
+      idempotencyKey: "refresh:2026-07-13T12:00:00.000Z",
     });
   });
 });

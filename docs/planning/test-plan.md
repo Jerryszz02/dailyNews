@@ -183,7 +183,7 @@ http://127.0.0.1:5173/
 
 ## 性能和数据质量检查
 
-目标实现使用 45 秒采集预算、5 分钟调度、30 分钟全来源尝试、V2 `coverage`/`quality` 摘要和结构不变量发布门。必须检查：
+目标实现使用 45 秒采集预算、2 小时调度、约 10 小时全来源轮转、V2 `coverage`/`quality` 摘要和结构不变量发布门。必须检查：
 
 - `npm run generate` 不应因单个来源失败而整体失败；
 - API 刷新时日志应能说明使用 `Firecrawl keyless`、`Direct source fetch` 或 `Firecrawl snapshot`；
@@ -300,8 +300,8 @@ npm run build
 | C1 | 真跨实例 | 进程 A 发布并退出后，独立冷进程 B 从同一 Supabase 读取相同 `reportId`；本地不超过 5 秒，生产不超过 60 秒 |
 | C2 | 72 小时候选池 | A 轮采来源组 1、B 轮采来源组 2，B 报告输入同时含 A+B；超过 72 小时的候选被排除 |
 | C3 | 注册表对齐 | 49 个 enabled source 都有持久 state；代码与数据库没有孤儿 source ID |
-| C4 | 公平轮转 | 固定时钟模拟 5 分钟 cadence、每轮最多 11 源；动态 enabled source 在滚动 30 分钟内都至少尝试一次 |
-| C5 | 失败重试不抑制覆盖 | partial/failed 来源最多占两个优先槽；即使 `circuit_open_until` 仍有值，也必须继续参与 C4 的 30 分钟滚动尝试，不能永久饥饿 |
+| C4 | 公平轮转 | 固定时钟模拟 2 小时 cadence、每轮最多 11 源；49 个 enabled source 约 10 小时完成一次轮转 |
+| C5 | 失败重试不抑制覆盖 | partial/failed 来源最多占两个优先槽；即使 `circuit_open_until` 仍有值，也必须继续参与 C4 的后续到期轮转，不能永久饥饿 |
 | C6 | 单源故障隔离 | 401/429/timeout/无结果被归一化记录，不影响其他来源候选落库，不保存完整外部响应 |
 
 ### 上线门 D：Freshness、API 和 UI
@@ -310,7 +310,7 @@ npm run build
 
 | ID | 验收 | 证据与阈值 |
 | --- | --- | --- |
-| D1 | fresh | 报告真实 `dataAsOf/generatedAt` 不超过 30 分钟且通过 D9 内容门；正常目标 P95 报告年龄不超过 20 分钟。`lastSuccessAt` 只表示最近成功检查，不可洗新报告 |
+| D1 | fresh | 报告真实 `dataAsOf/generatedAt` 不超过 30 分钟且通过 D9 内容门；成本控制模式不承诺 P95 20 分钟。`lastSuccessAt` 只表示最近成功检查，不可洗新报告 |
 | D2 | stale | 报告真实 `dataAsOf/generatedAt` 超过 30 分钟时 `/api/news` 与 `/api/health` 都明确 stale；即使刚完成一次无新内容检查，新闻仍只返回原时间的 last-known-good |
 | D3 | degraded | Supabase 失败但 bundled 可读时 news 返回 200 + degraded/stale；health 返回非健康状态，不伪装 fresh |
 | D4 | unavailable | Supabase 与所有 fallback 均无报告时返回 503 + unavailable |
@@ -324,7 +324,7 @@ npm run build
 
 | ID | 验收 | 证据与阈值 |
 | --- | --- | --- |
-| E1 | 真实调度 | Supabase Cron 每 5 分钟经 `pg_net` 调用受保护 GET；不是函数内定时器，也不是只展示 interval 字段 |
+| E1 | 真实调度 | Supabase Cron 每 2 小时经 `pg_net` 调用受保护 GET；不是函数内定时器，也不是只展示 interval 字段 |
 | E2 | 调度鉴权 | cron secret 未配置为 503，错误/缺失为 401，正确调用运行或明确返回 busy/skipped |
 | E3 | 定时幂等 | 同一时间槽重试只产生一个有效 run 和至多一个 snapshot |
 | E4 | latest read | production compact `/api/news?view=web` 使用 30 秒 Vercel 边缘缓存；客户端时钟偏差不影响读取。`view=web&reload=1` 必须 `no-store` |
@@ -335,9 +335,9 @@ npm run build
 
 | 阶段 | 通过标准 |
 | --- | --- |
-| 24 小时 burn-in | 无双 latest、`unmappedCandidateCount=0`、latest recall=100%、所有动态 enabled 来源 30 分钟轮转达标、无 selection-caused failure 或 secret 泄漏 |
-| 7 天生产 soak | 调度成功率不低于 99%；报告年龄 P95 不高于 20 分钟；冷实例 latest 收敛不超过 60 秒；healthy 来源 cadence 达标率 100% |
-| 内容延迟抽样 | 重大来源新闻发布到网站可见 P95 不高于 30 分钟；一般新闻 P95 不高于 2 小时 |
+| 24 小时 burn-in | `已取消`；原五分钟 cadence 门不得用于当前成本控制模式 |
+| 7 天生产 soak | `已取消`；如未来恢复正式验收，必须按届时 cadence 重建设计 |
+| 内容延迟抽样 | 当前只观察真实延迟，不承诺原 P95 30 分钟；一般新闻目标不高于 10 小时全轮上界 |
 | 内容质量 | must-know 召回不低于 90%、首页价值精确率不低于 85%、重复事件不高于 5%、模板摘要不高于 3%、错误来源归因和缺失发布时间为 0 |
 
 运行证据至少保留每个 refresh run 的时间槽、状态、已选来源、发现/采用数量、published report ID 和归一化错误码；HTTP 200 本身不能作为调度成功证据。

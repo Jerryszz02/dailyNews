@@ -2,13 +2,13 @@
 
 ## 目标
 
-在现有 Supabase 持久运行态上完成完整性优先重构，使后台每 5 分钟检查一批来源、30 分钟完成全轮，并在局部失败、冷启动和内容静默时继续返回真实 last-known-good。
+在现有 Supabase 持久运行态上保持完整性优先行为，同时把后台改为每 2 小时检查一批来源、约 10 小时完成全轮，以控制 Vercel Fluid Active CPU，并在局部失败、冷启动和内容静默时继续返回真实 last-known-good。
 
 ## 发布前提
 
 - 数据模型、RPC、RLS 与 pgTAP 通过 [database-design.md](database-design.md) 和 [test-plan.md](test-plan.md) 的上线门；
 - `GET /api/news` 不抓取新闻源，`GET /api/cron` 与 `POST /api/refresh` 共用唯一刷新 orchestrator；
-- 动态 enabled source 在持久 due-state 驱动下滚动 30 分钟全部尝试；partial/failed 来源优先重试但不能饿死正常来源；
+- 动态 enabled source 在持久 due-state 驱动下约 10 小时完成轮转；partial/failed 来源优先重试但不能饿死正常来源；
 - 旧 fallback 不改写 `reportId`、`generatedAt`、`lastSuccessAt`；
 - 所有用户可见状态和错误为中文且不含 secret。
 
@@ -20,7 +20,7 @@
 | Vercel server | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | 仅 Production/Preview 中需要的 scope；不加 `VITE_` |
 | Vercel server | `CRON_SECRET`, `DAILY_NEWS_REFRESH_TOKEN` | cron 与人工刷新分开，可独立轮换 |
 | Supabase Vault | refresh URL 与 cron secret | 只保存值；migration 只引用约定 secret 名 |
-| Supabase Cron | `*/5 * * * *` | 通过 `pg_net` GET 生产 `/api/cron` |
+| Supabase Cron | `0 */2 * * *` | 通过 `pg_net` GET 生产 `/api/cron` |
 
 真实值不得写入文档、提交、命令输出或聊天。数据库 password/PAT 只用于 CLI 登录/迁移，不是应用 runtime 变量。
 
@@ -55,16 +55,16 @@
 1. 使用受保护 endpoint 手动运行至少两轮，确认来源组发生轮转，第二份报告输入包含两轮候选；
 2. 查询 durable run/source/latest，确认无双 latest、无旧时间重盖、无敏感错误；
 3. 将生产 URL 与 `CRON_SECRET` 写入 Supabase Vault；
-4. 启用 5 分钟 Supabase Cron，观察至少六个真实时间槽和一次重复/并发调用；每个时槽同时核对 pg_net HTTP 与 durable refresh run，不能只看 Cron 入队成功；
+4. 启用 2 小时 Supabase Cron，观察至少三个真实时间槽和一次受控重复/并发调用；每个时槽同时核对 pg_net HTTP 与 durable refresh run，不能只看 Cron 入队成功；
 5. 确认已打开网页在新报告发布后 60 秒内自动收敛。
 
-### 4. 24 小时 burn-in
+### 4. 24 小时 burn-in（已取消）
 
-保持 bundled fallback 和上一快照可回滚。每个 5 分钟自然槽记录 Cron、pg_net、durable run、snapshot/runtime 原子链接、source state、公开 report ID、完整性指标和分轴状态。通过标准：动态 enabled 来源滚动 30 分钟全部尝试、`unmappedCandidateCount=0`、24 小时 latest recall=100%、无 selection-caused failed run、无双发布/secret 泄漏。
+原五分钟 cadence 的正式 burn-in 已取消，历史证据保留但不作为当前发布门。恢复正式验收前必须按两小时 cadence 重新定义槽位、来源覆盖和新鲜度阈值。
 
-### 5. 7 天生产 soak
+### 5. 7 天生产 soak（已取消）
 
-按 [test-plan.md](test-plan.md) 统计调度成功率、报告年龄 P95、API P95、来源 cadence、source-to-site 延迟和内容质量。全部达标后才宣布“实时更新功能最终验收完成”。
+原七天 soak 已取消。当前只执行与本次变更相称的 migration、Cron schedule、API 可用性和 CPU 趋势验证。
 
 ## 回滚
 

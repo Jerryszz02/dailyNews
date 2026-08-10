@@ -160,6 +160,13 @@ select ok(
   'Supabase Cron allows 55 seconds for the Vercel refresh request'
 );
 select ok(
+  position(
+    '0 */2 * * *'
+    in pg_get_functiondef('public.daily_news_install_refresh_cron()'::regprocedure)
+  ) > 0,
+  'Supabase Cron installs the two-hour cost-control schedule'
+);
+select ok(
   exists (
     select 1
     from pg_index as index_definition

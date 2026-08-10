@@ -45,7 +45,7 @@
 | `last_success_at` | 最近一次成功 |
 | `next_due_at` | 持久化公平轮转游标；到期来源优先被下一轮选择 |
 | `consecutive_failures` | 连续失败次数 |
-| `circuit_open_until` | 兼容失败诊断时间；不得作为跳过 30 分钟覆盖尝试的调度门 |
+| `circuit_open_until` | 兼容失败诊断时间；不得作为跳过后续到期轮转的调度门 |
 | `latency_ms_p50/p95` | 滚动延迟指标 |
 | `accepted_rate` | 候选通过质量门槛的比例 |
 | `last_error_code` | 归一化错误类型，不保存敏感错误正文 |
@@ -205,8 +205,8 @@
 - 并发刷新最多一个取得有效租约，重复调度不产生双重发布；
 - published/unchanged/partial 通过同一原子终态；结构失败或数据库失败不产生部分 source/candidate 推进；
 - 快照 payload 与 latest pointer 在一个事务内切换，不允许读到半写入报告；
-- 所有 enabled 来源在 5 分钟调度下滚动 30 分钟内都至少尝试一次；partial/failed 优先重试且不能饿死正常来源；
-- 正常运行时报告年龄 P95 不高于 20 分钟，超过 30 分钟必须标记 stale；
+- 所有 enabled 来源在 2 小时调度下约 10 小时完成一次轮转；partial/failed 优先重试且不能饿死正常来源；
+- 报告年龄超过 30 分钟仍必须如实标记 stale；成本控制模式不再承诺 P95 20 分钟的新鲜度；
 - `GET /api/news` 通过 30 秒 Vercel 时间桶缓存读取 latest，生产小流量 P95 不高于 750 ms、P99 不高于 1 秒；
 - 任一已发布事件可追溯到具体来源 URL；
 - 报告可回滚到上一成功版本；

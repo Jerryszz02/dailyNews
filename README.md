@@ -41,7 +41,7 @@ npm run serve
 - 60 秒函数上限内，采集阶段默认使用 45 秒，保留约 10 秒完成 72 小时候选读取、报告构建与原子提交。局部来源、解析或翻译失败会标记 `partial/degraded`，不会冻结其他有效变化。
 - `GET /api/news` 只读已经发布的报告，不在用户请求内抓取外部来源。
 - 静态报告先写临时文件并通过结构不变量校验，再原子替换 `public/daily-news.json`。
-- 生产每 5 分钟由 Supabase Cron 调用受保护 `/api/cron`；每轮最多 11 源，其中 9 个用于正常公平轮转、最多 2 个优先重试 partial/failed，保证每个 `enabled && approved` 来源在滚动 30 分钟内至少尝试一次。
+- 生产每 2 小时由 Supabase Cron 调用受保护 `/api/cron`；每轮最多 11 源，其中 9 个用于正常公平轮转、最多 2 个优先重试 partial/failed。成本控制模式下，49 个 `enabled && approved` 来源约需 10 小时完成一轮覆盖。
 - Supabase 保存来源状态、近 72 小时候选、刷新租约/运行和不可变报告；来源结果、候选、指标、可选 snapshot 与 latest pointer 通过版本化 RPC 在一个事务中完成。
 
 只把已有静态报告离线升级为 V2，不访问新闻源：
@@ -62,7 +62,7 @@ npm run generate
 ```bash
 DAILY_NEWS_MAX_SOURCES=11
 DAILY_NEWS_LIMIT_PER_SECTION=5
-DAILY_NEWS_REFRESH_INTERVAL_MINUTES=5
+DAILY_NEWS_REFRESH_INTERVAL_MINUTES=120
 DAILY_NEWS_COLLECTION_BUDGET_MS=45000
 DAILY_NEWS_SOURCE_CONCURRENCY=11
 DAILY_NEWS_MAX_AGE_HOURS=72
@@ -89,7 +89,7 @@ curl http://127.0.0.1:4173/api/health
 
 `GET /api/news` 默认返回完整 `DailyNewsReport` V2、兼容 `items`，并增加 `latestStories` 与刷新元数据；旧 V2 会在读取时自动派生这些字段。普通读取使用 30 秒共享缓存，`view=web&reload=1` 使用 `no-store`，不再使用客户端时钟生成缓存参数。`servingMode`、`pipelineStatus`、`contentStatus` 分别表达服务来源、流水线健康和内容新鲜度；存在有效 last-known-good 时 `/api/news` 与 `/api/health` 均返回 200 并如实标记 degraded/stale，完全没有可服务报告时才返回 503。
 
-Supabase 首次部署顺序见 [发布计划](docs/planning/release-plan.md)：migration dry-run/push 后运行 `npm run bootstrap:supabase`，再配置 Vault 并安装 5 分钟 cron。bootstrap 保留 bundled 报告原始时间，因此旧基准不会被标成 fresh。
+Supabase 首次部署顺序见 [发布计划](docs/planning/release-plan.md)：migration dry-run/push 后运行 `npm run bootstrap:supabase`，再配置 Vault 并安装 2 小时 cron。bootstrap 保留 bundled 报告原始时间，因此旧基准不会被标成 fresh。
 
 ## 中文化边界
 

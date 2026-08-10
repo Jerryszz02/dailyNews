@@ -1,8 +1,8 @@
 # Supabase 生产验收记录（2026-07-13）
 
-## 当前结论
+## 历史结论
 
-状态：**前十一次 24 小时 burn-in 均未通过或被后续部署取代；第十二次候选窗口因 pg_net 网络超时、起点 body 过 TTL 和约 45–51 秒刷新明确失败。随后 compact snapshot/500 候选部署的首五槽又全部触发旧 bloated report 与新受限候选池之间的相对质量门误判，已经同样失败。相对事件门按候选池规模归一化、同时保持绝对 freshness、核心数、来源数与 protected beats 门不变的第二个最小修复现已作为唯一 production deployment 发布；必须从其首个完整自然槽重新建立新 24 小时窗口**。
+状态：**历史记录；正式 24 小时 burn-in 与 7 天 soak 已取消。本文件只保留 2026-07 的逐次证据，不证明当前 deployment、Cron、配额或生产健康。当前状态应以 Vercel Observability、Supabase `cron.job`/`refresh_run` 与 `docs/runbook.md` 为准。**
 
 Supabase 持久化、两次生产迁移、Vercel 读取、受保护刷新和 15 分钟 Supabase Cron 已部署。当前 production deployment `dpl_8GswEGG1CfUn3K2WAdeVPvG7zrpL` 来自 `main@65f9989`，在原有 12 秒总采集预算、maxSources 11、直连并发 11 与 keyless 路径不变的前提下，并发启动 keyless/direct，规范来源失败优先级，使用 Anthropic 官方 sitemap，并对 Supabase 中的大型报告采用向后兼容的 gzip/base64 传输层编码。前十一轮已依次暴露调度丢槽、到期边界、deadline cadence、Supabase 瞬时读失败、半开容量、P95、证据留存、来源 starvation 与报告发布尾延迟问题。24 小时与随后 7 天 soak 完成前，仍不能把本记录解释为“实时更新最终验收完成”。
 

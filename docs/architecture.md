@@ -4,7 +4,7 @@ Daily News is a Vite + React + TypeScript event-level news briefing with a serve
 
 ## Data Flow
 
-1. `src/config/sources.ts` separates collection (`enabled`) from publication admission (`approved`) and records allowed hosts, review notes and publication roles. `src/lib/sourceCoverage.ts` selects at most eleven due sources per five-minute run: nine normal rotation slots and up to two partial/failed retries. Open circuits never suppress the rolling 30-minute attempt invariant.
+1. `src/config/sources.ts` separates collection (`enabled`) from publication admission (`approved`) and records allowed hosts, review notes and publication roles. `src/lib/sourceCoverage.ts` selects at most eleven due sources per two-hour run: nine normal rotation slots and up to two partial/failed retries. Open circuits never suppress a due coverage attempt; the 49 approved sources complete a rotation in about ten hours under the cost-control cadence.
 2. `scripts/newsService.ts` runs Firecrawl keyless web/news search and bounded direct page/feed/sitemap collection concurrently within a 45-second budget. Each source request has an independent timeout, sitemap limits are honored, and both requested and redirect-final URLs must remain inside the source allowlist.
 3. Candidate identity and original text survive enrichment independently and are persisted in the same atomic terminal commit. Translation failures keep the original text visible with `translationStatus: pending`; missing summaries and publication times degrade to explicit pending/estimated states instead of deleting the candidate.
 4. `src/lib/curation.ts` rejects only unapproved/out-of-domain sources, invalid or missing identity, navigation pages and explicit promotion. Trust and credibility do not affect inclusion, tier or ranking.
@@ -21,7 +21,7 @@ Daily News is a Vite + React + TypeScript event-level news briefing with a serve
 - Production-style local service: `npm run serve`, which builds `dist/` and serves both static files and API.
 - Local runtime without Supabase: async in-memory NewsStore with the same lease/candidate/publish contract.
 - Production runtime: Supabase stores source state, refresh runs, fenced lease, 72-hour candidates, immutable snapshots and the singleton latest pointer.
-- Scheduler: Supabase Cron runs every 5 minutes through `pg_net` and calls authenticated `GET /api/cron`; it does not rely on a Vercel function timer.
+- Scheduler: Supabase Cron runs every 2 hours through `pg_net` and calls authenticated `GET /api/cron`; it does not rely on a Vercel function timer.
 
 ## API Routes
 
