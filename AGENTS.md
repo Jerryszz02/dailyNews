@@ -32,6 +32,7 @@ Use `npm test` for core logic changes, `npm run test:integration` for API/store/
 - Do not paste Firecrawl keys or `.env.local` values into code, logs, commits, or responses.
 - `dist/` is build output. Update it only when a verified build is part of the requested change.
 - Keep `/api/news`, `/api/health`, `/api/refresh`, and `/api/cron` server-only; do not move collection or refresh calls into browser code.
+- Treat `.production-acceptance/current/summary.json` as the local acceptance status source. A deployment alias mismatch invalidates the active window; verify the alias before claiming the monitor is running.
 - Category pages filter by `primaryCategory`; auxiliary `categories` are explanatory tags and must not make one story appear in multiple category tabs.
 - Source admission is decided when configuring a source. `trust.shouldShow` is compatibility-only and must not filter, tier or rank stories.
 - Reuters, Bloomberg, FT, WSJ, and The Athletic are disabled because direct visitor verification is unreliable due to 401/paywall behavior.
@@ -46,5 +47,7 @@ Use `npm test` for core logic changes, `npm run test:integration` for API/store/
 - `scripts/newsRefresh.ts` — durable lease, source selection, candidate pool, structural invariants and atomic publish orchestration.
 - `scripts/supabaseNewsStore.ts` and `scripts/inMemoryNewsStore.ts` — production and local `NewsStore` implementations.
 - `scripts/newsServer.ts` — local live API and production-style static server.
+- `scripts/productionAcceptanceMonitor.ts` — deterministic 24-hour burn-in and seven-day soak monitor.
 - `scripts/generateDailyNews.ts` — report generation entrypoint.
+- `supabase/migrations/` — production schema, RLS, RPC, fencing and atomic refresh migrations.
 - `docs/architecture.md` and `docs/runbook.md` — current API/data-flow and operations references.
