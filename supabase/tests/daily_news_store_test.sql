@@ -14,7 +14,7 @@ restart identity;
 insert into daily_news.runtime_state (singleton_id) values (true);
 insert into daily_news.refresh_lease (singleton_id) values (true);
 
-select plan(120);
+select plan(121);
 
 select has_schema('daily_news', 'private daily_news schema exists');
 select has_table('daily_news', 'refresh_run', 'refresh_run table exists');
