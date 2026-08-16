@@ -314,6 +314,7 @@ export function evaluateSlotAudit(
 
   fail(audit.security.readOnly, "security_not_read_only");
   fail(audit.security.tlsEncrypted, "security_tls_not_encrypted");
+  fail(audit.security.strictCert, "security_certificate_not_verified");
   fail(audit.security.rolledBack, "security_not_rolled_back");
   fail(audit.deployment.aliasExact, "deployment_alias_mismatch");
 

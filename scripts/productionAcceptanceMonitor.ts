@@ -132,16 +132,6 @@ function safeCode(error: unknown): string {
   return String(raw).toUpperCase().replace(/[^A-Z0-9_]/g, "_").slice(0, 120);
 }
 
-function executable(name: "npm" | "npx"): string {
-  const besideNode = path.join(path.dirname(process.execPath), name);
-  if (fs.existsSync(besideNode)) return besideNode;
-  for (const directory of ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"]) {
-    const candidate = path.join(directory, name);
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  return name;
-}
-
 async function waitUntil(time: number): Promise<void> {
   while (Date.now() < time) {
     await new Promise((resolve) => setTimeout(resolve, Math.min(60_000, time - Date.now())));
@@ -263,40 +253,19 @@ function resetAfterRuntimeFailure(
   };
 }
 
-async function prepareTemporaryClient(root: string, cwd: string): Promise<string> {
-  const clientRoot = path.join(root, "client");
-  fs.mkdirSync(clientRoot, { mode: 0o700 });
-  await runCommand(
-    executable("npm"),
-    [
-      "install",
-      "--prefix",
-      clientRoot,
-      "--no-save",
-      "--no-package-lock",
-      "--ignore-scripts",
-      "pg",
-      "dotenv",
-    ],
-    { cwd, timeoutMs: 120_000 },
-  );
-  return path.join(clientRoot, "node_modules");
-}
-
 async function auditSlot(options: {
   cwd: string;
   temporaryRoot: string;
-  nodeModules: string;
   state: MonitorState;
   targetSlot: string;
 }) {
   const envFile = path.join(options.temporaryRoot, `production-${crypto.randomUUID()}.env`);
+  const vercelCli = path.join(options.cwd, "node_modules", ".bin", "vercel");
+  if (!fs.existsSync(vercelCli)) throw new Error("LOCKED_VERCEL_CLI_NOT_FOUND");
   try {
     await runCommand(
-      executable("npx"),
+      vercelCli,
       [
-        "--yes",
-        "vercel",
         "env",
         "pull",
         envFile,
@@ -307,8 +276,8 @@ async function auditSlot(options: {
     );
     fs.chmodSync(envFile, 0o600);
     const inspectOutput = await runCommand(
-      executable("npx"),
-      ["--yes", "vercel", "inspect", options.state.alias, "--format=json"],
+      vercelCli,
+      ["inspect", options.state.alias, "--format=json"],
       { cwd: options.cwd, capture: true, timeoutMs: 45_000, maxAttempts: 2 },
     );
     const inspect = JSON.parse(inspectOutput) as {
@@ -327,7 +296,6 @@ async function auditSlot(options: {
       expectedDeployment: options.state.expectedDeployment,
       alias: options.state.alias,
       envFile,
-      nodeModules: options.nodeModules,
       inspectedDeploymentId,
       includeRolling24h: options.state.phase === "soak",
     });
@@ -545,9 +513,10 @@ async function runMonitor(options: CliOptions): Promise<void> {
       caffeinate.unref();
     }
 
-    const nodeModules = await prepareTemporaryClient(temporaryRoot, cwd);
+    const vercelCli = path.join(cwd, "node_modules", ".bin", "vercel");
+    if (!fs.existsSync(vercelCli)) throw new Error("LOCKED_VERCEL_CLI_NOT_FOUND");
     appendJsonLine(path.join(output, "events.jsonl"), {
-      type: "temporary_client_ready",
+      type: "locked_client_ready",
       at: new Date().toISOString(),
     });
 
@@ -573,7 +542,6 @@ async function runMonitor(options: CliOptions): Promise<void> {
         const audit = await auditSlot({
           cwd,
           temporaryRoot,
-          nodeModules,
           state,
           targetSlot,
         });

@@ -9,6 +9,7 @@ import { isAllowedSourceUrl, isCollectibleSource } from "../src/lib/sourceAdmiss
 import { normalRotationSlots, selectSourcesForCoverage } from "../src/lib/sourceCoverage.js";
 import { hostnameFromUrl } from "../src/lib/text.js";
 import type { Category, DailyNewsReport, NewsSource, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
+import { publicSourceDispatcher } from "./sourceNetworkPolicy.js";
 
 export const defaultLimitPerSection = 5;
 export const defaultMaxSources = newsSources.filter(isCollectibleSource).length;
@@ -95,6 +96,11 @@ const defaultTranslationModel = "deepseek-v4-flash";
 const maxArticleContextLength = 3_200;
 const sourceAttemptTimeoutMs = 8_000;
 const maxRedirectHops = 5;
+const maxSourceResponseBytes = 2 * 1024 * 1024;
+const maxTranslationTitleBytes = 256;
+const maxTranslationSummaryBytes = 2 * 1024;
+const maxTranslationContextBytes = 4 * 1024;
+const translationRequestTimeoutMs = 15_000;
 
 export async function generateDailyNewsReport(options: NewsGenerationOptions = {}): Promise<NewsGenerationResult> {
   const now = options.now ?? new Date();
@@ -724,8 +730,12 @@ function normalizeCollectionError(error: unknown, globalDeadlineAt?: number): st
     return globalDeadlineAt && Date.now() < globalDeadlineAt ? "source_timeout" : "collection_deadline";
   }
   if (error instanceof SourceUrlOutOfScopeError) return "source_url_out_of_scope";
+  if (error instanceof SourceResponseTooLargeError) return "source_response_too_large";
   if (error instanceof SourceParseError) return "source_parse_failed";
   if (error instanceof DOMException && error.name === "AbortError") return "source_timeout";
+  if ((error as { cause?: { code?: unknown } })?.cause?.code === "SOURCE_ADDRESS_NOT_PUBLIC") {
+    return "source_address_not_public";
+  }
   const message = String(error).toLowerCase();
   if (message.includes("insufficient credits") || message.includes("payment required") || message.includes("http 402")) {
     return "source_quota_exhausted";
@@ -794,16 +804,21 @@ function createAsyncTaskGate(concurrency: number): AsyncTaskGate {
 class CollectionDeadlineError extends Error {}
 class SourceUrlOutOfScopeError extends Error {}
 class SourceParseError extends Error {}
+class SourceResponseTooLargeError extends Error {}
 
-export async function runWithinDeadline<T>(task: () => Promise<T>, deadlineAt: number): Promise<T> {
+export async function runWithinDeadline<T>(task: (signal: AbortSignal) => Promise<T>, deadlineAt: number): Promise<T> {
   const remainingMs = deadlineAt - Date.now();
   if (remainingMs <= 0) throw new CollectionDeadlineError("Collection deadline reached");
+  const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      task(),
+      task(controller.signal),
       new Promise<T>((_resolve, reject) => {
-        timeout = setTimeout(() => reject(new CollectionDeadlineError("Collection deadline reached")), remainingMs);
+        timeout = setTimeout(() => {
+          controller.abort();
+          reject(new CollectionDeadlineError("Collection deadline reached"));
+        }, remainingMs);
       }),
     ]);
   } finally {
@@ -833,14 +848,18 @@ async function fetchSourceDocument(
     let currentUrl = url;
     for (let redirectHop = 0; redirectHop <= maxRedirectHops; redirectHop += 1) {
       const response = await runWithinDeadline(
-        () => fetch(currentUrl, {
-          headers: {
-            accept: "text/html, application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
-            "user-agent": "DailyNewsBot/0.1 (+https://localhost)",
-          },
-          redirect: "manual",
-          signal: controller.signal,
-        }),
+        (deadlineSignal) => {
+          const requestInit: RequestInit & { dispatcher: typeof publicSourceDispatcher } = {
+            headers: {
+              accept: "text/html, application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+              "user-agent": "DailyNewsBot/0.1 (+https://localhost)",
+            },
+            redirect: "manual",
+            signal: AbortSignal.any([controller.signal, deadlineSignal]),
+            dispatcher: publicSourceDispatcher,
+          };
+          return fetch(currentUrl, requestInit);
+        },
         deadlineAt ? sourceAttemptDeadline(deadlineAt) : Date.now() + sourceAttemptTimeoutMs,
       );
       if (isRedirectStatus(response.status)) {
@@ -859,7 +878,7 @@ async function fetchSourceDocument(
       }
       if (!response.ok && !allowHttpError) throw new Error(`HTTP ${response.status}`);
       return {
-        text: response.ok ? await response.text() : "",
+        text: response.ok ? await readBoundedSourceResponse(response) : "",
         finalUrl,
       };
     }
@@ -867,6 +886,36 @@ async function fetchSourceDocument(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function readBoundedSourceResponse(response: Response): Promise<string> {
+  const contentLength = Number(response.headers?.get?.("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > maxSourceResponseBytes) {
+    throw new SourceResponseTooLargeError("source_response_too_large");
+  }
+  if (!response.body || typeof response.body.getReader !== "function") {
+    const text = await response.text();
+    if (Buffer.byteLength(text, "utf8") > maxSourceResponseBytes) {
+      throw new SourceResponseTooLargeError("source_response_too_large");
+    }
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalBytes += value.byteLength;
+    if (totalBytes > maxSourceResponseBytes) {
+      await reader.cancel("source_response_too_large").catch(() => undefined);
+      throw new SourceResponseTooLargeError("source_response_too_large");
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
 }
 
 function isRedirectStatus(status: number): boolean {
@@ -888,7 +937,11 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
           ? await readArticleSummaryContext(options.url, options.deadlineAt, options.fetchGate, options.source)
           : (options.articleContext ?? undefined);
       const translated = await runWithinDeadline(
-        () => translateNewsText({ title: options.title, summary: options.summary, articleContext }, options.translationConfig!),
+        (signal) => translateNewsText(
+          { title: options.title, summary: options.summary, articleContext },
+          options.translationConfig!,
+          signal,
+        ),
         options.deadlineAt ?? Date.now() + 15_000,
       );
       if (isNonChineseText(translated) || needsSummaryRepair(translated.title, translated.summary)) {
@@ -918,7 +971,11 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
 
   try {
     const enriched = await runWithinDeadline(
-      () => translateNewsText({ title: options.title, summary: options.summary, articleContext }, options.translationConfig!),
+      (signal) => translateNewsText(
+        { title: options.title, summary: options.summary, articleContext },
+        options.translationConfig!,
+        signal,
+      ),
       options.deadlineAt ?? Date.now() + 15_000,
     );
     if (containsChinese(enriched.summary) && !needsSummaryRepair(options.title, enriched.summary)) {
@@ -1793,7 +1850,15 @@ export function readTranslationConfig(): TranslationConfig | undefined {
 export async function translateNewsText(
   text: { title: string; summary: string; articleContext?: string },
   config: TranslationConfig,
+  signal?: AbortSignal,
 ): Promise<{ title: string; summary: string }> {
+  const boundedText = {
+    title: truncateUtf8(text.title, maxTranslationTitleBytes),
+    summary: truncateUtf8(text.summary, maxTranslationSummaryBytes),
+    ...(text.articleContext
+      ? { articleContext: truncateUtf8(text.articleContext, maxTranslationContextBytes) }
+      : {}),
+  };
   const body = {
     model: config.model,
     messages: [
@@ -1804,7 +1869,7 @@ export async function translateNewsText(
       },
       {
         role: "user",
-        content: `请基于以下新闻素材输出 JSON：${JSON.stringify(text)}`,
+        content: `请基于以下新闻素材输出 JSON：${JSON.stringify(boundedText)}`,
       },
     ],
     temperature: 0.2,
@@ -1820,6 +1885,9 @@ export async function translateNewsText(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(translationRequestTimeoutMs)])
+      : AbortSignal.timeout(translationRequestTimeoutMs),
   });
 
   if (!response.ok) {
@@ -1830,9 +1898,22 @@ export async function translateNewsText(
   const content = readAssistantContent(payload);
   const parsed = readTranslationJson(content);
   return {
-    title: typeof parsed.title === "string" && parsed.title.trim() ? parsed.title.trim() : text.title,
-    summary: typeof parsed.summary === "string" && parsed.summary.trim() ? parsed.summary.trim() : text.summary,
+    title: typeof parsed.title === "string" && parsed.title.trim() ? parsed.title.trim() : boundedText.title,
+    summary: typeof parsed.summary === "string" && parsed.summary.trim() ? parsed.summary.trim() : boundedText.summary,
   };
+}
+
+function truncateUtf8(value: string, maxBytes: number): string {
+  if (Buffer.byteLength(value, "utf8") <= maxBytes) return value;
+  let bytes = 0;
+  let result = "";
+  for (const character of value) {
+    const size = Buffer.byteLength(character, "utf8");
+    if (bytes + size > maxBytes) break;
+    result += character;
+    bytes += size;
+  }
+  return result;
 }
 
 function isDeepSeekConfig(config: TranslationConfig): boolean {

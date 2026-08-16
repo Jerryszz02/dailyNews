@@ -15,6 +15,7 @@ const originalRefreshToken = process.env.DAILY_NEWS_REFRESH_TOKEN;
 const originalCronSecret = process.env.CRON_SECRET;
 const originalSupabaseUrl = process.env.SUPABASE_URL;
 const originalSupabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+const originalNodeEnv = process.env.NODE_ENV;
 
 afterEach(() => {
   if (originalVercel === undefined) delete process.env.VERCEL;
@@ -23,6 +24,7 @@ afterEach(() => {
   restoreEnv("CRON_SECRET", originalCronSecret);
   restoreEnv("SUPABASE_URL", originalSupabaseUrl);
   restoreEnv("SUPABASE_SECRET_KEY", originalSupabaseSecretKey);
+  restoreEnv("NODE_ENV", originalNodeEnv);
   resetDefaultNewsApiHandlersForTests();
   resetDefaultNewsStoreForTests();
   vi.restoreAllMocks();
@@ -57,10 +59,10 @@ describe("serverless report API", () => {
     expect(await response.json()).toEqual({ error: "No published news report is available" });
   });
 
-  it("keeps manual reload responses out of the CDN cache", async () => {
+  it("rejects full manual reloads before reading durable storage", async () => {
     const response = await handleNewsRequest(new Request("https://example.com/api/news?reload=1"));
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(400);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("vercel-cdn-cache-control")).toBeNull();
   });
@@ -85,6 +87,48 @@ describe("serverless report API", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("vercel-cdn-cache-control")).toBeNull();
+  });
+
+  it("coalesces concurrent compact reloads into one durable read", async () => {
+    const report = readBundledReport();
+    const readState = vi.fn().mockResolvedValue({
+      latest: {
+        reportId: "coalesced-report",
+        report,
+        dataAsOf: report.generatedAt,
+        newestContentAt: report.generatedAt,
+        publishedAt: report.generatedAt,
+      },
+      runtime: {},
+      sources: [],
+    });
+    const handlers = createNewsApiHandlers({
+      store: { kind: "supabase", persistent: true, readState } as unknown as NewsStore,
+    });
+
+    const [first, second] = await Promise.all([
+      handlers.handleNewsRequest(new Request("https://example.com/api/news?view=web&reload=1")),
+      handlers.handleNewsRequest(new Request("https://example.com/api/news?view=web&reload=1")),
+    ]);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(readState).toHaveBeenCalledOnce();
+  });
+
+  it("rate limits repeated compact reloads from the same client", async () => {
+    const handlers = createNewsApiHandlers();
+    const request = () => new Request("https://example.com/api/news?view=web&reload=1", {
+      headers: { "x-forwarded-for": "203.0.113.7" },
+    });
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      expect((await handlers.handleNewsRequest(request())).status).toBe(200);
+    }
+    const limited = await handlers.handleNewsRequest(request());
+
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBe("60");
   });
 
   it("rejects unknown cache keys before reading durable storage", async () => {
@@ -120,6 +164,7 @@ describe("serverless report API", () => {
 
   it("allows one two-hour slot beyond the ten-hour in-memory source rotation", async () => {
     const now = new Date("2026-08-10T12:00:00.000Z");
+    let requestedAt = now;
     const report = { ...readBundledReport(), generatedAt: now.toISOString() };
     const state = (oldestAttemptHours: number) => ({
       latest: {
@@ -152,9 +197,10 @@ describe("serverless report API", () => {
       persistent: false,
       readState: vi.fn().mockResolvedValueOnce(state(11)).mockResolvedValueOnce(state(13)),
     } as unknown as NewsStore;
-    const handlers = createNewsApiHandlers({ store, now: () => now });
+    const handlers = createNewsApiHandlers({ store, now: () => requestedAt });
 
     const current = await handlers.handleHealthRequest(new Request("https://example.com/api/health"));
+    requestedAt = new Date(now.getTime() + 4_000);
     const stale = await handlers.handleHealthRequest(new Request("https://example.com/api/health"));
 
     expect((await current.json()).coverageStatus).toBe("current");
@@ -251,6 +297,73 @@ describe("serverless report API", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ ok: false, error: "Unauthorized" });
+  });
+
+  it("requires a configured token for a persistent local refresh store", async () => {
+    delete process.env.VERCEL;
+    delete process.env.DAILY_NEWS_REFRESH_TOKEN;
+    process.env.NODE_ENV = "development";
+    const refresh = vi.fn();
+    const handlers = createNewsApiHandlers({
+      store: { kind: "supabase", persistent: true } as NewsStore,
+      refresh,
+    });
+
+    const response = await handlers.handleRefreshRequest(
+      new Request("http://127.0.0.1:4173/api/refresh", {
+        method: "POST",
+        headers: { "x-daily-news-refresh": "1" },
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("rejects cross-site tokenless refreshes but keeps the explicit in-memory development path", async () => {
+    delete process.env.VERCEL;
+    delete process.env.DAILY_NEWS_REFRESH_TOKEN;
+    process.env.NODE_ENV = "development";
+    const refresh = vi.fn().mockResolvedValue({
+      ok: true,
+      status: "unchanged",
+      runId: "local-run",
+      reportId: "local-report",
+      generatedAt: "2026-08-16T00:00:00.000Z",
+      selectedSourceIds: [],
+      discoveredCount: 0,
+      candidateCount: 0,
+      errorCode: null,
+    });
+    const handlers = createNewsApiHandlers({
+      store: { kind: "memory", persistent: false } as NewsStore,
+      refresh,
+    });
+
+    const crossSite = await handlers.handleRefreshRequest(
+      new Request("http://127.0.0.1:4173/api/refresh", {
+        method: "POST",
+        headers: {
+          origin: "https://evil.example",
+          "sec-fetch-site": "cross-site",
+          "x-daily-news-refresh": "1",
+        },
+      }),
+    );
+    const sameOrigin = await handlers.handleRefreshRequest(
+      new Request("http://127.0.0.1:4173/api/refresh", {
+        method: "POST",
+        headers: {
+          origin: "http://127.0.0.1:4173",
+          "sec-fetch-site": "same-origin",
+          "x-daily-news-refresh": "1",
+        },
+      }),
+    );
+
+    expect(crossSite.status).toBe(401);
+    expect(sameOrigin.status).toBe(200);
+    expect(refresh).toHaveBeenCalledOnce();
   });
 
   it("marks an old bundled report stale instead of healthy", async () => {

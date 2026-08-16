@@ -87,7 +87,7 @@ curl http://127.0.0.1:4173/api/news
 curl http://127.0.0.1:4173/api/health
 ```
 
-`GET /api/news` 默认返回完整 `DailyNewsReport` V2、兼容 `items`，并增加 `latestStories` 与刷新元数据；旧 V2 会在读取时自动派生这些字段。普通读取使用 30 秒共享缓存，`view=web&reload=1` 使用 `no-store`，不再使用客户端时钟生成缓存参数。`servingMode`、`pipelineStatus`、`contentStatus` 分别表达服务来源、流水线健康和内容新鲜度；存在有效 last-known-good 时 `/api/news` 与 `/api/health` 均返回 200 并如实标记 degraded/stale，完全没有可服务报告时才返回 503。
+`GET /api/news` 默认返回完整 `DailyNewsReport` V2、兼容 `items`，并增加 `latestStories` 与刷新元数据；旧 V2 会在读取时自动派生这些字段。普通读取使用 30 秒共享缓存；仅紧凑视图允许 `view=web&reload=1`，该响应使用 `no-store`，并受短时服务端读取合并与每客户端限流保护。`servingMode`、`pipelineStatus`、`contentStatus` 分别表达服务来源、流水线健康和内容新鲜度；存在有效 last-known-good 时 `/api/news` 与 `/api/health` 均返回 200 并如实标记 degraded/stale，完全没有可服务报告时才返回 503。
 
 Supabase 首次部署顺序见 [发布计划](docs/planning/release-plan.md)：migration dry-run/push 后运行 `npm run bootstrap:supabase`，再配置 Vault 并安装 2 小时 cron。bootstrap 保留 bundled 报告原始时间，因此旧基准不会被标成 fresh。
 

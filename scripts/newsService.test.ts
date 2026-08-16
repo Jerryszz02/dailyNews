@@ -206,6 +206,59 @@ describe("generateDailyNewsReport", () => {
 });
 
 describe("collectNewsCandidates source outcomes", () => {
+  it("rejects an oversized source response before parsing it", async () => {
+    const source = testSource("oversized", "超大响应源");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html></html>", {
+      status: 200,
+      headers: { "content-length": String(3 * 1024 * 1024) },
+    })));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-08-16T00:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.items).toEqual([]);
+    expect(result.sourceOutcomes).toEqual([{
+      sourceId: source.source_id,
+      status: "failed",
+      discoveredCount: 0,
+      errorCode: "source_response_too_large",
+    }]);
+  });
+
+  it("stops reading a chunked source response at the byte limit", async () => {
+    const source = testSource("chunked-oversized", "分块超大响应源");
+    const chunk = new Uint8Array(1024 * 1024);
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(chunk);
+        controller.enqueue(chunk);
+        controller.enqueue(new Uint8Array([1]));
+        controller.close();
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status: 200 })));
+
+    const result = await collectNewsCandidates({
+      sources: [source],
+      useFirecrawlKeyless: false,
+      limitPerSection: 1,
+      now: new Date("2026-08-16T00:00:00.000Z"),
+      collectionBudgetMs: 3_000,
+      repairSummariesWithModel: false,
+    });
+
+    expect(result.sourceOutcomes[0]).toMatchObject({
+      status: "failed",
+      errorCode: "source_response_too_large",
+    });
+  });
+
   it("uses collision-resistant IDs for distinct URLs with the same legacy 32-bit hash", async () => {
     const source = structuredClone(newsSources.find((candidate) => candidate.source_id === "xinhua")!);
     source.sections = [{ ...source.sections[0], url: "https://www.news.cn/" }];
@@ -1627,6 +1680,43 @@ describe("translation helpers", () => {
     expect(body.thinking).toEqual({ type: "disabled" });
     expect(body.max_tokens).toBeGreaterThanOrEqual(600);
     expect(body.messages[0].content).toContain("JSON");
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("bounds translation input before sending it to the provider", async () => {
+    const config = { apiKey: "test-key", baseUrl: "https://api.deepseek.com", model: "deepseek-v4-flash" };
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse(JSON.stringify({ title: "中文标题", summary: "中文摘要" })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await translateNewsText({
+      title: "T".repeat(10_000),
+      summary: "S".repeat(50_000),
+      articleContext: "A".repeat(100_000),
+    }, config);
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const userMessage = body.messages[1].content as string;
+    expect(Buffer.byteLength(userMessage, "utf8")).toBeLessThanOrEqual(16 * 1024);
+  });
+
+  it("aborts the provider request when the collection deadline expires", async () => {
+    const config = { apiKey: "test-key", baseUrl: "https://api.deepseek.com", model: "deepseek-v4-flash" };
+    let requestSignal: AbortSignal | undefined;
+    vi.stubGlobal("fetch", vi.fn((_input, init) => {
+      const signal = init?.signal;
+      if (!(signal instanceof AbortSignal)) throw new Error("translation_abort_signal_missing");
+      requestSignal = signal;
+      return new Promise<Response>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+      });
+    }));
+
+    await expect(runWithinDeadline(
+      (signal) => translateNewsText({ title: "English title", summary: "English summary" }, config, signal),
+      Date.now() + 20,
+    )).rejects.toThrow("Collection deadline reached");
+
+    expect(requestSignal?.aborted).toBe(true);
   });
 
   it("translates non-Chinese news into Chinese display text", async () => {

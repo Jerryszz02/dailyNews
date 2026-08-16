@@ -20,7 +20,22 @@ function hostFromUrl(url: string): string | null {
   }
 }
 
+function secureSourceUrl(url: string): URL | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return null;
+    if (parsed.port && parsed.port !== "443") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export function defineApprovedSource(source: SourceDefinition): NewsSource {
+  const insecureSection = source.sections.find((section) => !secureSourceUrl(section.url));
+  if (insecureSection) {
+    throw new Error(`Approved source ${source.source_id} must use credential-free HTTPS section URLs`);
+  }
   const allowedHosts = Array.from(
     new Set(source.sections.map((section) => hostFromUrl(section.url)).filter((host): host is string => Boolean(host))),
   );
@@ -59,8 +74,9 @@ export function isCollectibleSource(source: NewsSource): boolean {
 
 export function isAllowedSourceUrl(source: NewsSource, url: string): boolean {
   if (source.admission !== "approved") return false;
-  const candidateHost = hostFromUrl(url);
-  if (!candidateHost) return false;
+  const candidateUrl = secureSourceUrl(url);
+  if (!candidateUrl) return false;
+  const candidateHost = normalizeHost(candidateUrl.hostname);
   const matchingAllowedHosts = source.allowedHosts
     .map(normalizeHost)
     .filter((allowedHost) => candidateHost === allowedHost || candidateHost.endsWith(`.${allowedHost}`));
@@ -72,7 +88,7 @@ export function isAllowedSourceUrl(source: NewsSource, url: string): boolean {
   if (!scopedAllowedHost) return true;
   const pathPrefixes = normalizedPathPrefixes.filter((prefix) => prefix.startsWith(`${scopedAllowedHost}/`));
   if (pathPrefixes.length === 0) return true;
-  const candidatePath = `${scopedAllowedHost}/${new URL(url).pathname.split("/").filter(Boolean).join("/")}`.toLowerCase();
+  const candidatePath = `${scopedAllowedHost}/${candidateUrl.pathname.split("/").filter(Boolean).join("/")}`.toLowerCase();
   return pathPrefixes.some((prefix) => {
     const normalizedPrefix = prefix.replace(/\/$/, "");
     return candidatePath === normalizedPrefix || candidatePath.startsWith(`${normalizedPrefix}/`);

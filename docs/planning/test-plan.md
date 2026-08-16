@@ -127,7 +127,7 @@ curl http://127.0.0.1:4173/api/news
 手动刷新：
 
 ```bash
-curl -X POST http://127.0.0.1:4173/api/refresh
+curl -X POST -H 'X-Daily-News-Refresh: 1' http://127.0.0.1:4173/api/refresh
 ```
 
 期望：
@@ -320,7 +320,7 @@ npm run build
 | D3 | degraded | Supabase 失败但 bundled 可读时 news 返回 200 + degraded/stale；health 返回非健康状态，不伪装 fresh |
 | D4 | unavailable | Supabase 与所有 fallback 均无报告时返回 503 + unavailable |
 | D5 | 时间真实性 | UI 分别显示报告生成、最新新闻、上次成功检查；页面读取时间不能冒充内容更新时间 |
-| D6 | 按钮语义 | 浏览器按钮只 GET `/api/news?view=web&reload=1`，浏览器响应为 `no-store`、边缘 TTL 为 5 秒，文案为“重新加载报告”，不从浏览器触发采集 |
+| D6 | 按钮语义 | 浏览器按钮只 GET `/api/news?view=web&reload=1`，浏览器响应为 `no-store`，服务端短时合并读取并按客户端限流；文案为“重新加载报告”，不从浏览器触发采集 |
 | D7 | 自动收敛 | 前端每 30 秒请求共享 compact `view=web&window` URL；API 从报告 A 变为 B 后，已打开页面在 60 秒内显示 B |
 | D8 | 响应式 | 桌面与 390px 下 stale banner、时间状态和报告内容无关键遮挡，新增文案为中文 |
 | D9 | 完整性门 | 每个 display_ready/degraded 候选恰好映射一个 story；最近 24 小时 story 进入 latest 的召回率 100%；内容年龄只改变 contentStatus，不阻断发布 |

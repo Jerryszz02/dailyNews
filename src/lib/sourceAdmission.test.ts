@@ -50,6 +50,30 @@ describe("source admission", () => {
     expect(isAllowedSourceUrl(source, "https://news.example.com.evil.test/story/1")).toBe(false);
   });
 
+  it("requires authenticated HTTPS URLs on the standard port", () => {
+    const source = defineApprovedSource({
+      source_id: "secure-example",
+      name: "Secure Example",
+      countryOrRegion: "global",
+      language: "en-US",
+      mediaType: "public",
+      defaultWeight: 1,
+      credibility: 80,
+      sections: [{
+        label: "News",
+        url: "https://news.example.com/",
+        categories: ["international"],
+        primaryCategory: "international",
+      }],
+      mayHavePaywall: false,
+      enabled: true,
+    });
+
+    expect(isAllowedSourceUrl(source, "http://news.example.com/story/1")).toBe(false);
+    expect(isAllowedSourceUrl(source, "https://user:pass@news.example.com/story/1")).toBe(false);
+    expect(isAllowedSourceUrl(source, "https://news.example.com:8443/story/1")).toBe(false);
+  });
+
   it("keeps publication admission independent from technical collection enablement", () => {
     const source = { ...newsSources[0], admission: "blocked" as const };
     expect(isApprovedSource(source)).toBe(false);

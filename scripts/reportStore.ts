@@ -126,7 +126,7 @@ export function validateReportInvariants(report: DailyNewsReport): string[] {
         errors.push("evidence_url_out_of_scope");
       }
       evidenceSourceIds.add(evidence.sourceId);
-      if (!isHttpUrl(evidence.url)) errors.push("invalid_story_url");
+      if (!isHttpsUrl(evidence.url)) errors.push("invalid_story_url");
       if (evidence.publishedAt) {
         const evidencePublishedAt = Date.parse(evidence.publishedAt);
         if (!Number.isFinite(evidencePublishedAt) || evidencePublishedAt > updatedAt) {
@@ -187,9 +187,10 @@ function visibleReportProjection(report: DailyNewsReport): unknown {
   };
 }
 
-function isHttpUrl(value: string): boolean {
+function isHttpsUrl(value: string): boolean {
   try {
-    return /^https?:$/.test(new URL(value).protocol);
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && (!url.port || url.port === "443");
   } catch {
     return false;
   }

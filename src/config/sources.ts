@@ -306,7 +306,7 @@ const configuredSources: SourceDefinition[] = [
     credibility: 66,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("影视", "http://news.mtime.com/", "entertainment", ["entertainment", "china", "society"], ["时光网 影视 新闻", "时光网 电影 电视"])],
+    sections: [section("影视", "https://news.mtime.com/", "entertainment", ["entertainment", "china", "society"], ["时光网 影视 新闻", "时光网 电影 电视"])],
   },
   {
     source_id: "reuters",

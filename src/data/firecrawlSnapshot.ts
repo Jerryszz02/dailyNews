@@ -159,7 +159,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
   {
     id: "firecrawl-people-invoice",
     title: "有奖发票，小激励激发大活力（财经观）",
-    url: "http://finance.people.com.cn/n1/2026/0629/c1004-40749146.html",
+    url: "https://finance.people.com.cn/n1/2026/0629/c1004-40749146.html",
     sourceId: "people",
     sourceName: "人民网",
     language: "zh-CN",
@@ -172,7 +172,7 @@ export const firecrawlSnapshotNews: RawNewsItem[] = [
   {
     id: "firecrawl-people-jingxian-culture",
     title: "泾县：以规划深耕墨园沃土 以存量赓续千年文脉",
-    url: "http://ah.people.com.cn/BIG5/n2/2026/0629/c374164-41624344.html",
+    url: "https://ah.people.com.cn/BIG5/n2/2026/0629/c374164-41624344.html",
     sourceId: "people",
     sourceName: "人民网",
     language: "zh-CN",
