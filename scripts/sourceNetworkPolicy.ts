@@ -50,19 +50,26 @@ export async function resolvePublicSourceAddress(
   hostname: string,
   resolver: SourceHostResolver = resolveAllAddresses,
 ): Promise<ResolvedAddress> {
+  return (await resolvePublicSourceAddresses(hostname, resolver))[0];
+}
+
+async function resolvePublicSourceAddresses(
+  hostname: string,
+  resolver: SourceHostResolver,
+): Promise<ResolvedAddress[]> {
   const addresses = await resolver(hostname);
   if (addresses.length === 0 || addresses.some(({ address }) => !isPublicSourceAddress(address))) {
     throw Object.assign(new Error("source_address_not_public"), { code: "SOURCE_ADDRESS_NOT_PUBLIC" });
   }
-  return addresses[0];
+  return addresses;
 }
 
 export function createPublicSourceLookup(resolver: SourceHostResolver = resolveAllAddresses) {
   return (hostname: string, options: { all?: boolean }, callback: SourceLookupCallback): void => {
-    void resolvePublicSourceAddress(hostname, resolver).then(
-      ({ address, family }) => {
-        if (options.all) callback(null, [{ address, family }]);
-        else callback(null, address, family);
+    void resolvePublicSourceAddresses(hostname, resolver).then(
+      (addresses) => {
+        if (options.all) callback(null, addresses);
+        else callback(null, addresses[0].address, addresses[0].family);
       },
       (error) => callback(error as Error, options.all ? [] : "", 0),
     );
