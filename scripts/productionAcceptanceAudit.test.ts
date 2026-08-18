@@ -1,6 +1,7 @@
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
+  connectReadOnly,
   minIsoTimestamp,
   summarizePublicReport,
   timestampMs,
@@ -210,5 +211,39 @@ describe("production acceptance LaunchAgent plist", () => {
 
     await expect(bootoutLaunchAgent("gui/501/example", runLaunchctl)).rejects.toBe(timeoutError);
     expect(runLaunchctl).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("production acceptance database connection", () => {
+  it("does not retry with certificate verification disabled", async () => {
+    const clientOptions: Array<Record<string, unknown>> = [];
+    class RejectingClient {
+      connection = { stream: { encrypted: false } };
+
+      constructor(options: Record<string, unknown>) {
+        clientOptions.push(options);
+      }
+
+      async connect(): Promise<void> {
+        throw Object.assign(new Error("self signed certificate in certificate chain"), {
+          code: "SELF_SIGNED_CERT_IN_CHAIN",
+        });
+      }
+
+      async end(): Promise<void> {}
+
+      async query(): Promise<{ rows: Array<Record<string, unknown>> }> {
+        return { rows: [] };
+      }
+    }
+
+    await expect(connectReadOnly(
+      { DATABASE_URL: "postgresql://postgres:secret@db.abcdefghij.supabase.co:5432/postgres" },
+      "abcdefghij",
+      RejectingClient,
+    )).rejects.toMatchObject({ code: "SELF_SIGNED_CERT_IN_CHAIN" });
+
+    expect(clientOptions).toHaveLength(1);
+    expect(clientOptions[0]?.ssl).toEqual({ rejectUnauthorized: true });
   });
 });

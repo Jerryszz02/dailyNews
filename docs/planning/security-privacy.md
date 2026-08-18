@@ -91,8 +91,8 @@
 | 项 | 当前状态 | 风险 |
 | --- | --- | --- |
 | 监听/部署 | 本地 `127.0.0.1`；生产 Vercel 公网 | 公开入口必须按 endpoint 分权 |
-| CORS | 当前 `*` | 只读报告可跨域；写/刷新路由仍依赖 bearer token，后续可收紧 origin |
-| `POST /api/refresh` | production 使用 `DAILY_NEWS_REFRESH_TOKEN` | 未配置 503，错误/缺失 401；仍需数据库租约防重入 |
+| CORS | 当前 `*` | 只读报告可跨域；persistent refresh 依赖 bearer token，本地 in-memory 例外要求同源与非简单请求头 |
+| `POST /api/refresh` | production 与 persistent store 使用 `DAILY_NEWS_REFRESH_TOKEN` | 未配置 503，错误/缺失 401；仍需数据库租约防重入 |
 | `GET /api/cron` | `CRON_SECRET` + Supabase lease | 只有调度器可触发；同一时间槽重试幂等 |
 | 错误信息 | 仅归一化 error code | 不返回 SQL、外部响应、连接字符串或 secret |
 | 持久化 | Supabase server-only tables | RLS + 无 anon/authenticated policy；快照和候选只保存公开最小元数据 |

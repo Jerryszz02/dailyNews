@@ -170,6 +170,23 @@ describe("last-known-good report store", () => {
     ]));
   });
 
+  it("rejects cleartext HTTP evidence at the publication boundary", () => {
+    const current = readBundledReport();
+    const invalid = {
+      ...current,
+      stories: current.stories.map((story, storyIndex) => storyIndex === 0
+        ? {
+            ...story,
+            evidence: story.evidence.map((evidence, evidenceIndex) => evidenceIndex === 0
+              ? { ...evidence, url: evidence.url.replace(/^https:/, "http:") }
+              : evidence),
+          }
+        : story),
+    };
+
+    expect(validateReportInvariants(invalid)).toContain("invalid_story_url");
+  });
+
   it("allows a fresh core event that is excluded by the publisher diversity limit", () => {
     const current = readBundledReport();
     const staleAt = new Date(Date.parse(current.generatedAt) - 121 * 60_000).toISOString();

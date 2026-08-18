@@ -176,6 +176,13 @@ describe("production acceptance rules", () => {
     });
   });
 
+  it("fails closed when the database certificate was not strictly verified", () => {
+    const audit = passingAudit();
+    audit.security.strictCert = false;
+
+    expect(evaluateSlotAudit(audit).failures).toContain("security_certificate_not_verified");
+  });
+
   it("rejects structural coverage gaps while allowing old curated content", () => {
     const audit = passingAudit();
     audit.durable[0].duration = 60.001;

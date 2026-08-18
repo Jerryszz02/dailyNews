@@ -225,14 +225,14 @@ interface ExternalModules {
   };
 }
 
-function loadExternalModules(nodeModules: string): ExternalModules {
-  const requireFromClient = createRequire(path.join(nodeModules, "package.json"));
-  const dotenv = requireFromClient("dotenv") as ExternalModules["dotenv"];
-  const { Client } = requireFromClient("pg") as { Client: ExternalModules["Client"] };
+function loadExternalModules(): ExternalModules {
+  const requireFromProject = createRequire(import.meta.url);
+  const dotenv = requireFromProject("dotenv") as ExternalModules["dotenv"];
+  const { Client } = requireFromProject("pg") as { Client: ExternalModules["Client"] };
   return { dotenv, Client };
 }
 
-async function connectReadOnly(
+export async function connectReadOnly(
   env: Record<string, string>,
   ref: string,
   Client: ExternalModules["Client"],
@@ -262,29 +262,6 @@ async function connectReadOnly(
       return { client: strictClient, strictCert: true };
     } catch (error) {
       await strictClient.end().catch(() => {});
-      lastCode = String((error as { code?: unknown })?.code ?? "CONNECT_ERROR");
-      const message = String((error as { message?: unknown })?.message ?? "");
-      const selfSigned =
-        lastCode === "SELF_SIGNED_CERT_IN_CHAIN" ||
-        message.includes("self signed certificate in certificate chain");
-      if (!selfSigned) continue;
-    }
-
-    const fallbackClient = new Client({
-      connectionString,
-      ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 6_000,
-      query_timeout: 15_000,
-      keepAlive: false,
-    });
-    try {
-      await fallbackClient.connect();
-      if (fallbackClient.connection?.stream?.encrypted !== true) {
-        throw Object.assign(new Error("TLS_REQUIRED"), { code: "TLS_REQUIRED" });
-      }
-      return { client: fallbackClient, strictCert: false };
-    } catch (error) {
-      await fallbackClient.end().catch(() => {});
       lastCode = String((error as { code?: unknown })?.code ?? "CONNECT_ERROR");
     }
   }
@@ -332,13 +309,12 @@ export interface CollectSlotAuditOptions {
   expectedDeployment: string;
   alias: string;
   envFile: string;
-  nodeModules: string;
   inspectedDeploymentId: string | null;
   includeRolling24h?: boolean;
 }
 
 export async function collectSlotAudit(options: CollectSlotAuditOptions): Promise<SlotAudit> {
-  const { dotenv, Client } = loadExternalModules(options.nodeModules);
+  const { dotenv, Client } = loadExternalModules();
   const env = dotenv.parse(fs.readFileSync(options.envFile));
   const supabaseUrl = new URL(env.SUPABASE_URL);
   const ref = supabaseUrl.hostname.split(".")[0];

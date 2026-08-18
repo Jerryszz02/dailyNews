@@ -117,7 +117,7 @@ src/config/sources.ts
 ### 安全
 
 - 浏览器不得读取 Firecrawl、翻译或刷新凭据。
-- Vercel 的 `POST /api/refresh` 需要 `DAILY_NEWS_REFRESH_TOKEN`；未配置返回 `503`，错误凭据返回 `401`。
+- Vercel 和任何 persistent store 的 `POST /api/refresh` 都需要 `DAILY_NEWS_REFRESH_TOKEN`；未配置返回 `503`，错误凭据返回 `401`。仅本地 in-memory store 保留显式同源开发例外，并要求 `X-Daily-News-Refresh: 1`。
 - 不绕过登录、付费墙或访客验证；只保存公开标题、摘要、时间、URL 和最小证据元数据。
 - `SUPABASE_SECRET_KEY`、`CRON_SECRET` 和 `DAILY_NEWS_REFRESH_TOKEN` 只存在于服务端环境；前端只接收公开报告和聚合健康字段。
 

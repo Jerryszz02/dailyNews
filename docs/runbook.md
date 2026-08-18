@@ -69,7 +69,7 @@ Production defaults to eleven due sources per run: nine normal rotation slots an
 
 `DAILY_NEWS_COLLECTION_BUDGET_MS` is the hard wall-clock deadline for one collection round. Production defaults to 45 seconds inside the 60-second function limit, leaving about 10 seconds for candidate paging, report construction and atomic commit. Firecrawl and direct source work run concurrently; each request is independently bounded to eight seconds. Sources that have not started before the deadline remain due for the next slot instead of being recorded as healthy empty.
 
-Set `DAILY_NEWS_REFRESH_TOKEN` on Vercel before enabling `POST /api/refresh`. Send it as `Authorization: Bearer <token>`. Do not put the token in browser code.
+Set `DAILY_NEWS_REFRESH_TOKEN` before enabling `POST /api/refresh` with persistent storage, including local Supabase development. Send it as `Authorization: Bearer <token>`. Do not put the token in browser code. The tokenless local exception is limited to the in-memory store and requires same-origin or non-browser access plus `X-Daily-News-Refresh: 1`.
 
 Set `SUPABASE_URL`, `SUPABASE_SECRET_KEY` and `CRON_SECRET` only in server-side environments. Never add `VITE_` to those names. Supabase Cron reads the production `/api/cron` URL and the same cron secret from Vault; migration files contain only the Vault secret names.
 
@@ -87,7 +87,7 @@ Expected behavior:
 - `/api/health` and `/api/news` return 200 whenever a structurally valid last-known-good exists, even when `pipelineStatus=degraded` or `contentStatus=stale`; 503 means no report is serviceable.
 - `/api/news` returns `version: 2`, non-empty `stories`, derived-or-stored `latestStories` and legacy `items` without waiting for external fetching.
 - Refresh metadata includes `servingMode`, `pipelineStatus`, `contentStatus`, `lastCheckedAt`, `lastFullSweepAt`, `lastPublishedAt` and `newestContentAt`.
-- Ordinary `/api/news?view=web` reads use a 30-second shared cache. Manual `/api/news?view=web&reload=1` reads are `no-store`; clients do not send clock-derived cache-window parameters.
+- Ordinary `/api/news?view=web` reads use a 30-second shared cache. Manual `/api/news?view=web&reload=1` reads are `no-store`, reuse a short server-side read window and are rate limited; full-report `reload=1` is rejected.
 - The frontend shows 今日必知、重要进展、持续关注、分类深读、搜索和偏好设置。
 
 ## Supabase Release
@@ -125,7 +125,7 @@ npm run monitor:production -- status --output .production-acceptance/current
 npm run monitor:production -- stop --output .production-acceptance/current
 ```
 
-The output directory is gitignored. `evidence.jsonl` is append-only; `state.json` and `summary.json` are atomically replaced after every audit; `final-report.json` appears only after the burn-in and all seven soak days pass. The production environment is pulled only into a random mode-600 file, the database transaction is read-only and rolled back, and the temporary PostgreSQL client is deleted when the monitor exits. Evidence contains public deployment/run/report IDs and non-sensitive aggregates only.
+The output directory is gitignored. `evidence.jsonl` is append-only; `state.json` and `summary.json` are atomically replaced after every audit; `final-report.json` appears only after the burn-in and all seven soak days pass. Run `npm ci` before starting so `pg`, `dotenv` and the Vercel CLI come from the reviewed lockfile. The production environment is pulled only into a random mode-600 file, the database connection requires strict certificate verification, and the transaction is read-only and rolled back. Evidence contains public deployment/run/report IDs and non-sensitive aggregates only.
 
 `stop` only terminates the local observer and unloads its LaunchAgent. It preserves the output directory and does not disable the independent Supabase Cron that calls `/api/cron` every two hours. Pause any separate Codex heartbeat independently if one was created for status reminders.
 

@@ -19,11 +19,11 @@ API 只负责读取或刷新已经生成的事件级报告。外部来源抓取�
 
 - 响应为 UTF-8 JSON。
 - 当前 CORS 为 `Access-Control-Allow-Origin: *`。
-- 成功 `/api/news` 保持 V2 兼容响应；网页使用 `view=web` 紧凑表示，在客户端水合回完整 V2。自动轮询固定请求 `/api/news?view=web` 并使用 30 秒 CDN 缓存；主动重载使用 `view=web&reload=1` 和 `no-store`。
+- 成功 `/api/news` 保持 V2 兼容响应；网页使用 `view=web` 紧凑表示，在客户端水合回完整 V2。自动轮询固定请求 `/api/news?view=web` 并使用 30 秒 CDN 缓存；主动重载仅允许 `view=web&reload=1`，使用 `no-store`、短时读取合并和每客户端限流。
 - `/api/health`、受保护 refresh/cron、错误与 unavailable 响应继续 `Cache-Control: no-store`；报告不包含用户个性化或敏感数据。
 - 公开错误只返回归一化信息，不返回外部响应正文、secret 或 translation 配置。
 
-`GET /api/news` 只接受可选且唯一的 `view=web` 和可选 `reload=1`；旧页面的整数 `window` 参数在兼容期被接受但不再校验客户端时钟。未知、重复或冲突参数在读取 durable storage 前返回 `400 + no-store`。
+`GET /api/news` 只接受可选且唯一的 `view=web` 和可选 `reload=1`；`reload=1` 必须与 `view=web` 同时使用，full reload 在读取 durable storage 前返回 `400 + no-store`。未知、重复或冲突参数同样提前拒绝。
 
 ## `GET /api/news`
 
@@ -105,7 +105,7 @@ interface DailyNewsReportV2 {
 
 ### 本地
 
-非 production、非 Vercel 环境允许无 token 手动刷新，便于开发。
+仅非 production、非 Vercel 的 in-memory store 允许无 token 手动刷新，并要求 `X-Daily-News-Refresh: 1`；浏览器请求还必须是 same-origin。local Supabase 等 persistent store 始终要求 token。
 
 ### Vercel / production
 
@@ -155,7 +155,7 @@ Authorization: Bearer <CRON_SECRET>
 
 - `GET /api/news` 不调用 `fetch`；
 - `GET /api/news?view=web` 在同一 30 秒缓存周期出现 MISS→HIT；health、错误和写入口仍为 `no-store`；
-- `GET /api/news?view=web&reload=1` 对浏览器返回 `no-store` 且同边缘 5 秒内复用；非法 cache query 在读取 durable storage 前返回 `400 + no-store`；
+- `GET /api/news?view=web&reload=1` 对浏览器返回 `no-store`，同实例短时复用 durable read 并按客户端限流；非法 cache query 在读取 durable storage 前返回 `400 + no-store`；
 - 冷启动立即返回非空 V2；
 - health 区分 report availability 和 refresh health；
 - 未配置/错误 refresh token 的状态码分别为 `503`/`401`；

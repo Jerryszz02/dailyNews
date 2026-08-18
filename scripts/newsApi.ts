@@ -24,6 +24,11 @@ const noStoreJsonHeaders = {
   "Content-Type": "application/json; charset=utf-8",
 };
 
+const publicReadCacheMs = 3_000;
+const reloadRateLimitWindowMs = 60_000;
+const reloadRateLimit = 6;
+const reloadRateLimitMaxClients = 1_024;
+
 export interface NewsApiDependencies {
   store?: NewsStore | null;
   bundledReport?: DailyNewsReport | null;
@@ -43,6 +48,23 @@ export function createNewsApiHandlers(dependencies: NewsApiDependencies = {}): N
   const bundledReport = dependencies.bundledReport === undefined ? readBundledReport() : dependencies.bundledReport;
   const now = dependencies.now ?? (() => new Date());
   const refresh = dependencies.refresh ?? runNewsRefresh;
+  let cachedRead: { expiresAt: number; value: Awaited<ReturnType<typeof readLatestWithFallback>> } | null = null;
+  let readInFlight: Promise<Awaited<ReturnType<typeof readLatestWithFallback>>> | null = null;
+  const reloadRequests = new Map<string, { windowStartedAt: number; count: number }>();
+
+  const readPublicState = async () => {
+    const requestedAt = now().getTime();
+    if (cachedRead && cachedRead.expiresAt > requestedAt) return cachedRead.value;
+    readInFlight ??= readLatestWithFallback(store, bundledReport).then((value) => {
+      if (!value.storageErrorCode) {
+        cachedRead = { expiresAt: now().getTime() + publicReadCacheMs, value };
+      }
+      return value;
+    }).finally(() => {
+      readInFlight = null;
+    });
+    return readInFlight;
+  };
 
   return {
     async handleNewsRequest(request) {
@@ -50,7 +72,13 @@ export function createNewsApiHandlers(dependencies: NewsApiDependencies = {}): N
       const requestedAt = now();
       const requestMode = newsRequestMode(request, requestedAt);
       if (!requestMode) return jsonResponse(400, { error: "Invalid news cache key" }, noStoreJsonHeaders);
-      const read = await readLatestWithFallback(store, bundledReport);
+      if (requestMode.cache === "reload" && !acceptReloadRequest(request, reloadRequests, requestedAt)) {
+        return jsonResponse(429, { error: "Too many reload requests" }, {
+          ...noStoreJsonHeaders,
+          "Retry-After": "60",
+        });
+      }
+      const read = await readPublicState();
       if (!read.latest) return jsonResponse(503, { error: "No published news report is available" }, noStoreJsonHeaders);
       const report = reportResponse(read.latest, read.state, read.storage, read.storageErrorCode, requestedAt);
       return jsonResponse(
@@ -62,7 +90,7 @@ export function createNewsApiHandlers(dependencies: NewsApiDependencies = {}): N
 
     async handleHealthRequest(request) {
       if (request.method !== "GET") return methodNotAllowed(["GET"]);
-      const read = await readLatestWithFallback(store, bundledReport);
+      const read = await readPublicState();
       const freshness = evaluateFreshness(
         {
           report: read.latest?.report,
@@ -113,7 +141,12 @@ export function createNewsApiHandlers(dependencies: NewsApiDependencies = {}): N
       if (process.env.VERCEL && !process.env.DAILY_NEWS_REFRESH_TOKEN) {
         return jsonResponse(503, { ok: false, error: "Refresh is not configured" }, noStoreJsonHeaders);
       }
-      if (!isRefreshAuthorized(request)) return jsonResponse(401, { ok: false, error: "Unauthorized" }, noStoreJsonHeaders);
+      if (!process.env.DAILY_NEWS_REFRESH_TOKEN && (store?.persistent || process.env.NODE_ENV === "production")) {
+        return jsonResponse(503, { ok: false, error: "Refresh is not configured" }, noStoreJsonHeaders);
+      }
+      if (!isRefreshAuthorized(request, store)) {
+        return jsonResponse(401, { ok: false, error: "Unauthorized" }, noStoreJsonHeaders);
+      }
       if (!store || (process.env.VERCEL && !hasCompleteSupabaseConfiguration())) {
         return jsonResponse(503, { ok: false, error: "Refresh storage is not configured" }, noStoreJsonHeaders);
       }
@@ -309,8 +342,29 @@ function newsRequestMode(request: Request, _now: Date): { cache: "shared" | "rel
   if (viewValue !== null && viewValue !== "web") return null;
   const view = viewValue === "web" ? "web" : "full";
   const reloadValue = searchParams.get("reload");
-  if (reloadValue !== null) return reloadValue === "1" ? { cache: "reload", view } : null;
+  if (reloadValue !== null) return reloadValue === "1" && view === "web" ? { cache: "reload", view } : null;
   return { cache: "shared", view };
+}
+
+function acceptReloadRequest(
+  request: Request,
+  requests: Map<string, { windowStartedAt: number; count: number }>,
+  requestedAt: Date,
+): boolean {
+  const forwardedFor = request.headers.get("x-vercel-forwarded-for") ?? request.headers.get("x-forwarded-for") ?? "unknown";
+  const client = forwardedFor.split(",", 1)[0]?.trim() || "unknown";
+  const timestamp = requestedAt.getTime();
+  const current = requests.get(client);
+  if (current && timestamp - current.windowStartedAt < reloadRateLimitWindowMs) {
+    if (current.count >= reloadRateLimit) return false;
+    current.count += 1;
+    return true;
+  }
+  if (!current && requests.size >= reloadRateLimitMaxClients) {
+    requests.delete(requests.keys().next().value ?? "");
+  }
+  requests.set(client, { windowStartedAt: timestamp, count: 1 });
+  return true;
 }
 
 function fullSweepTimestamp(state: NewsStoreState): string | null {
@@ -349,8 +403,12 @@ function coverageStatus(state: NewsStoreState, now: Date): "current" | "stale" |
     : "stale";
 }
 
-function isRefreshAuthorized(request: Request): boolean {
+function isRefreshAuthorized(request: Request, store: NewsStore | null): boolean {
   const token = process.env.DAILY_NEWS_REFRESH_TOKEN;
-  if (!token) return !process.env.VERCEL && process.env.NODE_ENV !== "production";
-  return request.headers.get("authorization") === `Bearer ${token}`;
+  if (token) return request.headers.get("authorization") === `Bearer ${token}`;
+  if (process.env.VERCEL || process.env.NODE_ENV === "production" || store?.persistent) return false;
+  if (request.headers.get("x-daily-news-refresh") !== "1") return false;
+  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
+  const origin = request.headers.get("origin");
+  return !origin || origin === new URL(request.url).origin;
 }
