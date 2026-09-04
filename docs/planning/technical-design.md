@@ -64,7 +64,7 @@ src/config/sources.ts
 | 采集服务 | `scripts/newsService.ts` | Firecrawl/直连、中文化、发布时间、域名归因、并发、总预算、新鲜度和 fallback |
 | 候选门槛 | `src/lib/curation.ts` | 只拒绝未知/越域来源、非法身份、导航和推广；翻译/摘要/日期不足进入 degraded |
 | 事件聚类 | `src/lib/dedupe.ts` | canonical URL、标题相似度、中文连续文本、时间窗和共享上下文聚类；唯一主分类 |
-| 信任与兼容排序 | `src/lib/trust.ts`, `src/lib/scoring.ts` | 保留兼容字段和解释；不得参与 visibility、tier 或 latest 排序 |
+| 信任与兼容排序 | `src/lib/trust.ts`, `src/lib/scoring.ts` | `shouldShow` 仅为兼容字段，不参与收录、tier 或排序；`trust.level` 参与事实状态判断，状态可影响持续关注层选择 |
 | 事件选题 | `src/lib/curation.ts` | evidence、independence group、status、event type、公共影响、四级 tier 和多样性选择 |
 | 报告管线 | `src/lib/newsPipeline.ts` | 输出 V2 `stories`、首页三层、sections、coverage、quality 和兼容 `items` |
 | 报告存储 | `scripts/newsStoreFactory.ts`, `scripts/supabaseNewsStore.ts`, `scripts/inMemoryNewsStore.ts`, `scripts/reportStore.ts` | 生产 durable state、本地内存适配、bundled 读取、V1→V2 升级和发布门槛 |

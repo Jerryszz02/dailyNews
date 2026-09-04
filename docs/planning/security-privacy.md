@@ -25,7 +25,7 @@
 | `scripts/newsService.ts` | `loadLocalEnv()` 读取 `.env.local` 和 `.env`；有 `DAILY_NEWS_TRANSLATION_API_KEY` 时使用 DeepSeek Flash 默认翻译配置 |
 | `scripts/newsServer.ts` | API 响应 `Access-Control-Allow-Origin: *`，本地服务监听 `127.0.0.1` |
 | `src/App.tsx` | 前端只 fetch `/api/news` 和 `/daily-news.json`，外链使用 `target="_blank"` 和 `rel="noreferrer"` |
-| `src/lib/sourceAdmission.ts`, `src/lib/trust.ts` | 来源在配置时统一准入；`trust` 只提供兼容评分和事实提示，`shouldShow` 恒为 true，不参与收录、分层或排序 |
+| `src/lib/sourceAdmission.ts`, `src/lib/trust.ts`, `src/lib/curation.ts` | 来源在配置时统一准入；`trust.shouldShow` 恒为 true 且仅为兼容字段，不参与收录、分层或排序；`trust.level` 会参与事实状态判断，`confirmed` 状态不会进入持续关注层 |
 
 ## 敏感数据和数据分级
 
