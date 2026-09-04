@@ -144,6 +144,7 @@ export function validateReportInvariants(report: DailyNewsReport): string[] {
     ...report.topStories,
     ...report.importantStories,
     ...report.watchlist,
+    ...(report.hotStories ?? []),
   ];
   if (selected.some((story) => !storyIds.has(story.id))) errors.push("dangling_story_reference");
   const storyById = new Map(report.stories.map((story) => [story.id, story]));
@@ -152,6 +153,12 @@ export function validateReportInvariants(report: DailyNewsReport): string[] {
   }
   if (report.sections.some((section) => section.storyIds.some((storyId) => !storyIds.has(storyId)))) {
     errors.push("dangling_section_reference");
+  }
+  if (report.dailyEdition?.storyIds.some((storyId) => !storyIds.has(storyId))) {
+    errors.push("dangling_daily_edition_reference");
+  }
+  if (report.dailyEdition?.sections.some((section) => section.storyIds.some((storyId) => !storyIds.has(storyId)))) {
+    errors.push("dangling_daily_edition_section_reference");
   }
   const expectedLatestIds = selectLatestStories(report.stories, new Date(report.generatedAt)).map((story) => story.id);
   const actualLatestIds = (report.latestStories ?? []).map((story) => story.id);
@@ -178,6 +185,8 @@ function visibleReportProjection(report: DailyNewsReport): unknown {
     topStoryIds: report.topStories.map((story) => story.id),
     importantStoryIds: report.importantStories.map((story) => story.id),
     watchlistIds: report.watchlist.map((story) => story.id),
+    hotStoryIds: report.hotStories?.map((story) => story.id),
+    dailyEdition: report.dailyEdition,
     sections: report.sections,
     coverage: report.coverage,
     quality: report.quality,
@@ -231,6 +240,7 @@ export function normalizeV2Report(report: DailyNewsReport): DailyNewsReport {
     topStories: resolveStories(report.topStories),
     importantStories: resolveStories(report.importantStories),
     watchlist: resolveStories(report.watchlist),
+    hotStories: report.hotStories ? resolveStories(report.hotStories) : undefined,
     quality: {
       ...report.quality,
       latestEventCount: latestStories.length,

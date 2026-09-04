@@ -22,7 +22,7 @@
 | `AGENTS.md` | 不粘贴 Firecrawl key 或 `.env.local` 值；Firecrawl/API key 使用 server-side；API 路由保持 server-only |
 | `README.md` | 翻译密钥只在 Node 服务端读取，前端不接触密钥 |
 | `docs/architecture.md` | 浏览器不读取 `.env`、`.env.local` 或翻译凭据 |
-| `scripts/newsService.ts` | `loadLocalEnv()` 读取 `.env.local` 和 `.env`；有 `DAILY_NEWS_TRANSLATION_API_KEY` 时使用 DeepSeek Flash 默认翻译配置 |
+| `scripts/newsService.ts`, `scripts/semanticDedupe.ts` | `loadLocalEnv()` 读取 `.env.local` 和 `.env`；翻译可使用 DeepSeek Flash 默认配置，语义去重还要求显式开启且只发送截断标题、摘要、分类和发布时间 |
 | `scripts/newsServer.ts` | API 响应 `Access-Control-Allow-Origin: *`，本地服务监听 `127.0.0.1` |
 | `src/App.tsx` | 前端只 fetch `/api/news` 和 `/daily-news.json`，外链使用 `target="_blank"` 和 `rel="noreferrer"` |
 | `src/lib/sourceAdmission.ts`, `src/lib/trust.ts`, `src/lib/curation.ts` | 来源在配置时统一准入；`trust.shouldShow` 恒为 true 且仅为兼容字段，不参与收录、分层或排序；`trust.level` 会参与事实状态判断，`confirmed` 状态不会进入持续关注层 |
@@ -34,6 +34,8 @@
 | `DAILY_NEWS_TRANSLATION_API_KEY` | secret | 只应存在本地环境变量或 `.env.local`；Node 侧读取；不能提交或粘贴 |
 | `DAILY_NEWS_TRANSLATION_BASE_URL` | 配置 | 可指向本地或云端 OpenAI-compatible 服务；不包含密钥时可公开说明 |
 | `DAILY_NEWS_TRANSLATION_MODEL` | 配置 | 模型名不是 secret，但可能暴露供应商选择 |
+| `DAILY_NEWS_LLM_DEDUPE_ENABLED` | 配置 | 默认关闭；设为 true 才允许把灰区候选对发送给已配置模型 |
+| `DAILY_NEWS_LLM_DEDUPE_MAX_CALLS_PER_REFRESH` | 配置 | 每轮模型调用硬上限，默认 12；用于控制成本和供应商暴露面 |
 | `.env.local`, `.env` | 本地配置 | 不应提交或写入文档正文 |
 | Firecrawl key | 当前项目不要求 | 代码使用 keyless；若未来引入 key，必须只留在 server-side |
 | 新闻标题、摘要、来源、URL | 公开内容 | 可写入 `public/daily-news.json`，但要避免夹带 private token 或非公开内容 |
@@ -50,6 +52,7 @@
 | 浏览器 <-> Node API | 浏览器只消费生成后的报告，不直接抓取 Firecrawl 或翻译服务 |
 | Node API <-> 外部新闻来源 | Node 可以访问公开新闻网页/feed；失败应跳过而非泄露内部错误给页面 |
 | Node API <-> 翻译服务 | 只有 Node 读取翻译配置；无密钥或翻译失败时保留原文并标记 `translationStatus: pending` |
+| Node API <-> 语义去重模型 | 默认无调用；开启后只发送公开且截断的标题、摘要、分类和发布时间，不发送 URL、凭据、内部错误或用户数据；失败时不合并 |
 | Node API <-> Supabase | 只有服务端 secret client 经 Data API/RPC 访问；浏览器不持有 publishable 或 secret key |
 | Supabase Cron <-> Node API | `pg_net` 从 Vault 读取 URL/secret，调用受保护 GET；迁移只保存 Vault secret 名称 |
 | 生成产物 <-> 源数据 | `public/daily-news.json` 是公开生成产物，不是 secrets 或编辑源 |

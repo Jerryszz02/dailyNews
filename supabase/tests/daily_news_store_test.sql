@@ -1186,20 +1186,20 @@ select is(
 );
 
 update daily_news.source_state
-set last_attempt_at = clock_timestamp() - interval '11 hours'
+set last_attempt_at = clock_timestamp() - interval '3 hours'
 where source_id = 'source-a';
 select is(
   (select recently_attempted_source_count from public.daily_news_read_latest()),
   (select enabled_source_count from public.daily_news_read_latest()),
-  'the cost-control coverage window includes a full rotation plus one scheduler slot'
+  'the full-source coverage window includes one delayed scheduler slot'
 );
 update daily_news.source_state
-set last_attempt_at = clock_timestamp() - interval '13 hours'
+set last_attempt_at = clock_timestamp() - interval '5 hours'
 where source_id = 'source-a';
 select is(
   (select recently_attempted_source_count from public.daily_news_read_latest()),
   (select enabled_source_count - 1 from public.daily_news_read_latest()),
-  'the cost-control coverage window excludes a source older than twelve hours'
+  'the full-source coverage window excludes a source older than four hours'
 );
 
 update daily_news.runtime_state

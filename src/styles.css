@@ -888,6 +888,21 @@ select {
   padding: 2px 7px;
 }
 
+.event-meta .heat-badge {
+  background: #fff0e8;
+  border: 1px solid #efb28e;
+  border-radius: 999px;
+  color: #a54818;
+  font-weight: 800;
+  padding: 2px 7px;
+}
+
+.event-meta .heat-badge.surging {
+  background: #ffe8e8;
+  border-color: #ed9e9e;
+  color: #a32626;
+}
+
 .event-status {
   border: 1px solid #c8dce3;
   border-radius: 999px;
@@ -969,6 +984,21 @@ select {
 .event-explanation {
   background: #edf8fa;
   color: #22677a;
+}
+
+.selection-reason {
+  color: #4c6570;
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 8px 2px 0;
+}
+
+.daily-edition-section {
+  border-color: #badfe5;
+}
+
+.hot-news-section {
+  border-color: #ebcfb8;
 }
 
 .event-next {

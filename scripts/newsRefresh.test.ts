@@ -11,21 +11,37 @@ import {
   defaultServerlessMaxSources,
   hashReportContent,
   mergeRefreshCandidates,
+  preservePublishedDailyEdition,
   runNewsRefresh,
 } from "./newsRefresh";
-import type { NewsCollectionOptions, NewsCollectionResult } from "./newsService";
+import { defaultRefreshIntervalMinutes, type NewsCollectionOptions, type NewsCollectionResult } from "./newsService";
 import { expandLegacyItems, readBundledReport } from "./reportStore";
 
 describe("durable news refresh", () => {
+  it("keeps a non-empty daily edition immutable within the same 08:00 cutoff", () => {
+    const now = new Date("2026-07-15T00:00:00.000Z");
+    const original = buildDailyReport(recentCandidates(now, "首版日报事件"), defaultPreferences, now);
+    const later = buildDailyReport(
+      recentCandidates(new Date(now.getTime() + 60 * 60_000), "稍后发现的日报事件"),
+      defaultPreferences,
+      new Date(now.getTime() + 60 * 60_000),
+    );
+    expect(original.dailyEdition?.id).toBe(later.dailyEdition?.id);
+
+    const preserved = preservePublishedDailyEdition(later, original);
+
+    expect(preserved.dailyEdition).toEqual(original.dailyEdition);
+  });
+
   it.each([
     ["the production default", undefined, 45_000],
     ["an explicit override", 9_000, 9_000],
-  ])("forwards %s collection budget while reserving retry slots", async (_label, override, expected) => {
+  ])("forwards %s collection budget while planning the full configured source cohort", async (_label, override, expected) => {
     const initial = readBundledReport();
     const now = new Date("2026-07-15T23:45:00.000Z");
     const store = new InMemoryNewsStore(initial, () => now);
     const readRecentCandidates = vi.spyOn(store, "readRecentCandidates");
-    const sources = newsSources.filter((source) => source.enabled).slice(0, 11);
+    const sources = newsSources.filter((source) => source.enabled).slice(0, 15);
     const collect = vi.fn(async (_options: NewsCollectionOptions): Promise<NewsCollectionResult> => ({
       items: [],
       mode: "No live data",
@@ -59,7 +75,7 @@ describe("durable news refresh", () => {
 
     expect(collect).toHaveBeenCalledOnce();
     expect(collect.mock.calls[0]?.[0]).toMatchObject({
-      maxSources: 11,
+      maxSources: 15,
       collectionBudgetMs: expected,
     });
     expect(readRecentCandidates).toHaveBeenCalledWith(expect.any(String));
@@ -472,7 +488,7 @@ describe("durable news refresh", () => {
     expect(syncSources).toHaveBeenCalledOnce();
   });
 
-  it("retries pending translations every cron tick even when no source is due", async () => {
+  it("retries pending translations while still attempting every source on each cron tick", async () => {
     const initial = readBundledReport();
     const now = new Date("2026-08-03T00:00:00.000Z");
     const scheduledAt = new Date(now.getTime() + 5 * 60_000);
@@ -565,7 +581,7 @@ describe("durable news refresh", () => {
       );
       const latest = (await store.readState()).latest?.report;
 
-      expect(collect).not.toHaveBeenCalled();
+      expect(collect).toHaveBeenCalledOnce();
       expect(result.status).toBe("published");
       expect(latest?.stories).toHaveLength(2);
       const translatedStory = latest?.stories.find((story) =>
@@ -590,7 +606,7 @@ describe("durable news refresh", () => {
     }
   });
 
-  it("selects a source that becomes due while refresh setup is running", async () => {
+  it("attempts a source regardless of its due timestamp and schedules the next full refresh", async () => {
     const initial = readBundledReport();
     const previousAttemptAt = new Date("2026-07-15T08:30:01.518Z");
     const scheduledAt = new Date("2026-07-15T10:00:01.514Z");
@@ -650,10 +666,10 @@ describe("durable news refresh", () => {
     expect(result.selectedSourceIds).toEqual([source.source_id]);
     const sourceState = (await store.readState()).sources[0];
     expect(sourceState?.lastAttemptAt).toBe(scheduledAt.toISOString());
-    expect(sourceState?.nextDueAt).toBe(new Date(scheduledAt.getTime() + 30 * 60_000).toISOString());
+    expect(sourceState?.nextDueAt).toBe(new Date(scheduledAt.getTime() + defaultRefreshIntervalMinutes * 60_000).toISOString());
   });
 
-  it("attempts a source at 30 minutes after replacing a legacy 90-minute interval", async () => {
+  it("replaces a legacy source interval with the two-hour full-refresh interval", async () => {
     const initial = readBundledReport();
     const previousAttemptAt = new Date("2026-07-15T08:00:00.000Z");
     const scheduledAt = new Date("2026-07-15T08:30:00.000Z");
@@ -703,9 +719,9 @@ describe("durable news refresh", () => {
     expect(result.selectedSourceIds).toEqual([source.source_id]);
     expect(collect).toHaveBeenCalledOnce();
     expect((await store.readState()).sources[0]).toMatchObject({
-      intervalMinutes: defaultSourceIntervalMinutes,
+      intervalMinutes: defaultRefreshIntervalMinutes,
       lastAttemptAt: scheduledAt.toISOString(),
-      nextDueAt: new Date(scheduledAt.getTime() + defaultSourceIntervalMinutes * 60_000).toISOString(),
+      nextDueAt: new Date(scheduledAt.getTime() + defaultRefreshIntervalMinutes * 60_000).toISOString(),
     });
   });
 
@@ -990,6 +1006,7 @@ describe("durable news refresh", () => {
       topStories: freshReport.topStories.map((story) => storyById.get(story.id)!),
       importantStories: [],
       watchlist: [],
+      hotStories: freshReport.hotStories?.map((story) => storyById.get(story.id)!),
       quality: { ...freshReport.quality, latestEventCount: latestStories.length },
     };
 

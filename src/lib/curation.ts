@@ -2,6 +2,7 @@ import { newsSources } from "../config/sources.js";
 import type {
   Category,
   CoverageSummary,
+  DailyEdition,
   EventType,
   ImportanceFeatures,
   ImportanceTier,
@@ -10,6 +11,7 @@ import type {
   RawNewsItem,
   StoryCard,
   StoryEvidence,
+  StoryHeat,
   StorySection,
   StoryStatus,
 } from "../types";
@@ -60,6 +62,8 @@ export interface CurationFields {
   topStories: StoryCard[];
   importantStories: StoryCard[];
   watchlist: StoryCard[];
+  hotStories: StoryCard[];
+  dailyEdition: DailyEdition;
   sections: StorySection[];
   coverage: CoverageSummary;
   quality: PublicQualitySummary;
@@ -101,7 +105,7 @@ export function buildCurationFields(
   rejectionReasons: Record<string, number>,
   now: Date,
 ): CurationFields {
-  const stories = rankedItems.map((item) => toStoryCard(item, rawItems, now));
+  const stories = attachHeat(rankedItems.map((item) => toStoryCard(item, rawItems, now)), now);
   const latestStories = selectLatestStories(stories, now);
   const corePublisherCounts = new Map<string, number>();
   const topStories = selectDiverse(
@@ -142,9 +146,23 @@ export function buildCurationFields(
       { maxAgeMinutes: currentCoreWindowMinutes, slots: 8 },
     ],
   );
-  const sections = buildSections(stories);
-  const singleSourceCount = stories.filter((story) => independentSourceCount(story) <= 1).length;
-  const coreStories = [...topStories, ...importantStories];
+  const selectionReasons = new Map<string, StoryCard["selection"]>();
+  topStories.forEach((story) => selectionReasons.set(story.id, selectionFor(story, "今日必知")));
+  importantStories.forEach((story) => selectionReasons.set(story.id, selectionFor(story, "重要进展")));
+  const annotatedStories = stories.map((story) => {
+    const selection = selectionReasons.get(story.id);
+    return selection ? { ...story, selection } : story;
+  });
+  const annotatedById = new Map(annotatedStories.map((story) => [story.id, story]));
+  const resolvedLatestStories = latestStories.map((story) => annotatedById.get(story.id)!);
+  const resolvedTopStories = topStories.map((story) => annotatedById.get(story.id)!);
+  const resolvedImportantStories = importantStories.map((story) => annotatedById.get(story.id)!);
+  const resolvedWatchlist = watchlist.map((story) => annotatedById.get(story.id)!);
+  const hotStories = selectHotStories(annotatedStories, now);
+  const dailyEdition = buildDailyEdition(annotatedStories, now);
+  const sections = buildSections(annotatedStories);
+  const singleSourceCount = annotatedStories.filter((story) => independentSourceCount(story) <= 1).length;
+  const coreStories = [...resolvedTopStories, ...resolvedImportantStories];
   const publisherCounts = new Map<string, number>();
   for (const story of coreStories) {
     const publisher = story.evidence[0]?.sourceId ?? "unknown";
@@ -154,29 +172,179 @@ export function buildCurationFields(
 
   return {
     window: reportWindow(rawItems, now),
-    stories,
-    latestStories,
-    topStories,
-    importantStories,
-    watchlist,
+    stories: annotatedStories,
+    latestStories: resolvedLatestStories,
+    topStories: resolvedTopStories,
+    importantStories: resolvedImportantStories,
+    watchlist: resolvedWatchlist,
+    hotStories,
+    dailyEdition,
     sections,
-    coverage: buildCoverage(rawItems, stories, sections),
+    coverage: buildCoverage(rawItems, annotatedStories, sections),
     quality: {
       candidateCount: rawItems.length + sumValues(rejectionReasons),
       acceptedCandidateCount: rawItems.length,
       rejectedCandidateCount: sumValues(rejectionReasons),
-      eventCount: stories.length,
-      selectedEventCount: stories.length,
-      duplicateEventRate: ratio(rawItems.length - stories.length, rawItems.length),
-      singleSourceShare: ratio(singleSourceCount, stories.length),
-      singleIndependentSourceEventShare: ratio(singleSourceCount, stories.length),
+      eventCount: annotatedStories.length,
+      selectedEventCount: annotatedStories.length,
+      duplicateEventRate: ratio(rawItems.length - annotatedStories.length, rawItems.length),
+      singleSourceShare: ratio(singleSourceCount, annotatedStories.length),
+      singleIndependentSourceEventShare: ratio(singleSourceCount, annotatedStories.length),
       maxPrimaryPublisherShare: ratio(Math.max(0, ...publisherCounts.values()), coreStories.length),
       weaklySourcedCoreShare: ratio(weaklySourcedCoreCount, coreStories.length),
       rejectionReasons,
       latestEventCount: latestStories.length,
-      unmappedCandidateCount: countUnmappedCandidates(rawItems, stories),
+      unmappedCandidateCount: countUnmappedCandidates(rawItems, annotatedStories),
     },
   };
+}
+
+function selectionFor(story: StoryCard, section: "今日必知" | "重要进展"): NonNullable<StoryCard["selection"]> {
+  const criteria = [
+    `公共影响 ${story.importance.publicImpact}/100`,
+    `时效 ${story.importance.urgency}/100`,
+    `${story.evidence.length} 条证据`,
+    story.status === "confirmed" ? "事实已确认" : "事实仍在发展",
+  ];
+  return {
+    selected: true,
+    reason: `${section}：${story.whyItMatters}`,
+    criteria,
+  };
+}
+
+function attachHeat(stories: StoryCard[], now: Date): StoryCard[] {
+  return stories.map((story) => ({ ...story, heat: storyHeat(story, now) }));
+}
+
+function storyHeat(story: StoryCard, now: Date): StoryHeat {
+  const roleWeight: Record<StoryEvidence["role"], number> = {
+    original: 1,
+    confirmation: 0.9,
+    context: 0.65,
+    analysis: 0.5,
+    lead: 0.25,
+  };
+  const newestPerIndependentSource = new Map<string, StoryEvidence>();
+  for (const evidence of story.evidence) {
+    const current = newestPerIndependentSource.get(evidence.independenceGroup);
+    if (!current || evidenceTimestamp(evidence) > evidenceTimestamp(current)) {
+      newestPerIndependentSource.set(evidence.independenceGroup, evidence);
+    }
+  }
+  const evidenceSignals = [...newestPerIndependentSource.values()];
+  const weightedSignals = evidenceSignals.reduce((total, evidence) => {
+    const ageHours = Math.max(0, (now.getTime() - evidenceTimestamp(evidence)) / 3_600_000);
+    return total + roleWeight[evidence.role] * Math.pow(0.5, ageHours / 24);
+  }, 0);
+  const recentSignals = evidenceSignals.filter((evidence) => now.getTime() - evidenceTimestamp(evidence) <= 3 * 3_600_000).length;
+  const earlierSignals = evidenceSignals.filter((evidence) => {
+    const age = now.getTime() - evidenceTimestamp(evidence);
+    return age > 3 * 3_600_000 && age <= 24 * 3_600_000;
+  }).length;
+  const discussionSignals = evidenceSignals.filter((evidence) => evidence.role === "lead").length;
+  const evidenceScore = clamp((1 - Math.exp(-weightedSignals / 1.8)) * 100);
+  const velocityScore = clamp((recentSignals / Math.max(1, earlierSignals + 1)) * 45);
+  const discussionScore = clamp((1 - Math.exp(-discussionSignals / 2)) * 100);
+  const score = clamp(evidenceScore * 0.55 + velocityScore * 0.3 + discussionScore * 0.15);
+  const newestAgeHours = Math.max(0, (now.getTime() - storyActivityTimestamp(story)) / 3_600_000);
+  const trend = velocityScore >= 65 && recentSignals >= 3
+    ? "surging"
+    : velocityScore >= 35 && recentSignals >= 2
+      ? "rising"
+      : newestAgeHours <= 2
+        ? "new"
+        : "steady";
+
+  return {
+    score,
+    evidenceScore,
+    velocityScore,
+    discussionScore,
+    trend,
+    coverageConfidence:
+      story.timeStatus === "estimated" || story.evidence.some((evidence) => !evidence.publishedAt)
+        ? "limited"
+        : "verified",
+  };
+}
+
+function evidenceTimestamp(evidence: StoryEvidence): number {
+  const timestamp = Date.parse(evidence.publishedAt ?? "");
+  return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
+}
+
+function selectHotStories(stories: StoryCard[], now: Date): StoryCard[] {
+  return stories
+    .filter((story) => {
+      const ageMs = now.getTime() - storyActivityTimestamp(story);
+      return ageMs >= 0 && ageMs <= 48 * 3_600_000 && (story.heat?.score ?? 0) >= 30;
+    })
+    .sort((left, right) => {
+      const heatDelta = (right.heat?.score ?? 0) - (left.heat?.score ?? 0);
+      return heatDelta || storyActivityTimestamp(right) - storyActivityTimestamp(left);
+    })
+    .slice(0, 20);
+}
+
+function buildDailyEdition(stories: StoryCard[], now: Date): DailyEdition {
+  const cutoffAt = latestChinaMorningCutoff(now);
+  const from = new Date(cutoffAt.getTime() - 24 * 3_600_000);
+  const candidates = stories
+    .filter((story) => {
+      const timestamp = storyActivityTimestamp(story);
+      return timestamp >= from.getTime() && timestamp < cutoffAt.getTime() && story.tier !== "noise";
+    })
+    .sort((left, right) => {
+      const importanceDelta = right.importance.total - left.importance.total;
+      return importanceDelta || storyActivityTimestamp(right) - storyActivityTimestamp(left);
+    });
+  const selected: StoryCard[] = [];
+  const selectedIds = new Set<string>();
+  for (const beat of allBeats) {
+    const story = candidates.find((candidate) => candidate.primaryBeat === beat && !selectedIds.has(candidate.id));
+    if (!story) continue;
+    selected.push(story);
+    selectedIds.add(story.id);
+  }
+  for (const story of candidates) {
+    if (selected.length >= 24) break;
+    if (selectedIds.has(story.id)) continue;
+    selected.push(story);
+    selectedIds.add(story.id);
+  }
+  const ordered = selected.sort((left, right) => storyActivityTimestamp(right) - storyActivityTimestamp(left));
+  const editionDate = chinaDateKey(cutoffAt);
+  return {
+    id: `daily-${editionDate}`,
+    editionDate,
+    generatedAt: cutoffAt.toISOString(),
+    cutoffAt: cutoffAt.toISOString(),
+    window: { from: from.toISOString(), to: cutoffAt.toISOString() },
+    storyIds: ordered.map((story) => story.id),
+    sections: allBeats.map((beat) => ({
+      beat,
+      storyIds: ordered.filter((story) => story.primaryBeat === beat).map((story) => story.id),
+    })),
+    readTimeMinutes: Math.ceil(ordered.length * 1.2),
+  };
+}
+
+function latestChinaMorningCutoff(now: Date): Date {
+  const chinaOffsetMs = 8 * 3_600_000;
+  const chinaNow = new Date(now.getTime() + chinaOffsetMs);
+  let cutoffMs = Date.UTC(chinaNow.getUTCFullYear(), chinaNow.getUTCMonth(), chinaNow.getUTCDate(), 0, 0, 0, 0);
+  if (now.getTime() < cutoffMs) cutoffMs -= 24 * 3_600_000;
+  return new Date(cutoffMs);
+}
+
+function chinaDateKey(cutoffAt: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(cutoffAt);
 }
 
 function candidateRejectionReason(item: RawNewsItem): string | undefined {
@@ -262,13 +430,13 @@ function toEvidence(item: RawNewsItem): StoryEvidence {
     title: item.title,
     publishedAt: item.publishedAt,
     role:
-      source?.mediaType === "official"
+      source?.signalRole === "first_party"
         ? "original"
-        : source?.mediaType === "wire"
+        : source?.signalRole === "reporting"
           ? "confirmation"
-          : source?.mediaType === "social"
+          : source?.signalRole === "discussion"
             ? "lead"
-            : source?.mediaType === "technology" || source?.mediaType === "business"
+            : source?.signalRole === "analysis"
               ? "analysis"
               : "context",
     independenceGroup: hostnameFromUrl(item.url).replace(/^www\./, "") || item.sourceId,

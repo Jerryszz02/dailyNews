@@ -4,13 +4,13 @@
 
 ## 目标
 
-在现有 Supabase 持久运行态上保持完整性优先行为，同时把后台改为每 2 小时检查一批来源、约 10 小时完成全轮，以控制 Vercel Fluid Active CPU，并在局部失败、冷启动和内容静默时继续返回真实 last-known-good。
+在现有 Supabase 持久运行态上保持完整性优先行为，同时让后台每 2 小时在同一轮计划全部启用来源，以有限并发控制 Vercel Fluid Active CPU，并在局部失败、冷启动和内容静默时继续返回真实 last-known-good。
 
 ## 发布前提
 
 - 数据模型、RPC、RLS 与 pgTAP 通过 [database-design.md](database-design.md) 和 [test-plan.md](test-plan.md) 的上线门；
 - `GET /api/news` 不抓取新闻源，`GET /api/cron` 与 `POST /api/refresh` 共用唯一刷新 orchestrator；
-- 动态 enabled source 在持久 due-state 驱动下约 10 小时完成轮转；partial/failed 来源优先重试但不能饿死正常来源；
+- 动态 enabled source 每轮全部进入计划；due-state 和 partial/failed 只用于诊断，不能抑制下一轮采集；
 - 旧 fallback 不改写 `reportId`、`generatedAt`、`lastSuccessAt`；
 - 所有用户可见状态和错误为中文且不含 secret。
 
@@ -54,7 +54,7 @@
 
 ### 3. 手动刷新与调度接管
 
-1. 使用受保护 endpoint 手动运行至少两轮，确认来源组发生轮转，第二份报告输入包含两轮候选；
+1. 使用受保护 endpoint 手动运行至少两轮，确认每轮 `planned_source_ids` 都等于完整启用来源集合，第二份报告输入保留两轮候选；
 2. 查询 durable run/source/latest，确认无双 latest、无旧时间重盖、无敏感错误；
 3. 将生产 URL 与 `CRON_SECRET` 写入 Supabase Vault；
 4. 启用 2 小时 Supabase Cron，观察至少三个真实时间槽和一次受控重复/并发调用；每个时槽同时核对 pg_net HTTP 与 durable refresh run，不能只看 Cron 入队成功；

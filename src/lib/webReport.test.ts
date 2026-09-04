@@ -24,7 +24,10 @@ describe("web report representation", () => {
     expect(compact).not.toHaveProperty("topStories");
     expect(hydrated.stories.map((story) => story.id)).toEqual(full.stories.map((story) => story.id));
     expect(compact.latestStoryIds).toEqual(full.latestStories?.map((story) => story.id));
+    expect(compact.hotStoryIds).toEqual(full.hotStories?.map((story) => story.id));
     expect(hydrated.latestStories?.map((story) => story.id)).toEqual(full.latestStories?.map((story) => story.id));
+    expect(hydrated.hotStories?.map((story) => story.id)).toEqual(full.hotStories?.map((story) => story.id));
+    expect(hydrated.dailyEdition).toEqual(full.dailyEdition);
     expect(hydrated.topStories.map((story) => story.id)).toEqual(full.topStories.map((story) => story.id));
     expect(hydrated.importantStories.map((story) => story.id)).toEqual(full.importantStories.map((story) => story.id));
     expect(hydrated.watchlist.map((story) => story.id)).toEqual(full.watchlist.map((story) => story.id));

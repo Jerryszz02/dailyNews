@@ -47,8 +47,8 @@ GitHub Actions 在 pull request 与 main push 上强制运行两个 job：`app-t
 
 | 代表文件 | 覆盖点 |
 | --- | --- |
-| `src/lib/*.test.ts`, `src/App.test.ts` | 选题、排序、来源覆盖、freshness、compact web report、客户端缓存 URL 和 fallback |
-| `scripts/newsService.test.ts`, `scripts/reportStore.test.ts` | 采集 deadline、来源 outcome、日期/摘要处理、发布绝对/相对门槛 |
+| `src/lib/*.test.ts`, `src/App.test.ts` | 选题、排序、全来源计划、来源角色、热点、08:00 日报、freshness、compact web report、客户端缓存 URL 和 fallback |
+| `scripts/newsService.test.ts`, `scripts/semanticDedupe.test.ts`, `scripts/reportStore.test.ts` | 采集 deadline、来源 outcome、LLM 灰区与调用上限、日期/摘要处理、报告引用不变量 |
 | `scripts/newsRefresh.test.ts`, `scripts/newsApi.test.ts` | durable 刷新、鉴权、API cache/query、fresh/stale/degraded 与原子发布 |
 | `scripts/newsStore.contract.test.ts`, `scripts/supabaseNewsStore.test.ts` | InMemory/Supabase contract、fencing、RPC 映射和重试边界 |
 | `scripts/productionAcceptanceRules.test.ts` | burn-in/soak 槽判定、失败重置和 deployment 连续性 |
@@ -188,15 +188,18 @@ http://127.0.0.1:5173/
 
 ## 性能和数据质量检查
 
-目标实现使用 45 秒采集预算、2 小时调度、约 10 小时全来源轮转、V2 `coverage`/`quality` 摘要和结构不变量发布门。必须检查：
+目标实现使用 45 秒采集预算、2 小时全来源调度、默认 24 并发、V2 `coverage`/`quality` 摘要和结构不变量发布门。必须检查：
 
 - 单个来源失败不应阻断其他来源 outcome；整轮没有足够实时结果时不得发布；
+- 每个生产 refresh 的 `planned_source_ids` 必须等于当时完整 `enabled && approved` 注册表，不能受 `next_due_at`、失败状态或旧的 11 源上限影响；
 - API 刷新时日志应能说明使用 `Firecrawl keyless`、`Direct source fetch` 或混合采集；生产候选池不得混入 snapshot；
 - 报告 `sourceCount` 应合理反映启用来源覆盖；
 - 新闻 URL 不应重复；
 - `items` 中不应缺少 `trust` 或 `primaryCategory`。
 - 每个有效候选恰好映射一个 story，最近 24 小时 story 全部进入 latest；
 - 候选窗口不得静默截断，局部来源失败不得阻断其它新闻发布。
+- 热点只使用真实新闻/证据时间，缺发布时间必须标记 `coverageConfidence=limited`；热度不能改变重要性 tier。
+- 同一日报 edition 的 story 引用必须稳定且全部可解析，十个 section 都存在，空分类不填充低价值事件。
 
 ## V2 重构验证计划与状态
 
@@ -298,15 +301,15 @@ npm run build
 | B6 | 质量失败 | rejected/failed run 不切换 latest，不把 bundled/fallback 重新盖当前时间 |
 | B7 | 回滚 | 可原子切回上一成功 snapshot，坏版本保留审计，API 在 60 秒内收敛 |
 
-### 上线门 C：跨实例、候选池和来源轮转
+### 上线门 C：跨实例、候选池和全来源刷新
 
 | ID | 验收 | 证据与阈值 |
 | --- | --- | --- |
 | C1 | 真跨实例 | 进程 A 发布并退出后，独立冷进程 B 从同一 Supabase 读取相同 `reportId`；本地不超过 5 秒，生产不超过 60 秒 |
-| C2 | 72 小时候选池 | A 轮采来源组 1、B 轮采来源组 2，B 报告输入同时含 A+B；超过 72 小时的候选被排除 |
+| C2 | 72 小时候选池 | 连续两轮完整 sweep 的候选按 canonical key 合并；超过 72 小时的候选被排除 |
 | C3 | 注册表对齐 | 49 个 enabled source 都有持久 state；代码与数据库没有孤儿 source ID |
-| C4 | 公平轮转 | 固定时钟模拟 2 小时 cadence、每轮最多 11 源；49 个 enabled source 约 10 小时完成一次轮转 |
-| C5 | 失败重试不抑制覆盖 | partial/failed 来源最多占两个优先槽；即使 `circuit_open_until` 仍有值，也必须继续参与 C4 的后续到期轮转，不能永久饥饿 |
+| C4 | 完整计划 | 固定时钟模拟每轮 `planned_source_ids` 精确等于 49 个 enabled source；`next_due_at` 不得排除来源 |
+| C5 | 失败不抑制覆盖 | 即使来源为 partial/failed 或 `circuit_open_until` 仍有值，也必须继续进入下一轮完整计划 |
 | C6 | 单源故障隔离 | 401/429/timeout/无结果被归一化记录，不影响其他来源候选落库，不保存完整外部响应 |
 
 ### 上线门 D：Freshness、API 和 UI
@@ -342,7 +345,7 @@ npm run build
 | --- | --- |
 | 24 小时 burn-in | `已取消`；原五分钟 cadence 门不得用于当前成本控制模式 |
 | 7 天生产 soak | `已取消`；如未来恢复正式验收，必须按届时 cadence 重建设计 |
-| 内容延迟抽样 | 当前只观察真实延迟，不承诺原 P95 30 分钟；一般新闻目标不高于 10 小时全轮上界 |
+| 内容延迟抽样 | 当前只观察真实延迟；计划等待上界应收敛到一个 2 小时刷新槽，外部来源发布时间/可访问性和本轮执行时间另行记录 |
 | 内容质量 | must-know 召回不低于 90%、首页价值精确率不低于 85%、重复事件不高于 5%、模板摘要不高于 3%、错误来源归因和缺失发布时间为 0 |
 
 运行证据至少保留每个 refresh run 的时间槽、状态、已选来源、发现/采用数量、published report ID 和归一化错误码；HTTP 200 本身不能作为调度成功证据。

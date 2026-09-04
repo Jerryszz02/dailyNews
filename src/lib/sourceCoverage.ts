@@ -36,6 +36,14 @@ export const defaultSourceIntervalMinutes = 30;
 export const normalRotationSlots = 9;
 export const retrySlots = 2;
 
+/**
+ * Production refreshes use a full sweep. Health state remains diagnostic and
+ * must never postpone discovery from an enabled, approved source.
+ */
+export function selectAllSourcesForRefresh(sources: NewsSource[]): NewsSource[] {
+  return sources.filter((source) => source.enabled && source.admission === "approved");
+}
+
 const mediaRoleScore: Record<MediaType, number> = {
   wire: 28,
   official: 24,

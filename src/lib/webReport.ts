@@ -21,7 +21,7 @@ export function compactDailyNewsReport(report: DailyNewsReport): WebDailyNewsRep
       ];
     }),
   );
-  const { items: _items, latestStories, topStories, importantStories, watchlist, ...shared } = report;
+  const { items: _items, latestStories, topStories, importantStories, watchlist, hotStories, ...shared } = report;
   const latest = latestStories ?? selectLatestStories(report.stories, new Date(report.generatedAt));
 
   return {
@@ -31,6 +31,7 @@ export function compactDailyNewsReport(report: DailyNewsReport): WebDailyNewsRep
     topStoryIds: topStories.map((story) => story.id),
     importantStoryIds: importantStories.map((story) => story.id),
     watchlistIds: watchlist.map((story) => story.id),
+    hotStoryIds: hotStories?.map((story) => story.id),
     rankingMetadata,
   };
 }
@@ -43,6 +44,7 @@ export function hydrateWebDailyNewsReport(report: WebDailyNewsReport): DailyNews
     topStoryIds,
     importantStoryIds,
     watchlistIds,
+    hotStoryIds,
     rankingMetadata,
     ...shared
   } = report;
@@ -57,6 +59,7 @@ export function hydrateWebDailyNewsReport(report: WebDailyNewsReport): DailyNews
     topStories: storiesForIds(storyById, topStoryIds),
     importantStories: storiesForIds(storyById, importantStoryIds),
     watchlist: storiesForIds(storyById, watchlistIds),
+    hotStories: hotStoryIds ? storiesForIds(storyById, hotStoryIds) : undefined,
   };
 }
 
@@ -73,6 +76,7 @@ export function isWebDailyNewsReport(value: unknown): value is WebDailyNewsRepor
     Array.isArray(report.topStoryIds) &&
     Array.isArray(report.importantStoryIds) &&
     Array.isArray(report.watchlistIds) &&
+    (report.hotStoryIds === undefined || Array.isArray(report.hotStoryIds)) &&
     (report.latestStoryIds === undefined || Array.isArray(report.latestStoryIds)) &&
     Array.isArray(report.sections) &&
     Boolean(report.coverage) &&
@@ -89,6 +93,7 @@ export function isWebDailyNewsReport(value: unknown): value is WebDailyNewsRepor
     ...(report.topStoryIds as string[]),
     ...(report.importantStoryIds as string[]),
     ...(report.watchlistIds as string[]),
+    ...((report.hotStoryIds as string[] | undefined) ?? []),
   ];
   return (
     storyIds.size === stories.length &&

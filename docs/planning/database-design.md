@@ -22,6 +22,7 @@
 | `public/daily-news.json` 是生成产物 | 只作 bundled last-known-good，不能作为并发更新数据库 |
 | `scripts/newsRefresh.ts` | 刷新与用户读取解耦，通过候选池、租约和 snapshot 交换状态 |
 | `20260723093000_atomic_refresh_commit.sql` | changed-report 成功路径在一次事务中提交来源结果、候选、快照、run 与 latest |
+| `20260904090000_full_source_refresh.sql` | 将公开覆盖窗口收紧为两个调度槽，匹配每轮完整来源 sweep |
 | `DailyNewsReportV2` | 事件与 evidence 仍在 report payload；独立事件查询表尚未实现 |
 
 ## 非目标
@@ -69,8 +70,11 @@
 | `quality_status` | display_ready/degraded/rejected |
 | `rejection_reasons` | 归一化拒绝原因数组 |
 | `translation_status` / `time_status` | enrichment 是否待补；不得因此删除候选 |
+| candidate JSON 中的 `semanticEventId` / `semanticRelation` | 可选的高置信 LLM 同事件锚点、锚定候选、模型和决定时间；不需要新增表列 |
 
 唯一约束：`canonical_url + source_id`。同一 URL 的更新时间变化应更新候选版本，而不是无限新增重复记录。
+
+热点、精选理由和 `dailyEdition` 当前保存在不可变 report payload 中；它们是事件集合的派生投影，不另建可写状态表。同一非空 edition ID 在后续刷新中沿用已发布引用，跨日期历史浏览仍需未来的只读 snapshot 查询契约。
 
 ### `story_event`（逻辑模型，尚未独立建表）
 
@@ -205,7 +209,7 @@
 - 并发刷新最多一个取得有效租约，重复调度不产生双重发布；
 - published/unchanged/partial 通过同一原子终态；结构失败或数据库失败不产生部分 source/candidate 推进；
 - 快照 payload 与 latest pointer 在一个事务内切换，不允许读到半写入报告；
-- 所有 enabled 来源在 2 小时调度下约 10 小时完成一次轮转；partial/failed 优先重试且不能饿死正常来源；
+- 每个 2 小时刷新都计划所有 enabled 来源；partial/failed 只改变健康诊断，不能把来源排除到后续时槽；
 - 报告年龄超过 30 分钟仍必须如实标记 stale；成本控制模式不再承诺 P95 20 分钟的新鲜度；
 - `GET /api/news` 通过 30 秒 Vercel 时间桶缓存读取 latest，生产小流量 P95 不高于 750 ms、P99 不高于 1 秒；
 - 任一已发布事件可追溯到具体来源 URL；

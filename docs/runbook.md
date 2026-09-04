@@ -47,11 +47,11 @@ npx supabase db push --dry-run
 ## Environment Variables
 
 ```bash
-DAILY_NEWS_MAX_SOURCES=11
+DAILY_NEWS_MAX_SOURCES=49
 DAILY_NEWS_LIMIT_PER_SECTION=5
 DAILY_NEWS_REFRESH_INTERVAL_MINUTES=120
 DAILY_NEWS_COLLECTION_BUDGET_MS=45000
-DAILY_NEWS_SOURCE_CONCURRENCY=11
+DAILY_NEWS_SOURCE_CONCURRENCY=24
 DAILY_NEWS_MAX_AGE_HOURS=72
 SUPABASE_URL=
 SUPABASE_SECRET_KEY=
@@ -60,20 +60,24 @@ DAILY_NEWS_REFRESH_TOKEN=
 DAILY_NEWS_TRANSLATION_API_KEY=YOUR-DEEPSEEK-API-KEY
 DAILY_NEWS_TRANSLATION_BASE_URL=
 DAILY_NEWS_TRANSLATION_MODEL=
+DAILY_NEWS_LLM_DEDUPE_ENABLED=false
+DAILY_NEWS_LLM_DEDUPE_MAX_CALLS_PER_REFRESH=12
 PORT=4173
 ```
 
 Keep `.env` and `.env.local` local. Do not commit or paste their values.
 
-Production defaults to eleven due sources per run: nine normal rotation slots and up to two priority retries for partial/failed sources. At the two-hour cost-control cadence, persistent `next_due_at` rotation covers all 49 enabled and approved sources in about ten hours; an open circuit does not suppress a due coverage attempt.
+Production plans every enabled and approved source in every two-hour refresh. Work is bounded by a 24-source concurrency pool rather than an eleven-source rotation, so adding sources does not create a multi-slot discovery queue. Source health and `next_due_at` remain operational diagnostics; they do not suppress a production attempt.
 
-`DAILY_NEWS_COLLECTION_BUDGET_MS` is the hard wall-clock deadline for one collection round. Production defaults to 45 seconds inside the 60-second function limit, leaving about 10 seconds for candidate paging, report construction and atomic commit. Firecrawl and direct source work run concurrently; each request is independently bounded to eight seconds. Sources that have not started before the deadline remain due for the next slot instead of being recorded as healthy empty.
+`DAILY_NEWS_COLLECTION_BUDGET_MS` is the hard wall-clock deadline for one collection round. Production defaults to 45 seconds inside the 60-second function limit, leaving about 10 seconds for candidate paging, report construction and atomic commit. Firecrawl and direct source work run concurrently; each source attempt is bounded to eight seconds. A source that cannot complete is recorded as partial/failed/skipped and cannot make another source disappear from the plan.
 
 Set `DAILY_NEWS_REFRESH_TOKEN` before enabling `POST /api/refresh` with persistent storage, including local Supabase development. Send it as `Authorization: Bearer <token>`. Do not put the token in browser code. The tokenless local exception is limited to the in-memory store and requires same-origin or non-browser access plus `X-Daily-News-Refresh: 1`.
 
 Set `SUPABASE_URL`, `SUPABASE_SECRET_KEY` and `CRON_SECRET` only in server-side environments. Never add `VITE_` to those names. Supabase Cron reads the production `/api/cron` URL and the same cron secret from Vault; migration files contain only the Vault secret names.
 
 `DAILY_NEWS_TRANSLATION_API_KEY` is optional and server-only. When set, the generator defaults to DeepSeek Flash (`https://api.deepseek.com` and `deepseek-v4-flash`) to rewrite non-Chinese stories into Chinese titles and summaries, and to repair summaries that are missing or identical to titles. Set `DAILY_NEWS_TRANSLATION_BASE_URL` or `DAILY_NEWS_TRANSLATION_MODEL` only when overriding those defaults. On Vercel, configure the API key as a project environment variable, not in committed files.
+
+Semantic dedupe is opt-in. Set `DAILY_NEWS_LLM_DEDUPE_ENABLED=true` to reuse the translation provider for ambiguous new candidate pairs. Exact/high-confidence local matches and obvious non-matches never call the model; each candidate has at most three neighbors, each refresh has a default ceiling of twelve model calls, and failures fall back to no merge.
 
 ## Smoke Checks
 
@@ -85,10 +89,10 @@ curl http://127.0.0.1:4173/api/news
 Expected behavior:
 
 - `/api/health` and `/api/news` return 200 whenever a structurally valid last-known-good exists, even when `pipelineStatus=degraded` or `contentStatus=stale`; 503 means no report is serviceable.
-- `/api/news` returns `version: 2`, non-empty `stories`, derived-or-stored `latestStories` and legacy `items` without waiting for external fetching.
+- `/api/news` returns `version: 2`, non-empty `stories`, derived-or-stored `latestStories`, optional `hotStories`/`dailyEdition` and legacy `items` without waiting for external fetching.
 - Refresh metadata includes `servingMode`, `pipelineStatus`, `contentStatus`, `lastCheckedAt`, `lastFullSweepAt`, `lastPublishedAt` and `newestContentAt`.
 - Ordinary `/api/news?view=web` reads use a 30-second shared cache. Manual `/api/news?view=web&reload=1` reads are `no-store`, reuse a short server-side read window and are rate limited; full-report `reload=1` is rejected.
-- The frontend shows 今日必知、重要进展、持续关注、分类深读、搜索和偏好设置。
+- The frontend shows 全分类日报、正在升温、今日必知、重要进展、持续关注、分类深读、搜索和偏好设置。
 
 ## Supabase Release
 
@@ -107,7 +111,7 @@ Expected behavior:
 - If candidate paging or report validation fails, the refresh keeps last-known-good. Source count, beat continuity, trust and curated selection are not publication gates; a valid visible change from the complete candidate window should publish.
 - If NBA, FIFA, FIBA or AI company blog items are missing, check whether `DAILY_NEWS_TRANSLATION_API_KEY` is configured; many of those sources return English-only title and summary text.
 - Preferences only reorder important/category stories; they never hide or promote `must_know` events.
-- Refresh is polling-based: Supabase Cron checks every 2 hours and the frontend reloads the published report every 30 seconds. The app does not receive source-side webhooks.
+- Refresh is schedule-based: Supabase Cron starts a full-source sweep every 2 hours and the frontend reloads the published report every 30 seconds. The app does not receive source-side webhooks.
 - If `/api/news` is readable but `/api/health` is stale, check Supabase `refresh_run`, `runtime_state`, source due-state, Cron/Vault configuration and Vercel `/api/cron` logs in that order.
 
 ## Token-free production acceptance monitor

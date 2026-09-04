@@ -5,12 +5,20 @@ import {
   defaultSourceIntervalMinutes,
   normalRotationSlots,
   retrySlots,
+  selectAllSourcesForRefresh,
   selectSourcesForCoverage,
   sourceBeats,
   type SourceHealthState,
 } from "./sourceCoverage";
 
 describe("source coverage scheduling", () => {
+  it("plans every approved enabled source for each production refresh regardless of due state", () => {
+    const collectible = newsSources.filter((source) => source.enabled && source.admission === "approved");
+    const selected = selectAllSourcesForRefresh(newsSources);
+
+    expect(selected.map((source) => source.source_id)).toEqual(collectible.map((source) => source.source_id));
+  });
+
   it("keeps every approved enabled source for full static or manual collection", () => {
     const collectible = newsSources.filter((source) => source.enabled && source.admission === "approved");
     const selected = selectSourcesForCoverage(newsSources, collectible.length);

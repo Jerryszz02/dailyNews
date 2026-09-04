@@ -30,6 +30,7 @@ export type CandidateDisposition = "display_ready" | "degraded" | "rejected";
 export type SourceAdmission = "approved" | "blocked";
 
 export type SourcePublicationRole = "reporting" | "lead";
+export type SourceSignalRole = "first_party" | "reporting" | "analysis" | "discussion";
 
 export interface NewsSource {
   source_id: string;
@@ -44,6 +45,7 @@ export interface NewsSource {
   enabled: boolean;
   admission: SourceAdmission;
   publicationRole: SourcePublicationRole;
+  signalRole?: SourceSignalRole;
   allowedHosts: string[];
   allowedPathPrefixes?: string[];
   reviewedAt: string;
@@ -91,6 +93,13 @@ export interface RawNewsItem {
   translationStatus?: "translated" | "original" | "pending";
   summaryStatus?: "complete" | "pending";
   timeStatus?: "verified" | "estimated";
+  semanticEventId?: string;
+  semanticRelation?: {
+    anchorCandidateId: string;
+    confidence: number;
+    model: string;
+    decidedAt: string;
+  };
 }
 
 export interface NewsCluster extends RawNewsItem {
@@ -188,6 +197,39 @@ export interface StoryCard {
   sourceNames: string[];
   evidence: StoryEvidence[];
   importance: ImportanceFeatures;
+  selection?: {
+    selected: true;
+    reason: string;
+    criteria: string[];
+  };
+  heat?: StoryHeat;
+}
+
+export type HeatTrend = "new" | "rising" | "surging" | "steady";
+
+export interface StoryHeat {
+  score: number;
+  evidenceScore: number;
+  velocityScore: number;
+  discussionScore: number;
+  trend: HeatTrend;
+  coverageConfidence: "verified" | "limited";
+}
+
+export interface DailyEditionSection {
+  beat: Category;
+  storyIds: string[];
+}
+
+export interface DailyEdition {
+  id: string;
+  editionDate: string;
+  generatedAt: string;
+  cutoffAt: string;
+  window: { from: string; to: string };
+  storyIds: string[];
+  sections: DailyEditionSection[];
+  readTimeMinutes: number;
 }
 
 export interface CoverageBeatSummary {
@@ -271,6 +313,8 @@ export interface DailyNewsReport {
   topStories: StoryCard[];
   importantStories: StoryCard[];
   watchlist: StoryCard[];
+  hotStories?: StoryCard[];
+  dailyEdition?: DailyEdition;
   sections: StorySection[];
   coverage: CoverageSummary;
   quality: PublicQualitySummary;
@@ -287,12 +331,13 @@ export interface WebReportRankingMetadata {
 
 export type WebDailyNewsReport = Omit<
   DailyNewsReport,
-  "items" | "latestStories" | "topStories" | "importantStories" | "watchlist"
+  "items" | "latestStories" | "topStories" | "importantStories" | "watchlist" | "hotStories"
 > & {
   webView: 1;
   latestStoryIds?: string[];
   topStoryIds: string[];
   importantStoryIds: string[];
   watchlistIds: string[];
+  hotStoryIds?: string[];
   rankingMetadata: Record<string, WebReportRankingMetadata>;
 };
