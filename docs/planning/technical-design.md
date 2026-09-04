@@ -31,7 +31,7 @@ src/config/sources.ts
 
 生产运行链路已由 Supabase 取代早期 bundled JSON + 单进程内存刷新。旧架构只作为迁移动机保留在 Git 历史和生产验收记录中，不再是当前实现。
 
-## 当前生产架构（Supabase）
+## 仓库定义的生产架构（Supabase）
 
 ```text
 2 小时外部调度器
@@ -81,7 +81,7 @@ src/config/sources.ts
 | Cron 入口 | GET、secret 鉴权、幂等获取租约；不向调用方返回内部错误或凭据 |
 | Durable API | 冷实例读取同一 latest，按 durable 时间计算 fresh/stale/degraded/unavailable |
 | 前端新鲜度 | 显示“内容更新时间”和“页面检查时间”两个不同概念；stale 时给明确警告 |
-| 生产验收 | 固定 deployment 的本地只读 monitor 保存 burn-in/soak 证据；deployment 变化即重建窗口 |
+| 历史生产验收 | 本地只读 monitor 保存固定 deployment 的历史证据；正式 burn-in/soak 已取消，未获明确批准不得恢复或拼接旧窗口 |
 
 ## 关键契约
 
