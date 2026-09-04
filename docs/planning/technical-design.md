@@ -31,7 +31,7 @@ src/config/sources.ts
 
 生产运行链路已由 Supabase 取代早期 bundled JSON + 单进程内存刷新。旧架构只作为迁移动机保留在 Git 历史和生产验收记录中，不再是当前实现。
 
-## 当前生产架构（Supabase）
+## 仓库定义的生产架构（Supabase）
 
 ```text
 2 小时外部调度器
@@ -64,7 +64,7 @@ src/config/sources.ts
 | 采集服务 | `scripts/newsService.ts` | Firecrawl/直连、中文化、发布时间、域名归因、并发、总预算、新鲜度和 fallback |
 | 候选门槛 | `src/lib/curation.ts` | 只拒绝未知/越域来源、非法身份、导航和推广；翻译/摘要/日期不足进入 degraded |
 | 事件聚类 | `src/lib/dedupe.ts` | canonical URL、标题相似度、中文连续文本、时间窗和共享上下文聚类；唯一主分类 |
-| 信任与兼容排序 | `src/lib/trust.ts`, `src/lib/scoring.ts` | 保留兼容字段和解释；不得参与 visibility、tier 或 latest 排序 |
+| 信任与兼容排序 | `src/lib/trust.ts`, `src/lib/scoring.ts` | `shouldShow` 仅为兼容字段，不参与收录、tier 或排序；`trust.level` 参与事实状态判断，状态可影响持续关注层选择 |
 | 事件选题 | `src/lib/curation.ts` | evidence、independence group、status、event type、公共影响、四级 tier 和多样性选择 |
 | 报告管线 | `src/lib/newsPipeline.ts` | 输出 V2 `stories`、首页三层、sections、coverage、quality 和兼容 `items` |
 | 报告存储 | `scripts/newsStoreFactory.ts`, `scripts/supabaseNewsStore.ts`, `scripts/inMemoryNewsStore.ts`, `scripts/reportStore.ts` | 生产 durable state、本地内存适配、bundled 读取、V1→V2 升级和发布门槛 |
@@ -81,7 +81,7 @@ src/config/sources.ts
 | Cron 入口 | GET、secret 鉴权、幂等获取租约；不向调用方返回内部错误或凭据 |
 | Durable API | 冷实例读取同一 latest，按 durable 时间计算 fresh/stale/degraded/unavailable |
 | 前端新鲜度 | 显示“内容更新时间”和“页面检查时间”两个不同概念；stale 时给明确警告 |
-| 生产验收 | 固定 deployment 的本地只读 monitor 保存 burn-in/soak 证据；deployment 变化即重建窗口 |
+| 历史生产验收 | 本地只读 monitor 保存固定 deployment 的历史证据；正式 burn-in/soak 已取消，未获明确批准不得恢复或拼接旧窗口 |
 
 ## 关键契约
 

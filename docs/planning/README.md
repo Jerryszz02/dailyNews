@@ -8,18 +8,18 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 请求 | 降低 Vercel Fluid Active CPU：把生产刷新从每 5 分钟降到每 2 小时 |
-| 更新时间 | 2026-08-10 |
-| 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews-reduce-refresh-frequency` |
-| 工作模式 | `agent/reduce-refresh-frequency` 已实现并通过本地测试；生产 Supabase Cron 已远端确认启用且为 `0 */2 * * *`，仓库 migration 尚待 PR 合并后发布 |
+| 请求 | 2026-09-04 仓库收尾与知识库状态同步 |
+| 更新时间 | 2026-09-04 |
+| 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews` |
+| 工作模式 | 状态同步与审计；`main@6b67c1c` 与 `origin/main` 对齐，PR #9 已合并；本次未把历史部署证据解释为当前云端状态 |
 
 ## 项目概览
 
 Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配置化来源发现候选，经过质量门槛、事件聚类、证据状态、公共影响分级和集合级多样性选择，在网页中展示今日必知、重要进展、持续关注、分类深读、搜索和偏好设置。
 
-事件级 V2 API/UI、Supabase last-known-good、租约、候选池和不可变快照已经存在。2026-08-10 的 Vercel Functions 证据显示 `/api/cron` 在 12 小时内以 87 次调用消耗 27 分钟 Active CPU，而 `/api/news` 228 次只消耗 29 秒；Hobby Team 已因滚动用量超限暂停。本轮不改变内容完整性不变量，只把生产调度降为每 2 小时一次；每轮仍最多 11 源，49 个已准入来源约 10 小时完成一轮覆盖，以牺牲实时性换取可持续的免费额度。
+事件级 V2 API/UI、Supabase last-known-good、租约、候选池和不可变快照已经存在。2026-09-04 从默认分支代码确认：54 个来源均已准入，其中 49 个启用；仓库默认每 2 小时刷新一次、每轮最多 11 源，约 10 小时完成一轮覆盖。2026-08-10 的 Vercel CPU 与额度结论只属于历史诊断，当前部署、配额和 Cron 状态必须通过 Vercel 与 Supabase 重新验证。
 
-形式化 24 小时 burn-in 与七天 soak 已取消，不作为日常代码同步的发布门槛；历史证据继续保留，生产 Supabase Cron 与本地 observer 仍相互独立。
+形式化 24 小时 burn-in 与七天 soak 已取消，不作为日常代码同步的发布门槛；历史证据继续保留。2026-09-04 本地 `monitor:production status` 显示旧窗口为 `needs_review`、`monitorProcess.running=false`，不能据此推断当前生产状态。
 
 项目由四条主要链路组成：
 
@@ -44,16 +44,16 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | `src/App.tsx` | 用户界面、API/static/snapshot fallback、偏好存储、搜索和展示逻辑 |
 | `src/types.ts` | 核心数据类型和 `DailyNewsReport` 结构 |
 | `src/config/sources.ts` | 来源、栏目、主分类、查询和可信度配置 |
-| `src/lib/newsPipeline.ts` | 过滤启用来源、聚类、排序、可信度过滤和报告 notes |
+| `src/lib/newsPipeline.ts` | 对已准入候选做结构质量门、聚类、兼容排序和 V2 报告组装；`trust` 不参与收录、分层或排序 |
 | `src/lib/curation.ts`, `src/lib/sourceCoverage.ts` | V2 事件选题与来源覆盖调度 |
 | `src/lib/dedupe.ts` | 同事件聚类和唯一主分类选择规则 |
 | `src/lib/scoring.ts` | 排序评分维度和排序原因 |
-| `src/lib/trust.ts` | 可信度评分、展示门槛和原因 |
+| `src/lib/trust.ts` | 兼容可信度评分与解释原因；`shouldShow` 恒为 true |
 | `src/lib/newsOrdering.ts` | 偏好列表、热点列表和分类列表排序方式 |
 | `scripts/newsService.ts` | 生成链路、Firecrawl keyless、直接来源抓取、翻译配置、fallback 读取 |
 | `scripts/newsApi.ts`, `scripts/reportStore.ts` | Serverless 只读 API、刷新鉴权、last-known-good 和发布门槛 |
 | `scripts/newsRefresh.ts`, `scripts/newsServer.ts` | durable 刷新 orchestrator、本地 API、静态文件服务和健康检查 |
-| `scripts/productionAcceptanceMonitor.ts` | 固定 deployment 的 24 小时 burn-in 与七天 soak 证据采集 |
+| `scripts/productionAcceptanceMonitor.ts` | 历史固定 deployment 的 burn-in/soak 证据采集与本地 observer 状态检查 |
 | `public/daily-news.json` | 当前报告的来源、分类和摘要质量基线；仅用于审计，不作为编辑源 |
 | `src/lib/scoring.test.ts`, `src/lib/newsOrdering.test.ts` | 已有自动化验证覆盖点 |
 | Google News、Reuters、AP 官方原则 | 用于约束显著性、权威性、新鲜度、独立性、准确性和来源归因，不代表引入外部付费 API |
@@ -98,10 +98,10 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | 项 | 为什么无法从当前仓库确定 |
 | --- | --- |
 | 目标用户和正式使用场景 | 仓库说明为“原型”，没有产品 brief、访谈、运营目标或正式用户角色文档 |
-| Supabase 区域、配额和维护责任 | 生产资源与 secret scope 已验证可用；项目区域、长期配额和轮换责任仍需运营确认 |
+| 当前云端部署、Supabase Cron、配额和维护责任 | 本次只验证了仓库与本地 observer；云端状态、项目区域、长期配额和轮换责任需实时检查 |
 | 来源准入责任人 | 本轮会把准入状态、允许域名和审核说明写入配置；具体由谁批准新增/禁用来源仍需运营确认 |
 | 真实访问量与告警渠道 | 中国到 iad1 的 Phase 0 样本已把 latest read 校准为 P95 ≤750ms、P99 ≤1s；通知渠道仍需结合账号配置 |
-| 长期数据保留策略 | Supabase 已保存候选、运行和不可变快照；长期保留期限与清理策略仍待确认 |
+| 长期数据保留策略 | 默认分支尚无 retention migration 或清理任务；候选、运行和不可变快照的保留期限仍待确认 |
 | 首页最终事件数量 | 当前按质量门槛自然变化，不为达到建议区间回填低价值事件；阈值仍需 golden dataset 校准 |
 | 最终 beat/栏目 | 建议把主题、地理范围和事件类型拆轴；具体一级栏目仍需确认 |
 | 模型使用边界 | 建议只用于结构化提取、翻译和事实约束摘要，供应商与预算待确认 |
@@ -111,7 +111,7 @@ Daily News 是一个 Vite + React + TypeScript 事件级新闻日报。它从配
 | 建议 | 原因 |
 | --- | --- |
 | 确认 Daily News 的目标读者和主要使用频率 | 当前只能从 UI 和 README 推断是个人/原型新闻日报，无法确定正式产品定位 |
-| 确认 Supabase 项目与 secret 的维护人 | 生产已经公开部署；需要明确 migration、Vault、Vercel env 和轮换责任 |
+| 确认 Supabase 项目与 secret 的维护人 | 仓库已有 production 架构与发布流程；当前部署状态需实时核对，并明确 migration、Vault、Vercel env 和轮换责任 |
 | 确认新增来源的评估标准 | 代码有 `credibility`、`enabled`、`mayHavePaywall`，但没有来源准入流程 |
-| 确认翻译服务是否固定使用本地 OpenAI-compatible 服务 | README 只给出可选变量，不能确定供应商、模型和成本边界 |
+| 确认是否长期使用当前 DeepSeek 默认翻译配置 | 代码已有可覆盖的 OpenAI-compatible 配置，但供应商、模型、预算和轮换责任仍待确认 |
 | 确认是否需要保存长期历史日报 | 已有 Supabase 不可变报告快照；长期保留期限和查询入口仍待确认，并会影响清理策略与产品设计 |

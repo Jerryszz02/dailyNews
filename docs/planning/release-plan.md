@@ -1,6 +1,6 @@
 # Supabase 实时更新发布计划
 
-> 当前决策（2026-08-02）：生产 Supabase Cron 继续运行，但用户不再要求执行形式化 24 小时 burn-in 与 7 天 soak；对应本地 LaunchAgent 和 Codex 检查任务已停止。下文运行门保留为可复用的验收方案，不代表当前仍有待运行的任务。
+> 当前发布基线：仓库按每 2 小时 Supabase Cron 设计，但当前云端 job、deployment 与配额状态必须实时验证。用户不再要求执行形式化 24 小时 burn-in 与 7 天 soak；2026-09-04 本地 observer 已确认停止。下文运行门保留为可复用方案，不代表当前仍有待运行的任务。
 
 ## 目标
 
@@ -22,7 +22,7 @@
 | Vercel server | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | 仅 Production/Preview 中需要的 scope；不加 `VITE_` |
 | Vercel server | `CRON_SECRET`, `DAILY_NEWS_REFRESH_TOKEN` | cron 与人工刷新分开，可独立轮换 |
 | Supabase Vault | refresh URL 与 cron secret | 只保存值；migration 只引用约定 secret 名 |
-| Supabase Cron | `0 */2 * * *` | 通过 `pg_net` GET 生产 `/api/cron` |
+| Supabase Cron | 仓库目标 `0 */2 * * *` | 通过 `pg_net` GET 生产 `/api/cron`；发布时实时核对云端 job |
 
 真实值不得写入文档、提交、命令输出或聊天。数据库 password/PAT 只用于 CLI 登录/迁移，不是应用 runtime 变量。
 
@@ -30,7 +30,7 @@
 
 ### 0. 代码与确定性验收
 
-1. 从 `origin/main` 创建隔离 `codex/news-pipeline-stability` worktree，不带入原工作区未提交改动；
+1. 从最新 `origin/main` 创建隔离 `agent/<task-name>` worktree，不带入原工作区未提交改动；
 2. 新增向后兼容 migration、pgTAP、NewsStore contract、完整性、调度、API、前端与 GitHub Actions；
 3. 本地运行 unit、integration、build、database tests 和 diff-check；
 4. 推送 draft PR，独立自审全部 diff，修复 P0–P2，等待 `app-tests` 与 `database-tests` 全绿；

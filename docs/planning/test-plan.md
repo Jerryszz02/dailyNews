@@ -8,7 +8,7 @@
 
 适用于修改产品行为、数据生成、API、排序、去重、可信度、分类、前端展示、中文化或来源配置的工作。
 
-Phase 2 同时适用于 Supabase 数据一致性、生产调度、跨实例、新鲜度、回滚和连续运行验收。长期 dashboard 仍是非目标，但必须保存 24 小时与 7 天观察证据。
+Phase 2 同时适用于 Supabase 数据一致性、生产调度、跨实例、新鲜度和回滚验收。形式化 24 小时 burn-in 与 7 天 soak 已取消；长期 dashboard 仍是非目标，历史观察证据不得当作当前运行状态。
 
 ## Plan 或项目证据
 
@@ -106,8 +106,8 @@ curl http://127.0.0.1:4173/api/health
 
 期望：
 
-- 初始刷新完成前可接受 `503`；
-- 刷新完成后返回 `ok: true`；
+- bundled、memory 或 snapshot 中存在任一结构有效报告时立即返回 `200`；只有完全没有可服务报告时才返回 `503`；
+- 返回 `200` 时 `ok: true`，同时通过 `pipelineStatus` 和 `contentStatus` 如实表达降级或陈旧；
 - `itemCount` 大于 0；
 - `lastError` 为 `null` 或可解释的刷新错误。
 
@@ -200,7 +200,7 @@ http://127.0.0.1:5173/
 
 ## V2 重构验证计划与状态
 
-本节对应 [news-curation-refactor-plan.md](news-curation-refactor-plan.md)。核心自动化与浏览器验证已具备；7–14 天 golden dataset、完整 24 小时 burn-in 与连续 7 天 soak 仍未完成。
+本节对应 [news-curation-refactor-plan.md](news-curation-refactor-plan.md)。核心自动化与浏览器验证已具备；7–14 天 golden dataset 仍未完成，形式化 24 小时 burn-in 与连续 7 天 soak 已取消而不是待办。
 
 当前已覆盖：来源覆盖与双入口、并发上限、整轮 deadline、过期实时数据 fallback、域名归因、中文信息量、事件持续更新聚类、低价值国际/体育降级、单源社交线索、V2 引用完整性、last-known-good、防回退发布门槛、只读 API、刷新鉴权、桌面/390px 布局和分类空状态。
 

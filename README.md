@@ -110,7 +110,7 @@ npm run monitor:production -- status --output .production-acceptance/current
 - `src/config/sources.ts`：中英新闻来源、准入状态、允许域名、审核说明、发布角色、查询词和主分类。
 - `src/config/scoring.ts`：排序权重和公共重要性关键词。
 - `src/lib/scoring.ts`：可解释排序评分。
-- `src/lib/trust.ts`：兼容旧报告的事实标签；`shouldShow` 恒为 true，不参与收录、层级或排序。
+- `src/lib/trust.ts`：兼容旧报告的事实标签；`shouldShow` 恒为 true，不参与收录、层级或排序；`trust.level` 会参与事实状态判断，状态可影响持续关注层选择。
 - `src/lib/dedupe.ts`：同一事件聚类去重，并确定唯一主分类。
 - `src/lib/curation.ts`：候选有效性、事件证据、事实状态、公共影响分层和集合级软重排。
 - `src/lib/sourceCoverage.ts`：按持久 due time 公平轮转来源，并兼顾栏目、来源角色、地区和健康状态。

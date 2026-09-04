@@ -48,7 +48,7 @@ Daily News 要解决的问题是：让用户在 10–15 分钟内掌握当天最
 | 新闻阅读者 | `src/App.tsx` 的事件首页、分类、搜索和偏好设置 | 先读今日必知，再按需要查看重要进展、持续关注或某个分类 |
 | 本地维护者 | `README.md`, `docs/runbook.md`, npm scripts | 配置来源、生成静态日报、启动本地 API、验证排序和展示 |
 | 来源维护者 | `src/config/sources.ts` | 新增、禁用或调整来源、栏目、查询词、主分类和可信度 |
-| 生产维护者 | `scripts/productionAcceptanceMonitor.ts`, `supabase/migrations/`, `docs/runbook.md` | 迁移、部署、调度、回滚和连续运行验收 |
+| 生产维护者 | `supabase/migrations/`, `docs/runbook.md`, `scripts/productionAcceptanceMonitor.ts` | 迁移、部署、调度、回滚、当前 smoke 与历史验收证据核对 |
 
 目标用户是否是单人自用、内部工具还是公开产品：待确认。
 
