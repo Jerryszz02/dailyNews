@@ -7,6 +7,15 @@ import type {
 } from "../types";
 import { selectLatestStories } from "./curation.js";
 
+export function storiesForDailyEdition(report: DailyNewsReport): StoryCard[] {
+  if (!report.dailyEdition) return [];
+  const storyById = new Map((report.dailyEdition.stories ?? report.stories).map((story) => [story.id, story]));
+  return report.dailyEdition.storyIds.flatMap((id) => {
+    const story = storyById.get(id);
+    return story ? [story] : [];
+  });
+}
+
 export function compactDailyNewsReport(report: DailyNewsReport): WebDailyNewsReport {
   const itemById = new Map(report.items.map((item) => [item.id, item]));
   const rankingMetadata = Object.fromEntries(

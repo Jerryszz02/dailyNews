@@ -46,6 +46,7 @@ interface DailyNewsReportV2 {
     cutoffAt: string;
     window: { from: string; to: string };
     storyIds: string[];
+    stories?: StoryCard[]; // 冻结的日报正文；仅旧版报告缺省
     sections: Array<{ beat: Category; storyIds: string[] }>;
     readTimeMinutes: number;
   };
@@ -176,7 +177,7 @@ Authorization: Bearer <CRON_SECRET>
 - fallback 不改变 `generatedAt` 或 `lastSuccessAt`；
 - 两个冷进程读取同一个 `latestReportId`，发布后 60 秒内一致；
 - 报告内容陈旧但可读时 `/api/news` 与 `/api/health` 均返回 200，并明确 `contentStatus=stale/quiet`；
-- compact web 表示通过 `hotStoryIds` 和 `dailyEdition.storyIds` 往返，不复制事件正文；
+- compact web 表示通过 `hotStoryIds` 引用实时事件；`dailyEdition.stories` 独立保存冻结正文，日报 ID 只在该快照内解析，兼容旧版缺省字段时才读取实时事件；
 - API 失败时浏览器继续静态 fallback。
 
 ## 待确认

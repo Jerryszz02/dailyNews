@@ -3,6 +3,7 @@ import { defaultPreferences } from "../src/config/preferences";
 import { newsSources } from "../src/config/sources";
 import { buildDailyReport } from "../src/lib/newsPipeline";
 import { selectLatestStories } from "../src/lib/curation";
+import { compactDailyNewsReport, hydrateWebDailyNewsReport, storiesForDailyEdition } from "../src/lib/webReport";
 import { defaultSourceIntervalMinutes, selectSourcesForCoverage } from "../src/lib/sourceCoverage";
 import type { RawNewsItem } from "../src/types";
 import { InMemoryNewsStore } from "./inMemoryNewsStore";
@@ -15,9 +16,61 @@ import {
   runNewsRefresh,
 } from "./newsRefresh";
 import { defaultRefreshIntervalMinutes, type NewsCollectionOptions, type NewsCollectionResult } from "./newsService";
-import { expandLegacyItems, readBundledReport } from "./reportStore";
+import { expandLegacyItems, readBundledReport, validateReportInvariants } from "./reportStore";
 
 describe("durable news refresh", () => {
+  it("freezes daily card content across updates, pool removal and compact transport", () => {
+    const now = new Date("2026-07-15T00:00:00.000Z");
+    const candidates = recentCandidates(now, "首版日报事件");
+    const original = buildDailyReport(candidates, defaultPreferences, now);
+    const frozen = structuredClone(storiesForDailyEdition(original));
+    expect(frozen.length).toBeGreaterThan(0);
+    const later = buildDailyReport(candidates.map((candidate) => ({
+      ...candidate,
+      title: `${candidate.title}后续更新`,
+      summary: `${candidate.summary}新增事实与后续进展。`,
+    })), defaultPreferences, new Date(now.getTime() + 60 * 60_000));
+    const preserved = preservePublishedDailyEdition(later, original);
+    expect(storiesForDailyEdition(preserved)).toEqual(frozen);
+    expect(preserved.stories).toEqual(later.stories);
+    expect(preserved.stories).not.toEqual(original.stories);
+    const legacyOriginal = structuredClone(original);
+    delete legacyOriginal.dailyEdition!.stories;
+    expect(storiesForDailyEdition(preservePublishedDailyEdition(later, legacyOriginal))).toEqual(frozen);
+    const hydrated = hydrateWebDailyNewsReport(JSON.parse(JSON.stringify(compactDailyNewsReport(preserved))));
+    expect(storiesForDailyEdition(hydrated)).toEqual(frozen);
+    const emptyPool = buildDailyReport([], defaultPreferences, new Date(now.getTime() + 2 * 60 * 60_000));
+    const retained = preservePublishedDailyEdition(emptyPool, preserved);
+    expect(storiesForDailyEdition(retained)).toEqual(frozen);
+    expect(validateReportInvariants(retained).filter((error) => error.includes("daily_edition"))).toEqual([]);
+    const broken = structuredClone(preserved);
+    broken.dailyEdition!.stories = [];
+    expect(validateReportInvariants(broken)).toContain("dangling_daily_edition_reference");
+    const tomorrow = buildDailyReport(candidates, defaultPreferences, new Date(now.getTime() + 24 * 60 * 60_000));
+    expect(preservePublishedDailyEdition(tomorrow, preserved).dailyEdition).toEqual(tomorrow.dailyEdition);
+  });
+
+  it.each([
+    { title: "完全不同的新事件" },
+    { summary: "同一网址现在报道其他事实。" },
+    { publishedAt: "2026-07-23T06:30:00.000Z" },
+    { primaryCategory: "society" as const, categories: ["society" as const] },
+  ])("clears both semantic fields when relation material changes: %j", (changes) => {
+    const now = new Date("2026-07-23T06:45:00.000Z");
+    const stored = {
+      ...recentCandidates(now, "原事件")[0]!,
+      primaryCategory: "ai" as const,
+      semanticEventId: "old-event",
+      semanticRelation: { anchorCandidateId: "anchor", confidence: 0.9, model: "model", decidedAt: now.toISOString() },
+    };
+    const [merged] = mergeRefreshCandidates([stored], [{ ...stored, ...changes }], "2026-07-20T00:00:00.000Z");
+    expect(merged?.semanticEventId).toBeUndefined();
+    expect(merged?.semanticRelation).toBeUndefined();
+    const [unchanged] = mergeRefreshCandidates([stored], [{ ...stored, extractedAt: now.toISOString() }], "2026-07-20T00:00:00.000Z");
+    expect(unchanged?.semanticEventId).toBe(stored.semanticEventId);
+    expect(unchanged?.semanticRelation).toEqual(stored.semanticRelation);
+  });
+
   it("keeps a non-empty daily edition immutable within the same 08:00 cutoff", () => {
     const now = new Date("2026-07-15T00:00:00.000Z");
     const original = buildDailyReport(recentCandidates(now, "首版日报事件"), defaultPreferences, now);

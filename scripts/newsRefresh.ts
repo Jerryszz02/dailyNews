@@ -19,7 +19,8 @@ import {
 import type { LeaseIdentity, NewsStore, RefreshLease, RefreshTrigger, SourceCollectionResult } from "./newsStore.js";
 import { newestContentTimestamp } from "./newsStore.js";
 import { validateReportInvariants } from "./reportStore.js";
-import { resolveAmbiguousEventRelations } from "./semanticDedupe.js";
+import { resolveAmbiguousEventRelations, sameEventRelationMaterial } from "./semanticDedupe.js";
+import { storiesForDailyEdition } from "../src/lib/webReport.js";
 
 export const defaultServerlessMaxSources = newsSources.filter(isCollectibleSource).length;
 export const defaultRefreshLeaseSeconds = 120;
@@ -190,7 +191,7 @@ export async function runNewsRefresh(
       collection.items
         .filter((candidate) => {
           const stored = storedByKey.get(candidateKey(candidate));
-          return !stored || stored.title !== candidate.title || stored.summary !== candidate.summary || stored.publishedAt !== candidate.publishedAt;
+          return !stored || !sameEventRelationMaterial(stored, candidate);
         })
         .map(candidateKey),
     );
@@ -375,9 +376,10 @@ export function preservePublishedDailyEdition(report: DailyNewsReport, previous:
   if (!edition || !previousEdition || previousEdition.storyIds.length === 0 || edition.id !== previousEdition.id) {
     return report;
   }
-  const storyIds = new Set(report.stories.map((story) => story.id));
-  if (previousEdition.storyIds.some((storyId) => !storyIds.has(storyId))) return report;
-  return { ...report, dailyEdition: previousEdition };
+  return {
+    ...report,
+    dailyEdition: structuredClone({ ...previousEdition, stories: storiesForDailyEdition(previous!) }),
+  };
 }
 
 function sourceRegistryMatches(
@@ -405,14 +407,15 @@ export function mergeRefreshCandidates(
   for (const candidate of collectedCandidates) {
     const key = candidateKey(candidate);
     const stored = bySourceAndUrl.get(key);
+    const relationChanged = stored !== undefined && !sameEventRelationMaterial(stored, candidate);
     bySourceAndUrl.set(key, {
       ...candidate,
       publishedAt: candidate.publishedAt ?? stored?.publishedAt,
       updatedAt: candidate.updatedAt ?? stored?.updatedAt,
       discoveredAt: earliestTimestamp(stored?.discoveredAt, candidate.discoveredAt ?? candidate.extractedAt),
       extractedAt: earliestTimestamp(stored?.extractedAt, candidate.extractedAt),
-      semanticEventId: candidate.semanticEventId ?? stored?.semanticEventId,
-      semanticRelation: candidate.semanticRelation ?? stored?.semanticRelation,
+      semanticEventId: relationChanged ? undefined : candidate.semanticEventId ?? stored?.semanticEventId,
+      semanticRelation: relationChanged ? undefined : candidate.semanticRelation ?? stored?.semanticRelation,
     });
   }
   const sinceMs = Date.parse(since);

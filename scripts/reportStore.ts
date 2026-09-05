@@ -154,10 +154,12 @@ export function validateReportInvariants(report: DailyNewsReport): string[] {
   if (report.sections.some((section) => section.storyIds.some((storyId) => !storyIds.has(storyId)))) {
     errors.push("dangling_section_reference");
   }
-  if (report.dailyEdition?.storyIds.some((storyId) => !storyIds.has(storyId))) {
+  const editionStoryIds = new Set((report.dailyEdition?.stories ?? report.stories).map((story) => story.id));
+  if (report.dailyEdition?.storyIds.some((storyId) => !editionStoryIds.has(storyId))) {
     errors.push("dangling_daily_edition_reference");
   }
-  if (report.dailyEdition?.sections.some((section) => section.storyIds.some((storyId) => !storyIds.has(storyId)))) {
+  if (report.dailyEdition?.sections.some((section) => section.storyIds.some((storyId) =>
+    !editionStoryIds.has(storyId) || !report.dailyEdition!.storyIds.includes(storyId)))) {
     errors.push("dangling_daily_edition_section_reference");
   }
   const expectedLatestIds = selectLatestStories(report.stories, new Date(report.generatedAt)).map((story) => story.id);

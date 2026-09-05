@@ -95,7 +95,7 @@ src/config/sources.ts
 - `sections.storyIds` 必须全部能在 `stories` 中解析。
 - `items` 是迁移期兼容字段，仍包含 `score_breakdown`、`trust`、`primaryCategory` 等 V1 消费字段。
 - `hotStories` 是 48 小时内按证据角色、独立来源增速和 24 小时半衰期计算的热点子集；热度不改变重要性层级。
-- `dailyEdition` 固定以上海时间 08:00 为截止点，引用前 24 小时事件并按现有十类分组；同一 edition ID 已成功发布且引用仍有效时后续刷新沿用原选择。
+- `dailyEdition` 固定以上海时间 08:00 为截止点，保存前 24 小时事件的独立 `stories` 卡片快照并按现有十类分组；同一 edition ID 已成功发布后，后续刷新保留原选择和正文，即使实时事件已更新或移出候选池。旧版日报首次沿用时从旧报告补齐卡片快照。
 
 ### 事件选择
 

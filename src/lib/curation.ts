@@ -322,6 +322,7 @@ function buildDailyEdition(stories: StoryCard[], now: Date): DailyEdition {
     cutoffAt: cutoffAt.toISOString(),
     window: { from: from.toISOString(), to: cutoffAt.toISOString() },
     storyIds: ordered.map((story) => story.id),
+    stories: structuredClone(ordered),
     sections: allBeats.map((beat) => ({
       beat,
       storyIds: ordered.filter((story) => story.primaryBeat === beat).map((story) => story.id),

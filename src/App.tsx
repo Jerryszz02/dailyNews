@@ -18,7 +18,7 @@ import { buildDailyReport } from "./lib/newsPipeline";
 import { orderStoriesByActivity, storyActivityTimestamp } from "./lib/curation";
 import { rankNews } from "./lib/scoring";
 import { normalizeText } from "./lib/text";
-import { hydrateWebDailyNewsReport, isWebDailyNewsReport } from "./lib/webReport";
+import { hydrateWebDailyNewsReport, isWebDailyNewsReport, storiesForDailyEdition } from "./lib/webReport";
 import type {
   Category,
   DailyNewsReport,
@@ -574,15 +574,6 @@ function EventCard({ story, variant, anchor = true }: { story: StoryCard; varian
       </footer>
     </article>
   );
-}
-
-function storiesForDailyEdition(report: DailyNewsReport): StoryCard[] {
-  if (!report.dailyEdition) return [];
-  const storyById = new Map(report.stories.map((story) => [story.id, story]));
-  return report.dailyEdition.storyIds.flatMap((id) => {
-    const story = storyById.get(id);
-    return story ? [story] : [];
-  });
 }
 
 function heatTrendLabel(trend: NonNullable<StoryCard["heat"]>["trend"]): string {

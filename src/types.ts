@@ -228,6 +228,8 @@ export interface DailyEdition {
   cutoffAt: string;
   window: { from: string; to: string };
   storyIds: string[];
+  /** Frozen card content; absent only on older reports that referenced the live pool. */
+  stories?: StoryCard[];
   sections: DailyEditionSection[];
   readTimeMinutes: number;
 }

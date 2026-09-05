@@ -39,6 +39,12 @@ interface SemanticDedupeConfig {
   model: string;
 }
 
+export function sameEventRelationMaterial(left: RawNewsItem, right: RawNewsItem): boolean {
+  return left.title === right.title && left.summary === right.summary &&
+    left.publishedAt === right.publishedAt &&
+    (left.primaryCategory ?? left.categories[0]) === (right.primaryCategory ?? right.categories[0]);
+}
+
 export async function resolveAmbiguousEventRelations(
   items: RawNewsItem[],
   options: SemanticDedupeOptions,
