@@ -3,6 +3,7 @@ import { defaultPreferences } from "../src/config/preferences";
 import { newsSources } from "../src/config/sources";
 import { buildDailyReport } from "../src/lib/newsPipeline";
 import { selectLatestStories } from "../src/lib/curation";
+import { compactDailyNewsReport, hydrateWebDailyNewsReport, storiesForDailyEdition } from "../src/lib/webReport";
 import { defaultSourceIntervalMinutes, selectSourcesForCoverage } from "../src/lib/sourceCoverage";
 import type { RawNewsItem } from "../src/types";
 import { InMemoryNewsStore } from "./inMemoryNewsStore";
@@ -11,21 +12,89 @@ import {
   defaultServerlessMaxSources,
   hashReportContent,
   mergeRefreshCandidates,
+  preservePublishedDailyEdition,
   runNewsRefresh,
 } from "./newsRefresh";
-import type { NewsCollectionOptions, NewsCollectionResult } from "./newsService";
-import { expandLegacyItems, readBundledReport } from "./reportStore";
+import { defaultRefreshIntervalMinutes, type NewsCollectionOptions, type NewsCollectionResult } from "./newsService";
+import { expandLegacyItems, readBundledReport, validateReportInvariants } from "./reportStore";
 
 describe("durable news refresh", () => {
+  it("freezes daily card content across updates, pool removal and compact transport", () => {
+    const now = new Date("2026-07-15T00:00:00.000Z");
+    const candidates = recentCandidates(now, "首版日报事件");
+    const original = buildDailyReport(candidates, defaultPreferences, now);
+    const frozen = structuredClone(storiesForDailyEdition(original));
+    expect(frozen.length).toBeGreaterThan(0);
+    const later = buildDailyReport(candidates.map((candidate) => ({
+      ...candidate,
+      title: `${candidate.title}后续更新`,
+      summary: `${candidate.summary}新增事实与后续进展。`,
+    })), defaultPreferences, new Date(now.getTime() + 60 * 60_000));
+    const preserved = preservePublishedDailyEdition(later, original);
+    expect(storiesForDailyEdition(preserved)).toEqual(frozen);
+    expect(preserved.stories).toEqual(later.stories);
+    expect(preserved.stories).not.toEqual(original.stories);
+    const legacyOriginal = structuredClone(original);
+    delete legacyOriginal.dailyEdition!.stories;
+    expect(storiesForDailyEdition(preservePublishedDailyEdition(later, legacyOriginal))).toEqual(frozen);
+    const hydrated = hydrateWebDailyNewsReport(JSON.parse(JSON.stringify(compactDailyNewsReport(preserved))));
+    expect(storiesForDailyEdition(hydrated)).toEqual(frozen);
+    const emptyPool = buildDailyReport([], defaultPreferences, new Date(now.getTime() + 2 * 60 * 60_000));
+    const retained = preservePublishedDailyEdition(emptyPool, preserved);
+    expect(storiesForDailyEdition(retained)).toEqual(frozen);
+    expect(validateReportInvariants(retained).filter((error) => error.includes("daily_edition"))).toEqual([]);
+    const broken = structuredClone(preserved);
+    broken.dailyEdition!.stories = [];
+    expect(validateReportInvariants(broken)).toContain("dangling_daily_edition_reference");
+    const tomorrow = buildDailyReport(candidates, defaultPreferences, new Date(now.getTime() + 24 * 60 * 60_000));
+    expect(preservePublishedDailyEdition(tomorrow, preserved).dailyEdition).toEqual(tomorrow.dailyEdition);
+  });
+
+  it.each([
+    { title: "完全不同的新事件" },
+    { summary: "同一网址现在报道其他事实。" },
+    { publishedAt: "2026-07-23T06:30:00.000Z" },
+    { primaryCategory: "society" as const, categories: ["society" as const] },
+  ])("clears both semantic fields when relation material changes: %j", (changes) => {
+    const now = new Date("2026-07-23T06:45:00.000Z");
+    const stored = {
+      ...recentCandidates(now, "原事件")[0]!,
+      primaryCategory: "ai" as const,
+      semanticEventId: "old-event",
+      semanticRelation: { anchorCandidateId: "anchor", confidence: 0.9, model: "model", decidedAt: now.toISOString() },
+    };
+    const [merged] = mergeRefreshCandidates([stored], [{ ...stored, ...changes }], "2026-07-20T00:00:00.000Z");
+    expect(merged?.semanticEventId).toBeUndefined();
+    expect(merged?.semanticRelation).toBeUndefined();
+    const [unchanged] = mergeRefreshCandidates([stored], [{ ...stored, extractedAt: now.toISOString() }], "2026-07-20T00:00:00.000Z");
+    expect(unchanged?.semanticEventId).toBe(stored.semanticEventId);
+    expect(unchanged?.semanticRelation).toEqual(stored.semanticRelation);
+  });
+
+  it("keeps a non-empty daily edition immutable within the same 08:00 cutoff", () => {
+    const now = new Date("2026-07-15T00:00:00.000Z");
+    const original = buildDailyReport(recentCandidates(now, "首版日报事件"), defaultPreferences, now);
+    const later = buildDailyReport(
+      recentCandidates(new Date(now.getTime() + 60 * 60_000), "稍后发现的日报事件"),
+      defaultPreferences,
+      new Date(now.getTime() + 60 * 60_000),
+    );
+    expect(original.dailyEdition?.id).toBe(later.dailyEdition?.id);
+
+    const preserved = preservePublishedDailyEdition(later, original);
+
+    expect(preserved.dailyEdition).toEqual(original.dailyEdition);
+  });
+
   it.each([
     ["the production default", undefined, 45_000],
     ["an explicit override", 9_000, 9_000],
-  ])("forwards %s collection budget while reserving retry slots", async (_label, override, expected) => {
+  ])("forwards %s collection budget while planning the full configured source cohort", async (_label, override, expected) => {
     const initial = readBundledReport();
     const now = new Date("2026-07-15T23:45:00.000Z");
     const store = new InMemoryNewsStore(initial, () => now);
     const readRecentCandidates = vi.spyOn(store, "readRecentCandidates");
-    const sources = newsSources.filter((source) => source.enabled).slice(0, 11);
+    const sources = newsSources.filter((source) => source.enabled).slice(0, 15);
     const collect = vi.fn(async (_options: NewsCollectionOptions): Promise<NewsCollectionResult> => ({
       items: [],
       mode: "No live data",
@@ -59,7 +128,7 @@ describe("durable news refresh", () => {
 
     expect(collect).toHaveBeenCalledOnce();
     expect(collect.mock.calls[0]?.[0]).toMatchObject({
-      maxSources: 11,
+      maxSources: 15,
       collectionBudgetMs: expected,
     });
     expect(readRecentCandidates).toHaveBeenCalledWith(expect.any(String));
@@ -472,7 +541,7 @@ describe("durable news refresh", () => {
     expect(syncSources).toHaveBeenCalledOnce();
   });
 
-  it("retries pending translations every cron tick even when no source is due", async () => {
+  it("retries pending translations while still attempting every source on each cron tick", async () => {
     const initial = readBundledReport();
     const now = new Date("2026-08-03T00:00:00.000Z");
     const scheduledAt = new Date(now.getTime() + 5 * 60_000);
@@ -565,7 +634,7 @@ describe("durable news refresh", () => {
       );
       const latest = (await store.readState()).latest?.report;
 
-      expect(collect).not.toHaveBeenCalled();
+      expect(collect).toHaveBeenCalledOnce();
       expect(result.status).toBe("published");
       expect(latest?.stories).toHaveLength(2);
       const translatedStory = latest?.stories.find((story) =>
@@ -590,7 +659,7 @@ describe("durable news refresh", () => {
     }
   });
 
-  it("selects a source that becomes due while refresh setup is running", async () => {
+  it("attempts a source regardless of its due timestamp and schedules the next full refresh", async () => {
     const initial = readBundledReport();
     const previousAttemptAt = new Date("2026-07-15T08:30:01.518Z");
     const scheduledAt = new Date("2026-07-15T10:00:01.514Z");
@@ -650,10 +719,10 @@ describe("durable news refresh", () => {
     expect(result.selectedSourceIds).toEqual([source.source_id]);
     const sourceState = (await store.readState()).sources[0];
     expect(sourceState?.lastAttemptAt).toBe(scheduledAt.toISOString());
-    expect(sourceState?.nextDueAt).toBe(new Date(scheduledAt.getTime() + 30 * 60_000).toISOString());
+    expect(sourceState?.nextDueAt).toBe(new Date(scheduledAt.getTime() + defaultRefreshIntervalMinutes * 60_000).toISOString());
   });
 
-  it("attempts a source at 30 minutes after replacing a legacy 90-minute interval", async () => {
+  it("replaces a legacy source interval with the two-hour full-refresh interval", async () => {
     const initial = readBundledReport();
     const previousAttemptAt = new Date("2026-07-15T08:00:00.000Z");
     const scheduledAt = new Date("2026-07-15T08:30:00.000Z");
@@ -703,9 +772,9 @@ describe("durable news refresh", () => {
     expect(result.selectedSourceIds).toEqual([source.source_id]);
     expect(collect).toHaveBeenCalledOnce();
     expect((await store.readState()).sources[0]).toMatchObject({
-      intervalMinutes: defaultSourceIntervalMinutes,
+      intervalMinutes: defaultRefreshIntervalMinutes,
       lastAttemptAt: scheduledAt.toISOString(),
-      nextDueAt: new Date(scheduledAt.getTime() + defaultSourceIntervalMinutes * 60_000).toISOString(),
+      nextDueAt: new Date(scheduledAt.getTime() + defaultRefreshIntervalMinutes * 60_000).toISOString(),
     });
   });
 
@@ -990,6 +1059,7 @@ describe("durable news refresh", () => {
       topStories: freshReport.topStories.map((story) => storyById.get(story.id)!),
       importantStories: [],
       watchlist: [],
+      hotStories: freshReport.hotStories?.map((story) => storyById.get(story.id)!),
       quality: { ...freshReport.quality, latestEventCount: latestStories.length },
     };
 

@@ -829,8 +829,8 @@ describe("collectNewsCandidates source outcomes", () => {
     ]);
   });
 
-  it("bounds direct listing and article requests across eleven concurrent sources", async () => {
-    const sources = Array.from({ length: 11 }, (_unused, index) =>
+  it("bounds direct listing and article requests across the full-source concurrency pool", async () => {
+    const sources = Array.from({ length: defaultSourceConcurrency }, (_unused, index) =>
       testSource(`bounded-${index + 1}`, `受限来源 ${index + 1}`),
     );
     let articleRequestsStarted = 0;
@@ -841,7 +841,7 @@ describe("collectNewsCandidates source outcomes", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
       const sourceIndex = sources.findIndex((source) => source.sections[0].url === url);
-      if (sourceIndex >= 0 && sourceIndex < 5) {
+      if (sourceIndex >= 0 && sourceIndex < 12) {
         return htmlResponse(`
           <rss><channel><item>
             <title>需要正文摘要的 Feed 新闻标题</title>
@@ -850,7 +850,7 @@ describe("collectNewsCandidates source outcomes", () => {
           </item></channel></rss>
         `);
       }
-      if (sourceIndex >= 5) {
+      if (sourceIndex >= 12) {
         return htmlResponse(`
           <a href="/news/2026/07/18/article-1.html">候选新闻标题一，包含足够长度用于识别</a>
           <a href="/news/2026/07/18/article-2.html">候选新闻标题二，包含足够长度用于识别</a>
@@ -873,16 +873,16 @@ describe("collectNewsCandidates source outcomes", () => {
       collectionBudgetMs: 3_000,
       repairSummariesWithModel: false,
     });
-    for (let attempt = 0; attempt < 100 && articleRequestsStarted < 11; attempt += 1) {
+    for (let attempt = 0; attempt < 100 && articleRequestsStarted < defaultSourceConcurrency; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
-    expect(articleRequestsStarted).toBe(11);
+    expect(articleRequestsStarted).toBe(defaultSourceConcurrency);
     await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(articleRequestsStarted).toBe(11);
+    expect(articleRequestsStarted).toBe(defaultSourceConcurrency);
 
     releaseArticleRequests();
     const result = await resultPromise;
-    expect(result.sourceOutcomes).toHaveLength(11);
+    expect(result.sourceOutcomes).toHaveLength(defaultSourceConcurrency);
     expect(result.sourceOutcomes.every((outcome) => outcome.status === "success")).toBe(true);
   });
 
@@ -1266,8 +1266,8 @@ describe("mapWithConcurrency", () => {
     expect(maxActive).toBe(2);
   });
 
-  it("starts all eleven selected sources before releasing the default concurrency barrier", async () => {
-    const values = Array.from({ length: 11 }, (_, index) => index + 1);
+  it("starts the full default source cohort before releasing the concurrency barrier", async () => {
+    const values = Array.from({ length: defaultSourceConcurrency }, (_, index) => index + 1);
     const started: number[] = [];
     let active = 0;
     let completed = 0;
@@ -1287,14 +1287,14 @@ describe("mapWithConcurrency", () => {
       return value;
     });
 
-    expect(defaultSourceConcurrency).toBe(11);
+    expect(defaultSourceConcurrency).toBe(24);
     expect(started).toEqual(values);
     expect(completed).toBe(0);
 
     release();
     await expect(resultPromise).resolves.toEqual(values);
-    expect(maxActive).toBe(11);
-    expect(completed).toBe(11);
+    expect(maxActive).toBe(defaultSourceConcurrency);
+    expect(completed).toBe(defaultSourceConcurrency);
   });
 });
 

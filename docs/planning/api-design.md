@@ -39,6 +39,17 @@ interface DailyNewsReportV2 {
   topStories: StoryCard[];
   importantStories: StoryCard[];
   watchlist: StoryCard[];
+  hotStories?: StoryCard[];
+  dailyEdition?: {
+    id: string;
+    editionDate: string;
+    cutoffAt: string;
+    window: { from: string; to: string };
+    storyIds: string[];
+    stories?: StoryCard[]; // 冻结的日报正文；仅旧版报告缺省
+    sections: Array<{ beat: Category; storyIds: string[] }>;
+    readTimeMinutes: number;
+  };
   sections: Array<{ beat: Category; storyIds: string[] }>;
   coverage: CoverageSummary;
   quality: PublicQualitySummary;
@@ -68,7 +79,9 @@ interface DailyNewsReportV2 {
 契约：
 
 - `stories` 是完整规范事件集合；`latestStories` 引用最近 24 小时所有有效事件并按活动时间倒序；
+- `hotStories` 引用 48 小时内按证据传播强度排序的事件；`dailyEdition` 引用上海时间 08:00 截止的前 24 小时全分类精选；
 - 三个首页数组互不重复，且成员也来自同一事件模型；
+- `hotStories` 可与精选层交叉，因为热度和重要性是独立维度；日报与所有子视图都只保存 `stories` 中的引用；
 - 每个 `sections.storyIds` 必须能在 `stories` 中解析；
 - `items` 是迁移期 V1 兼容投影；
 - `coverage` 和 `quality` 只包含可公开聚合，不包含内部抓取错误或凭据；
@@ -164,6 +177,7 @@ Authorization: Bearer <CRON_SECRET>
 - fallback 不改变 `generatedAt` 或 `lastSuccessAt`；
 - 两个冷进程读取同一个 `latestReportId`，发布后 60 秒内一致；
 - 报告内容陈旧但可读时 `/api/news` 与 `/api/health` 均返回 200，并明确 `contentStatus=stale/quiet`；
+- compact web 表示通过 `hotStoryIds` 引用实时事件；`dailyEdition.stories` 独立保存冻结正文，日报 ID 只在该快照内解析，兼容旧版缺省字段时才读取实时事件；
 - API 失败时浏览器继续静态 fallback。
 
 ## 待确认

@@ -103,6 +103,46 @@ describe("event-level curation", () => {
     expect(report.topStories[0].status).toBe("confirmed");
     expect(report.topStories[0].evidence).toHaveLength(2);
     expect(report.topStories[0].whyItMatters).not.toContain("偏好加分");
+    expect(report.topStories[0].selection).toMatchObject({ selected: true });
+    expect(report.topStories[0].selection?.reason).toContain("今日必知");
+    expect(report.hotStories?.[0]).toMatchObject({
+      heat: { trend: "rising", coverageConfidence: "verified" },
+    });
+  });
+
+  it("builds the fixed 08:00 China edition across every represented category", () => {
+    const report = buildDailyReport(
+      [
+        candidate({
+          id: "edition-policy",
+          title: "全国金融监管新规公布并明确执行时间",
+          url: "https://www.news.cn/politics/edition-policy.html",
+          publishedAt: "2026-07-09T23:00:00.000Z",
+        }),
+        candidate({
+          id: "edition-sports",
+          title: "全国联赛决赛产生冠军并刷新赛事纪录",
+          url: "https://sports.news.cn/edition-sports.html",
+          categories: ["sports"],
+          primaryCategory: "sports",
+          summary: "全国联赛决赛结束并产生冠军，赛事同时刷新纪录并公布后续赛程安排。",
+          publishedAt: "2026-07-09T22:00:00.000Z",
+        }),
+      ],
+      defaultPreferences,
+      now,
+    );
+
+    expect(report.dailyEdition).toMatchObject({
+      id: "daily-2026-07-10",
+      editionDate: "2026-07-10",
+      cutoffAt: "2026-07-10T00:00:00.000Z",
+      window: { from: "2026-07-09T00:00:00.000Z", to: "2026-07-10T00:00:00.000Z" },
+    });
+    expect(report.dailyEdition?.storyIds).toHaveLength(2);
+    expect(report.dailyEdition?.sections.find((section) => section.beat === "policy")?.storyIds).toHaveLength(1);
+    expect(report.dailyEdition?.sections.find((section) => section.beat === "sports")?.storyIds).toHaveLength(1);
+    expect(report.dailyEdition?.sections).toHaveLength(10);
   });
 
   it("keeps must-know selection independent from user preference", () => {

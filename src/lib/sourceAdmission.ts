@@ -2,7 +2,7 @@ import type { NewsSource } from "../types";
 
 export type SourceDefinition = Omit<
   NewsSource,
-  "admission" | "publicationRole" | "allowedHosts" | "reviewedAt" | "reviewNote"
+  "admission" | "publicationRole" | "signalRole" | "allowedHosts" | "reviewedAt" | "reviewNote"
 >;
 
 const sourceReviewDate = "2026-08-03";
@@ -57,6 +57,14 @@ export function defineApprovedSource(source: SourceDefinition): NewsSource {
     ...source,
     admission: "approved",
     publicationRole: ["wire", "public", "official"].includes(source.mediaType) ? "lead" : "reporting",
+    signalRole:
+      source.mediaType === "official"
+        ? "first_party"
+        : source.mediaType === "social"
+          ? "discussion"
+          : source.mediaType === "technology" || source.mediaType === "business"
+            ? "analysis"
+            : "reporting",
     allowedHosts,
     ...(allowedPathPrefixes.length > 0 ? { allowedPathPrefixes } : {}),
     reviewedAt: sourceReviewDate,
@@ -103,6 +111,9 @@ export function validateSourceAdmission(sources: NewsSource[]): string[] {
     sourceIds.add(source.source_id);
     if (source.admission === "approved" && source.allowedHosts.length === 0) {
       issues.push(`approved source has no allowedHosts: ${source.source_id}`);
+    }
+    if (source.admission === "approved" && !source.signalRole) {
+      issues.push(`approved source has no signalRole: ${source.source_id}`);
     }
     if (source.admission === "approved") {
       for (const section of source.sections) {

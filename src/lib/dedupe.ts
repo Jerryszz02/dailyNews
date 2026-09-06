@@ -1,6 +1,13 @@
 import type { Category, NewsCluster, RawNewsItem } from "../types";
 import { normalizeText, tokenOverlap } from "./text.js";
 
+export interface EventPairSignals {
+  withinWindow: boolean;
+  sameCategory: boolean;
+  titleOverlap: number;
+  combinedOverlap: number;
+}
+
 const categoryPriority: Category[] = [
   "sports",
   "ai",
@@ -77,6 +84,7 @@ export function clusterNews(items: RawNewsItem[]): NewsCluster[] {
           ? "degraded"
           : undefined;
     duplicate.rejectionReasons = unique([...(duplicate.rejectionReasons ?? []), ...(item.rejectionReasons ?? [])]);
+    duplicate.semanticEventId ??= item.semanticEventId;
   }
 
   return clusters.map((cluster) => ({ ...cluster, primaryCategory: choosePrimaryCategory(cluster) }));
@@ -87,12 +95,23 @@ function isSameStory(cluster: NewsCluster, item: RawNewsItem): boolean {
     return true;
   }
 
-  if (!withinEventWindow(cluster.updatedAt, itemUpdatedAt(item))) return false;
-  if (cluster.primaryCategory !== (item.primaryCategory ?? item.categories[0] ?? "society")) return false;
+  if (cluster.semanticEventId && item.semanticEventId && cluster.semanticEventId === item.semanticEventId) {
+    return true;
+  }
 
-  const titleOverlap = tokenOverlap(cluster.title, item.title);
-  const combinedOverlap = tokenOverlap(`${cluster.title} ${cluster.summary}`, `${item.title} ${item.summary}`);
-  return titleOverlap >= 0.8 && combinedOverlap >= 0.85;
+  const signals = eventPairSignals(cluster, item);
+  return signals.withinWindow && signals.sameCategory && signals.titleOverlap >= 0.8 && signals.combinedOverlap >= 0.85;
+}
+
+export function eventPairSignals(left: RawNewsItem, right: RawNewsItem): EventPairSignals {
+  return {
+    withinWindow: withinEventWindow(itemUpdatedAt(left), itemUpdatedAt(right)),
+    sameCategory:
+      (left.primaryCategory ?? left.categories[0] ?? "society") ===
+      (right.primaryCategory ?? right.categories[0] ?? "society"),
+    titleOverlap: tokenOverlap(left.title, right.title),
+    combinedOverlap: tokenOverlap(`${left.title} ${left.summary}`, `${right.title} ${right.summary}`),
+  };
 }
 
 function canonicalUrl(value: string): string {

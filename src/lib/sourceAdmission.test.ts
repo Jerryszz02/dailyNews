@@ -23,6 +23,9 @@ describe("source admission", () => {
     expect(validateSourceAdmission(newsSources)).toEqual([]);
     expect(newsSources.every((source) => source.admission === "approved")).toBe(true);
     expect(newsSources.every((source) => source.reviewedAt === "2026-08-03")).toBe(true);
+    expect(newsSources.every((source) => source.signalRole)).toBe(true);
+    expect(newsSources.find((source) => source.source_id === "openai")?.signalRole).toBe("first_party");
+    expect(newsSources.find((source) => source.source_id === "x-openai")?.signalRole).toBe("discussion");
   });
 
   it("accepts configured hosts and their subdomains but rejects lookalikes", () => {

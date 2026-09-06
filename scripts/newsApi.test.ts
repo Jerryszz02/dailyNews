@@ -162,7 +162,7 @@ describe("serverless report API", () => {
     expect(body.refreshStatus).toBe("stale");
   });
 
-  it("allows one two-hour slot beyond the ten-hour in-memory source rotation", async () => {
+  it("marks full-sweep coverage stale after two refresh slots", async () => {
     const now = new Date("2026-08-10T12:00:00.000Z");
     let requestedAt = now;
     const report = { ...readBundledReport(), generatedAt: now.toISOString() };
@@ -195,7 +195,7 @@ describe("serverless report API", () => {
     const store = {
       kind: "memory",
       persistent: false,
-      readState: vi.fn().mockResolvedValueOnce(state(11)).mockResolvedValueOnce(state(13)),
+      readState: vi.fn().mockResolvedValueOnce(state(3)).mockResolvedValueOnce(state(5)),
     } as unknown as NewsStore;
     const handlers = createNewsApiHandlers({ store, now: () => requestedAt });
 

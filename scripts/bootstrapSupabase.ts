@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { newsSources } from "../src/config/sources.js";
 import { isCollectibleSource } from "../src/lib/sourceAdmission.js";
-import { defaultSourceIntervalMinutes } from "../src/lib/sourceCoverage.js";
+import { defaultRefreshIntervalMinutes } from "./newsService.js";
 import { hashCandidates, hashReportContent } from "./newsRefresh.js";
 import { getDefaultNewsStore } from "./newsStoreFactory.js";
 import { newestContentTimestamp } from "./newsStore.js";
@@ -38,7 +38,7 @@ async function main() {
       newsSources.map((source) => ({
         sourceId: source.source_id,
         enabled: isCollectibleSource(source),
-        intervalMinutes: defaultSourceIntervalMinutes,
+        intervalMinutes: defaultRefreshIntervalMinutes,
       })),
       observedAt,
     );

@@ -18,7 +18,7 @@ import { buildDailyReport } from "./lib/newsPipeline";
 import { orderStoriesByActivity, storyActivityTimestamp } from "./lib/curation";
 import { rankNews } from "./lib/scoring";
 import { normalizeText } from "./lib/text";
-import { hydrateWebDailyNewsReport, isWebDailyNewsReport } from "./lib/webReport";
+import { hydrateWebDailyNewsReport, isWebDailyNewsReport, storiesForDailyEdition } from "./lib/webReport";
 import type {
   Category,
   DailyNewsReport,
@@ -399,7 +399,9 @@ function BriefingHome({ report, query }: { report: DailyNewsReport; query: strin
   const topStories = filterStories(report.topStories, query);
   const importantStories = selectBriefingImportantStories(report, query);
   const watchlist = filterStories(report.watchlist, query);
-  const visibleStoryCount = latestStories.length + topStories.length + importantStories.length + watchlist.length;
+  const hotStories = filterStories(report.hotStories ?? [], query);
+  const dailyStories = filterStories(storiesForDailyEdition(report), query);
+  const visibleStoryCount = latestStories.length + topStories.length + importantStories.length + watchlist.length + hotStories.length + dailyStories.length;
 
   useEffect(() => {
     setLatestVisibleCount(initialLatestVisibleCount);
@@ -424,6 +426,36 @@ function BriefingHome({ report, query }: { report: DailyNewsReport; query: strin
       </section>
 
       {visibleStoryCount === 0 ? <div className="empty-state">没有匹配当前搜索的事件。</div> : null}
+
+      {dailyStories.length > 0 ? (
+        <section className="story-section daily-edition-section" aria-labelledby="daily-edition-title">
+          <div className="story-section-heading">
+            <div>
+              <p className="eyebrow">每日 08:00 · 覆盖全部栏目</p>
+              <h2 id="daily-edition-title">全分类日报</h2>
+            </div>
+            <span>约 {report.dailyEdition?.readTimeMinutes ?? Math.ceil(dailyStories.length * 1.2)} 分钟 · {dailyStories.length} 个事件</span>
+          </div>
+          <div className="story-grid">
+            {dailyStories.map((story) => <EventCard key={story.id} story={story} variant="compact" />)}
+          </div>
+        </section>
+      ) : null}
+
+      {hotStories.length > 0 ? (
+        <section className="story-section hot-news-section" aria-labelledby="hot-news-title">
+          <div className="story-section-heading">
+            <div>
+              <p className="eyebrow">证据增速 · 24 小时半衰期</p>
+              <h2 id="hot-news-title">正在升温</h2>
+            </div>
+            <span>{hotStories.length} 个热点事件</span>
+          </div>
+          <div className="story-grid">
+            {hotStories.map((story) => <EventCard key={story.id} story={story} variant="compact" />)}
+          </div>
+        </section>
+      ) : null}
 
       {visibleLatestStories.length > 0 ? (
         <section className="story-section latest-news-section" aria-labelledby="latest-updates-title">
@@ -509,6 +541,9 @@ function EventCard({ story, variant, anchor = true }: { story: StoryCard; varian
         <span>{categoryLabel(story.primaryBeat)}</span>
         <span>{story.evidence.length} 个证据来源</span>
         <span>{formatStoryAge(story)}</span>
+        {story.heat && story.heat.score >= 30 ? (
+          <span className={`heat-badge ${story.heat.trend}`}>{heatTrendLabel(story.heat.trend)} · {story.heat.score}</span>
+        ) : null}
         {story.translationStatus === "pending" ? <span className="degraded-badge">待翻译</span> : null}
         {story.summaryStatus === "pending" ? <span className="degraded-badge">摘要待补全</span> : null}
         {story.timeStatus === "estimated" ? <span className="degraded-badge">时间待核验</span> : null}
@@ -524,6 +559,9 @@ function EventCard({ story, variant, anchor = true }: { story: StoryCard; varian
         <Target size={15} />
         <span>{story.whyItMatters}</span>
       </div>
+      {story.selection ? (
+        <p className="selection-reason" title={story.selection.criteria.join("；")}>精选理由：{story.selection.reason}</p>
+      ) : null}
       {variant !== "compact" ? (
         <div className="event-next">
           {variant === "watch" ? <CircleAlert size={15} /> : <Eye size={15} />}
@@ -536,6 +574,10 @@ function EventCard({ story, variant, anchor = true }: { story: StoryCard; varian
       </footer>
     </article>
   );
+}
+
+function heatTrendLabel(trend: NonNullable<StoryCard["heat"]>["trend"]): string {
+  return { new: "新出现", rising: "上升", surging: "突增", steady: "持续" }[trend];
 }
 
 function NavButton({ active, icon, label, onClick }: { active: boolean; icon: React.ReactNode; label: string; onClick: () => void }) {
