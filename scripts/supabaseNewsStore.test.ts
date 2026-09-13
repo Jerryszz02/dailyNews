@@ -7,6 +7,47 @@ import { readBundledReport } from "./reportStore";
 import { SupabaseNewsStore } from "./supabaseNewsStore";
 
 describe("SupabaseNewsStore RPC mapping", () => {
+  it("reads bounded collection cursors from the v2 state RPC", async () => {
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "daily_news_read_latest") return { data: [], error: null };
+      if (name === "daily_news_list_source_states_v2") return { data: [{ source_id: "x", interval_minutes: 15, consecutive_failures: 0, collection_cursor: { userId: "42", sinceId: "9007199254740993", paginationToken: "p", startTime: "2026-09-13T00:00:00.000Z", ignored: "secret" } }], error: null };
+      throw new Error(`Unexpected RPC: ${name}`);
+    });
+    const state = await new SupabaseNewsStore({ rpc } as unknown as SupabaseClient).readState();
+    expect(rpc.mock.calls.map(([name]) => name)).toContain("daily_news_list_source_states_v2");
+    expect(state.sources[0].collectionCursor).toEqual({ userId: "42", sinceId: "9007199254740993", paginationToken: "p", startTime: "2026-09-13T00:00:00.000Z" });
+  });
+
+  it("uses the legacy state RPC only when v2 is absent", async () => {
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "daily_news_read_latest") return { data: [], error: null };
+      if (name === "daily_news_list_source_states_v2") return { data: null, error: { code: "PGRST202" } };
+      if (name === "daily_news_list_source_states") return { data: [], error: null };
+      throw new Error(`Unexpected RPC: ${name}`);
+    });
+    await expect(new SupabaseNewsStore({ rpc } as unknown as SupabaseClient).readState()).resolves.toMatchObject({ sources: [] });
+    expect(rpc.mock.calls.map(([name]) => name)).toContain("daily_news_list_source_states");
+  });
+
+  it.each([
+    ["42501", "supabase_permission_denied"],
+    ["PGRST202", "x_cursor_store_unavailable"],
+  ])("requires durable source progress when X is configured (%s)", async (databaseCode, expectedCode) => {
+    vi.stubEnv("DAILY_NEWS_X_BEARER_TOKEN", "test-token");
+    try {
+      const rpc = vi.fn(async (name: string) => name === "daily_news_read_latest"
+        ? { data: [], error: null }
+        : { data: null, error: { code: databaseCode } });
+      const store = new SupabaseNewsStore({ rpc } as unknown as SupabaseClient);
+      await expect(store.readState()).rejects.toMatchObject({ code: expectedCode });
+      expect(rpc.mock.calls.map(([name]) => name)).not.toContain("daily_news_list_source_states");
+      // Serving an existing publication does not depend on the cursor RPC.
+      await expect(store.readPublicationState()).resolves.toMatchObject({ sources: [] });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("retries transient read failures before starting a refresh", async () => {
     vi.useFakeTimers();
     try {

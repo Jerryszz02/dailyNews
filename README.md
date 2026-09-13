@@ -35,10 +35,12 @@ npm run serve
 
 `npm run generate` 会写入 `public/daily-news.json`，前端在 API 不可用时会加载这个文件。生成逻辑在 `scripts/generateDailyNews.ts`，实时 API 复用 `scripts/newsService.ts`：
 
-- 默认不需要 Firecrawl API key：优先通过 Firecrawl keyless 搜索覆盖调度器选中的来源。
-- Firecrawl 的 web/news 结果与公开页面、feed、sitemap 直连采集并发执行；每个网络请求独立超时，初始 URL 与重定向后的最终 URL 都必须属于来源允许域名。
+- 优先读取配置的 RSS / Atom，再读公开页面或 sitemap；没有近期可用候选时才调用 Firecrawl keyless 补漏。
+- 每轮全部可采集信源进入同一任务池，最多 50 个来源并发，完成一个即补下一个。Feed 入口与文章链接分开校验；单请求与整轮截止时间继续生效。
+- X API、Firecrawl 与翻译各自最多 4 个并发请求，避免全局来源池集中压向同一服务。
 - 没有实时结果：保留 last-known-good 的原始 `reportId/generatedAt`，不会把旧新闻重盖成当前时间；静态 `npm run generate` 会报错并保留原文件。
-- 60 秒函数上限内，采集阶段默认使用 45 秒，保留约 10 秒完成 72 小时候选读取、报告构建与原子提交。局部来源、解析或翻译失败会标记 `partial/degraded`，不会冻结其他有效变化。
+- Vercel Hobby + Fluid 使用 300 秒函数时限，采集预算默认 240 秒，余下时间用于候选读取、报告构建与原子提交。刷新锁定期续租，失去租约后停止提交。局部来源、解析或翻译失败会标记 `partial/degraded`。
+- X 采用官方用户时间线 API，使用 `since_id` 和可恢复分页；游标随帖子原子保存。未配置服务端凭据时跳过 X 入口，不发出付费读取。
 - `GET /api/news` 只读已经发布的报告，不在用户请求内抓取外部来源。
 - 静态报告先写临时文件并通过结构不变量校验，再原子替换 `public/daily-news.json`。
 - 生产每 2 小时由 Supabase Cron 调用受保护 `/api/cron`；每轮把全部 `enabled && approved` 来源加入同一采集计划，并用有限并发控制资源。来源规模增加不会再线性扩大新闻的计划等待时间。
@@ -63,8 +65,9 @@ npm run generate
 DAILY_NEWS_MAX_SOURCES=49
 DAILY_NEWS_LIMIT_PER_SECTION=5
 DAILY_NEWS_REFRESH_INTERVAL_MINUTES=120
-DAILY_NEWS_COLLECTION_BUDGET_MS=45000
-DAILY_NEWS_SOURCE_CONCURRENCY=24
+DAILY_NEWS_COLLECTION_BUDGET_MS=240000
+DAILY_NEWS_SOURCE_CONCURRENCY=50
+DAILY_NEWS_X_BEARER_TOKEN=
 DAILY_NEWS_MAX_AGE_HOURS=72
 SUPABASE_URL=
 SUPABASE_SECRET_KEY=
@@ -78,7 +81,7 @@ DAILY_NEWS_LLM_DEDUPE_MAX_CALLS_PER_REFRESH=12
 PORT=4173
 ```
 
-`enabled` 只控制是否抓取，`admission: approved` 才允许发布。生产刷新始终计划全部已启用且已准入来源；`DAILY_NEWS_MAX_SOURCES` 仅用于手动静态生成或测试范围控制，不限制生产 refresh。默认并发为 24，单来源仍受 8 秒超时和全轮 45 秒预算保护。`SUPABASE_SECRET_KEY`、`CRON_SECRET` 和 `DAILY_NEWS_REFRESH_TOKEN` 都只能存在于服务端环境，不能使用 `VITE_` 前缀。
+`enabled` 控制是否抓取，`admission: approved` 才允许发布。生产刷新计划全部已启用、已准入且凭据可用的来源；`DAILY_NEWS_MAX_SOURCES` 仅用于手动静态生成或测试范围控制，不限制生产 refresh。默认 50 并发，每个来源和网络请求仍有独立超时，并受全轮 240 秒预算保护。Supabase、Cron、刷新、翻译和 X 凭据都只能存在于服务端环境，不能使用 `VITE_` 前缀。
 
 `DAILY_NEWS_TRANSLATION_API_KEY` 是可选 secret；配置后默认使用 DeepSeek Flash（`https://api.deepseek.com` + `deepseek-v4-flash`）把非中文新闻改写为中文标题和摘要，并在摘要缺失或等于标题时生成中文概述。`DAILY_NEWS_TRANSLATION_BASE_URL` 和 `DAILY_NEWS_TRANSLATION_MODEL` 只在需要覆盖默认 DeepSeek 配置时填写。生产部署到 Vercel 时只在项目环境变量里配置 secret，不提交 `.env.local`。
 

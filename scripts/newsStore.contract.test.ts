@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { selectLatestStories } from "../src/lib/curation";
 import type { RawNewsItem } from "../src/types";
 import { InMemoryNewsStore } from "./inMemoryNewsStore";
@@ -7,6 +7,28 @@ import type { LeaseIdentity } from "./newsStore";
 import { readBundledReport } from "./reportStore";
 
 describe("NewsStore contract", () => {
+  it("persists an unchanged cursor atomically and returns detached state", async () => {
+    const now = new Date("2026-07-13T08:00:00.000Z");
+    const store = new InMemoryNewsStore(readBundledReport(), () => now);
+    const lease = await acquire(store, now);
+    await store.syncSources(lease, [{ sourceId: "x", enabled: true, intervalMinutes: 15 }], now.toISOString());
+    await store.completeRefreshWithoutPublish(lease, { outcome: "unchanged" }, [{ sourceId: "x", status: "empty", attemptedAt: now.toISOString(), nextDueAt: now.toISOString(), discoveredCount: 0, acceptedCount: 0, errorCode: null, collectionCursor: { userId: "42", sinceId: "100" } }]);
+    const state = await store.readState();
+    state.sources[0].collectionCursor!.sinceId = "mutated";
+    expect((await store.readState()).sources[0].collectionCursor).toEqual({ userId: "42", sinceId: "100" });
+  });
+
+  it("rolls back cursor and candidates when an atomic publish throws", async () => {
+    const now = new Date("2026-07-13T08:00:00.000Z");
+    const store = new InMemoryNewsStore(readBundledReport(), () => now);
+    const lease = await acquire(store, now);
+    await store.syncSources(lease, [{ sourceId: "x", enabled: true, intervalMinutes: 15 }], now.toISOString());
+    vi.spyOn(store, "publishRefresh").mockRejectedValueOnce(new Error("publish failed"));
+    await expect(store.commitRefresh({ ...lease, reportId: randomUUID(), report: readBundledReport(), dataAsOf: now.toISOString(), newestContentAt: null, contentHash: "hash", inputFingerprint: "fingerprint", metrics: {} }, [{ sourceId: "x", status: "success", attemptedAt: now.toISOString(), nextDueAt: now.toISOString(), discoveredCount: 1, acceptedCount: 1, errorCode: null, collectionCursor: { userId: "42", sinceId: "100" } }], [rawCandidate()])).rejects.toThrow("publish failed");
+    expect((await store.readState()).sources[0].collectionCursor).toBeUndefined();
+    expect(await store.readRecentCandidates("2026-01-01T00:00:00.000Z")).toEqual([]);
+  });
+
   it("deduplicates candidates by source and canonical URL", async () => {
     const now = new Date("2026-07-13T08:00:00.000Z");
     const store = new InMemoryNewsStore(readBundledReport(), () => now);

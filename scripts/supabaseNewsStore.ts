@@ -15,6 +15,7 @@ import type {
   PublishRefreshResult,
   RefreshLease,
   SourceCollectionResult,
+  SourceCollectionCursor,
   SourceDefinition,
 } from "./newsStore.js";
 
@@ -36,9 +37,24 @@ export class SupabaseNewsStore implements NewsStore {
   async readState(): Promise<NewsStoreState> {
     const [publication, sourceData] = await Promise.all([
       this.readPublicationState(),
-      this.readRpc("daily_news_list_source_states").catch(() => []),
+      this.readSourceStates().catch((error) => {
+        // X progress is required for incremental reads; never restart from an
+        // empty cursor after a transient database failure.
+        if (process.env.DAILY_NEWS_X_BEARER_TOKEN?.trim()) throw error;
+        return [];
+      }),
     ]);
     return { ...publication, sources: rows(sourceData).map(readSourceState) };
+  }
+
+  private async readSourceStates(): Promise<unknown> {
+    try {
+      return await this.readRpc("daily_news_list_source_states_v2");
+    } catch (error) {
+      if (!(error instanceof NewsStoreError) || error.code !== "supabase_rpc_missing") throw error;
+      if (process.env.DAILY_NEWS_X_BEARER_TOKEN?.trim()) throw new NewsStoreError("x_cursor_store_unavailable");
+      return this.readRpc("daily_news_list_source_states");
+    }
   }
 
   async readPublicationState(): Promise<NewsStoreState> {
@@ -141,7 +157,7 @@ export class SupabaseNewsStore implements NewsStore {
   }
 
   async recordSourceResults(lease: LeaseIdentity, results: SourceCollectionResult[]): Promise<void> {
-    await this.rpc("daily_news_record_source_results", {
+    await this.rpc(results.some((result) => result.collectionCursor) ? "daily_news_record_source_results_v2" : "daily_news_record_source_results", {
       lease_owner: lease.ownerId,
       run_id: lease.runId,
       fencing_token: lease.fencingToken,
@@ -227,7 +243,7 @@ export class SupabaseNewsStore implements NewsStore {
     };
     try {
       return readPublishRefreshResult(
-        requiredFirstRow(await this.rpc("daily_news_finish_refresh_v2", args), "commit_result_missing"),
+        requiredFirstRow(await this.rpc(sourceResults.some((result) => result.collectionCursor) ? "daily_news_finish_refresh_v3" : "daily_news_finish_refresh_v2", args), "commit_result_missing"),
       );
     } catch (error) {
       const reconciled = await this.reconcileRefresh(input.runId);
@@ -260,7 +276,7 @@ export class SupabaseNewsStore implements NewsStore {
     const refreshOutcome = metrics.outcome === "partial" ? "partial" : "unchanged";
     let data: unknown;
     try {
-      data = await this.rpc("daily_news_finish_without_publish_v2", {
+      data = await this.rpc(sourceResults.some((result) => result.collectionCursor) ? "daily_news_finish_without_publish_v3" : "daily_news_finish_without_publish_v2", {
         lease_owner: lease.ownerId,
         run_id: lease.runId,
         fencing_token: lease.fencingToken,
@@ -421,6 +437,7 @@ function sourceResultsPayload(results: SourceCollectionResult[]): DatabaseRow[] 
     discovered_count: result.discoveredCount,
     accepted_count: result.acceptedCount,
     last_error_code: result.errorCode,
+    ...(encodeCursor(result.collectionCursor) ? { collection_cursor: encodeCursor(result.collectionCursor) } : {}),
   }));
 }
 
@@ -581,8 +598,33 @@ function readSourceState(row: DatabaseRow): NewsSourceState {
     acceptedRate: typeof row.accepted_rate === "number" ? row.accepted_rate : undefined,
     circuitOpenUntil: readTimestamp(row.circuit_open_until),
     lastErrorCode: readNullableString(row.last_error_code),
+    collectionCursor: readCursor(row.collection_cursor),
   };
 }
+
+function readCursor(value: unknown): SourceCollectionCursor | undefined {
+  if (!isRecord(value) || !isNumericId(value.userId)) return undefined;
+  const cursor: SourceCollectionCursor = { userId: value.userId };
+  if (isNumericId(value.sinceId)) cursor.sinceId = value.sinceId;
+  if (isBoundedToken(value.paginationToken)) cursor.paginationToken = value.paginationToken;
+  if (isNumericId(value.newestId)) cursor.newestId = value.newestId;
+  if (isTimestamp(value.startTime)) cursor.startTime = value.startTime;
+  return cursor;
+}
+
+function encodeCursor(value: SourceCollectionCursor | undefined): SourceCollectionCursor | undefined {
+  if (!value || !isNumericId(value.userId)) return undefined;
+  const cursor: SourceCollectionCursor = { userId: value.userId };
+  if (isNumericId(value.sinceId)) cursor.sinceId = value.sinceId;
+  if (isBoundedToken(value.paginationToken)) cursor.paginationToken = value.paginationToken;
+  if (isNumericId(value.newestId)) cursor.newestId = value.newestId;
+  if (isTimestamp(value.startTime)) cursor.startTime = value.startTime;
+  return cursor;
+}
+
+function isNumericId(value: unknown): value is string { return typeof value === "string" && /^\d{1,30}$/.test(value); }
+function isBoundedToken(value: unknown): value is string { return typeof value === "string" && value.length > 0 && value.length <= 2048; }
+function isTimestamp(value: unknown): value is string { return typeof value === "string" && Number.isFinite(Date.parse(value)); }
 
 function readString(value: unknown): string {
   return typeof value === "string" ? value : "";

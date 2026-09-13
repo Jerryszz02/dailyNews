@@ -1,5 +1,7 @@
 import { defineApprovedSource, type SourceDefinition } from "../lib/sourceAdmission.js";
 import type { Category, NewsSource, SearchSourceType, SourceSection } from "../types";
+import { expandedSourceDefinitions } from "./expandedSources.js";
+import { xAccountRegistry, xSourceId, type XAccountRegistryEntry } from "./xAccounts.js";
 
 const newsOnly: SearchSourceType[] = ["news"];
 const webAndNews: SearchSourceType[] = ["web", "news"];
@@ -12,11 +14,21 @@ function section(
   searchTerms: string[],
   searchSources: SearchSourceType[] = newsOnly,
   requireChinese = true,
+  feedUrl?: string,
 ): SourceSection {
-  return { label, url, primaryCategory, categories, searchTerms, searchSources, requireChinese };
+  return {
+    label,
+    url,
+    primaryCategory,
+    categories,
+    searchTerms,
+    searchSources,
+    requireChinese,
+    ...(feedUrl ? { feedUrl } : {}),
+  };
 }
 
-const configuredSources: SourceDefinition[] = [
+const curatedSources: SourceDefinition[] = [
   {
     source_id: "xinhua",
     name: "新华网",
@@ -78,6 +90,8 @@ const configuredSources: SourceDefinition[] = [
       section("国际", "https://www.chinanews.com.cn/gj/", "international", ["international", "policy"], ["中国新闻网 国际", "中新网 国际 世界"]),
       section("体育", "https://www.chinanews.com.cn/ty/", "sports", ["sports", "china"], ["中国新闻网 体育", "中新网 体育 足球 篮球"]),
       section("文娱", "https://www.chinanews.com.cn/yl/", "entertainment", ["entertainment", "china"], ["中国新闻网 文娱", "中新网 影视 娱乐"]),
+      section("财经", "https://www.chinanews.com.cn/finance/", "finance", ["finance", "china"], ["中国新闻网 财经", "中新网 财经 金融"], newsOnly, true, "https://www.chinanews.com.cn/rss/finance.xml"),
+      section("社会", "https://www.chinanews.com.cn/society/", "society", ["society", "china"], ["中国新闻网 社会", "中新网 社会 民生"], newsOnly, true, "https://www.chinanews.com.cn/rss/society.xml"),
     ],
   },
   {
@@ -138,7 +152,11 @@ const configuredSources: SourceDefinition[] = [
     credibility: 74,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("新闻", "https://www.thepaper.cn/", "china", ["china", "society", "policy"], ["澎湃新闻 时事", "澎湃新闻 社会 政策"])],
+    sections: [
+      section("新闻", "https://www.thepaper.cn/", "china", ["china", "society", "policy"], ["澎湃新闻 时事", "澎湃新闻 社会 政策"]),
+      section("社会", "https://www.thepaper.cn/", "society", ["society", "china"], ["澎湃新闻 社会", "澎湃新闻 民生 热点"]),
+      section("文艺", "https://www.thepaper.cn/", "entertainment", ["entertainment", "china", "society"], ["澎湃新闻 文艺", "澎湃新闻 文化 娱乐"]),
+    ],
   },
   {
     source_id: "36kr",
@@ -354,7 +372,7 @@ const configuredSources: SourceDefinition[] = [
     credibility: 86,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("World", "https://www.bbc.com/news/world", "international", ["international", "policy", "society"], ["BBC world news latest", "BBC international news"], newsOnly, false)],
+    sections: [section("World", "https://www.bbc.com/news/world", "international", ["international", "policy", "society"], ["BBC world news latest", "BBC international news"], newsOnly, false, "https://feeds.bbci.co.uk/news/world/rss.xml")],
   },
   {
     source_id: "aljazeera",
@@ -510,7 +528,7 @@ const configuredSources: SourceDefinition[] = [
     credibility: 90,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("News", "https://openai.com/news/", "ai", ["ai", "technology"], ["OpenAI news latest", "OpenAI blog product research"], webAndNews, false)],
+    sections: [section("News", "https://openai.com/news/", "ai", ["ai", "technology"], ["OpenAI news latest", "OpenAI blog product research"], webAndNews, false, "https://openai.com/news/rss.xml")],
   },
   {
     source_id: "anthropic",
@@ -534,7 +552,7 @@ const configuredSources: SourceDefinition[] = [
     credibility: 88,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("Blog", "https://deepmind.google/discover/blog/", "ai", ["ai", "technology", "science"], ["Google DeepMind blog latest", "DeepMind AI research news"], webAndNews, false)],
+    sections: [section("Blog", "https://deepmind.google/discover/blog/", "ai", ["ai", "technology", "science"], ["Google DeepMind blog latest", "DeepMind AI research news"], webAndNews, false, "https://deepmind.google/blog/rss.xml")],
   },
   {
     source_id: "google-ai",
@@ -594,7 +612,7 @@ const configuredSources: SourceDefinition[] = [
     credibility: 82,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("Blog", "https://huggingface.co/blog", "ai", ["ai", "technology"], ["Hugging Face blog latest", "Hugging Face AI models news"], webAndNews, false)],
+    sections: [section("Blog", "https://huggingface.co/blog", "ai", ["ai", "technology"], ["Hugging Face blog latest", "Hugging Face AI models news"], webAndNews, false, "https://huggingface.co/blog/feed.xml")],
   },
   {
     source_id: "x-shams",
@@ -602,6 +620,7 @@ const configuredSources: SourceDefinition[] = [
     countryOrRegion: "us",
     language: "en-US",
     mediaType: "social",
+    xUsername: "ShamsCharania",
     defaultWeight: 0.58,
     credibility: 58,
     mayHavePaywall: false,
@@ -614,6 +633,7 @@ const configuredSources: SourceDefinition[] = [
     countryOrRegion: "us",
     language: "en-US",
     mediaType: "social",
+    xUsername: "OpenAI",
     defaultWeight: 0.6,
     credibility: 62,
     mayHavePaywall: false,
@@ -626,6 +646,7 @@ const configuredSources: SourceDefinition[] = [
     countryOrRegion: "us",
     language: "en-US",
     mediaType: "social",
+    xUsername: "AnthropicAI",
     defaultWeight: 0.6,
     credibility: 62,
     mayHavePaywall: false,
@@ -638,6 +659,7 @@ const configuredSources: SourceDefinition[] = [
     countryOrRegion: "us",
     language: "en-US",
     mediaType: "social",
+    xUsername: "sama",
     defaultWeight: 0.55,
     credibility: 55,
     mayHavePaywall: false,
@@ -650,6 +672,7 @@ const configuredSources: SourceDefinition[] = [
     countryOrRegion: "us",
     language: "en-US",
     mediaType: "social",
+    xUsername: "gdb",
     defaultWeight: 0.52,
     credibility: 54,
     mayHavePaywall: false,
@@ -662,6 +685,7 @@ const configuredSources: SourceDefinition[] = [
     countryOrRegion: "us",
     language: "en-US",
     mediaType: "social",
+    xUsername: "GoogleDeepMind",
     defaultWeight: 0.58,
     credibility: 60,
     mayHavePaywall: false,
@@ -674,6 +698,7 @@ const configuredSources: SourceDefinition[] = [
     countryOrRegion: "us",
     language: "en-US",
     mediaType: "social",
+    xUsername: "karpathy",
     defaultWeight: 0.5,
     credibility: 52,
     mayHavePaywall: false,
@@ -682,4 +707,67 @@ const configuredSources: SourceDefinition[] = [
   },
 ];
 
-export const newsSources: NewsSource[] = configuredSources.map(defineApprovedSource);
+function xAccountSection(entry: XAccountRegistryEntry): SourceSection {
+  const primaryCategory = entry.categories[0];
+  if (!primaryCategory) {
+    throw new Error(`X account ${entry.handle} must declare at least one category`);
+  }
+  return {
+    label: "X",
+    url: `https://x.com/${entry.handle}`,
+    primaryCategory,
+    categories: entry.categories,
+    searchSources: newsOnly,
+    requireChinese: false,
+  };
+}
+
+/**
+ * X accounts are collected through the server-only official API keyed by
+ * `xUsername`. The section URL exists for admission host/path scoping and the
+ * feed policy stays a runtime-writer responsibility.
+ */
+function xAccountSourceDefinition(entry: XAccountRegistryEntry): SourceDefinition {
+  return {
+    source_id: xSourceId(entry.handle),
+    name: `${entry.name} X 动态`,
+    countryOrRegion: entry.countryOrRegion,
+    language: entry.language,
+    mediaType: "social",
+    xUsername: entry.handle,
+    defaultWeight: entry.defaultWeight,
+    credibility: entry.credibility,
+    mayHavePaywall: false,
+    enabled: entry.userConfirmed,
+    sections: [xAccountSection(entry)],
+  };
+}
+
+const curatedXHandles = new Set(
+  curatedSources
+    .map((source) => source.xUsername?.toLowerCase())
+    .filter((handle): handle is string => Boolean(handle)),
+);
+
+const generatedXSources: SourceDefinition[] = xAccountRegistry
+  .filter((entry) => !curatedXHandles.has(entry.handle.toLowerCase()))
+  .map(xAccountSourceDefinition);
+
+const configuredSources: SourceDefinition[] = [
+  ...curatedSources,
+  ...expandedSourceDefinitions,
+  ...generatedXSources,
+];
+
+const curatedSourceIds = new Set(curatedSources.map((source) => source.source_id));
+
+export const newsSources: NewsSource[] = configuredSources.map((source) => {
+  const approved = defineApprovedSource(source);
+  return curatedSourceIds.has(source.source_id) ? approved : {
+    ...approved,
+    reviewedAt: "2026-09-13",
+    reviewNote: source.enabled
+      ? "Source added to the user-approved global and China coverage expansion."
+      : "Proposed X account retained for user confirmation; collection remains disabled.",
+  };
+});

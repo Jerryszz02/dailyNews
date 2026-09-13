@@ -22,7 +22,9 @@ describe("source admission", () => {
   it("migrates every configured source through an explicit reviewed admission boundary", () => {
     expect(validateSourceAdmission(newsSources)).toEqual([]);
     expect(newsSources.every((source) => source.admission === "approved")).toBe(true);
-    expect(newsSources.every((source) => source.reviewedAt === "2026-08-03")).toBe(true);
+    expect(newsSources.every((source) => /^\d{4}-\d{2}-\d{2}$/.test(source.reviewedAt))).toBe(true);
+    expect(newsSources.find((source) => source.source_id === "openai")?.reviewedAt).toBe("2026-08-03");
+    expect(newsSources.find((source) => source.source_id === "deepseek")?.reviewedAt).toBe("2026-09-13");
     expect(newsSources.every((source) => source.signalRole)).toBe(true);
     expect(newsSources.find((source) => source.source_id === "openai")?.signalRole).toBe("first_party");
     expect(newsSources.find((source) => source.source_id === "x-openai")?.signalRole).toBe("discussion");

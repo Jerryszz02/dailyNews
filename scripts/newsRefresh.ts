@@ -21,6 +21,7 @@ import { newestContentTimestamp } from "./newsStore.js";
 import { validateReportInvariants } from "./reportStore.js";
 import { resolveAmbiguousEventRelations, sameEventRelationMaterial } from "./semanticDedupe.js";
 import { storiesForDailyEdition } from "../src/lib/webReport.js";
+import { isXApiConfigured } from "./xSource.js";
 
 export const defaultServerlessMaxSources = newsSources.filter(isCollectibleSource).length;
 export const defaultRefreshLeaseSeconds = 120;
@@ -67,7 +68,7 @@ export async function runNewsRefresh(
   const now = dependencies.now ?? (() => new Date());
   const scheduledAt = options.scheduledAt ?? now();
   const configuredSources = dependencies.sources ?? newsSources;
-  const enabledSources = configuredSources.filter(isCollectibleSource);
+  const enabledSources = configuredSources.filter((source) => isCollectibleSource(source) && (!source.xUsername || isXApiConfigured()));
   const limitPerSection = options.limitPerSection ?? readPositiveInteger("DAILY_NEWS_LIMIT_PER_SECTION", defaultLimitPerSection);
   const collectionBudgetMs =
     options.collectionBudgetMs ?? readPositiveInteger("DAILY_NEWS_COLLECTION_BUDGET_MS", defaultCollectionBudgetMs);
@@ -78,7 +79,7 @@ export async function runNewsRefresh(
   const idempotencyKey = options.idempotencyKey ?? manualIdempotencyKey(options.trigger, scheduledAt);
   const sourceRegistry = configuredSources.map((source) => ({
     sourceId: source.source_id,
-    enabled: isCollectibleSource(source),
+    enabled: isCollectibleSource(source) && (!source.xUsername || isXApiConfigured()),
     intervalMinutes: defaultRefreshIntervalMinutes,
   }));
 
@@ -113,6 +114,27 @@ export async function runNewsRefresh(
     ownerId: lease.ownerId,
     runId: lease.runId,
     fencingToken: lease.fencingToken,
+  };
+  let leaseLost = false;
+  let renewalInFlight: Promise<boolean> | null = null;
+  const heartbeatMs = Math.max(250, Math.min(30_000, Math.floor(leaseSeconds * 1_000 / 4)));
+  const heartbeat = setInterval(() => {
+    if (renewalInFlight || leaseLost) return;
+    renewalInFlight = dependencies.store.renewRefresh(leaseIdentity, leaseSeconds)
+      .then((renewed) => {
+        if (!renewed) leaseLost = true;
+        return renewed;
+      })
+      .catch(() => {
+        leaseLost = true;
+        return false;
+      })
+      .finally(() => { renewalInFlight = null; });
+  }, heartbeatMs);
+  const assertLease = async () => {
+    clearInterval(heartbeat);
+    if (renewalInFlight) await renewalInFlight;
+    if (leaseLost || !await dependencies.store.renewRefresh(leaseIdentity, leaseSeconds)) throw new Error("refresh_lease_invalid");
   };
   let plannedSourceIds: string[] = [];
   let selectedSourceIds: string[] = [];
@@ -149,6 +171,7 @@ export async function runNewsRefresh(
             limitPerSection,
             collectionBudgetMs,
             now: scheduledAt,
+            sourceStates: state.sources,
             useFirecrawlKeyless: options.useFirecrawlKeyless ?? true,
             repairSummariesWithModel: options.repairSummariesWithModel ?? true,
           })
@@ -240,6 +263,7 @@ export async function runNewsRefresh(
 
     if (candidates.length === 0) {
       if (state.latest) {
+        await assertLease();
         await dependencies.store.completeRefreshWithoutPublish(
           leaseIdentity,
           {
@@ -285,6 +309,7 @@ export async function runNewsRefresh(
     const contentHash = hashReportContent(report);
     const previousContentHash = state.latest?.contentHash ?? (state.latest ? hashReportContent(state.latest.report) : null);
     if (state.latest && contentHash === previousContentHash) {
+      await assertLease();
       await dependencies.store.completeRefreshWithoutPublish(
         leaseIdentity,
         {
@@ -317,6 +342,7 @@ export async function runNewsRefresh(
       inputFingerprint: hashCandidates(candidates),
       metrics,
     };
+    await assertLease();
     if (!dependencies.store.commitRefresh) throw new Error("atomic_refresh_commit_unavailable");
     const publication = await dependencies.store.commitRefresh(publishInput, sourceResults, candidateUpdates);
     if (!publication.published) {
@@ -367,6 +393,9 @@ export async function runNewsRefresh(
       candidateCount,
       errorCode,
     );
+  } finally {
+    clearInterval(heartbeat);
+    if (renewalInFlight) await renewalInFlight;
   }
 }
 
@@ -554,6 +583,7 @@ function buildSourceResults(
       discoveredCount: outcome.discoveredCount,
       acceptedCount: outcome.discoveredCount,
       errorCode: outcome.errorCode,
+      ...(outcome.cursor ? { collectionCursor: outcome.cursor } : {}),
     }];
   });
 }

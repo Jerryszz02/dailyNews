@@ -9,6 +9,8 @@ import { isAllowedSourceUrl, isCollectibleSource } from "../src/lib/sourceAdmiss
 import { selectSourcesForCoverage } from "../src/lib/sourceCoverage.js";
 import { hostnameFromUrl } from "../src/lib/text.js";
 import type { Category, DailyNewsReport, NewsSource, RawNewsItem, SearchSourceType, SourceSection } from "../src/types";
+import type { NewsSourceState } from "./newsStore.js";
+import { collectXSource } from "./xSource.js";
 import { publicSourceDispatcher } from "./sourceNetworkPolicy.js";
 
 export const defaultLimitPerSection = 5;
@@ -16,8 +18,8 @@ export const defaultMaxSources = newsSources.filter(isCollectibleSource).length;
 export const defaultRefreshIntervalMinutes = 120;
 export const defaultSourceCoverageWindowMinutes = defaultRefreshIntervalMinutes * 2;
 export const defaultMaxNewsAgeHours = 72;
-export const defaultSourceConcurrency = 24;
-export const defaultCollectionBudgetMs = 45_000;
+export const defaultSourceConcurrency = 50;
+export const defaultCollectionBudgetMs = 240_000;
 
 export interface NewsGenerationOptions {
   limitPerSection?: number;
@@ -37,6 +39,7 @@ export interface NewsGenerationResult {
 
 export interface NewsCollectionOptions extends NewsGenerationOptions {
   sources?: NewsSource[];
+  sourceStates?: NewsSourceState[];
 }
 
 export interface NewsCollectionSourceOutcome {
@@ -44,6 +47,7 @@ export interface NewsCollectionSourceOutcome {
   status: "success" | "partial" | "empty" | "failed" | "skipped";
   discoveredCount: number;
   errorCode: string | null;
+  cursor?: NewsSourceState["collectionCursor"];
 }
 
 export interface NewsCollectionResult {
@@ -75,6 +79,7 @@ interface NewsTextForDisplayOptions extends NewsText {
   deadlineAt?: number;
   articleContext?: string | null;
   fetchGate?: AsyncTaskGate;
+  translationGate?: AsyncTaskGate;
   source?: NewsSource;
 }
 
@@ -93,7 +98,10 @@ interface AsyncTaskGate {
 const defaultTranslationBaseUrl = "https://api.deepseek.com";
 const defaultTranslationModel = "deepseek-v4-flash";
 const maxArticleContextLength = 3_200;
-const sourceAttemptTimeoutMs = 8_000;
+// Keep each source bounded independently; the global invocation budget is
+// substantially larger and can continuously refill the 50-worker pool.
+const sourceAttemptTimeoutMs = 45_000;
+const sourceRequestTimeoutMs = 15_000;
 const maxRedirectHops = 5;
 const maxSourceResponseBytes = 2 * 1024 * 1024;
 const maxTranslationTitleBytes = 256;
@@ -127,52 +135,55 @@ export async function collectNewsCandidates(options: NewsCollectionOptions = {})
   const translationConfig = readTranslationConfig();
   const repairSummariesWithModel = options.repairSummariesWithModel ?? true;
   const selectedSources = (options.sources ?? selectSourcesForCoverage(newsSources, maxSources)).filter(isCollectibleSource);
-  const keylessPromise =
-    options.useFirecrawlKeyless === false
-      ? Promise.resolve({ items: [], outcomes: [] })
-      : fetchWithFirecrawlKeyless({
-          limitPerSection,
-          sources: selectedSources,
-          translationConfig,
-          repairSummariesWithModel,
-          deadlineAt,
-          now,
-        });
-  const directPromise = fetchDirectSources({
-    limitPerSection,
-    sources: selectedSources,
-    translationConfig,
-    repairSummariesWithModel,
-    deadlineAt,
-    now,
-    maxNewsAgeHours,
+  const concurrency = readPositiveInteger("DAILY_NEWS_SOURCE_CONCURRENCY", defaultSourceConcurrency);
+  const directGate = createAsyncTaskGate(concurrency);
+  const xGate = createAsyncTaskGate(4);
+  const firecrawlGate = createAsyncTaskGate(4);
+  const translationGate = createAsyncTaskGate(4);
+  const workflows = await mapWithConcurrency(selectedSources, concurrency, async (source) => {
+    try {
+      if (Date.now() >= deadlineAt) return {
+        items: [] as RawNewsItem[], directCount: 0, fallbackCount: 0,
+        outcome: { sourceId: source.source_id, status: "skipped" as const, discoveredCount: 0, errorCode: "collection_deadline" },
+      };
+      const sourceDeadlineAt = sourceAttemptDeadline(deadlineAt);
+      if (source.xUsername) {
+        const state = options.sourceStates?.find((entry) => entry.sourceId === source.source_id);
+        const xResult = await collectXSource({ source, cursor: state?.collectionCursor, now, deadlineAt: sourceDeadlineAt, requestGate: xGate });
+        const items = await mapWithConcurrency(xResult.items, 4, async (item) => prepareXItem(item, translationConfig, repairSummariesWithModel, sourceDeadlineAt, translationGate));
+        return { items, directCount: items.length, fallbackCount: 0, outcome: xResult.outcome };
+      }
+      const direct = await fetchDirectSources({ limitPerSection, sources: [source], translationConfig, repairSummariesWithModel, deadlineAt: sourceDeadlineAt, now, maxNewsAgeHours, requestGate: directGate, translationGate });
+      const directItems = filterRecentItems(direct.items, now, maxNewsAgeHours);
+      if (directItems.length > 0 || options.useFirecrawlKeyless === false) return {
+        items: directItems, directCount: directItems.length, fallbackCount: 0,
+        outcome: mergeSourceOutcomes(source.source_id, directItems.length, direct.outcomes, Date.now() >= deadlineAt),
+      };
+      const fallback = await fetchWithFirecrawlKeyless({ limitPerSection, sources: [source], translationConfig, repairSummariesWithModel, deadlineAt: sourceDeadlineAt, now, requestGate: firecrawlGate, fetchGate: directGate, translationGate });
+      const items = filterRecentItems(fallback.items, now, maxNewsAgeHours);
+      return {
+        items, directCount: 0, fallbackCount: items.length,
+        outcome: mergeSourceOutcomes(source.source_id, items.length, items.length ? fallback.outcomes : [...direct.outcomes, ...fallback.outcomes], Date.now() >= deadlineAt),
+      };
+    } catch (error) {
+      return { items: [] as RawNewsItem[], directCount: 0, fallbackCount: 0,
+        outcome: { sourceId: source.source_id, status: "failed" as const, discoveredCount: 0, errorCode: normalizeCollectionError(error, deadlineAt) } };
+    }
   });
-  const [keylessResult, directResult] = await Promise.all([keylessPromise, directPromise]);
-  const recentFetchedItems = filterRecentItems(keylessResult.items, now, maxNewsAgeHours);
-  const recentDirectItems = filterRecentItems(directResult.items, now, maxNewsAgeHours);
-  const combinedLiveItems = uniqueItemsByUrl([...recentFetchedItems, ...recentDirectItems]);
-  const keylessOutcomes = new Map(keylessResult.outcomes.map((outcome) => [outcome.sourceId, outcome]));
-  const directOutcomes = new Map(directResult.outcomes.map((outcome) => [outcome.sourceId, outcome]));
-  const discoveredBySource = countItemsBySource(combinedLiveItems);
+  const combinedLiveItems = uniqueItemsByUrl(workflows.flatMap((result) => result.items));
+  const hasDirect = workflows.some((result) => result.directCount > 0);
+  const hasFallback = workflows.some((result) => result.fallbackCount > 0);
 
   return {
     items: combinedLiveItems,
     mode: combinedLiveItems.length === 0
       ? "No live data"
-      : recentFetchedItems.length > 0 && recentDirectItems.length > 0
+      : hasDirect && hasFallback
         ? "Hybrid live fetch"
-        : recentFetchedItems.length > 0
+        : hasFallback
           ? "Firecrawl keyless"
           : "Direct source fetch",
-    sourceOutcomes: selectedSources.map((source) => {
-      const discoveredCount = discoveredBySource.get(source.source_id) ?? 0;
-      return mergeSourceOutcomes(
-        source.source_id,
-        discoveredCount,
-        [keylessOutcomes.get(source.source_id), directOutcomes.get(source.source_id)],
-        Date.now() >= deadlineAt,
-      );
-    }),
+    sourceOutcomes: workflows.map((result) => result.outcome),
   };
 }
 
@@ -213,6 +224,27 @@ export async function retryPendingCandidateTranslations(
   });
 }
 
+async function prepareXItem(
+  item: RawNewsItem,
+  translationConfig: TranslationConfig | undefined,
+  repairSummariesWithModel: boolean,
+  deadlineAt: number,
+  translationGate: AsyncTaskGate,
+): Promise<RawNewsItem> {
+  const prepared = await prepareNewsTextForDisplay({
+    title: item.title,
+    summary: item.summary,
+    url: item.url,
+    allowTranslation: true,
+    repairSummaryWithModel: repairSummariesWithModel,
+    translationConfig,
+    deadlineAt,
+    articleContext: item.summary,
+    translationGate,
+  });
+  return { ...item, title: prepared.title, summary: prepared.summary, translationStatus: prepared.translationStatus ?? item.translationStatus, summaryStatus: prepared.summaryStatus ?? item.summaryStatus, qualityStatus: prepared.qualityStatus ?? item.qualityStatus, rejectionReasons: prepared.rejectionReasons ?? item.rejectionReasons };
+}
+
 function mergeSourceOutcomes(
   sourceId: string,
   discoveredCount: number,
@@ -227,14 +259,17 @@ function mergeSourceOutcomes(
       sourceId,
       status: incompleteOutcome ? "partial" : "success",
       discoveredCount,
-      errorCode: incompleteOutcome?.errorCode ?? null,
+      errorCode: deadlineReached && incompleteOutcome?.errorCode === "source_timeout"
+        ? "collection_deadline"
+        : incompleteOutcome?.errorCode ?? null,
+      ...(outcomes.find((outcome) => outcome?.cursor)?.cursor ? { cursor: outcomes.find((outcome) => outcome?.cursor)?.cursor } : {}),
     };
   }
 
   const attemptedOutcomes = outcomes.filter((outcome): outcome is NewsCollectionSourceOutcome => Boolean(outcome));
   const completedOutcomes = attemptedOutcomes.filter((outcome) => outcome.status !== "skipped");
   const failedOutcome =
-    completedOutcomes.find(
+    [...completedOutcomes].reverse().find(
       (outcome) =>
         outcome.status === "failed" &&
         outcome.errorCode &&
@@ -248,11 +283,12 @@ function mergeSourceOutcomes(
       status: "failed",
       discoveredCount: 0,
       errorCode: anyFailure.errorCode ?? (deadlineReached ? "collection_deadline" : "source_result_missing"),
+      ...(outcomes.find((outcome) => outcome?.cursor)?.cursor ? { cursor: outcomes.find((outcome) => outcome?.cursor)?.cursor } : {}),
     };
   }
 
   if (completedOutcomes.some((outcome) => outcome.status !== "failed")) {
-    return { sourceId, status: "empty", discoveredCount: 0, errorCode: null };
+    return { sourceId, status: "empty", discoveredCount: 0, errorCode: null, ...(outcomes.find((outcome) => outcome?.cursor)?.cursor ? { cursor: outcomes.find((outcome) => outcome?.cursor)?.cursor } : {}) };
   }
 
   const skippedOutcome = attemptedOutcomes.find((outcome) => outcome.status === "skipped");
@@ -340,12 +376,6 @@ function isDailyNewsReport(value: Partial<DailyNewsReport>): value is DailyNewsR
   );
 }
 
-function countItemsBySource(items: RawNewsItem[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const item of items) counts.set(item.sourceId, (counts.get(item.sourceId) ?? 0) + 1);
-  return counts;
-}
-
 export function loadLocalEnv() {
   for (const fileName of [".env.local", ".env"]) {
     const filePath = new URL(`../${fileName}`, import.meta.url);
@@ -387,12 +417,14 @@ async function fetchWithFirecrawlKeyless(
     repairSummariesWithModel: boolean;
     deadlineAt: number;
     now: Date;
+    requestGate?: AsyncTaskGate;
+    fetchGate?: AsyncTaskGate;
+    translationGate?: AsyncTaskGate;
   },
 ): Promise<{ items: RawNewsItem[]; outcomes: NewsCollectionSourceOutcome[] }> {
-  const app = new Firecrawl({ apiKey: "" });
+  const app = new Firecrawl({ apiKey: "", timeoutMs: sourceRequestTimeoutMs, maxRetries: 0 });
   const enabledSources = options.sources.filter(isCollectibleSource);
-  const concurrency = readPositiveInteger("DAILY_NEWS_SOURCE_CONCURRENCY", defaultSourceConcurrency);
-  const sourceResults = await mapWithConcurrency(enabledSources, concurrency, async (source) => {
+  const sourceResults = await mapWithConcurrency(enabledSources, enabledSources.length, async (source) => {
     const deadlineAt = sourceAttemptDeadline(options.deadlineAt);
     const sourceItems: RawNewsItem[] = [];
     let successfulSearches = 0;
@@ -413,26 +445,26 @@ async function fetchWithFirecrawlKeyless(
       for (const query of buildQueries(source.name, section)) {
         try {
           attemptedSearches += 1;
-          let results = await runWithinDeadline(
+          let results = await runGatedWithinDeadline(options.requestGate,
             () =>
               app.search(query, {
                 limit: options.limitPerSection,
                 includeDomains: domain ? [domain] : undefined,
                 sources: section.searchSources ?? ["news"],
               } as never),
-            deadlineAt,
+            Math.min(deadlineAt, Date.now() + sourceRequestTimeoutMs),
           );
           successfulSearches += 1;
           let searchResults = readSearchResults(results, section.searchSources ?? ["news"]);
           if (searchResults.length === 0 && domain) {
             attemptedSearches += 1;
-            results = await runWithinDeadline(
+            results = await runGatedWithinDeadline(options.requestGate,
               () =>
                 app.search(query, {
                   limit: options.limitPerSection,
                   sources: section.searchSources ?? ["news"],
                 } as never),
-              deadlineAt,
+              Math.min(deadlineAt, Date.now() + sourceRequestTimeoutMs),
             );
             successfulSearches += 1;
             searchResults = readSearchResults(results, section.searchSources ?? ["news"]);
@@ -462,7 +494,7 @@ async function fetchWithFirecrawlKeyless(
           let title = readString(result, "title").trim();
           const requestedUrl = readString(result, "url").trim();
           if (!title || !requestedUrl) continue;
-          const document = await fetchSourceDocument(requestedUrl, deadlineAt, source, true);
+          const document = await runGatedWithinDeadline(options.fetchGate, () => fetchSourceDocument(requestedUrl, deadlineAt, source, true), deadlineAt);
           const url = document.finalUrl;
           let summary = readString(result, "description") || title;
           const originalWasNonChinese = isNonChineseText({ title, summary });
@@ -476,6 +508,8 @@ async function fetchWithFirecrawlKeyless(
             deadlineAt,
             articleContext: extractArticleSummaryContext(document.text) ?? null,
             source,
+            fetchGate: options.fetchGate,
+            translationGate: options.translationGate,
           });
           title = preparedText.title;
           summary = preparedText.summary;
@@ -590,11 +624,13 @@ async function fetchDirectSources(
     deadlineAt: number;
     now: Date;
     maxNewsAgeHours: number;
+    requestGate?: AsyncTaskGate;
+    translationGate?: AsyncTaskGate;
   },
 ): Promise<{ items: RawNewsItem[]; outcomes: NewsCollectionSourceOutcome[] }> {
   const enabledSources = options.sources.filter(isCollectibleSource);
   const concurrency = readPositiveInteger("DAILY_NEWS_SOURCE_CONCURRENCY", defaultSourceConcurrency);
-  const fetchGate = createAsyncTaskGate(concurrency);
+  const fetchGate = options.requestGate ?? createAsyncTaskGate(concurrency);
 
   const sourceItems = await mapWithConcurrency(enabledSources, concurrency, async (source) => {
     const sourceDeadlineAt = sourceAttemptDeadline(options.deadlineAt);
@@ -609,10 +645,29 @@ async function fetchDirectSources(
       }
       try {
         attemptedSections += 1;
-        const html = await fetchGate.run(() => fetchText(section.url, sourceDeadlineAt, source));
+        const configuredFeedUrl = section.feedUrl?.trim();
+        let html = "";
+        let candidateBaseUrl = section.url;
+        if (configuredFeedUrl) {
+          try {
+            html = await runGatedWithinDeadline(fetchGate, () => fetchText(configuredFeedUrl, sourceDeadlineAt, undefined, new URL(configuredFeedUrl).origin), sourceDeadlineAt);
+            candidateBaseUrl = configuredFeedUrl;
+            const feedCandidates = readDirectCandidates(html, candidateBaseUrl).filter((candidate) =>
+              candidate.kind === "feed" && isAllowedSourceUrl(source, candidate.url) &&
+              (!candidate.publishedAt || isRecentPublishedAt(candidate.publishedAt, options.now, options.maxNewsAgeHours)),
+            );
+            if (feedCandidates.length === 0) html = "";
+          } catch {
+            html = "";
+          }
+        }
+        if (!html) {
+          html = await runGatedWithinDeadline(fetchGate, () => fetchText(section.url, sourceDeadlineAt, source), sourceDeadlineAt);
+          candidateBaseUrl = section.url;
+        }
         successfulSections += 1;
         const candidates = await prioritizeDirectCandidates(
-          readDirectCandidates(html, section.url)
+          readDirectCandidates(html, candidateBaseUrl)
             .map((candidate) => ({
               ...candidate,
               publishedAt: normalizeCandidatePublishedAt(candidate.publishedAt, options.now),
@@ -654,6 +709,7 @@ async function fetchDirectSources(
             deadlineAt: sourceDeadlineAt,
             articleContext: candidate.articleContext,
             fetchGate,
+            translationGate: options.translationGate,
             source,
           });
           title = preparedText.title;
@@ -825,8 +881,15 @@ export async function runWithinDeadline<T>(task: (signal: AbortSignal) => Promis
   }
 }
 
-async function fetchText(url: string, deadlineAt?: number, source?: NewsSource): Promise<string> {
-  return (await fetchSourceDocument(url, deadlineAt, source)).text;
+function runGatedWithinDeadline<T>(gate: AsyncTaskGate | undefined, task: (signal: AbortSignal) => Promise<T>, deadlineAt: number): Promise<T> {
+  return runWithinDeadline(
+    () => gate ? gate.run(() => runWithinDeadline(task, deadlineAt)) : runWithinDeadline(task, deadlineAt),
+    deadlineAt,
+  );
+}
+
+async function fetchText(url: string, deadlineAt?: number, source?: NewsSource, networkOrigin?: string): Promise<string> {
+  return (await fetchSourceDocument(url, deadlineAt, source, false, networkOrigin)).text;
 }
 
 async function fetchSourceDocument(
@@ -834,14 +897,21 @@ async function fetchSourceDocument(
   deadlineAt?: number,
   source?: NewsSource,
   allowHttpError = false,
+  networkOrigin?: string,
 ): Promise<{ text: string; finalUrl: string }> {
+  const allowedFeedUrl = (value: string) => {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && !parsed.username && !parsed.password && parsed.origin === networkOrigin;
+  };
+  if (networkOrigin && !allowedFeedUrl(url)) throw new SourceUrlOutOfScopeError("feed_origin_out_of_scope");
   if (source && !isAllowedSourceUrl(source, url)) {
     throw new SourceUrlOutOfScopeError("source_url_out_of_scope");
   }
   const controller = new AbortController();
   const timeoutMs = deadlineAt
-    ? Math.max(1, Math.min(sourceAttemptTimeoutMs, deadlineAt - Date.now()))
-    : sourceAttemptTimeoutMs;
+    ? Math.max(1, Math.min(sourceRequestTimeoutMs, deadlineAt - Date.now()))
+    : sourceRequestTimeoutMs;
+  const requestDeadlineAt = Date.now() + timeoutMs;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     let currentUrl = url;
@@ -859,12 +929,15 @@ async function fetchSourceDocument(
           };
           return fetch(currentUrl, requestInit);
         },
-        deadlineAt ? sourceAttemptDeadline(deadlineAt) : Date.now() + sourceAttemptTimeoutMs,
+        requestDeadlineAt,
       );
       if (isRedirectStatus(response.status)) {
         const location = response.headers?.get("location");
         if (!location || redirectHop === maxRedirectHops) throw new Error("source_redirect_invalid");
         const nextUrl = new URL(location, currentUrl).toString();
+        if (networkOrigin && !allowedFeedUrl(nextUrl)) {
+          throw new SourceUrlOutOfScopeError("feed_redirect_out_of_scope");
+        }
         if (source && !isAllowedSourceUrl(source, nextUrl)) {
           throw new SourceUrlOutOfScopeError("source_url_out_of_scope");
         }
@@ -872,12 +945,15 @@ async function fetchSourceDocument(
         continue;
       }
       const finalUrl = response.url?.trim() || currentUrl;
+      if (networkOrigin && !allowedFeedUrl(finalUrl)) {
+        throw new SourceUrlOutOfScopeError("feed_origin_out_of_scope");
+      }
       if (source && !isAllowedSourceUrl(source, finalUrl)) {
         throw new SourceUrlOutOfScopeError("source_url_out_of_scope");
       }
       if (!response.ok && !allowHttpError) throw new Error(`HTTP ${response.status}`);
       return {
-        text: response.ok ? await readBoundedSourceResponse(response) : "",
+        text: response.ok ? await runWithinDeadline(() => readBoundedSourceResponse(response), requestDeadlineAt) : "",
         finalUrl,
       };
     }
@@ -935,7 +1011,7 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
         options.articleContext === undefined
           ? await readArticleSummaryContext(options.url, options.deadlineAt, options.fetchGate, options.source)
           : (options.articleContext ?? undefined);
-      const translated = await runWithinDeadline(
+      const translated = await runGatedWithinDeadline(options.translationGate,
         (signal) => translateNewsText(
           { title: options.title, summary: options.summary, articleContext },
           options.translationConfig!,
@@ -969,7 +1045,7 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
   }
 
   try {
-    const enriched = await runWithinDeadline(
+    const enriched = await runGatedWithinDeadline(options.translationGate,
       (signal) => translateNewsText(
         { title: options.title, summary: options.summary, articleContext },
         options.translationConfig!,
@@ -1233,8 +1309,8 @@ function readFeedCandidates(html: string, baseUrl: string): DirectCandidate[] {
     const title = cleanText(readTag(block, "title"));
     const rawLink = readTag(block, "link") || readLinkHref(block);
     const url = resolveCandidateUrl(rawLink, baseUrl);
-    const summary = cleanText(readTag(block, "description") || readTag(block, "summary") || readTag(block, "content"));
-    const publishedAt = readPublishedDate(readTag(block, "pubDate") || readTag(block, "published") || readTag(block, "updated"));
+    const summary = cleanText(readTag(block, "description") || readTag(block, "summary") || readTag(block, "content:encoded") || readTag(block, "content"));
+    const publishedAt = readPublishedDate(readTag(block, "pubDate") || readTag(block, "published") || readTag(block, "updated") || readTag(block, "dc:date"));
     if (title && url) candidates.push({ title, url, summary: summary || title, publishedAt, kind: "feed" });
   }
   return uniqueCandidates(candidates)

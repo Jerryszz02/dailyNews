@@ -4,6 +4,14 @@ export type NewsStoreKind = "memory" | "supabase";
 export type RefreshTrigger = "cron" | "manual" | "local";
 export type SourceResultStatus = "success" | "empty" | "partial" | "failed";
 
+export interface SourceCollectionCursor {
+  userId: string;
+  sinceId?: string;
+  paginationToken?: string;
+  newestId?: string;
+  startTime?: string;
+}
+
 export interface PublishedNewsReport {
   reportId: string;
   report: DailyNewsReport;
@@ -35,6 +43,7 @@ export interface NewsSourceState {
   acceptedRate?: number;
   circuitOpenUntil: string | null;
   lastErrorCode: string | null;
+  collectionCursor?: SourceCollectionCursor;
 }
 
 export interface NewsStoreState {
@@ -57,6 +66,7 @@ export interface SourceCollectionResult {
   discoveredCount: number;
   acceptedCount: number;
   errorCode: string | null;
+  collectionCursor?: SourceCollectionCursor;
 }
 
 export interface RefreshLease {

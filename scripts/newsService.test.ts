@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPreferences } from "../src/config/preferences";
 import { newsSources } from "../src/config/sources";
 import { buildDailyReport } from "../src/lib/newsPipeline";
+import { selectSourcesForCoverage } from "../src/lib/sourceCoverage";
 import type { NewsSource, RawNewsItem } from "../src/types";
 
 const firecrawlSearchMock = vi.hoisted(() => vi.fn());
@@ -132,9 +133,9 @@ function testSource(sourceId: string, name: string): NewsSource {
 }
 
 describe("generateDailyNewsReport", () => {
-  it("uses the two-hour refresh cadence and leaves ten seconds for publishing", () => {
+  it("uses the two-hour refresh cadence and reserves sixty seconds outside collection", () => {
     expect(defaultRefreshIntervalMinutes).toBe(120);
-    expect(defaultCollectionBudgetMs).toBe(45_000);
+    expect(defaultCollectionBudgetMs).toBe(240_000);
   });
 
   it("uses the checked-in fallback when direct results are all stale", async () => {
@@ -161,7 +162,8 @@ describe("generateDailyNewsReport", () => {
   });
 
   it("uses even a single valid live item instead of enforcing a minimum news count", async () => {
-    const liveUrl = "https://www.news.cn/20260809/one-valid-live-story.html";
+    const selectedSource = selectSourcesForCoverage(newsSources, 1)[0];
+    const liveUrl = new URL("/20260809/one-valid-live-story.html", selectedSource.sections[0].url).toString();
     const liveTitle = "一条有效实时新闻也必须立即进入报告而不能被最低条数门槛拦截";
     vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
       const url = String(input);
@@ -366,7 +368,7 @@ describe("collectNewsCandidates source outcomes", () => {
     expect(result.sourceOutcomes).toEqual([
       { sourceId: "empty", status: "empty", discoveredCount: 0, errorCode: null },
       { sourceId: "failed", status: "failed", discoveredCount: 0, errorCode: "source_server_error" },
-      { sourceId: "recovered", status: "partial", discoveredCount: 1, errorCode: "source_server_error" },
+      { sourceId: "recovered", status: "success", discoveredCount: 1, errorCode: null },
     ]);
   });
 
@@ -421,7 +423,7 @@ describe("collectNewsCandidates source outcomes", () => {
         collectionBudgetMs: 45_000,
         repairSummariesWithModel: false,
       });
-      await vi.advanceTimersByTimeAsync(8_000);
+      await vi.advanceTimersByTimeAsync(15_000);
       const result = await resultPromise;
 
       expect(result.items.map((item) => item.sourceId)).toEqual(["fast-keyless"]);
@@ -590,7 +592,7 @@ describe("collectNewsCandidates source outcomes", () => {
         collectionBudgetMs: 45_000,
         repairSummariesWithModel: false,
       });
-      await vi.advanceTimersByTimeAsync(8_000);
+      await vi.advanceTimersByTimeAsync(15_000);
       const result = await resultPromise;
 
       expect(result.items.map((item) => item.sourceId)).toEqual([fast.source_id]);
@@ -1287,7 +1289,7 @@ describe("mapWithConcurrency", () => {
       return value;
     });
 
-    expect(defaultSourceConcurrency).toBe(24);
+    expect(defaultSourceConcurrency).toBe(50);
     expect(started).toEqual(values);
     expect(completed).toBe(0);
 
