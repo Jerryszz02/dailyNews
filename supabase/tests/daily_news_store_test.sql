@@ -154,10 +154,10 @@ select ok(
 );
 select ok(
   position(
-    'timeout_milliseconds := 55000'
+    'timeout_milliseconds := 295000'
     in pg_get_functiondef('public.daily_news_install_refresh_cron()'::regprocedure)
   ) > 0,
-  'Supabase Cron allows 55 seconds for the Vercel refresh request'
+  'Supabase Cron allows 295 seconds within the 300-second Vercel refresh limit'
 );
 select ok(
   position(

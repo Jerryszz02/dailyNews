@@ -65,10 +65,5 @@ select is(
   (select run_metrics#>>'{terminalResult,outcome}' from daily_news.refresh_run where run_id=(select run_id from test_cursor_lease)),
   'unchanged', 'cursor wrapper preserves v2 terminal reconciliation metadata'
 );
-select ok(
-  position('295000' in pg_get_functiondef('public.daily_news_install_refresh_cron()'::regprocedure)) > 0,
-  'Cron caller waits within the 300-second Vercel duration'
-);
-
 select * from finish();
 rollback;
