@@ -14,6 +14,7 @@ import type {
   PublishedNewsReport,
   RefreshLease,
   SourceCollectionResult,
+  SourceCollectionCursor,
   SourceDefinition,
 } from "./newsStore.js";
 import { newestContentTimestamp } from "./newsStore.js";
@@ -62,7 +63,10 @@ export class InMemoryNewsStore implements NewsStore {
     return {
       latest: this.latest,
       runtime: { ...this.runtime },
-      sources: Array.from(this.sourceStates.values(), (state) => ({ ...state })),
+      sources: Array.from(this.sourceStates.values(), (state) => ({
+        ...state,
+        collectionCursor: cloneCursor(state.collectionCursor),
+      })),
     };
   }
 
@@ -94,6 +98,7 @@ export class InMemoryNewsStore implements NewsStore {
         acceptedRate: current?.acceptedRate,
         circuitOpenUntil: current?.circuitOpenUntil ?? null,
         lastErrorCode: current?.lastErrorCode ?? null,
+        collectionCursor: cloneCursor(current?.collectionCursor),
       });
     }
     for (const [sourceId, current] of this.sourceStates) {
@@ -185,6 +190,7 @@ export class InMemoryNewsStore implements NewsStore {
               ? null
               : current.circuitOpenUntil,
         lastErrorCode: result.errorCode,
+        collectionCursor: result.collectionCursor ? cloneCursor(result.collectionCursor) : current.collectionCursor,
       });
     }
   }
@@ -258,9 +264,17 @@ export class InMemoryNewsStore implements NewsStore {
     candidates: RawNewsItem[],
   ): Promise<PublishRefreshResult> {
     this.assertLease(input);
-    await this.recordSourceResults(input, sourceResults);
-    await this.upsertCandidates(input, candidates);
-    return this.publishRefresh(input);
+    const sourceBackup = new Map(Array.from(this.sourceStates, ([id, state]) => [id, { ...state, collectionCursor: cloneCursor(state.collectionCursor) }]));
+    const candidateBackup = new Map(Array.from(this.candidates, ([id, candidate]) => [id, structuredClone(candidate)]));
+    try {
+      await this.recordSourceResults(input, sourceResults);
+      await this.upsertCandidates(input, candidates);
+      return await this.publishRefresh(input);
+    } catch (error) {
+      this.sourceStates = sourceBackup;
+      this.candidates = candidateBackup;
+      throw error;
+    }
   }
 
   async completeRefreshWithoutPublish(
@@ -270,8 +284,16 @@ export class InMemoryNewsStore implements NewsStore {
     candidates: RawNewsItem[] = [],
   ): Promise<CompleteWithoutPublishResult> {
     this.assertLease(lease);
-    await this.recordSourceResults(lease, sourceResults);
-    await this.upsertCandidates(lease, candidates);
+    const sourceBackup = new Map(Array.from(this.sourceStates, ([id, state]) => [id, { ...state, collectionCursor: cloneCursor(state.collectionCursor) }]));
+    const candidateBackup = new Map(Array.from(this.candidates, ([id, candidate]) => [id, structuredClone(candidate)]));
+    try {
+      await this.recordSourceResults(lease, sourceResults);
+      await this.upsertCandidates(lease, candidates);
+    } catch (error) {
+      this.sourceStates = sourceBackup;
+      this.candidates = candidateBackup;
+      throw error;
+    }
     const completedAt = this.now().toISOString();
     const outcome = _metrics.outcome === "partial" ? "partial" : "unchanged";
     this.runtime = {
@@ -367,6 +389,10 @@ function earliestOptionalTimestamp(left?: string, right?: string): string | unde
   if (!Number.isFinite(leftMs)) return Number.isFinite(rightMs) ? right : undefined;
   if (!Number.isFinite(rightMs)) return left;
   return leftMs <= rightMs ? left : right;
+}
+
+function cloneCursor(cursor?: SourceCollectionCursor): SourceCollectionCursor | undefined {
+  return cursor ? { ...cursor } : undefined;
 }
 
 function canonicalUrl(value: string): string {

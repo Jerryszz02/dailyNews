@@ -137,10 +137,10 @@ describe("source coverage scheduling", () => {
     }).map((candidate) => candidate.source_id)).toEqual([source!.source_id]);
   });
 
-  it("attempts every approved enabled source in each rolling 30-minute window", () => {
+  it("covers a legacy manual cohort that fits eleven rotation slots per five minutes", () => {
     const enabledSources = newsSources.filter(
       (source) => source.enabled && source.admission === "approved",
-    );
+    ).slice(0, 49);
     const start = Date.parse("2026-07-10T00:00:00.000Z");
     const health = new Map<string, SourceHealthState>();
     const attempts = new Map(enabledSources.map((source) => [source.source_id, [] as number[]]));

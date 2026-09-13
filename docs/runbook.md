@@ -50,8 +50,9 @@ npx supabase db push --dry-run
 DAILY_NEWS_MAX_SOURCES=49
 DAILY_NEWS_LIMIT_PER_SECTION=5
 DAILY_NEWS_REFRESH_INTERVAL_MINUTES=120
-DAILY_NEWS_COLLECTION_BUDGET_MS=45000
-DAILY_NEWS_SOURCE_CONCURRENCY=24
+DAILY_NEWS_COLLECTION_BUDGET_MS=240000
+DAILY_NEWS_SOURCE_CONCURRENCY=50
+DAILY_NEWS_X_BEARER_TOKEN=
 DAILY_NEWS_MAX_AGE_HOURS=72
 SUPABASE_URL=
 SUPABASE_SECRET_KEY=
@@ -67,9 +68,15 @@ PORT=4173
 
 Keep `.env` and `.env.local` local. Do not commit or paste their values.
 
-Production plans every enabled and approved source in every two-hour refresh. Work is bounded by a 24-source concurrency pool rather than an eleven-source rotation, so adding sources does not create a multi-slot discovery queue. Source health and `next_due_at` remain operational diagnostics; they do not suppress a production attempt.
+Production plans every enabled, approved and credential-ready source in every two-hour refresh. A 50-source pool starts a new task whenever one finishes. Source health and `next_due_at` remain operational diagnostics; they do not suppress a production attempt. Concurrency and schedule frequency are independent settings; this change keeps the existing two-hour schedule.
 
-`DAILY_NEWS_COLLECTION_BUDGET_MS` is the hard wall-clock deadline for one collection round. Production defaults to 45 seconds inside the 60-second function limit, leaving about 10 seconds for candidate paging, report construction and atomic commit. Firecrawl and direct source work run concurrently; each source attempt is bounded to eight seconds. A source that cannot complete is recorded as partial/failed/skipped and cannot make another source disappear from the plan.
+The source pool shares a direct HTTP request gate. X API, Firecrawl and translation each have a separate four-request gate, so a large account registry cannot create 50 simultaneous requests against one provider.
+
+`DAILY_NEWS_COLLECTION_BUDGET_MS` is the wall-clock deadline for collection. Production defaults to 240 seconds inside Vercel's 300-second function limit, leaving time for candidate paging, translation repair, report construction and atomic commit. Sources prefer configured feeds and direct pages; Firecrawl only supplements a source without usable direct results. A source that cannot complete is recorded as partial/failed/skipped. The refresh lease renews during long runs, and a failed renewal prevents terminal commits.
+
+Apply the new cursor migration before configuring `DAILY_NEWS_X_BEARER_TOKEN`. X uses official `GET /2/users/:id/tweets`, caches the resolved user ID and saves `since_id` with any pending pagination. Missing credentials disable X collection without repeatedly marking the whole website pipeline degraded. First reads are limited to a recent window; replies and retweets are excluded, including Grok's automatic replies. Local fixture tests do not establish API access or paid-plan availability; perform a small authenticated check after configuring credentials. Never paste the token into the frontend or a chat.
+
+The duration migration updates an existing `daily-news-refresh` Cron command to wait up to 295 seconds while preserving its active state. It does not start a missing/disabled scheduler. When moving to a server, continue using the shared Node service and Supabase store; remove the hosting-specific invocation ceiling there, but keep request timeouts, bounded concurrency, leases and cursor persistence. A persistent X stream can later feed the same candidate pipeline.
 
 Set `DAILY_NEWS_REFRESH_TOKEN` before enabling `POST /api/refresh` with persistent storage, including local Supabase development. Send it as `Authorization: Bearer <token>`. Do not put the token in browser code. The tokenless local exception is limited to the in-memory store and requires same-origin or non-browser access plus `X-Daily-News-Refresh: 1`.
 
@@ -106,7 +113,7 @@ Expected behavior:
 ## Troubleshooting
 
 - If live API is down, the frontend should fall back to `public/daily-news.json`.
-- If Firecrawl returns no fresh results, `scripts/newsService.ts` switches to direct public source page/feed fetching so enabled sources can still refresh from their own pages.
+- If a configured feed fails or yields no usable recent results, check the direct-page fallback and then Firecrawl diagnostics for that source.
 - If neither Firecrawl nor direct fetching returns fresh results, the service keeps the previous report identity/time. It must not republish fallback as current.
 - If candidate paging or report validation fails, the refresh keeps last-known-good. Source count, beat continuity, trust and curated selection are not publication gates; a valid visible change from the complete candidate window should publish.
 - If NBA, FIFA, FIBA or AI company blog items are missing, check whether `DAILY_NEWS_TRANSLATION_API_KEY` is configured; many of those sources return English-only title and summary text.

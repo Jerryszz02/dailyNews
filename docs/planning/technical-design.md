@@ -8,7 +8,7 @@
 
 1. `approved` 是来源发布边界，`enabled` 只控制是否采集；运行时 trust/credibility 不得删除或降出可见集合。
 2. 每个 `display_ready/degraded` 候选恰好映射一个 story；最近 24 小时 story 全部进入 `latestStories`。
-3. 每 2 小时刷新一次，全部启用且已准入来源进入同一轮计划；默认并发 24，局部失败返回 partial，但健康状态不能把来源从下一轮计划中排除。
+3. 每 2 小时刷新一次，全部启用且已准入来源进入同一轮计划；默认并发 50，局部失败返回 partial，但健康状态不能把来源从下一轮计划中排除。未配置 X 凭据时不计划 X 来源。
 4. 发布只阻断结构损坏、引用错误、未知来源和不可确认的存储失败；精选、内容年龄和覆盖波动只产生 warning。
 5. `/api/news` 读取 publication state，不依赖 source state；服务、管线、内容状态分轴公开。
 
@@ -17,8 +17,8 @@
 ```text
 src/config/sources.ts
   -> src/lib/sourceCoverage.ts 全来源计划
-  -> Firecrawl keyless + 有限并发 direct fetch（默认并发 24，单来源最多 8 秒）
-  -> 45 秒采集预算内维护 72 小时候选池
+  -> RSS / direct fetch 优先，Firecrawl keyless 补充；X 官方 API 增量读取（默认 50 个来源并发）
+  -> 240 秒采集预算内维护 72 小时候选池
   -> src/lib/curation.ts 结构准入门槛
   -> src/lib/dedupe.ts 确定性事件聚类
   -> 可选的限额 LLM 灰区关系判断
@@ -51,7 +51,7 @@ src/config/sources.ts
 
 - Supabase 是唯一生产运行态来源；`public/daily-news.json` 只保留为部署包内的紧急 last-known-good。
 - 生产调度由 Supabase Cron 每 2 小时通过 `pg_net` 调用受保护 endpoint，不能依赖 Vercel 套餐频率或函数内 `setInterval`。
-- 每轮计划全部启用且已准入来源；默认 24 并发使当前 49 源可在同一 45 秒采集预算内分批开始。`next_due_at` 和失败状态继续用于诊断，不再用于跨刷新轮转。
+- 每轮计划全部启用且已准入来源；默认 50 个来源并发，任务完成后立即补入下一个来源。`next_due_at` 和失败状态继续用于诊断，不再用于跨刷新轮转。
 - 候选按 canonical URL 幂等写入，报告从最近 72 小时候选池构建，使分片采集不会只看到本轮少数来源。
 - 旧 bundled/snapshot 只能原样返回。无合格实时数据时不得以当前时间重写 `generatedAt`、`last_success_at` 或内容新鲜度。
 - 发布由事务 RPC 完成；刷新失败只更新 `last_attempt_at` 和非敏感错误码，不动 latest。
@@ -107,9 +107,10 @@ src/config/sources.ts
 
 ### 抓取与可靠性
 
-- 采集阶段默认预算为 `DAILY_NEWS_COLLECTION_BUDGET_MS=45000`；60 秒函数上限中至少预留 10 秒用于构建、验证和原子终结。
-- Firecrawl 与 direct fetch 按来源独立截止并发运行；一个来源的 terminal/timeout 不能跳过其它已选来源。
-- 直连和 Firecrawl 来源 worker 默认 `DAILY_NEWS_SOURCE_CONCURRENCY=24`；当前 49 源分最多三批进入 worker，单来源最长 8 秒且受整轮 deadline 约束。
+- 采集阶段默认预算为 `DAILY_NEWS_COLLECTION_BUDGET_MS=240000`；Vercel Fluid 函数上限配置为 300 秒，余量留给状态读取、构建、验证和原子终结。
+- 各来源优先 RSS / direct fetch，未获得近期可用候选才调用 Firecrawl；一个来源的 terminal/timeout 不能跳过其它已选来源。
+- 来源 worker 默认 `DAILY_NEWS_SOURCE_CONCURRENCY=50`；单来源最多 45 秒、单请求最多 15 秒，均受整轮 deadline 约束。X API、Firecrawl 和翻译各自限制为 4 个并发请求。
+- 采集期间定期续租，终结前重新确认租约；X 游标、候选和来源结果在同一终结事务内提交，分页未完成时保留 `since_id` 与分页进度。
 - deadline 前未完成的来源标记 partial/failed/skipped；错误/circuit 诊断不得把它从下一个全来源计划中移除。
 - LLM 去重必须显式开启，复用服务端翻译供应商配置；每条新候选最多 3 个近邻、每轮默认最多 12 次调用、总处理窗口 4 秒，失败保守不合并。
 - 事件/核心层/来源数量回退只记 warning；完整候选窗口下的合法变化可发布，窗口不完整时只增不减并保留 last-known-good 内容。

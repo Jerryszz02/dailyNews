@@ -87,7 +87,7 @@ describe("durable news refresh", () => {
   });
 
   it.each([
-    ["the production default", undefined, 45_000],
+    ["the production default", undefined, 240_000],
     ["an explicit override", 9_000, 9_000],
   ])("forwards %s collection budget while planning the full configured source cohort", async (_label, override, expected) => {
     const initial = readBundledReport();

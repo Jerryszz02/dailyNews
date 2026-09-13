@@ -41,6 +41,8 @@ export interface NewsSource {
   defaultWeight: number;
   credibility: number;
   sections: SourceSection[];
+  /** X handle without @; collected through the server-only official API. */
+  xUsername?: string;
   mayHavePaywall: boolean;
   enabled: boolean;
   admission: SourceAdmission;
@@ -55,6 +57,8 @@ export interface NewsSource {
 export interface SourceSection {
   label: string;
   url: string;
+  /** Public RSS/Atom discovery endpoint; article URLs remain scoped to this source. */
+  feedUrl?: string;
   categories: Category[];
   primaryCategory: Category;
   searchTerms?: string[];
