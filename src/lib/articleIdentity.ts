@@ -15,5 +15,5 @@ export function isNavigationCandidate(title: string, url: string): boolean {
   if (/^\/betting\/news\/[^/]+$/.test(path)) return true;
   if (/^\/(world-rankings|stats-zone)(\/|$)/.test(path)) return true;
   if (/^\/competitions\/[^/]+\/20\d{2}$/.test(path)) return true;
-  return /^(更多要闻播报|更多新闻|更多内容|网站导航|首页|首页新闻|uk politics|n\. ireland|northern ireland|feature stories|features|previews|reviews|latest news|photo stories|videos|watch live|more news)\s*[+＋]?$/i.test(title.trim());
+  return /^(更多要闻播报|更多新闻|更多内容|网站导航|首页|首页新闻|uk politics|n\. ireland|northern ireland|feature stories|featured|features|previews|reviews|latest news|photo stories|videos|watch live|more news)\s*[+＋]?$/i.test(title.trim());
 }

@@ -1995,6 +1995,7 @@ describe("collection regression acceptance", () => {
       <a href="/world-rankings/introduction">世界田径运动员综合排名</a>
       <a href="/stats-zone/road-to/7212925">世界大赛运动员资格排名</a>
       <a href="/competitions/world-athletics-ultimate-championship/2026">年度田径锦标赛主页面</a>
+      <a href="http://tech.navigation.example.com/p/1234567890">FEATURED</a>
       <a href="http://tech.navigation.example.com/p/1234567890">科技企业公布一项新的重要研究成果</a>
       <a href="/1/003/842.htm">新产品完成公开测试并公布上市安排</a>
       <a href="/sj/zxfb/202609/t20260917_123456.html">统计机构正式发布本月经济统计数据</a>`;
@@ -2005,6 +2006,7 @@ describe("collection regression acceptance", () => {
     expect(result.items).toHaveLength(3);
     expect(result.items.some((item) => /Politics|Ireland|更多/.test(item.title))).toBe(false);
     expect(result.items.some((item) => item.url === "https://tech.navigation.example.com/p/1234567890")).toBe(true);
+    expect(result.items.find((item) => item.url === "https://tech.navigation.example.com/p/1234567890")?.title).toBe("科技企业公布一项新的重要研究成果");
   });
 
   it("extracts a CDATA RSS article and chooses the Atom alternate rather than self or image", async () => {
