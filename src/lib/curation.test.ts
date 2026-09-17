@@ -484,6 +484,22 @@ describe("event-level curation", () => {
     });
   });
 
+  it("removes previously stored template and directory candidates while preserving nested news", () => {
+    const result = applyCandidateQualityGate([
+      candidate({ id: "script", sourceId: "cctv", url: "https://news.cctv.com/world/'+data.clickUrl+'", title: "'+data.title+'" }),
+      candidate({ id: "locale", sourceId: "eu-commission", url: "https://commission.europa.eu/news-and-media/news_nl", title: "欧盟委员会荷兰语新闻" }),
+      candidate({ id: "rankings", sourceId: "world-athletics", url: "https://worldathletics.org/world-rankings/introduction" }),
+      candidate({ id: "road-to", sourceId: "world-athletics", url: "https://worldathletics.org/stats-zone/road-to/7212925" }),
+      candidate({ id: "event-home", sourceId: "world-athletics", url: "https://worldathletics.org/competitions/world-athletics-ultimate-championship/2026" }),
+      candidate({ id: "nhk-home", sourceId: "nhk", url: "https://www3.nhk.or.jp/nhkworld/news/" }),
+      candidate({ id: "szse-home", sourceId: "szse", url: "https://www.szse.cn/aboutus/trends/news/", title: "更多&nbsp&nbsp" }),
+      candidate({ id: "betting-guide", sourceId: "cbs-sports-nba", url: "https://www.cbssports.com/betting/news/nfl/" }),
+      candidate({ id: "real-news", sourceId: "world-athletics", url: "https://worldathletics.org/competitions/world-athletics-road-running-championships/copenhagen26/news/preview/wrrc-copenhagen-26-preview-men-mile" }),
+    ]);
+    expect(result.accepted.map((item) => item.id)).toEqual(["real-news"]);
+    expect(result.rejectionReasons).toEqual({ navigation_page: 8 });
+  });
+
   it("keeps approved candidates publishable when collection is technically disabled", () => {
     const report = buildDailyReport(
       [

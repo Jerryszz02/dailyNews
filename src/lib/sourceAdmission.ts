@@ -32,19 +32,20 @@ function secureSourceUrl(url: string): URL | null {
 }
 
 export function defineApprovedSource(source: SourceDefinition): NewsSource {
-  const insecureSection = source.sections.find((section) => !secureSourceUrl(section.url));
+  const readerUrls = source.sections.flatMap((section) => [section.url, ...(section.readerUrlAliases ?? [])]);
+  const insecureSection = readerUrls.find((url) => !secureSourceUrl(url));
   if (insecureSection) {
     throw new Error(`Approved source ${source.source_id} must use credential-free HTTPS section URLs`);
   }
   const allowedHosts = Array.from(
-    new Set(source.sections.map((section) => hostFromUrl(section.url)).filter((host): host is string => Boolean(host))),
+    new Set(readerUrls.map(hostFromUrl).filter((host): host is string => Boolean(host))),
   );
   if (allowedHosts.length === 0) {
     throw new Error(`Approved source ${source.source_id} must declare at least one valid section URL`);
   }
-  const allowedPathPrefixes = Array.from(new Set(source.sections.flatMap((section) => {
+  const allowedPathPrefixes = Array.from(new Set(readerUrls.flatMap((readerUrl) => {
     try {
-      const url = new URL(section.url);
+      const url = new URL(readerUrl);
       const host = normalizeHost(url.hostname);
       const profile = url.pathname.split("/").filter(Boolean)[0]?.toLowerCase();
       return sharedProfileHosts.has(host) && profile ? [`${host}/${profile}`] : [];
@@ -117,8 +118,8 @@ export function validateSourceAdmission(sources: NewsSource[]): string[] {
     }
     if (source.admission === "approved") {
       for (const section of source.sections) {
-        if (!isAllowedSourceUrl(source, section.url)) {
-          issues.push(`section URL is outside allowedHosts: ${source.source_id}:${section.url}`);
+        for (const url of [section.url, ...(section.readerUrlAliases ?? [])]) {
+          if (!isAllowedSourceUrl(source, url)) issues.push(`section URL is outside allowedHosts: ${source.source_id}:${url}`);
         }
       }
     }

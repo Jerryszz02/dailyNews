@@ -305,7 +305,9 @@ describe("durable news refresh", () => {
   });
 
   it("publishes add-only from last-known-good when the candidate window cannot be read", async () => {
-    const initial = readBundledReport();
+    const bundled = readBundledReport();
+    // Seed a valid prior report; stored navigation pages are intentionally removed by the quality gate.
+    const initial = buildDailyReport(expandLegacyItems(bundled.items), defaultPreferences, new Date(bundled.generatedAt));
     const now = new Date(initial.generatedAt);
     const store = new InMemoryNewsStore(initial, () => now);
     const template = expandLegacyItems(initial.items)[0]!;

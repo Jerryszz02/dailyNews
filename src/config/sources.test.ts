@@ -293,7 +293,8 @@ describe("approved source catalog expansion", () => {
   it("keeps section reader URLs as the only source of allowedHosts", () => {
     for (const source of newsSources) {
       const sectionHosts = new Set(
-        source.sections.map((section) => new URL(section.url).hostname.replace(/^www\./, "").toLowerCase()),
+        source.sections.flatMap((section) => [section.url, ...(section.readerUrlAliases ?? [])])
+          .map((url) => new URL(url).hostname.replace(/^www\./, "").toLowerCase()),
       );
       expect(source.allowedHosts.every((host) => sectionHosts.has(host)), `${source.source_id} allowedHosts`).toBe(true);
       for (const section of source.sections) {
@@ -305,6 +306,7 @@ describe("approved source catalog expansion", () => {
       }
     }
 
+    expect(sourceById("bbc")?.allowedHosts).toContain("bbc.co.uk");
     expect(sourceById("bbc")?.allowedHosts).not.toContain("feeds.bbci.co.uk");
     expect(sourceById("arxiv")?.allowedHosts).not.toContain("rss.arxiv.org");
     expect(sourceById("dw")?.allowedHosts).not.toContain("rss.dw.com");

@@ -79,6 +79,15 @@ describe("source admission", () => {
     expect(isAllowedSourceUrl(source, "https://news.example.com:8443/story/1")).toBe(false);
   });
 
+  it("admits only explicitly configured reader aliases and validates their HTTPS boundary", () => {
+    const bbc = newsSources.find((source) => source.source_id === "bbc")!;
+    expect(isAllowedSourceUrl(bbc, "https://www.bbc.co.uk/news/articles/example")).toBe(true);
+    expect(isAllowedSourceUrl(bbc, "https://feeds.bbci.co.uk/news/world/rss.xml")).toBe(false);
+    expect(isAllowedSourceUrl(bbc, "https://bbc.co.uk.evil.test/news/example")).toBe(false);
+    expect(() => defineApprovedSource({ ...bbc, sections: [{ ...bbc.sections[0], readerUrlAliases: ["http://reader.example.com/"] }] })).toThrow(/HTTPS/);
+    expect(() => defineApprovedSource({ ...bbc, sections: [{ ...bbc.sections[0], readerUrlAliases: ["https://user:password@reader.example.com/"] }] })).toThrow(/HTTPS/);
+  });
+
   it("keeps publication admission independent from technical collection enablement", () => {
     const source = { ...newsSources[0], admission: "blocked" as const };
     expect(isApprovedSource(source)).toBe(false);

@@ -55,9 +55,11 @@ export interface NewsSource {
 }
 
 export interface SourceSection {
+  /** Explicitly reviewed publisher reader URL aliases; never inferred from feeds. */
+  readerUrlAliases?: string[];
   label: string;
   url: string;
-  /** Public RSS/Atom discovery endpoint; article URLs remain scoped to this source. */
+  /** Public RSS/Atom/news-sitemap discovery endpoint; article URLs remain scoped to this source. */
   feedUrl?: string;
   categories: Category[];
   primaryCategory: Category;

@@ -5,6 +5,7 @@ import { defaultPreferences } from "../src/config/preferences.js";
 import { newsSources } from "../src/config/sources.js";
 import { firecrawlSnapshotNews } from "../src/data/firecrawlSnapshot.js";
 import { buildDailyReport } from "../src/lib/newsPipeline.js";
+import { isNavigationCandidate } from "../src/lib/articleIdentity.js";
 import { isAllowedSourceUrl, isCollectibleSource } from "../src/lib/sourceAdmission.js";
 import { selectSourcesForCoverage } from "../src/lib/sourceCoverage.js";
 import { hostnameFromUrl } from "../src/lib/text.js";
@@ -40,6 +41,7 @@ export interface NewsGenerationResult {
 export interface NewsCollectionOptions extends NewsGenerationOptions {
   sources?: NewsSource[];
   sourceStates?: NewsSourceState[];
+  includeDiagnostics?: boolean;
 }
 
 export interface NewsCollectionSourceOutcome {
@@ -54,7 +56,25 @@ export interface NewsCollectionResult {
   items: RawNewsItem[];
   mode: "Firecrawl keyless" | "Direct source fetch" | "Hybrid live fetch" | "No live data";
   sourceOutcomes: NewsCollectionSourceOutcome[];
+  diagnostics?: SourceCollectionDiagnostics[];
 }
+
+export interface SourceCollectionDiagnostics {
+  sourceId: string;
+  direct?: { status: NewsCollectionSourceOutcome["status"]; errorCode: string | null; count: number; durationMs: number };
+  fallback?: { status: NewsCollectionSourceOutcome["status"]; errorCode: string | null; count: number; durationMs: number };
+  searchRequests: number;
+  enrichmentDurationMs?: number;
+  pendingTranslations?: number;
+}
+
+interface CandidateEnrichment {
+  source: NewsSource;
+  section?: SourceSection;
+  articleContext?: string | null;
+}
+
+type EnrichmentQueue = Map<string, CandidateEnrichment>;
 
 interface TranslationConfig {
   apiKey: string;
@@ -140,27 +160,35 @@ export async function collectNewsCandidates(options: NewsCollectionOptions = {})
   const xGate = createAsyncTaskGate(4);
   const firecrawlGate = createAsyncTaskGate(4);
   const translationGate = createAsyncTaskGate(4);
-  const workflows = await mapWithConcurrency(selectedSources, concurrency, async (source) => {
+  const pendingText: EnrichmentQueue = new Map();
+  const diagnostics = selectedSources.map((source): SourceCollectionDiagnostics => ({ sourceId: source.source_id, searchRequests: 0 }));
+  // Acquisition workers never await translation. A slow model must not occupy
+  // a source slot or consume the next section's source request budget.
+  const workflows = await mapWithConcurrency(selectedSources, concurrency, async (source, index) => {
+    const diagnostic = diagnostics[index];
     try {
       if (Date.now() >= deadlineAt) return {
         items: [] as RawNewsItem[], directCount: 0, fallbackCount: 0,
         outcome: { sourceId: source.source_id, status: "skipped" as const, discoveredCount: 0, errorCode: "collection_deadline" },
       };
-      const sourceDeadlineAt = sourceAttemptDeadline(deadlineAt);
       if (source.xUsername) {
         const state = options.sourceStates?.find((entry) => entry.sourceId === source.source_id);
-        const xResult = await collectXSource({ source, cursor: state?.collectionCursor, now, deadlineAt: sourceDeadlineAt, requestGate: xGate });
-        const items = await mapWithConcurrency(xResult.items, 4, async (item) => prepareXItem(item, translationConfig, repairSummariesWithModel, sourceDeadlineAt, translationGate));
-        return { items, directCount: items.length, fallbackCount: 0, outcome: xResult.outcome };
+        const result = await collectXSource({ source, cursor: state?.collectionCursor, now, deadlineAt: sourceAttemptDeadline(deadlineAt), requestGate: xGate });
+        for (const item of result.items) pendingText.set(item.id, { source, articleContext: item.summary });
+        return { items: result.items, directCount: result.items.length, fallbackCount: 0, outcome: result.outcome };
       }
-      const direct = await fetchDirectSources({ limitPerSection, sources: [source], translationConfig, repairSummariesWithModel, deadlineAt: sourceDeadlineAt, now, maxNewsAgeHours, requestGate: directGate, translationGate });
+      const directStartedAt = Date.now();
+      const direct = await fetchDirectSources({ limitPerSection, sources: [source], pendingText, deadlineAt: sourceAttemptDeadline(deadlineAt), now, maxNewsAgeHours, requestGate: directGate });
       const directItems = filterRecentItems(direct.items, now, maxNewsAgeHours);
+      diagnostic.direct = { status: direct.outcomes[0].status, errorCode: direct.outcomes[0].errorCode, count: directItems.length, durationMs: Date.now() - directStartedAt };
       if (directItems.length > 0 || options.useFirecrawlKeyless === false) return {
         items: directItems, directCount: directItems.length, fallbackCount: 0,
         outcome: mergeSourceOutcomes(source.source_id, directItems.length, direct.outcomes, Date.now() >= deadlineAt),
       };
-      const fallback = await fetchWithFirecrawlKeyless({ limitPerSection, sources: [source], translationConfig, repairSummariesWithModel, deadlineAt: sourceDeadlineAt, now, requestGate: firecrawlGate, fetchGate: directGate, translationGate });
+      const fallbackStartedAt = Date.now();
+      const fallback = await fetchWithFirecrawlKeyless({ limitPerSection, sources: [source], pendingText, diagnostic, deadlineAt: sourceAttemptDeadline(deadlineAt), now, requestGate: firecrawlGate, fetchGate: directGate });
       const items = filterRecentItems(fallback.items, now, maxNewsAgeHours);
+      diagnostic.fallback = { status: fallback.outcomes[0].status, errorCode: fallback.outcomes[0].errorCode, count: items.length, durationMs: Date.now() - fallbackStartedAt };
       return {
         items, directCount: 0, fallbackCount: items.length,
         outcome: mergeSourceOutcomes(source.source_id, items.length, items.length ? fallback.outcomes : [...direct.outcomes, ...fallback.outcomes], Date.now() >= deadlineAt),
@@ -170,20 +198,54 @@ export async function collectNewsCandidates(options: NewsCollectionOptions = {})
         outcome: { sourceId: source.source_id, status: "failed" as const, discoveredCount: 0, errorCode: normalizeCollectionError(error, deadlineAt) } };
     }
   });
-  const combinedLiveItems = uniqueItemsByUrl(workflows.flatMap((result) => result.items));
+  const acquired = uniqueItemsByUrl(workflows.flatMap((result) => result.items));
+  const diagnosticsBySource = new Map(diagnostics.map((entry) => [entry.sourceId, entry]));
+  const enrichedItems = await mapWithConcurrency(acquired, 4, async (item) => {
+    const context = pendingText.get(item.id);
+    if (!context) return item;
+    const startedAt = Date.now();
+    const prepared = await prepareNewsTextForDisplay({
+      title: item.title, summary: item.summary, url: item.url,
+      allowTranslation: context.section ? context.section.requireChinese === false : true,
+      repairSummaryWithModel: repairSummariesWithModel, translationConfig,
+      deadlineAt, articleContext: context.articleContext, source: context.source,
+      fetchGate: directGate, translationGate,
+    });
+    const reasons = newsTextDegradationReasons(prepared, item.publishedAt);
+    const diagnostic = diagnosticsBySource.get(item.sourceId)!;
+    diagnostic.enrichmentDurationMs = (diagnostic.enrichmentDurationMs ?? 0) + Date.now() - startedAt;
+    diagnostic.pendingTranslations = (diagnostic.pendingTranslations ?? 0) + Number(prepared.translationStatus === "pending");
+    const primaryCategory = context.section ? inferPrimaryCategory({ ...item, title: prepared.title, summary: prepared.summary }, context.section) : item.primaryCategory;
+    return {
+      ...item, title: prepared.title, summary: prepared.summary, primaryCategory,
+      categories: primaryCategory ? uniqueValues([primaryCategory, ...item.categories]) : item.categories,
+      qualityStatus: reasons.length ? "degraded" as const : "display_ready" as const,
+      rejectionReasons: reasons.length ? reasons : undefined,
+      translationStatus: prepared.translationStatus ?? "original" as const,
+      summaryStatus: prepared.summaryStatus ?? "complete" as const,
+    };
+  });
+  // Retry transient model failures once, after every acquired item received its first turn.
+  const retryable = enrichedItems.filter((item) => item.rejectionReasons?.some((reason) => reason === "translation_failed" || reason === "translation_invalid"));
+  const repaired = new Map((await retryPendingCandidateTranslations(retryable, deadlineAt, now)).map((item) => [item.id, item]));
+  const combinedLiveItems = enrichedItems.map((item) => repaired.get(item.id) ?? item);
+  for (const diagnostic of diagnostics) {
+    diagnostic.pendingTranslations = combinedLiveItems.filter((item) => item.sourceId === diagnostic.sourceId && item.translationStatus === "pending").length;
+  }
   const hasDirect = workflows.some((result) => result.directCount > 0);
   const hasFallback = workflows.some((result) => result.fallbackCount > 0);
-
+  const sourceOutcomes = workflows.map(({ outcome }) => {
+    const items = combinedLiveItems.filter((item) => item.sourceId === outcome.sourceId);
+    const reason = items.flatMap((item) => item.rejectionReasons ?? [])[0];
+    return reason && items.length > 0
+      ? { ...outcome, status: "partial" as const, errorCode: outcome.errorCode ?? reason }
+      : outcome;
+  });
   return {
     items: combinedLiveItems,
-    mode: combinedLiveItems.length === 0
-      ? "No live data"
-      : hasDirect && hasFallback
-        ? "Hybrid live fetch"
-        : hasFallback
-          ? "Firecrawl keyless"
-          : "Direct source fetch",
-    sourceOutcomes: workflows.map((result) => result.outcome),
+    mode: combinedLiveItems.length === 0 ? "No live data" : hasDirect && hasFallback ? "Hybrid live fetch" : hasFallback ? "Firecrawl keyless" : "Direct source fetch",
+    sourceOutcomes,
+    ...(options.includeDiagnostics ? { diagnostics } : {}),
   };
 }
 
@@ -222,27 +284,6 @@ export async function retryPendingCandidateTranslations(
       qualityStatus: rejectionReasons.length === 0 && item.timeStatus !== "estimated" ? "display_ready" : "degraded",
     };
   });
-}
-
-async function prepareXItem(
-  item: RawNewsItem,
-  translationConfig: TranslationConfig | undefined,
-  repairSummariesWithModel: boolean,
-  deadlineAt: number,
-  translationGate: AsyncTaskGate,
-): Promise<RawNewsItem> {
-  const prepared = await prepareNewsTextForDisplay({
-    title: item.title,
-    summary: item.summary,
-    url: item.url,
-    allowTranslation: true,
-    repairSummaryWithModel: repairSummariesWithModel,
-    translationConfig,
-    deadlineAt,
-    articleContext: item.summary,
-    translationGate,
-  });
-  return { ...item, title: prepared.title, summary: prepared.summary, translationStatus: prepared.translationStatus ?? item.translationStatus, summaryStatus: prepared.summaryStatus ?? item.summaryStatus, qualityStatus: prepared.qualityStatus ?? item.qualityStatus, rejectionReasons: prepared.rejectionReasons ?? item.rejectionReasons };
 }
 
 function mergeSourceOutcomes(
@@ -413,16 +454,15 @@ async function fetchWithFirecrawlKeyless(
   options: {
     limitPerSection: number;
     sources: NewsSource[];
-    translationConfig?: TranslationConfig;
-    repairSummariesWithModel: boolean;
+    pendingText: EnrichmentQueue;
+    diagnostic: SourceCollectionDiagnostics;
     deadlineAt: number;
     now: Date;
     requestGate?: AsyncTaskGate;
     fetchGate?: AsyncTaskGate;
-    translationGate?: AsyncTaskGate;
   },
 ): Promise<{ items: RawNewsItem[]; outcomes: NewsCollectionSourceOutcome[] }> {
-  const app = new Firecrawl({ apiKey: "", timeoutMs: sourceRequestTimeoutMs, maxRetries: 0 });
+  const app = new Firecrawl({ apiKey: "", timeoutMs: sourceRequestTimeoutMs, maxRetries: 1 });
   const enabledSources = options.sources.filter(isCollectibleSource);
   const sourceResults = await mapWithConcurrency(enabledSources, enabledSources.length, async (source) => {
     const deadlineAt = sourceAttemptDeadline(options.deadlineAt);
@@ -446,25 +486,29 @@ async function fetchWithFirecrawlKeyless(
         try {
           attemptedSearches += 1;
           let results = await runGatedWithinDeadline(options.requestGate,
-            () =>
-              app.search(query, {
+            () => {
+              options.diagnostic.searchRequests += 1;
+              return runWithinDeadline(() => app.search(query, {
                 limit: options.limitPerSection,
                 includeDomains: domain ? [domain] : undefined,
                 sources: section.searchSources ?? ["news"],
-              } as never),
-            Math.min(deadlineAt, Date.now() + sourceRequestTimeoutMs),
+              } as never), Math.min(deadlineAt, Date.now() + sourceRequestTimeoutMs));
+            },
+            deadlineAt,
           );
           successfulSearches += 1;
           let searchResults = readSearchResults(results, section.searchSources ?? ["news"]);
           if (searchResults.length === 0 && domain) {
             attemptedSearches += 1;
             results = await runGatedWithinDeadline(options.requestGate,
-              () =>
-                app.search(query, {
+              () => {
+                options.diagnostic.searchRequests += 1;
+                return runWithinDeadline(() => app.search(query, {
                   limit: options.limitPerSection,
                   sources: section.searchSources ?? ["news"],
-                } as never),
-              Math.min(deadlineAt, Date.now() + sourceRequestTimeoutMs),
+                } as never), Math.min(deadlineAt, Date.now() + sourceRequestTimeoutMs));
+            },
+              deadlineAt,
             );
             successfulSearches += 1;
             searchResults = readSearchResults(results, section.searchSources ?? ["news"]);
@@ -491,41 +535,27 @@ async function fetchWithFirecrawlKeyless(
 
       for (const result of webResults) {
         try {
-          let title = readString(result, "title").trim();
+          const title = readString(result, "title").trim();
           const requestedUrl = readString(result, "url").trim();
-          if (!title || !requestedUrl) continue;
+          if (!title || !requestedUrl || isNavigationCandidate(title, requestedUrl)) continue;
           const document = await runGatedWithinDeadline(options.fetchGate, () => fetchSourceDocument(requestedUrl, deadlineAt, source, true), deadlineAt);
           const url = document.finalUrl;
-          let summary = readString(result, "description") || title;
+          const summary = readString(result, "description") || title;
           const originalWasNonChinese = isNonChineseText({ title, summary });
-          const preparedText = await prepareNewsTextForDisplay({
-            title,
-            summary,
-            url,
-            allowTranslation: section.requireChinese === false,
-            repairSummaryWithModel: options.repairSummariesWithModel,
-            translationConfig: options.translationConfig,
-            deadlineAt,
-            articleContext: extractArticleSummaryContext(document.text) ?? null,
-            source,
-            fetchGate: options.fetchGate,
-            translationGate: options.translationGate,
-          });
-          title = preparedText.title;
-          summary = preparedText.summary;
 
           const publishedAt = normalizeCandidatePublishedAt(
             extractDate(result) ?? extractPublishedDateFromHtml(document.text) ?? inferPublishedDateFromUrl(url),
             options.now,
           );
-          const degradationReasons = newsTextDegradationReasons(preparedText, publishedAt);
-          if (degradationReasons.length > 0) lastErrorCode ??= degradationReasons[0];
+          const degradationReasons = newsTextDegradationReasons({ title, summary }, publishedAt);
           const discoveredAt = options.now.toISOString();
           const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
           const categories = uniqueValues([primaryCategory, ...section.categories]);
 
+          const id = `${source.source_id}-${hashId(url)}`;
+          options.pendingText.set(id, { source, section, articleContext: extractArticleSummaryContext(document.text) ?? null });
           sourceItems.push({
-            id: `${source.source_id}-${hashId(url)}`,
+            id,
             title,
             url,
             sourceId: source.source_id,
@@ -541,8 +571,8 @@ async function fetchWithFirecrawlKeyless(
             mayHavePaywall: source.mayHavePaywall,
             qualityStatus: degradationReasons.length > 0 ? "degraded" : "display_ready",
             rejectionReasons: degradationReasons.length > 0 ? degradationReasons : undefined,
-            translationStatus: preparedText.translationStatus ?? (originalWasNonChinese ? "translated" : "original"),
-            summaryStatus: preparedText.summaryStatus ?? "complete",
+            translationStatus: originalWasNonChinese ? "pending" : "original",
+            summaryStatus: needsSummaryRepair(title, summary) ? "pending" : "complete",
             timeStatus: publishedAt ? "verified" : "estimated",
           });
         } catch (error) {
@@ -619,13 +649,11 @@ async function fetchDirectSources(
   options: {
     limitPerSection: number;
     sources: NewsSource[];
-    translationConfig?: TranslationConfig;
-    repairSummariesWithModel: boolean;
+    pendingText: EnrichmentQueue;
     deadlineAt: number;
     now: Date;
     maxNewsAgeHours: number;
     requestGate?: AsyncTaskGate;
-    translationGate?: AsyncTaskGate;
   },
 ): Promise<{ items: RawNewsItem[]; outcomes: NewsCollectionSourceOutcome[] }> {
   const enabledSources = options.sources.filter(isCollectibleSource);
@@ -652,8 +680,8 @@ async function fetchDirectSources(
           try {
             html = await runGatedWithinDeadline(fetchGate, () => fetchText(configuredFeedUrl, sourceDeadlineAt, undefined, new URL(configuredFeedUrl).origin), sourceDeadlineAt);
             candidateBaseUrl = configuredFeedUrl;
-            const feedCandidates = readDirectCandidates(html, candidateBaseUrl).filter((candidate) =>
-              candidate.kind === "feed" && isAllowedSourceUrl(source, candidate.url) &&
+            const feedCandidates = readDirectCandidates(html, candidateBaseUrl, source).filter((candidate) =>
+              isAllowedSourceUrl(source, candidate.url) &&
               (!candidate.publishedAt || isRecentPublishedAt(candidate.publishedAt, options.now, options.maxNewsAgeHours)),
             );
             if (feedCandidates.length === 0) html = "";
@@ -667,7 +695,7 @@ async function fetchDirectSources(
         }
         successfulSections += 1;
         const candidates = await prioritizeDirectCandidates(
-          readDirectCandidates(html, candidateBaseUrl)
+          readDirectCandidates(html, candidateBaseUrl, source)
             .map((candidate) => ({
               ...candidate,
               publishedAt: normalizeCandidatePublishedAt(candidate.publishedAt, options.now),
@@ -693,36 +721,22 @@ async function fetchDirectSources(
           const publishedAt = normalizeCandidatePublishedAt(candidate.publishedAt, options.now);
           const discoveredAt = options.now.toISOString();
           if (publishedAt && !isRecentPublishedAt(publishedAt, options.now, options.maxNewsAgeHours)) continue;
-          let title = candidate.title.trim();
+          const title = candidate.title.trim();
           const url = candidate.url.trim();
           if (!title || !url || !isAllowedSourceUrl(source, url)) continue;
-          let summary = candidate.summary || title;
+          const summary = candidate.summary || title;
 
           const originalWasNonChinese = isNonChineseText({ title, summary });
-          const preparedText = await prepareNewsTextForDisplay({
-            title,
-            summary,
-            url,
-            allowTranslation: section.requireChinese === false,
-            repairSummaryWithModel: options.repairSummariesWithModel,
-            translationConfig: options.translationConfig,
-            deadlineAt: sourceDeadlineAt,
-            articleContext: candidate.articleContext,
-            fetchGate,
-            translationGate: options.translationGate,
-            source,
-          });
-          title = preparedText.title;
-          summary = preparedText.summary;
-          const degradationReasons = newsTextDegradationReasons(preparedText, publishedAt);
-          if (degradationReasons.length > 0) lastErrorCode ??= degradationReasons[0];
+          const rawText: NewsText = { title, summary, translationStatus: originalWasNonChinese ? "pending" : "original", summaryStatus: needsSummaryRepair(title, summary) ? "pending" : "complete" };
+          const id = `${source.source_id}-direct-${hashId(url)}`;
+          options.pendingText.set(id, { source, section, articleContext: candidate.articleContext });
 
           const primaryCategory = inferPrimaryCategory({ title, summary, url }, section);
           const categories = uniqueValues([primaryCategory, ...section.categories]);
 
           items.push({
-            id: `${source.source_id}-direct-${hashId(url)}`,
-            title,
+            id,
+            title: rawText.title,
             url,
             sourceId: source.source_id,
             sourceName: source.name,
@@ -730,15 +744,15 @@ async function fetchDirectSources(
             region: source.countryOrRegion,
             categories,
             primaryCategory,
-            summary,
+            summary: rawText.summary,
             publishedAt,
             discoveredAt,
             extractedAt: new Date().toISOString(),
             mayHavePaywall: source.mayHavePaywall,
-            qualityStatus: degradationReasons.length > 0 ? "degraded" : "display_ready",
-            rejectionReasons: degradationReasons.length > 0 ? degradationReasons : undefined,
-            translationStatus: preparedText.translationStatus ?? (originalWasNonChinese ? "translated" : "original"),
-            summaryStatus: preparedText.summaryStatus ?? "complete",
+            qualityStatus: "degraded",
+            rejectionReasons: publishedAt ? undefined : ["published_at_missing"],
+            translationStatus: rawText.translationStatus,
+            summaryStatus: rawText.summaryStatus,
             timeStatus: publishedAt ? "verified" : "estimated",
           });
           accepted += 1;
@@ -749,6 +763,7 @@ async function fetchDirectSources(
         if (error instanceof CollectionDeadlineError) break;
       }
     }
+
     return {
       items,
       outcome: {
@@ -788,7 +803,10 @@ function normalizeCollectionError(error: unknown, globalDeadlineAt?: number): st
   if (error instanceof SourceResponseTooLargeError) return "source_response_too_large";
   if (error instanceof SourceParseError) return "source_parse_failed";
   if (error instanceof DOMException && error.name === "AbortError") return "source_timeout";
-  if ((error as { cause?: { code?: unknown } })?.cause?.code === "SOURCE_ADDRESS_NOT_PUBLIC") {
+  const transportCode = (error as { cause?: { code?: string } })?.cause?.code;
+  if (transportCode && ["UND_ERR_CONNECT_TIMEOUT", "ETIMEDOUT"].includes(transportCode)) return "source_timeout";
+  if (transportCode && ["ENOTFOUND", "EAI_AGAIN"].includes(transportCode)) return "source_dns_failed";
+  if (transportCode === "SOURCE_ADDRESS_NOT_PUBLIC") {
     return "source_address_not_public";
   }
   const message = String(error).toLowerCase();
@@ -889,7 +907,16 @@ function runGatedWithinDeadline<T>(gate: AsyncTaskGate | undefined, task: (signa
 }
 
 async function fetchText(url: string, deadlineAt?: number, source?: NewsSource, networkOrigin?: string): Promise<string> {
-  return (await fetchSourceDocument(url, deadlineAt, source, false, networkOrigin)).text;
+  try {
+    return (await fetchSourceDocument(url, deadlineAt, source, false, networkOrigin)).text;
+  } catch (error) {
+    const code = (error as { cause?: { code?: string } }).cause?.code;
+    // One retry for a transport failure, within the existing source deadline.
+    // HTTP denial, redirects, parse failures and address policy never retry here.
+    if (!code || !["UND_ERR_CONNECT_TIMEOUT", "ECONNRESET", "EAI_AGAIN", "ETIMEDOUT"].includes(code) ||
+        (deadlineAt !== undefined && Date.now() >= deadlineAt)) throw error;
+    return (await fetchSourceDocument(url, deadlineAt, source, false, networkOrigin)).text;
+  }
 }
 
 async function fetchSourceDocument(
@@ -1019,8 +1046,11 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
         ),
         options.deadlineAt ?? Date.now() + 15_000,
       );
-      if (isNonChineseText(translated) || needsSummaryRepair(translated.title, translated.summary)) {
+      if (isNonChineseText(translated) || /无新闻内容|无法(?:生成|翻译|改写)|未提供新闻|请提供新闻/.test(translated.title)) {
         return degradedOriginalText(options, "translation_invalid");
+      }
+      if (needsSummaryRepair(translated.title, translated.summary)) {
+        return { ...degradedSummaryText(translated), translationStatus: "translated" };
       }
       return { ...translated, translationStatus: "translated", summaryStatus: "complete" };
     } catch (error) {
@@ -1037,6 +1067,9 @@ export async function prepareNewsTextForDisplay(options: NewsTextForDisplayOptio
     options.articleContext === undefined
       ? await readArticleSummaryContext(options.url, options.deadlineAt, options.fetchGate, options.source)
       : (options.articleContext ?? undefined);
+  const factualSummary = buildSummaryFromArticleContext(options.title, articleContext);
+  if (factualSummary) return { title: options.title, summary: factualSummary, summaryStatus: "complete" };
+  if (!articleContext) return degradedSummaryText(options);
   if (!options.translationConfig || !options.repairSummaryWithModel) {
     const fallbackSummary = buildSummaryFromArticleContext(options.title, articleContext);
     return fallbackSummary
@@ -1142,23 +1175,28 @@ async function readArticleSummaryContext(
 }
 
 export function extractArticleSummaryContext(html: string): string | undefined {
-  const values = uniqueValues([...readMetaDescriptions(html), ...readJsonLdText(html), ...readParagraphText(html)]);
+  // Article paragraphs are the strongest signal; site-wide metadata often contains
+  // licensing, navigation, or generic "more news" copy.
+  const paragraphs = readParagraphText(html);
+  const jsonLd = readJsonLdText(html).filter((value) => !isBoilerplateParagraph(value));
+  const meta = readMetaDescriptions(html).filter((value) => !isBoilerplateParagraph(value));
+  const values = uniqueValues([...paragraphs, ...jsonLd, ...meta]);
   const context = values.join("\n").slice(0, maxArticleContextLength).trim();
   return context || undefined;
 }
 
-function readDirectCandidates(html: string, baseUrl: string): DirectCandidate[] {
+function readDirectCandidates(html: string, baseUrl: string, source?: NewsSource): DirectCandidate[] {
   const feedItems = readFeedCandidates(html, baseUrl);
   if (feedItems.length > 0) return feedItems;
   if (/<(?:item|entry)\b/i.test(html)) {
     throw new SourceParseError("source_parse_failed");
   }
-  const sitemapItems = readSitemapCandidates(html, baseUrl);
+  const sitemapItems = readSitemapCandidates(html, baseUrl, source);
   if (sitemapItems.length > 0) return sitemapItems;
   if (/<(?:url|sitemap)\b/i.test(html)) {
     throw new SourceParseError("source_parse_failed");
   }
-  return readHtmlLinkCandidates(html, baseUrl);
+  return readHtmlLinkCandidates(html, baseUrl, source);
 }
 
 async function prioritizeDirectCandidates(
@@ -1269,20 +1307,20 @@ async function resolveDirectCandidate(
   }
 }
 
-function readSitemapCandidates(xml: string, baseUrl: string): DirectCandidate[] {
+function readSitemapCandidates(xml: string, baseUrl: string, source?: NewsSource): DirectCandidate[] {
   const baseHost = hostnameFromUrl(baseUrl);
   const candidates: DirectCandidate[] = [];
   for (const match of xml.matchAll(/<url\b[^>]*>([\s\S]*?)<\/url>/gi)) {
     const block = match[1];
     const url = resolveCandidateUrl(readTag(block, "loc"), baseUrl);
-    if (!url || (baseHost && hostnameFromUrl(url) !== baseHost) || !isLikelyArticleUrl(url)) continue;
-    const title = titleFromCandidateUrl(url);
+    if (!url || (source ? !isAllowedSourceUrl(source, url) : baseHost && hostnameFromUrl(url) !== baseHost) || !isLikelyArticleUrl(url)) continue;
+    const title = cleanText(readTag(block, "news:title")) || titleFromCandidateUrl(url);
     if (title.length < 8) continue;
     candidates.push({
       title,
       url,
       summary: title,
-      publishedAt: readPublishedDate(readTag(block, "lastmod")),
+      publishedAt: readPublishedDate(readTag(block, "news:publication_date") || readTag(block, "lastmod")),
       kind: "sitemap",
       articleContext: null,
     });
@@ -1319,12 +1357,13 @@ function readFeedCandidates(html: string, baseUrl: string): DirectCandidate[] {
     .map(({ candidate }) => candidate);
 }
 
-function readHtmlLinkCandidates(html: string, baseUrl: string): DirectCandidate[] {
+function readHtmlLinkCandidates(html: string, baseUrl: string, source?: NewsSource): DirectCandidate[] {
   const baseHost = hostnameFromUrl(baseUrl);
   const candidates: DirectCandidate[] = [];
-  const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  for (const match of html.matchAll(anchorPattern)) {
-    const url = resolveCandidateUrl(match[1], baseUrl);
+  const anchorPattern = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+  const visibleHtml = html.replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "").replace(/<!--[\s\S]*?-->/g, "");
+  for (const match of visibleHtml.matchAll(anchorPattern)) {
+    const url = resolveCandidateUrl(readAttribute(match[1], "href"), baseUrl);
     const cardHtml = match[2];
     const rawTitle = readHeadingText(cardHtml) || cleanText(cardHtml);
     const summary = cleanText(readTag(cardHtml, "p"));
@@ -1333,8 +1372,9 @@ function readHtmlLinkCandidates(html: string, baseUrl: string): DirectCandidate[
       parsePublishedDate(rawTitle);
     const title = removeTrailingPublishedDate(rawTitle);
     if (!url || !title || title.length < 8) continue;
-    if (baseHost && hostnameFromUrl(url) !== baseHost) continue;
+    if (source ? !isAllowedSourceUrl(source, url) : baseHost && !matchesSourceDomain(url, baseHost)) continue;
     if (!isLikelyArticleUrl(url)) continue;
+    if (isNavigationCandidate(title, url)) continue;
     if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|zip)(\?|$)/i.test(url)) continue;
     if (url.replace(/\/+$/, "") === baseUrl.replace(/\/+$/, "") || url.endsWith("#")) continue;
     candidates.push({
@@ -1379,9 +1419,18 @@ function isLikelyArticleUrl(url: string): boolean {
   const path = new URL(url).pathname.toLowerCase();
   return (
     /\/(20\d{2}|n1|n2|article|articles|news|gn|gj|cj|sh|politics|finance|companies|tech|world)\b/.test(path) ||
-    /\/20\d{6,8}\//.test(path) ||
+    /\/20\d{6,}\//.test(path) ||
     /\/\d{6,}\.(html|shtml)$/.test(path) ||
-    /\/[a-f0-9]{20,}\/c\.html$/.test(path)
+    /\/[a-f0-9]{20,}\/c\.html$/.test(path) ||
+    /\/(?:p|contents)\/\d+(?:\.html)?$/.test(path) ||
+    /\/newsdetail_forward_\d+$/.test(path) ||
+    /\/\d{6,}\/?$/.test(path) ||
+    /\/a\/20\d{4}\/\d{2}\/[a-z0-9]+\.html$/.test(path) ||
+    /\/\d+\/\d+\/\d+\.htm$/.test(path) ||
+    /\/(?:t20\d{6}_\d+|content_\d+)\.s?html?$/.test(path) ||
+    /\/(?:blog|blogs)\/[^/]{8,}\/?$/.test(path) ||
+    /\/20\d{6}-[^/]+\/?$/.test(path) ||
+    /\/category\/[^/]+\/[^/]+\.html$/.test(path)
   );
 }
 
@@ -1391,15 +1440,22 @@ function readTag(value: string, tagName: string): string {
 }
 
 function readLinkHref(value: string): string {
-  const match = value.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*\/?>/i);
-  return match?.[1] ?? "";
+  const links = [...value.matchAll(/<link\b([^>]*)>/gi)];
+  const alternate = links.find((match) => /\brel=["'][^"']*\balternate\b[^"']*["']/i.test(match[1]));
+  const match = alternate ?? links.find((entry) => !/\brel=["'][^"']*\bself\b/i.test(entry[1]));
+  return match?.[1].match(/\bhref=["']([^"']+)["']/i)?.[1] ?? "";
 }
 
-function resolveCandidateUrl(value: string, baseUrl: string): string {
-  const trimmed = decodeHtml(value).trim();
-  if (!trimmed || /^(javascript:|mailto:|tel:)/i.test(trimmed)) return "";
+export function resolveCandidateUrl(value: string, baseUrl: string): string {
+  const trimmed = decodeHtml(value).replace(/^\s*<!\[CDATA\[/i, "").replace(/\]\]>\s*$/i, "").trim();
+  if (!trimmed) return "";
   try {
-    return new URL(trimmed, baseUrl).toString();
+    const resolved = new URL(trimmed, baseUrl);
+    if (resolved.protocol !== "http:" && resolved.protocol !== "https:") return "";
+    // Some approved publishers still emit HTTP links. Only request their HTTPS equivalent;
+    // the usual source admission, redirect and network guards still apply afterward.
+    if (resolved.protocol === "http:") resolved.protocol = "https:";
+    return resolved.toString();
   } catch {
     return "";
   }
@@ -1444,10 +1500,10 @@ function uniqueValues<T>(items: T[]): T[] {
 
 export function extractPublishedDateFromHtml(html: string): string | undefined {
   const candidates = [
-    ...readInlineDates(html),
-    ...readTimeTagDates(html),
-    ...readJsonLdDates(html),
     ...readMetaDates(html),
+    ...readJsonLdDates(html),
+    ...readTimeTagDates(html),
+    ...readInlineDates(html),
   ].sort((left, right) => Number(hasClockTime(right)) - Number(hasClockTime(left)));
 
   for (const candidate of candidates) {
@@ -1518,7 +1574,7 @@ function readParagraphText(html: string): string[] {
 }
 
 function isBoilerplateParagraph(value: string): boolean {
-  return /责任编辑|版权|Copyright|广告|声明|二维码|分享到|举报/.test(value);
+  return /责任编辑|版权|Copyright|广告|声明|二维码|分享到|举报|网站经营许可|全媒体形式提供|许可证|ICP备案/.test(value);
 }
 
 function readMetaDates(html: string): string[] {
@@ -1620,8 +1676,9 @@ function hasClockTime(value: string): boolean {
 }
 
 function readAttribute(tag: string, name: string): string {
-  const pattern = new RegExp(`\\b${name}=["']([^"']+)["']`, "i");
-  return decodeHtml(tag.match(pattern)?.[1] ?? "").trim();
+  const pattern = new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>"']+))`, "i");
+  const match = tag.match(pattern);
+  return decodeHtml(match?.[1] ?? match?.[2] ?? match?.[3] ?? "").trim();
 }
 
 function isDateMetaKey(value: string): boolean {
@@ -1940,7 +1997,7 @@ export async function translateNewsText(
       {
         role: "system",
         content:
-          "你是中文新闻编辑。把新闻标题改写为简洁中文，并把摘要写成中文全文概述。保留事实、人物、机构、赛事、地点和数字，不添加素材没有的信息。只输出合法 JSON，格式为 {\"title\":\"中文标题\",\"summary\":\"中文概述\"}。",
+          "你是中文新闻编辑。把新闻标题改写为简洁中文（不超过40字），摘要控制在80至160字。保留事实、人物、机构、赛事、地点和数字，不添加素材没有的信息。只输出合法 JSON，格式为 {\"title\":\"中文标题\",\"summary\":\"中文概述\"}。",
       },
       {
         role: "user",
@@ -1948,7 +2005,7 @@ export async function translateNewsText(
       },
     ],
     temperature: 0.2,
-    max_tokens: 600,
+    max_tokens: 900,
     response_format: { type: "json_object" },
     ...(isDeepSeekConfig(config) ? { thinking: { type: "disabled" } } : {}),
   };
