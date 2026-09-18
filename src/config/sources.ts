@@ -15,6 +15,7 @@ function section(
   searchSources: SearchSourceType[] = newsOnly,
   requireChinese = true,
   feedUrl?: string,
+  readerUrlAliases?: string[],
 ): SourceSection {
   return {
     label,
@@ -25,6 +26,7 @@ function section(
     searchSources,
     requireChinese,
     ...(feedUrl ? { feedUrl } : {}),
+    ...(readerUrlAliases ? { readerUrlAliases } : {}),
   };
 }
 
@@ -240,7 +242,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 86,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("FIBA News", "https://www.fiba.basketball/news", "sports", ["sports", "international"], ["FIBA official basketball news", "FIBA basketball latest news"], webAndNews, false)],
+    sections: [section("FIBA News", "https://www.fiba.basketball/en/news", "sports", ["sports", "international"], ["FIBA official basketball news", "FIBA basketball latest news"], webAndNews, false)],
   },
   {
     source_id: "bbc-sport",
@@ -324,7 +326,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 66,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("影视", "https://news.mtime.com/", "entertainment", ["entertainment", "china", "society"], ["时光网 影视 新闻", "时光网 电影 电视"])],
+    sections: [section("影视", "https://news.mtime.com/", "entertainment", ["entertainment", "china", "society"], ["时光网 影视 新闻", "时光网 电影 电视"], newsOnly, true, undefined, ["https://content.mtime.com/"])],
   },
   {
     source_id: "reuters",
@@ -360,7 +362,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 78,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("World", "https://www.cnn.com/world", "international", ["international", "policy", "society"], ["CNN world news latest", "CNN international news"], newsOnly, false)],
+    sections: [section("World", "https://www.cnn.com/world", "international", ["international", "policy", "society"], ["CNN world news latest", "CNN international news"], newsOnly, false, "https://www.cnn.com/sitemap/news.xml")],
   },
   {
     source_id: "bbc",
@@ -372,7 +374,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 86,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("World", "https://www.bbc.com/news/world", "international", ["international", "policy", "society"], ["BBC world news latest", "BBC international news"], newsOnly, false, "https://feeds.bbci.co.uk/news/world/rss.xml")],
+    sections: [section("World", "https://www.bbc.com/news/world", "international", ["international", "policy", "society"], ["BBC world news latest", "BBC international news"], newsOnly, false, "https://feeds.bbci.co.uk/news/world/rss.xml", ["https://www.bbc.co.uk/news/world"])],
   },
   {
     source_id: "aljazeera",
@@ -396,7 +398,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 80,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("News", "https://www.npr.org/sections/news/", "international", ["international", "policy", "society"], ["NPR latest news", "NPR world news"], newsOnly, false)],
+    sections: [section("News", "https://www.npr.org/sections/news/", "international", ["international", "policy", "society"], ["NPR latest news", "NPR world news"], newsOnly, false, "https://feeds.npr.org/1001/rss.xml")],
   },
   {
     source_id: "guardian",
@@ -456,7 +458,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 74,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("Business", "https://www.cnbc.com/world/", "finance", ["finance", "technology", "international"], ["CNBC business markets latest", "CNBC technology economy"], newsOnly, false)],
+    sections: [section("Business", "https://www.cnbc.com/world/", "finance", ["finance", "technology", "international"], ["CNBC business markets latest", "CNBC technology economy"], newsOnly, false, "https://www.cnbc.com/id/100727362/device/rss/rss.html")],
   },
   {
     source_id: "techcrunch",
@@ -492,7 +494,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 76,
     mayHavePaywall: true,
     enabled: true,
-    sections: [section("Science", "https://www.wired.com/category/science/", "science", ["technology", "science", "ai"], ["Wired science AI latest", "Wired technology science"], newsOnly, false)],
+    sections: [section("Science", "https://www.wired.com/category/science/", "science", ["technology", "science", "ai"], ["Wired science AI latest", "Wired technology science"], newsOnly, false, "https://www.wired.com/feed/category/science/latest/rss")],
   },
   {
     source_id: "ars-technica",
@@ -516,7 +518,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 82,
     mayHavePaywall: true,
     enabled: true,
-    sections: [section("AI", "https://www.technologyreview.com/topic/artificial-intelligence/", "ai", ["ai", "technology", "science"], ["MIT Technology Review AI latest", "MIT Tech Review artificial intelligence"], newsOnly, false)],
+    sections: [section("AI", "https://www.technologyreview.com/topic/artificial-intelligence/", "ai", ["ai", "technology", "science"], ["MIT Technology Review AI latest", "MIT Tech Review artificial intelligence"], newsOnly, false, "https://www.technologyreview.com/topic/artificial-intelligence/feed/")],
   },
   {
     source_id: "openai",
@@ -552,7 +554,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 88,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("Blog", "https://deepmind.google/discover/blog/", "ai", ["ai", "technology", "science"], ["Google DeepMind blog latest", "DeepMind AI research news"], webAndNews, false, "https://deepmind.google/blog/rss.xml")],
+    sections: [section("Blog", "https://deepmind.google/discover/blog/", "ai", ["ai", "technology", "science"], ["Google DeepMind blog latest", "DeepMind AI research news"], webAndNews, false, "https://deepmind.google/blog/rss.xml", ["https://blog.google/innovation-and-ai/models-and-research/"])],
   },
   {
     source_id: "google-ai",
@@ -564,7 +566,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 86,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("Blog", "https://blog.google/technology/ai/", "ai", ["ai", "technology"], ["Google AI blog latest", "Google artificial intelligence news"], webAndNews, false)],
+    sections: [section("Blog", "https://blog.google/innovation-and-ai/technology/ai/", "ai", ["ai", "technology"], ["Google AI blog latest", "Google artificial intelligence news"], webAndNews, false, "https://blog.google/innovation-and-ai/technology/ai/rss/")],
   },
   {
     source_id: "meta-ai",
@@ -588,7 +590,7 @@ const curatedSources: SourceDefinition[] = [
     credibility: 84,
     mayHavePaywall: false,
     enabled: true,
-    sections: [section("Blog", "https://blogs.microsoft.com/ai/", "ai", ["ai", "technology"], ["Microsoft AI blog latest", "Microsoft artificial intelligence news"], webAndNews, false)],
+    sections: [section("Blog", "https://news.microsoft.com/source/topics/ai/", "ai", ["ai", "technology"], ["Microsoft AI blog latest", "Microsoft artificial intelligence news"], webAndNews, false, "https://news.microsoft.com/source/topics/ai/feed/")],
   },
   {
     source_id: "nvidia-ai",

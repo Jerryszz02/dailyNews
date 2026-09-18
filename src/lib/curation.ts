@@ -16,6 +16,7 @@ import type {
   StoryStatus,
 } from "../types";
 import { isAllowedSourceUrl, isApprovedSource } from "./sourceAdmission.js";
+import { isNavigationCandidate } from "./articleIdentity.js";
 import { hostnameFromUrl, normalizeText, tokenize } from "./text.js";
 
 const allBeats: Category[] = [
@@ -353,7 +354,7 @@ function candidateRejectionReason(item: RawNewsItem): string | undefined {
   try {
     const url = new URL(item.url);
     if (!/^https?:$/.test(url.protocol) || !url.hostname) return "invalid_url";
-    if (isNavigationUrl(url)) return "navigation_page";
+    if (isNavigationCandidate(item.title, item.url)) return "navigation_page";
   } catch {
     return "invalid_url";
   }
@@ -368,15 +369,6 @@ function isExplicitPromotion(value: string): boolean {
   return /\b(sponsored|advertorial)\b/i.test(value) ||
     /(赞助内容|商业推广|广告合作|广告链接|推广链接|优惠券|折扣码|购物导购)/.test(value) ||
     /(立即|点击|扫码|限时|下单|购买|领取|抢购).{0,12}(优惠|折扣|购买|下单|领取|咨询|活动)/.test(value);
-}
-
-function isNavigationUrl(url: URL): boolean {
-  const segments = url.pathname.split("/").filter(Boolean);
-  if (segments.length === 0) return true;
-  if (segments.length > 1) return false;
-  return /^(home|index(?:\.html?)?|news|latest|world|china|sports|technology|science|business|category|categories|tag|tags|search|topic|topics|section|sections)$/i.test(
-    segments[0],
-  );
 }
 
 function candidateDegradationReasons(item: RawNewsItem): string[] {

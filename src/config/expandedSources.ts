@@ -150,6 +150,7 @@ export const expandedSourceDefinitions: SourceDefinition[] = [
         primaryCategory: "technology",
         categories: ["technology", "ai"],
         searchTerms: ["IT之家 科技", "IT之家 数码 互联网"],
+        feedUrl: "https://www.ithome.com/rss/",
       },
     ],
   }),
@@ -207,6 +208,7 @@ export const expandedSourceDefinitions: SourceDefinition[] = [
         primaryCategory: "technology",
         categories: ["technology", "ai", "finance"],
         searchTerms: ["Apple Newsroom latest", "Apple product news"],
+        feedUrl: "https://www.apple.com/newsroom/rss-feed.rss",
       },
     ],
   }),
@@ -337,6 +339,7 @@ export const expandedSourceDefinitions: SourceDefinition[] = [
         primaryCategory: "finance",
         categories: ["finance", "policy", "international"],
         searchTerms: ["European Central Bank monetary policy", "ECB latest news"],
+        feedUrl: "https://www.ecb.europa.eu/rss/press.html",
       },
       {
         label: "Policy",
@@ -344,6 +347,7 @@ export const expandedSourceDefinitions: SourceDefinition[] = [
         primaryCategory: "policy",
         categories: ["policy", "finance", "international"],
         searchTerms: ["ECB policy decision", "European Central Bank press release"],
+        feedUrl: "https://www.ecb.europa.eu/rss/press.html",
       },
     ],
   }),
@@ -584,7 +588,7 @@ export const expandedSourceDefinitions: SourceDefinition[] = [
     sections: [
       {
         label: "新闻",
-        url: "https://www.cyol.com/",
+        url: "https://news.cyol.com/",
         primaryCategory: "china",
         categories: ["china", "society", "policy"],
         searchTerms: ["中国青年报 新闻", "中国青年报 社会 青年"],
@@ -698,7 +702,7 @@ export const expandedSourceDefinitions: SourceDefinition[] = [
     sections: [
       {
         label: "Press",
-        url: "https://commission.europa.eu/",
+        url: "https://commission.europa.eu/news-and-media/news_en",
         primaryCategory: "policy",
         categories: ["policy", "international", "finance"],
         searchTerms: ["European Commission press release", "EU Commission policy latest"],
@@ -740,6 +744,7 @@ export const expandedSourceDefinitions: SourceDefinition[] = [
         primaryCategory: "science",
         categories: ["science", "technology"],
         searchTerms: ["Science News latest", "Science News research"],
+        feedUrl: "https://www.sciencenews.org/feed",
       },
     ],
   }),
@@ -952,6 +957,7 @@ export const expandedSourceDefinitions: SourceDefinition[] = [
         primaryCategory: "entertainment",
         categories: ["entertainment", "international"],
         searchTerms: ["Hollywood Reporter latest", "THR film TV news"],
+        feedUrl: "https://www.hollywoodreporter.com/feed/",
       },
     ],
   }),

@@ -6,9 +6,11 @@ import { selectSourcesForCoverage } from "../src/lib/sourceCoverage";
 import type { NewsSource, RawNewsItem } from "../src/types";
 
 const firecrawlSearchMock = vi.hoisted(() => vi.fn());
+const firecrawlConstructorMock = vi.hoisted(() => vi.fn());
 
 vi.mock("firecrawl", () => ({
   Firecrawl: class {
+    constructor(options: unknown) { firecrawlConstructorMock(options); }
     search(...args: unknown[]) {
       return firecrawlSearchMock(...args);
     }
@@ -30,6 +32,7 @@ import {
   parsePublishedDate,
   prepareNewsTextForDisplay,
   readTranslationConfig,
+  resolveCandidateUrl,
   retryPendingCandidateTranslations,
   runWithinDeadline,
   translateNewsText,
@@ -48,6 +51,7 @@ let originalMaxNewsAge: string | undefined;
 
 beforeEach(() => {
   firecrawlSearchMock.mockReset();
+  firecrawlConstructorMock.mockReset();
   originalTranslationEnv = Object.fromEntries(translationEnvNames.map((name) => [name, process.env[name]])) as Record<
     (typeof translationEnvNames)[number],
     string | undefined
@@ -1369,12 +1373,41 @@ describe("extractPublishedDateFromHtml", () => {
     ).toBe("2026-07-09T00:03:37.000Z");
   });
 
+  it("prefers explicit article publication metadata over old dates in scripts and templates", () => {
+    expect(extractPublishedDateFromHtml(`
+      <meta property="article:published_time" content="2026-09-17T08:57:29+00:00">
+      <script>const templateCreated = "2021-05-01 14:03:39";</script>
+      <time datetime="2019-09-03">September 17, 2026 1:57am</time>
+    `)).toBe("2026-09-17T08:57:29.000Z");
+  });
+
   it("reads compact script publish timestamps", () => {
     expect(extractPublishedDateFromHtml('var publishDate ="20260709093554 ";')).toBe("2026-07-09T01:35:54.000Z");
   });
 });
 
 describe("extractArticleSummaryContext", () => {
+  it.each([
+    ["article body", "<article><p>$body</p></article>"],
+    ["JSON-LD", '<script type="application/ld+json">{"articleBody":"$body"}</script>'],
+    ["article description", '<meta property="og:description" content="$body">'],
+  ])("uses %s before an unrelated site-wide paragraph when repairing a summary", async (_label, articleHtml) => {
+    const body = "研究团队今天公布最新实验结果，详细介绍了验证方法、样本规模和适用范围，并明确了下一阶段的公开测试及数据发布计划。";
+    const notice = "为了持续改善您的浏览体验，本网站会记录您的偏好并保存必要的访问设置，您可以通过页面底部的选项管理这些设置。";
+    const context = extractArticleSummaryContext(`
+      <header><p>${notice}</p></header>
+      ${articleHtml.replace("$body", body)}
+      <footer><p>订阅我们的每周资讯邮件，即可及时了解网站更新和会员服务的最新安排，订阅后也可以随时在设置中调整接收频率。</p></footer>
+    `);
+
+    expect(context?.split("\n")[0]).toBe(body);
+    await expect(prepareNewsTextForDisplay({
+      title: "研究团队公布最新实验结果", summary: "研究团队公布最新实验结果",
+      url: "https://example.com/news/experiment", articleContext: context,
+      allowTranslation: false, repairSummaryWithModel: false,
+    })).resolves.toMatchObject({ summary: body, summaryStatus: "complete" });
+  });
+
   it("reads article context from metadata, JSON-LD and paragraphs", () => {
     const context = extractArticleSummaryContext(`
       <meta property="og:description" content="这是一段来自页面 metadata 的新闻摘要，包含足够多的事实信息用于后续概述。">
@@ -1385,6 +1418,25 @@ describe("extractArticleSummaryContext", () => {
     expect(context).toContain("metadata");
     expect(context).toContain("结构化数据");
     expect(context).toContain("页面正文段落");
+  });
+
+  it("prefers article body and removes generic site boilerplate", () => {
+    const context = extractArticleSummaryContext(`
+      <meta name="description" content="更多要闻播报+ 版权所有 Copyright 2026">
+      <article><p>这是一段真实正文，包含事件发生的时间、地点、相关机构和后续安排等具体事实信息，并补充了各方回应和影响范围。</p></article>
+    `);
+    expect(context).toContain("真实正文");
+    expect(context).not.toContain("版权所有");
+  });
+});
+
+describe("candidate URLs", () => {
+  it("decodes entities before stripping CDATA and rejects unsafe schemes", () => {
+    expect(resolveCandidateUrl("<![CDATA[/news/story?a=1&amp;b=2]]>", "https://example.com/feed")).toBe(
+      "https://example.com/news/story?a=1&b=2",
+    );
+    expect(resolveCandidateUrl("javascript:alert(1)", "https://example.com/feed")).toBe("");
+    expect(resolveCandidateUrl("ftp://example.com/file", "https://example.com/feed")).toBe("");
   });
 });
 
@@ -1773,6 +1825,16 @@ describe("translation helpers", () => {
     });
   });
 
+  it("keeps a translated headline when only its summary is unavailable", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(chatResponse(JSON.stringify({ title: "研究团队发布实验结果", summary: "研究团队发布实验结果" }))));
+    const result = await prepareNewsTextForDisplay({
+      title: "Research team releases results", summary: "Research team releases results",
+      url: "https://example.com/article", articleContext: null, allowTranslation: true,
+      repairSummaryWithModel: true, translationConfig: { apiKey: "test-key", baseUrl: "https://api.deepseek.com", model: "deepseek-v4-flash" },
+    });
+    expect(result).toMatchObject({ title: "研究团队发布实验结果", translationStatus: "translated", summaryStatus: "pending", rejectionReasons: ["summary_missing"] });
+  });
+
   it("keeps original text pending translation when no translation service is configured", async () => {
     await expect(
       prepareNewsTextForDisplay({
@@ -1818,7 +1880,7 @@ describe("translation helpers", () => {
     });
   });
 
-  it("uses article context as fallback when Chinese summary enrichment fails", async () => {
+  it("prefers factual Chinese article context before optional model enrichment", async () => {
     const config = { apiKey: "test-key", baseUrl: "https://api.deepseek.com", model: "deepseek-v4-flash" };
     const fetchMock = vi
       .fn()
@@ -1840,6 +1902,7 @@ describe("translation helpers", () => {
       summary: "这是一段中文新闻正文，提供事件背景、关键人物、时间线和后续影响，适合作为页面摘要。",
       summaryStatus: "complete",
     });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("extracts a factual article summary without calling the model when repair is disabled", async () => {
@@ -1881,5 +1944,162 @@ describe("inferPrimaryCategory", () => {
         { primaryCategory: "china", categories: ["china", "policy", "international"] },
       ),
     ).toBe("sports");
+  });
+});
+
+
+describe("collection regression acceptance", () => {
+  it("performs a real SDK attempt and records acquisition stage failures separately", async () => {
+    const source = testSource("sdk-attempt", "搜索尝试源");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("HTTP 403")));
+    firecrawlSearchMock.mockResolvedValue({ news: [] });
+    const result = await collectNewsCandidates({ sources: [source], includeDiagnostics: true });
+    expect(firecrawlConstructorMock).toHaveBeenCalledWith(expect.objectContaining({ maxRetries: 1 }));
+    expect(firecrawlSearchMock).toHaveBeenCalled();
+    expect(result.diagnostics?.[0]).toMatchObject({
+      direct: { status: "failed", errorCode: "source_access_denied" },
+      fallback: { status: "empty", errorCode: null }, searchRequests: 2,
+    });
+  });
+
+  it("acquires every source and later section before waiting on the model queue", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-18T07:00:00Z"));
+    const previousConcurrency = process.env.DAILY_NEWS_SOURCE_CONCURRENCY;
+    process.env.DAILY_NEWS_SOURCE_CONCURRENCY = "1";
+    process.env.DAILY_NEWS_TRANSLATION_API_KEY = "test-key";
+    try {
+      const sources = [testSource("first-queue", "排队源"), testSource("last-queue", "后续源")];
+      for (const source of sources) source.sections[0].requireChinese = false;
+      sources[0].sections.push({ ...sources[0].sections[0], url: "https://first-queue.example.com/second" });
+      const listingUrls = sources.flatMap((source) => source.sections.map((section) => section.url));
+      const fetchedListings: string[] = [];
+      const fetchMock = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/chat/completions")) {
+          expect(fetchedListings).toEqual(listingUrls);
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
+          return chatResponse(JSON.stringify({ title: "最新研究公布重要进展", summary: "研究团队公布完整实验结果，并详细说明技术用途与后续验证安排。" }));
+        }
+        if (listingUrls.includes(url)) {
+          fetchedListings.push(url);
+          const article = `${new URL(url).origin}/news/${url.endsWith("second") ? "second" : "first"}-story`;
+          return htmlResponse(`<rss><channel><item><title>Latest research result announced</title><link>${article}</link><description>The researchers shared detailed results and the next validation steps.</description><pubDate>2026-07-18T06:00:00Z</pubDate></item></channel></rss>`);
+        }
+        return htmlResponse("<p>The researchers shared detailed results and the next validation steps.</p>");
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      const pending = collectNewsCandidates({ sources, collectionBudgetMs: 90_000, useFirecrawlKeyless: false });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchedListings).toEqual(listingUrls);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const result = await pending;
+      expect(result.items).toHaveLength(3);
+      expect(result.items.every((item) => item.translationStatus === "translated")).toBe(true);
+      expect(result.sourceOutcomes.every((outcome) => outcome.status === "success")).toBe(true);
+    } finally {
+      if (previousConcurrency === undefined) delete process.env.DAILY_NEWS_SOURCE_CONCURRENCY;
+      else process.env.DAILY_NEWS_SOURCE_CONCURRENCY = previousConcurrency;
+      vi.useRealTimers();
+    }
+  });
+
+  it("filters BBC and CAS navigation while retaining article siblings on approved subdomains", async () => {
+    const source = testSource("navigation", "导航回归源");
+    const listing = `<nav>
+      <a href="/news/politics">UK Politics</a><a href="/news/northern_ireland">N. Ireland</a>
+      <a href="/news/northern_ireland/northern_ireland_politics">N. Ireland Politics</a>
+      <a href="/gj/">更多要闻播报 +</a></nav>
+      <script>str += '<a href="/news/real-looking-slug">这是一条脚本模板内的假新闻标题</a>';</script>
+      <a href="/world/'+data.clickUrl+'">'+data.title+'</a>
+      <a href="/news-and-media/news_nl">nlNederlands</a>
+      <a href="/world-rankings/introduction">世界田径运动员综合排名</a>
+      <a href="/stats-zone/road-to/7212925">世界大赛运动员资格排名</a>
+      <a href="/competitions/world-athletics-ultimate-championship/2026">年度田径锦标赛主页面</a>
+      <a href="http://tech.navigation.example.com/p/1234567890">FEATURED</a>
+      <a href="http://tech.navigation.example.com/p/1234567890">科技企业公布一项新的重要研究成果</a>
+      <a href="/1/003/842.htm">新产品完成公开测试并公布上市安排</a>
+      <a href="/sj/zxfb/202609/t20260917_123456.html">统计机构正式发布本月经济统计数据</a>`;
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => String(input) === source.sections[0].url
+      ? htmlResponse(listing)
+      : htmlResponse('<meta property="article:published_time" content="2026-07-18T06:00:00Z"><p>研究团队在今天公开详细的实验结果，并介绍了关键技术指标、应用范围，以及接下来的测试和验证安排。</p>')));
+    const result = await collectNewsCandidates({ sources: [source], now: new Date("2026-07-18T07:00:00Z"), useFirecrawlKeyless: false, repairSummariesWithModel: false });
+    expect(result.items).toHaveLength(3);
+    expect(result.items.some((item) => /Politics|Ireland|更多/.test(item.title))).toBe(false);
+    expect(result.items.some((item) => item.url === "https://tech.navigation.example.com/p/1234567890")).toBe(true);
+    expect(result.items.find((item) => item.url === "https://tech.navigation.example.com/p/1234567890")?.title).toBe("科技企业公布一项新的重要研究成果");
+  });
+
+  it("extracts a CDATA RSS article and chooses the Atom alternate rather than self or image", async () => {
+    const source = testSource("feed-links", "Feed链接源");
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => String(input) === source.sections[0].url
+      ? htmlResponse(`<rss><channel><item><title>美联储正式发布最新政策文件</title><link><![CDATA[https://feed-links.example.com/news/policy?a=1&amp;b=2]]></link><description>文件详细说明实施日期、政策影响和相关安排。</description><pubDate>2026-07-18T06:00:00Z</pubDate></item></channel></rss>`)
+      : htmlResponse("<p>最新政策文件正文提供有关时间安排和实施范围的明确说明。</p>")));
+    const result = await collectNewsCandidates({ sources: [source], now: new Date("2026-07-18T07:00:00Z"), useFirecrawlKeyless: false, repairSummariesWithModel: false });
+    expect(result.items[0]?.url).toBe("https://feed-links.example.com/news/policy?a=1&b=2");
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => String(input) === source.sections[0].url
+      ? htmlResponse(`<feed><entry><title>官方发布最新产品及相关技术信息</title><link rel="self" href="https://feed-links.example.com/feed"/><link rel="enclosure" href="https://feed-links.example.com/photo.jpg"/><link rel="alternate" href="https://feed-links.example.com/news/product"/><summary>发布内容包括功能、适用范围和后续上市计划。</summary><updated>2026-07-18T06:00:00Z</updated></entry></feed>`)
+      : htmlResponse("<p>官方产品详细信息。</p>")));
+    const atom = await collectNewsCandidates({ sources: [source], now: new Date("2026-07-18T07:00:00Z"), useFirecrawlKeyless: false, repairSummariesWithModel: false });
+    expect(atom.items[0]?.url).toBe("https://feed-links.example.com/news/product");
+  });
+
+  it("removes the reported site introduction even without a copyright marker", () => {
+    const body = "研究团队发布新的观测结果，说明实验使用的方法、数据范围和验证步骤，并给出了进一步分析及公开数据的安排。";
+    const context = extractArticleSummaryContext(`<meta name="description" content="新京报以文字、图片、视频等全媒体形式提供新闻服务，网站经营许可证。"><article><p>${body}</p></article>`);
+    expect(context).toBe(body);
+  });
+});
+
+
+describe("discovery recovery", () => {
+  it("retries a transient connection failure once without losing its source", async () => {
+    const source = testSource("connection-retry", "连接重试源");
+    let listingAttempts = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      if (String(input) === source.sections[0].url) {
+        if (++listingAttempts === 1) throw Object.assign(new Error("fetch failed"), { cause: { code: "UND_ERR_CONNECT_TIMEOUT" } });
+        return htmlResponse('<a href=/news/update-story>连接恢复后获取到的重要新闻内容</a>');
+      }
+      return htmlResponse('<meta property="article:published_time" content="2026-07-18T06:00:00Z"><p>公开报道说明事件的主要进展、涉及的机构和已经确定的实施范围，并明确了未来进一步验证和披露的安排。</p>');
+    }));
+    const result = await collectNewsCandidates({ sources: [source], now: new Date("2026-07-18T07:00:00Z"), useFirecrawlKeyless: false });
+    expect(listingAttempts).toBe(2);
+    expect(result.items).toHaveLength(1);
+    expect(result.sourceOutcomes[0].status).toBe("success");
+  });
+
+  it("uses the news sitemap publication date and title instead of a later modification date", async () => {
+    const source = testSource("news-sitemap", "新闻站点地图源");
+    source.sections[0].feedUrl = "https://news-sitemap.example.com/sitemap/news.xml";
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => String(input) === source.sections[0].feedUrl
+      ? htmlResponse(`<urlset><url><loc>https://news-sitemap.example.com/2026/07/18/article</loc><lastmod>2026-07-19T06:00:00Z</lastmod><news:news><news:title>官方发布一项重要研究进展</news:title><news:publication_date>2026-07-18T06:00:00Z</news:publication_date></news:news></url></urlset>`)
+      : htmlResponse('<p>研究说明主要结论、验证方法和潜在影响，公开数据可以用于进一步复核，并附有后续阶段的时间安排和具体范围。</p>')));
+    const result = await collectNewsCandidates({ sources: [source], now: new Date("2026-07-18T07:00:00Z"), useFirecrawlKeyless: false });
+    expect(result.items[0]).toMatchObject({ title: "官方发布一项重要研究进展", publishedAt: "2026-07-18T06:00:00.000Z" });
+  });
+
+  it("gives fallback its own attempt after a slow direct collection", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-18T07:00:00Z"));
+    try {
+      const source = testSource("fresh-fallback", "独立备用预算源");
+      source.sections = ["a", "b", "c"].map((part) => ({ ...source.sections[0], url: `https://fresh-fallback.example.com/${part}` }));
+      vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+        if (source.sections.some((section) => section.url === String(input))) {
+          await new Promise((resolve) => setTimeout(resolve, 14_000));
+        }
+        return htmlResponse("<p>页面可访问。</p>");
+      }));
+      firecrawlSearchMock.mockImplementation(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
+        return { news: [{ title: "备用搜索成功获取新闻内容", description: "官方报道介绍明确的事件进展和后续安排。", url: "https://fresh-fallback.example.com/news/current-story", publishedDate: "2026-07-18T06:00:00Z" }] };
+      });
+      const pending = collectNewsCandidates({ sources: [source], now: new Date("2026-07-18T07:00:00Z"), collectionBudgetMs: 100_000 });
+      await vi.advanceTimersByTimeAsync(72_000);
+      const result = await pending;
+      expect(result.items).toHaveLength(1);
+      expect(result.sourceOutcomes[0].status).toBe("success");
+    } finally { vi.useRealTimers(); }
   });
 });

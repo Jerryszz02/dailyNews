@@ -65,7 +65,7 @@ describe("scoring", () => {
         {
           id: "tech",
           title: "AI model regulation proposal affects enterprise deployments",
-          url: "https://techcrunch.com/tech",
+          url: "https://techcrunch.com/2026/06/29/ai-regulation-proposal",
           sourceId: "techcrunch",
           sourceName: "TechCrunch",
           language: "en-US",
@@ -117,7 +117,7 @@ describe("scoring", () => {
       {
         id: "finance",
         title: "Central bank rules change enterprise financing plans",
-        url: "https://cnbc.com/finance",
+        url: "https://cnbc.com/2026/06/29/central-bank-financing.html",
         sourceId: "cnbc",
         sourceName: "CNBC",
         language: "en-US",
