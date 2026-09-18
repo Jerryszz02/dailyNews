@@ -1175,12 +1175,14 @@ async function readArticleSummaryContext(
 }
 
 export function extractArticleSummaryContext(html: string): string | undefined {
-  // Article paragraphs are the strongest signal; site-wide metadata often contains
-  // licensing, navigation, or generic "more news" copy.
+  // Only scoped article paragraphs outrank structured context. Page-wide paragraphs
+  // may start with cookie or subscription notices and are a last-resort fallback.
+  const articleParagraphs = [...html.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article>/gi)]
+    .flatMap((match) => readParagraphText(match[1]));
   const paragraphs = readParagraphText(html);
   const jsonLd = readJsonLdText(html).filter((value) => !isBoilerplateParagraph(value));
   const meta = readMetaDescriptions(html).filter((value) => !isBoilerplateParagraph(value));
-  const values = uniqueValues([...paragraphs, ...jsonLd, ...meta]);
+  const values = uniqueValues([...articleParagraphs, ...jsonLd, ...meta, ...paragraphs]);
   const context = values.join("\n").slice(0, maxArticleContextLength).trim();
   return context || undefined;
 }

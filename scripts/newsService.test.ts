@@ -1387,6 +1387,27 @@ describe("extractPublishedDateFromHtml", () => {
 });
 
 describe("extractArticleSummaryContext", () => {
+  it.each([
+    ["article body", "<article><p>$body</p></article>"],
+    ["JSON-LD", '<script type="application/ld+json">{"articleBody":"$body"}</script>'],
+    ["article description", '<meta property="og:description" content="$body">'],
+  ])("uses %s before an unrelated site-wide paragraph when repairing a summary", async (_label, articleHtml) => {
+    const body = "研究团队今天公布最新实验结果，详细介绍了验证方法、样本规模和适用范围，并明确了下一阶段的公开测试及数据发布计划。";
+    const notice = "为了持续改善您的浏览体验，本网站会记录您的偏好并保存必要的访问设置，您可以通过页面底部的选项管理这些设置。";
+    const context = extractArticleSummaryContext(`
+      <header><p>${notice}</p></header>
+      ${articleHtml.replace("$body", body)}
+      <footer><p>订阅我们的每周资讯邮件，即可及时了解网站更新和会员服务的最新安排，订阅后也可以随时在设置中调整接收频率。</p></footer>
+    `);
+
+    expect(context?.split("\n")[0]).toBe(body);
+    await expect(prepareNewsTextForDisplay({
+      title: "研究团队公布最新实验结果", summary: "研究团队公布最新实验结果",
+      url: "https://example.com/news/experiment", articleContext: context,
+      allowTranslation: false, repairSummaryWithModel: false,
+    })).resolves.toMatchObject({ summary: body, summaryStatus: "complete" });
+  });
+
   it("reads article context from metadata, JSON-LD and paragraphs", () => {
     const context = extractArticleSummaryContext(`
       <meta property="og:description" content="这是一段来自页面 metadata 的新闻摘要，包含足够多的事实信息用于后续概述。">
