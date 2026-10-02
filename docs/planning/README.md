@@ -7,7 +7,7 @@
 | 请求 | 执行已批准的 AIHOT 重构计划 P1–P5，分阶段实现与本地有界验证 |
 | 更新时间 | 2026-10-03（Asia/Shanghai） |
 | 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews` |
-| 工作模式 | 实施模式；独立 worktree，P2 分支 `agent/aihot-p2-policies` 依赖 P1；规范目录与旧服务保留 |
+| 工作模式 | 实施模式；独立 worktree，P3 分支 `agent/aihot-p3-sources` 依赖 P2/P1；规范目录与旧服务保留 |
 | 现行代码基准 | 交接 `ce3f9263c3901839a85794aecea8bc55e67bf0e4`；旧规则固定 `8519831714b0d6c8183336c81e8190dceddf7843` |
 | AIHOT 目标基准 | `3343fe2b20db4be7269113752d82d3992fc52b6b`；固定版本，不自动同步上游 |
 | 新计划状态 | P0 已批准；P1 PR #15 代码 CI 已通过、未合并；P2 本地出口通过；P3 配置/fixture 离线验证通过；P4–P5 待实施，未生产切换 |

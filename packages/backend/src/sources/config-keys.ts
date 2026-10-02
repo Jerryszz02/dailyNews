@@ -4,7 +4,7 @@
 import type { SourceRow } from "./types.ts";
 
 // Rules applied in collect.ts to every kind read through collectSource.
-const COLLECTED = ["_aihot", "allowUrlPrefixes", "denyUrlPrefixes", "ingestNoiseFilter", "itemUrlPrefixRewrite", "sortByPublishedAt", "detail", "fetchPublicContent"];
+const COLLECTED = ["_aihot", "dailyNews", "allowUrlPrefixes", "denyUrlPrefixes", "ingestNoiseFilter", "itemUrlPrefixRewrite", "sortByPublishedAt", "detail", "fetchPublicContent"];
 
 const KEYS: Record<SourceRow["kind"], string[]> = {
   rss: [...COLLECTED, "feedUrl", "summaryIsBody", "preserveUrlFragment", "allowCategories", "denyCategories"],
@@ -18,7 +18,7 @@ const KEYS: Record<SourceRow["kind"], string[]> = {
     "urlTemplate", "urlTemplateFallback", "rawDropKeys", "requireBoolean", "minNumeric",
   ],
   // X accounts are mostly read in shards, which apply only these.
-  x_search: ["_aihot", "ingestNoiseFilter", "itemUrlPrefixRewrite", "query", "searchType"],
+  x_search: ["_aihot", "dailyNews", "ingestNoiseFilter", "itemUrlPrefixRewrite", "query", "searchType", "xUsername"],
   mp_account: ["wxid", "ghid", "nickname"],
   external: [],
 };
@@ -26,6 +26,12 @@ const KEYS: Record<SourceRow["kind"], string[]> = {
 // Objects with fixed keys (headers and bodyJson are request data, free-form).
 const NESTED: Record<string, string[]> = {
   _aihot: ["initialBackfillLimit", "initialBackfillMonths"],
+  dailyNews: [
+    "legacySourceId", "sectionId", "sectionLabel", "sectionUrl", "sourceCredibility", "tierReason", "mediaType", "signalRole",
+    "mayHavePaywall", "primaryCategoryHint", "publisherKey", "language", "allowedHosts", "allowedPathPrefixes",
+    "readerUrlAliases", "legacyEnabled", "disabledReason", "migrationStatus", "adapter", "searchTerms", "searchSources",
+    "reviewedAt", "firecrawlFallback",
+  ],
   ingestNoiseFilter: ["dropMarkers", "dropMarkersTitleOnly", "keepIfMatches"],
   itemUrlPrefixRewrite: ["from", "to"],
   requireBoolean: ["path", "equals"],
@@ -51,6 +57,23 @@ export function unsupportedConfig(kind: SourceRow["kind"], config: Record<string
     else if (NESTED[key] && value && typeof value === "object") {
       for (const sub of Object.keys(value)) if (!NESTED[key]!.includes(sub)) out.push(`${key}.${sub}`);
     }
+  }
+  const dn = config.dailyNews;
+  if (dn !== undefined && (!dn || typeof dn !== "object" || Array.isArray(dn))) out.push("dailyNews");
+  if (dn && typeof dn === "object" && !Array.isArray(dn)) {
+    const v = dn as Record<string, unknown>;
+    const adapter = v.adapter;
+    if (!["rss", "sitemap", "web_list", "json_list", "x_official"].includes(String(adapter))) out.push(`dailyNews.adapter=${String(adapter)}`);
+    if (!Array.isArray(v.allowedHosts) || v.allowedHosts.length === 0 || !v.allowedHosts.every((host) => typeof host === "string" && /^[a-z0-9.-]+$/i.test(host))) out.push("dailyNews.allowedHosts");
+    if (typeof v.publisherKey !== "string" || !/^publisher:[a-z0-9_-]+$/i.test(v.publisherKey)) out.push("dailyNews.publisherKey");
+    if (typeof v.legacySourceId !== "string" || typeof v.sectionId !== "string") out.push("dailyNews.legacyIdentity");
+    if (kind === "x_search" && adapter !== "x_official") out.push("dailyNews.xSearchAdapter");
+    if (kind === "rss" && adapter !== "rss") out.push("dailyNews.rssAdapter");
+    if (kind === "web_list" && adapter !== "web_list" && adapter !== "sitemap") out.push("dailyNews.webAdapter");
+    if (kind === "json_list" && adapter !== "json_list") out.push("dailyNews.jsonAdapter");
+    if (v.migrationStatus === "verified" && adapter === "web_list" &&
+      (typeof config.itemSelector !== "string" || typeof config.linkSelector !== "string" || typeof config.titleSelector !== "string"))
+      out.push("dailyNews.verifiedWebSelectors");
   }
   return out;
 }

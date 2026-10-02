@@ -10,6 +10,9 @@ import { fetchRss } from "./rss.ts";
 import { allowed, fetchDetail, fetchWebList, type DetailNeed } from "./web-list.ts";
 import { unsupportedConfig } from "./config-keys.ts";
 import { fetchJsonList } from "./json-list.ts";
+import { fetchSitemap } from "./sitemap.ts";
+import { fetchOfficialX } from "./x-official.ts";
+import { fetchFirecrawlFallback, firecrawlFallbackEnabled } from "./firecrawl-fallback.ts";
 import { fetchXSearch, planXShards, readXSearch, shardHandle, shardQuery, SHARDABLE_SQL, tweetToCandidate, type XBacklog } from "./x.ts";
 import { FetchError, type Candidate, type SourceRow } from "./types.ts";
 
@@ -78,6 +81,10 @@ export async function collectSource(sourceId: string, opts: { force?: boolean } 
   const source = await loadSource(sourceId);
   if (!source) return { sourceId, status: "skipped", found: 0, created: 0, revised: 0, error: "missing" };
   if (!source.enabled && !opts.force) return { sourceId, status: "skipped", found: 0, created: 0, revised: 0, error: "paused" };
+  // Import inventory is intentionally inert, including forced previews, until a reviewed pilot
+  // explicitly marks this section verified and enables its source row.
+  if (source.config.dailyNews?.migrationStatus !== undefined && source.config.dailyNews.migrationStatus !== "verified")
+    return { sourceId, status: "skipped", found: 0, created: 0, revised: 0, error: "migration unverified" };
   if (source.kind === "mp_account" || source.kind === "external") {
     // WeChat accounts are reconciled by the mp job; external sources only receive reports.
     return { sourceId, status: "skipped", found: 0, created: 0, revised: 0 };
@@ -96,18 +103,12 @@ export async function collectSource(sourceId: string, opts: { force?: boolean } 
     let paidReceiptIds: number[] = [];
     let nextCursor: Record<string, unknown> = { ...(source.cursor ?? {}) };
     let detail: Record<string, unknown> | null = null;
-    if (source.kind === "rss") {
-      const rss = await fetchRss(source, opts);
-      candidates = rss.candidates;
-      // The first import has a smaller backfill cap than later runs: allow the next run to read
-      // the ordinary window before accepting 304s. Persist validators only after store succeeds.
-      if (!firstImport) nextCursor.rss = rss.validator;
-      else delete nextCursor.rss;
-      if (rss.notModified) detail = { notModified: true, httpStatus: 304 };
-    }
-    else if (source.kind === "web_list") candidates = await fetchWebList(source);
-    else if (source.kind === "json_list") candidates = await fetchJsonList(source);
-    else {
+    if (source.kind === "x_search" && source.config.dailyNews?.adapter === "x_official") {
+      const x = await fetchOfficialX(source);
+      candidates = x.candidates;
+      nextCursor.officialX = x.cursor;
+      detail = { pages: x.pages, partial: x.partial, provider: "official_x_v2" };
+    } else if (source.kind === "x_search") {
       const x = await fetchXSearch(source);
       candidates = x.candidates;
       paidReceiptIds = x.receiptIds;
@@ -116,6 +117,34 @@ export async function collectSource(sourceId: string, opts: { force?: boolean } 
       if (x.backlog.length) nextCursor.xBacklog = x.backlog;
       else delete nextCursor.xBacklog;
       detail = { pages: x.pages, truncated: x.truncated, backlog: x.backlog.length, backlogPages: x.backlogPages, dropped: x.dropped };
+    } else {
+      let directError: unknown;
+      let notModified = false;
+      try {
+        if (source.kind === "rss") {
+          const rss = await fetchRss(source, opts);
+          candidates = rss.candidates;
+          if (!firstImport) nextCursor.rss = rss.validator;
+          else delete nextCursor.rss;
+          notModified = rss.notModified;
+          if (notModified) detail = { notModified: true, httpStatus: 304 };
+        } else if (source.kind === "web_list" && source.config.dailyNews?.adapter === "sitemap") {
+          const sitemap = await fetchSitemap(source);
+          candidates = sitemap.candidates;
+          detail = { documents: sitemap.documents, provider: "sitemap" };
+        } else if (source.kind === "web_list") candidates = await fetchWebList(source);
+        else candidates = await fetchJsonList(source);
+      } catch (error) {
+        directError = error;
+        candidates = [];
+      }
+      if (!notModified && candidates.length === 0 && firecrawlFallbackEnabled(source)) {
+        const fallback = await fetchFirecrawlFallback(source);
+        candidates = fallback.candidates;
+        paidReceiptIds.push(fallback.receiptId);
+        detail = { provider: "firecrawl_news_search", directError: directError ? String(directError).slice(0, 300) : null };
+      } else if (directError) throw directError;
+      if (directError && candidates.length === 0) throw directError;
     }
     found = candidates.length;
     candidates = candidates.filter((c) => allowed(c.url, source)).map((c) => rewriteUrl(c, source)).filter((c) => !noiseFiltered(c, source));

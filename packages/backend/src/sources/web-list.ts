@@ -76,6 +76,27 @@ export function jsonLdPublished($: cheerio.CheerioAPI, html: string): string | n
 const overHttps = (url: string) => url.replace(/^http:\/\//i, "https://");
 
 export function allowed(url: string, source: SourceRow): boolean {
+  const dailyNews = source.config.dailyNews;
+  if (dailyNews) {
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { return false; }
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password || (parsed.port && parsed.port !== "443")) return false;
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const hosts: string[] = dailyNews.allowedHosts ?? [];
+    const matched = hosts.map((h) => String(h).toLowerCase().replace(/^www\./, "")).filter((h) => host === h || host.endsWith(`.${h}`));
+    if (!matched.length) return false;
+    const scoped: string[] = dailyNews.allowedPathPrefixes ?? [];
+    const relevant = scoped.map((p) => String(p).toLowerCase().replace(/^www\./, "")).filter((p) => matched.some((h) => p.startsWith(`${h}/`)));
+    if (relevant.length) {
+      const normalizedPath = parsed.pathname.split("/").filter(Boolean).join("/").toLowerCase();
+      if (!relevant.some((p) => {
+        const [scopeHost, ...parts] = p.split("/");
+        if (!matched.includes(scopeHost!)) return false;
+        const path = parts.join("/").replace(/\/$/, "");
+        return normalizedPath === path || normalizedPath.startsWith(`${path}/`);
+      })) return false;
+    }
+  }
   const allow: string[] = (source.config.allowUrlPrefixes ?? []).map(overHttps);
   const deny: string[] = (source.config.denyUrlPrefixes ?? []).map(overHttps);
   const target = overHttps(url);
