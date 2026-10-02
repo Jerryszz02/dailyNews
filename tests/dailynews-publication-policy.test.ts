@@ -8,6 +8,8 @@ import { stopBoss } from "@aihot/backend/jobs/queue";
 import { publishArticle } from "@aihot/backend/publication/publish";
 import { reconcileEditorialPolicies } from "@aihot/backend/publication/editorial";
 import { selectedCondition } from "@aihot/backend/publication/scope";
+import { fetchItemsByIds, toItemSummary } from "@aihot/backend/publication/items";
+import { rowToV1 } from "@aihot/backend/publication/v1";
 import { tag } from "./setup.ts";
 
 process.env.DAILYNEWS_ALLOW_LEGACY_FIXTURES = "1";
@@ -122,6 +124,14 @@ test("global top-ten and important-thirty quotas displace the former selected ar
   assert.equal(displacedDecision?.representative_article_id, displaced);
   assert.equal(displacedDecision?.selected, false);
   assert.equal((await sql<{ selected: boolean }[]>`SELECT selected FROM publications WHERE article_id=${displaced}`)[0]?.selected, false);
+  const displacedRow = (await fetchItemsByIds([displaced])).get(displaced)!;
+  for (const view of [toItemSummary(displacedRow), rowToV1(displacedRow)]) {
+    assert.equal(view.selected, false);
+    assert.equal(view.scoreKind, "legacy_curation_total", "unselected public facts keep their own importance assessment");
+    assert.ok(view.score !== null && view.score > 0);
+    assert.notEqual(view.importanceTier, "noise");
+    assert.equal(view.factStatus, "confirmed");
+  }
 });
 
 test("mention-only fact has no representative and manual category flip invalidates old policy", async () => {

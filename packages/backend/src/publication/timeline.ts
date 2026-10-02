@@ -32,16 +32,15 @@ function binding(q: TimelineQuery): string {
   return queryBinding({ c: q.channel, k: q.category, t: q.tag, p: q.topic ?? null });
 }
 
-/** Representative preference: first-party, full text, higher score, earliest. */
-type RepresentativeRow = Pick<ItemRow, "first_party" | "body_mode" | "score" | "timeline_at">;
+/** Keep within-policy ranking, but never compare numbers from different editorial policies. */
+type RepresentativeRow = Pick<ItemRow, "id" | "first_party" | "body_mode" | "score" | "score_kind" | "timeline_at">;
 export function pickRepresentative<T extends RepresentativeRow>(rows: T[]): T {
+  const comparable = !!rows[0]?.score_kind && rows.every((r) => r.score_kind === rows[0]!.score_kind);
   return [...rows].sort((a, b) => {
     if (a.first_party !== b.first_party) return a.first_party ? -1 : 1;
     if (a.body_mode !== b.body_mode) return a.body_mode === "full" ? -1 : 1;
-    const sa = a.score ?? 0;
-    const sb = b.score ?? 0;
-    if (sa !== sb) return sb - sa;
-    return a.timeline_at.getTime() - b.timeline_at.getTime();
+    if (comparable && (a.score ?? 0) !== (b.score ?? 0)) return (b.score ?? 0) - (a.score ?? 0);
+    return a.timeline_at.getTime() - b.timeline_at.getTime() || a.id.localeCompare(b.id);
   })[0]!;
 }
 
@@ -150,7 +149,7 @@ export async function loadTimeline(q: TimelineQuery): Promise<Omit<TimelineRespo
   const [members, pool] = await Promise.all([
     storyIds.length || factIds.length
       ? sql<Member[]>`
-        SELECT p.story_id, p.fact_id, p.article_id AS id, p.first_party, p.body_mode, p.score, p.timeline_at, p.sort_at FROM publications p
+        SELECT p.story_id, p.fact_id, p.article_id AS id, p.first_party, p.body_mode, p.score, p.score_kind, p.timeline_at, p.sort_at FROM publications p
         WHERE (p.story_id IN ${sql(storyIds.length ? storyIds : [0])} OR (p.story_id IS NULL AND p.fact_id IN ${sql(factIds.length ? factIds : [0])}))
           AND ${selectedCondition(now)} ${filterSql(q)}`
       : Promise.resolve([] as Member[]),

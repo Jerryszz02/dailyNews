@@ -9,6 +9,8 @@ import { useAdminAction } from "../../features/admin/action";
 import { bj, money } from "../../features/admin/format";
 import { KIND_LABEL, MODE_LABEL, VISIBILITY_LABEL } from "../../features/admin/labels";
 import { AdminPage, Badge, Button, Card, Empty, Field, Input, Json, KV, ReasonDialog, Select, Textarea } from "../../features/admin/ui";
+import { FactJudgment } from "../../components/ui/Score";
+import { scoreLabel } from "../../lib/score-labels";
 
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -93,8 +95,10 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
         {p ? <Badge tone={p.visibility === "public" ? "ok" : "warn"}>{VISIBILITY_LABEL[p.visibility] ?? p.visibility}</Badge> : <Badge>未公开</Badge>}
         {p?.selected && <Badge tone="accent">精选</Badge>}
         {p?.eligible === false && <Badge>不进公开面</Badge>}
+        {p?.policy_id === "classification-pending" && <Badge tone="warn">分类待处理</Badge>}
         {a.backfill && <Badge tone="warn">历史回灌</Badge>}
         <Badge>处理 {a.processing_state}</Badge>
+        {a.processing_retry_at && <Badge tone="info">计划重试 {bj(a.processing_retry_at, true)}</Badge>}
         {c.override && <Badge tone="info" title={c.override.reason ?? undefined}>有人工设置 v{c.override.version}</Badge>}
       </div>
       {a.processing_error && <div className="mb-5 rounded-card bg-hot-soft px-4 py-3 text-[13px] text-hot ring-1 ring-hot/20">{a.processing_error}</div>}
@@ -146,7 +150,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
                       <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
                         <Badge tone={an.relevance === "pass" ? "ok" : "muted"}>{an.relevance}</Badge>
                         {an.selected && <Badge tone="accent">入选</Badge>}
-                        <Badge tone="info">分数 {an.score}</Badge>
+                        {an.score !== null && <Badge tone="info">分析记录分数 {an.score}</Badge>}
                         {an.category && <Badge>{CATEGORY_LABELS[an.category as keyof typeof CATEGORY_LABELS] ?? an.category}</Badge>}
                         <span className="text-ink-4">{an.model} · {an.prompt_version} · 输入 v{an.input_revision} · {an.origin} · {bj(an.created_at)}</span>
                       </div>
@@ -175,6 +179,12 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
                     ["范围", VISIBILITY_LABEL[p.visibility] ?? p.visibility],
                     ["精选", p.selected ? `是 · 可见于 ${p.visible_after ? bj(p.visible_after, true) : "立即"}` : "否"],
                     ["栏目", p.category ? CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] ?? p.category : null],
+                    ["策略", p.policy_id ? `${p.policy_id}${p.policy_version ? ` · ${p.policy_version}` : ""}` : "待定"],
+                    ["策略分数", p.score === null ? null : `${scoreLabel(p.score_kind)} ${p.score}`],
+                    ["事实判断", p.score_kind === "legacy_curation_total" ? <FactJudgment tier={p.importance_tier} status={p.fact_status} /> : null],
+                    ["输入版本", p.input_revision === null ? "待分析" : `文章 v${p.input_revision} · 来源 ${p.policy_tier ?? "待定"}`],
+                    ["待处理原因", a.processing_error],
+                    ["重试时间", a.processing_retry_at ? bj(a.processing_retry_at, true) : null],
                     ["标签", (p.tags as string[] | null)?.join("、")],
                     ["摘要", p.summary],
                     ["推荐理由", p.reason],

@@ -30,6 +30,7 @@ export function rowToV1(row: ApiItemRow): V1ItemPayload {
     articleId: row.id, title: row.title, originalTitle: row.original_title, summary: row.summary, sourceName: row.source_name,
     url: row.url, publishedAt: row.published_at, discoveredAt: row.discovered_at, category: row.category,
     score: row.score === null ? null : Number(row.score), selected: row.selected, reason: row.reason,
+    scoreKind: row.score_kind, importanceTier: row.importance_tier, factStatus: row.fact_status,
   });
 }
 
@@ -110,7 +111,18 @@ export async function effectiveWatermark(now = new Date()): Promise<number> {
 function minimalOf(item: V1ItemPayload) {
   return {
     id: item.id, title: item.title, source: item.source, publishedAt: item.publishedAt, discoveredAt: item.discoveredAt,
-    category: item.category, score: item.score, selected: item.selected, links: { aihot: item.links.aihot },
+    category: item.category, score: item.score, scoreKind: item.scoreKind, importanceTier: item.importanceTier,
+    factStatus: item.factStatus, selected: item.selected, links: { aihot: item.links.aihot },
+  };
+}
+
+/** Pre-P4 ledger JSON lacks decision metadata. Keep its original judgement and make the absence explicit. */
+function withLedgerDecisionFields(item: V1ItemPayload): V1ItemPayload {
+  return {
+    ...item,
+    scoreKind: item.scoreKind ?? null,
+    importanceTier: item.importanceTier ?? null,
+    factStatus: item.factStatus ?? null,
   };
 }
 
@@ -184,7 +196,10 @@ export async function selectedSnapshot(q: SnapshotQuery, now = new Date()) {
     count: page.length,
     hasMore,
     nextPage: hasMore && last ? encodeCursor(SYNC_PREFIX, { k: "page", e: epoch, w, f: fields, a: last.article_id, t: asOf }) : null,
-    items: page.map((r) => (fields === "minimal" ? minimalOf(r.payload) : r.payload)),
+    items: page.map((r) => {
+      const payload = withLedgerDecisionFields(r.payload);
+      return fields === "minimal" ? minimalOf(payload) : payload;
+    }),
   };
 }
 
@@ -224,7 +239,7 @@ export async function selectedChanges(q: { cursor: string; limit: number }, now 
     changes: page.map((r) =>
       r.op === "remove"
         ? { op: "remove" as const, changedAt: r.changed_at.toISOString(), id: r.article_id }
-        : { op: "upsert" as const, changedAt: r.changed_at.toISOString(), item: c.f === "minimal" ? minimalOf(r.payload!) : r.payload! },
+        : { op: "upsert" as const, changedAt: r.changed_at.toISOString(), item: c.f === "minimal" ? minimalOf(withLedgerDecisionFields(r.payload!)) : withLedgerDecisionFields(r.payload!) },
     ),
   };
 }

@@ -20,7 +20,8 @@ export async function searchContent(q: string): Promise<BeforeJson<AdminContentR
   if (!term) return [];
   const read = (where: ReturnType<typeof sql>) => sql<BeforeJson<AdminContentRow>[]>`
     SELECT a.id, coalesce(p.title, a.title) AS title, a.url, s.name AS source, a.discovered_at, a.processing_state,
-           p.visibility, p.selected, p.score
+           a.processing_error, a.processing_retry_at, p.visibility, p.selected, p.score,
+           p.score_kind, p.importance_tier, p.fact_status, p.policy_id
     FROM articles a JOIN sources s ON s.id = a.source_id LEFT JOIN publications p ON p.article_id = a.id
     WHERE ${where} ORDER BY a.discovered_at DESC, a.id LIMIT 50`;
   // Exact lookups use the identity indexes; a title search must not force a full-table join for an ID.
@@ -38,7 +39,8 @@ type Chain = BeforeJson<AdminContentChain>;
 export async function contentChain(id: string): Promise<Chain | null> {
   const [article] = await sql<Chain["article"][]>`
     SELECT a.id, a.source_id, a.url, a.identity_key, a.title, a.author, a.language, a.published_at, a.published_at_claim, a.discovered_at,
-           a.timeline_at, a.backfill, a.body_status, a.revision, a.processing_state, a.processing_error, a.grouped_at, length(a.body_text) AS body_chars,
+           a.timeline_at, a.backfill, a.body_status, a.revision, a.processing_state, a.processing_error,
+           a.processing_retry_at, a.processing_attempts, a.grouped_at, length(a.body_text) AS body_chars,
            s.name AS source_name, s.kind AS source_kind, s.tier, s.participation_mode, s.site_fulltext, s.syndicate_fulltext
     FROM articles a JOIN sources s ON s.id = a.source_id WHERE a.id = ${id}`;
   if (!article) return null;

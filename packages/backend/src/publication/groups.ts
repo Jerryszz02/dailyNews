@@ -32,10 +32,10 @@ export async function loadGroupReports(q: GroupReportsQuery, now = new Date()): 
   const filters = sql`${channelCondition(q.channel)} ${categoryCondition(q.category)} ${tagCondition(q.tag)} ${topicCondition(q.topicTags)}`;
   const members = await sql<{
     id: string; title: string; summary: string | null; timeline_at: Date; url: string; selected: boolean;
-    source_id: string; source_name: string; source_kind: string; first_party: boolean; icon_url: string | null;
+    source_id: string; legacy_source_id: string | null; source_name: string; source_kind: string; first_party: boolean; icon_url: string | null;
   }[]>`
     SELECT p.article_id AS id, p.title, p.summary, p.timeline_at, p.url, p.selected,
-           s.id AS source_id, s.name AS source_name, s.kind AS source_kind, p.first_party, s.icon_url
+           s.id AS source_id, s.legacy_source_id, s.name AS source_name, s.kind AS source_kind, p.first_party, s.icon_url
     FROM publications p JOIN sources s ON s.id = p.source_id
     WHERE p.article_id IN (SELECT article_id FROM fact_articles WHERE fact_id = ${fact.id}) AND s.participation_mode = 'editorial' AND ${listedCondition(now)} ${filters}
     ORDER BY p.timeline_at DESC, p.article_id ASC`;
@@ -64,7 +64,7 @@ export async function loadGroupReports(q: GroupReportsQuery, now = new Date()): 
         id: m.id,
         title: m.title,
         summary: m.summary,
-        source: { id: m.source_id, name: m.source_name, kind: m.source_kind as never, firstParty: m.first_party, iconUrl: proxiedImage(m.icon_url, "avatar") },
+        source: { id: m.source_id, legacySourceId: m.legacy_source_id, name: m.source_name, kind: m.source_kind as never, firstParty: m.first_party, iconUrl: proxiedImage(m.icon_url, "avatar") },
         timelineAt: m.timeline_at.toISOString(),
         originalUrl: m.url,
         selected: m.selected,
@@ -97,9 +97,9 @@ export async function loadDevelopments(q: DevelopmentsQuery, now = new Date()): 
     SELECT id, public_id::text, title FROM stories WHERE public_id = ${q.storyPublicId} AND merged_into IS NULL`;
   if (!story) return { kind: "not_found" };
   const filters = sql`${channelCondition(q.channel)} ${categoryCondition(q.category)} ${tagCondition(q.tag)} ${topicCondition(q.topicTags)}`;
-  type Member = Pick<ItemRow, "id" | "fact_id" | "first_party" | "body_mode" | "score" | "timeline_at" | "sort_at">;
+  type Member = Pick<ItemRow, "id" | "fact_id" | "first_party" | "body_mode" | "score" | "score_kind" | "timeline_at" | "sort_at">;
   const selected = await sql<Member[]>`
-    SELECT p.article_id AS id, p.fact_id, p.first_party, p.body_mode, p.score, p.timeline_at, p.sort_at
+    SELECT p.article_id AS id, p.fact_id, p.first_party, p.body_mode, p.score, p.score_kind, p.timeline_at, p.sort_at
     FROM publications p JOIN sources s ON s.id = p.source_id WHERE p.story_id = ${story.id} AND s.participation_mode = 'editorial' AND ${selectedCondition(now)} ${filters}`;
   if (selected.length === 0) return { kind: "not_found" };
   const counts = new Map(

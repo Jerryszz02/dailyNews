@@ -26,9 +26,9 @@ export function isPoolEligible(input: {
 }
 
 /**
- * Item detail page (and its Markdown export): every unwithdrawn item from an editorial source has one,
- * with or without a Chinese summary (noindex unless indexable). hot_signal material is heat evidence
- * only and has none. A paused source keeps its pages.
+ * Source/withdrawal part of item-detail access. Callers additionally require a current eligible
+ * decision and the release gate. hot_signal material is heat evidence only and has no page.
+ * A paused source keeps already eligible pages.
  */
 export function hasItemPage(p: { visibility: string; sourceMode: string }): boolean {
   return p.visibility !== "withdrawn" && p.sourceMode === "editorial";

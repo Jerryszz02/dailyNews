@@ -13,6 +13,7 @@ const MACHINE: Array<[path: string, type: RegExp]> = [
   ["/api/v1/items", /json/],
   ["/api/v1/hot-topics", /json/],
   ["/api/v1/selected/snapshot", /json/],
+  ["/api/legacy/archive", /json/],
   ["/feed.xml", /xml/],
   ["/feed/all.xml", /xml/],
   ["/llms.txt", /text\/plain/],
@@ -51,7 +52,18 @@ async function check(path: string, expect: (res: Response, body: string) => stri
 // Pages write the name as HTML text: a name such as "MyF&B" appears as "MyF&amp;B".
 const htmlName = SITE.name.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
 for (const path of PAGES) await check(path, (_res, body) => (body.includes(SITE.name) || body.includes(htmlName) ? null : `the page does not name ${SITE.name}`));
-for (const [path, type] of MACHINE) await check(path, (res) => (type.test(res.headers.get("content-type") ?? "") ? null : `content-type ${res.headers.get("content-type")}`));
+for (const [path, type] of MACHINE) await check(path, (res, body) => {
+  if (!type.test(res.headers.get("content-type") ?? "")) return `content-type ${res.headers.get("content-type")}`;
+  if (path === "/api/legacy/archive") {
+    try {
+      const archive = JSON.parse(body) as { live?: boolean; storyCount?: number; sha256?: string; generatedAt?: string };
+      if (archive.live !== false || archive.storyCount !== 47 || archive.sha256 !== "38cbdbbd00865a735ba01095d26a1bdfccdcea959dd5fbbd4c2c8f1e40af9f36" || archive.generatedAt !== "2026-07-09T15:39:06.365Z") {
+        return "frozen archive metadata mismatch";
+      }
+    } catch { return "invalid frozen archive metadata"; }
+  }
+  return null;
+});
 // MCP: the handshake answers with the site's server name.
 const mcp = await fetch(`${base}/api/mcp`, {
   method: "POST",

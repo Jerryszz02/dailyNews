@@ -16,6 +16,9 @@ export interface ItemRow {
   category: string | null;
   tags: string[];
   score: number | null;
+  score_kind?: "ai_attention" | "legacy_curation_total" | null;
+  importance_tier?: string | null;
+  fact_status?: string | null;
   selected: boolean;
   eligible: boolean;
   channel: "news" | "x";
@@ -35,6 +38,7 @@ export interface ItemRow {
   fact_id: number | null;
   story_id: number | null;
   source_id: string;
+  legacy_source_id?: string | null;
   source_name: string;
   source_kind: SourceKind;
   /** Participation mode of the source now (editorial, hot_signal, isolated). */
@@ -50,28 +54,43 @@ export interface ItemRow {
   quoted_zh: string | null;
 }
 
+// Non-AI importance belongs to the current fact, including public representatives outside the
+// selected quotas. A pending fact has no score; never substitute an article's model score.
+const POLICY_COLUMNS = sql`
+  CASE WHEN p.category='ai' THEN p.score ELSE policy_decision.score END AS score,
+  CASE WHEN p.category='ai' AND p.score IS NOT NULL THEN 'ai_attention'
+    ELSE policy_decision.score_kind END AS score_kind,
+  policy_decision.importance_tier, policy_decision.fact_status`;
+const POLICY_JOIN = sql`
+  LEFT JOIN fact_editorial_state policy_fact ON policy_fact.fact_id=p.fact_id
+  LEFT JOIN editorial_decisions policy_decision ON policy_decision.id=policy_fact.decision_id
+    AND policy_decision.scope='fact' AND policy_decision.policy_id='dailynews-non-ai-fact'
+    AND policy_decision.primary_category=p.category
+    AND policy_decision.evidence_version=policy_fact.evidence_version`;
+
 /** Columns every item listing selects. Internal judgement details never leave this layer. */
 export const ITEM_COLUMNS = sql`
-  p.article_id AS id, p.revision, p.title, p.original_title, p.summary, p.reason, p.category, p.tags, p.score,
+  p.article_id AS id, p.revision, p.title, p.original_title, p.summary, p.reason, p.category, p.tags, ${POLICY_COLUMNS},
   p.selected, p.eligible, p.channel, p.url, p.published_at, p.discovered_at, p.timeline_at, p.sort_at, p.first_party, p.visibility,
   p.body_mode, p.syndicate, p.indexable, p.visible_after, p.backfill, p.fact_id, p.story_id,
-  s.id AS source_id, s.name AS source_name, s.kind AS source_kind, s.participation_mode AS source_mode, s.icon_url AS source_icon,
+  s.id AS source_id, s.legacy_source_id, s.name AS source_name, s.kind AS source_kind, s.participation_mode AS source_mode, s.icon_url AS source_icon,
   a.x_post, a.author, a.language,
   st.public_id::text AS story_public_id, st.title AS story_title,
   CASE WHEN p.channel = 'x' THEN tr.body_text END AS zh_text, qt.text_zh AS quoted_zh`;
 
 /** Public API listings never render article bodies, X media or story metadata. */
-export type ApiItemRow = Pick<ItemRow, "id" | "title" | "original_title" | "summary" | "source_name" | "url" | "published_at" | "discovered_at" | "category" | "score" | "selected" | "reason">;
+export type ApiItemRow = Pick<ItemRow, "id" | "title" | "original_title" | "summary" | "source_name" | "url" | "published_at" | "discovered_at" | "category" | "score" | "score_kind" | "importance_tier" | "fact_status" | "selected" | "reason">;
 export const API_ITEM_COLUMNS = sql`
   p.article_id AS id, p.title, p.original_title, p.summary, s.name AS source_name, p.url,
-  p.published_at, p.discovered_at, p.category, p.score, p.selected, p.reason`;
-export const API_ITEM_FROM = sql`FROM publications p JOIN sources s ON s.id = p.source_id`;
+  p.published_at, p.discovered_at, p.category, ${POLICY_COLUMNS}, p.selected, p.reason`;
+export const API_ITEM_FROM = sql`FROM publications p JOIN sources s ON s.id = p.source_id ${POLICY_JOIN}`;
 
 /** A translation of an older revision is left out: the original changed after it (the worker translates it again). */
 export const ITEM_FROM = sql`
   FROM publications p
   JOIN sources s ON s.id = p.source_id
   JOIN articles a ON a.id = p.article_id
+  ${POLICY_JOIN}
   LEFT JOIN stories st ON st.id = p.story_id AND st.merged_into IS NULL
   LEFT JOIN translations tr ON tr.article_id = p.article_id AND tr.lang = 'zh' AND tr.revision >= a.revision
   LEFT JOIN quote_translations qt ON p.channel = 'x' AND qt.tweet_id = substring(a.x_post->'quoted'->>'url' from '/status/([0-9]+)')`;
@@ -149,6 +168,7 @@ export function toItemSummary(row: ItemRow): ItemSummary {
     reason: row.selected ? row.reason : null,
     source: {
       id: row.source_id,
+      legacySourceId: row.legacy_source_id ?? null,
       name: row.source_name,
       kind: row.source_kind,
       firstParty: row.first_party,
@@ -162,6 +182,9 @@ export function toItemSummary(row: ItemRow): ItemSummary {
     category: (row.category as CategoryKey | null) ?? null,
     tags: displayTags(row.tags),
     score: row.score === null ? null : Math.round(Number(row.score)),
+    scoreKind: row.score_kind ?? (row.category === "ai" && row.score !== null ? "ai_attention" : null),
+    importanceTier: row.importance_tier ?? null,
+    factStatus: row.fact_status ?? null,
     selected: row.selected,
     channel: row.channel,
     story: row.story_public_id ? { publicId: row.story_public_id, title: row.story_title ?? "" } : null,
@@ -174,8 +197,9 @@ export function toFeedItemSummary(row: ItemRow): FeedItemSummary {
   const item = toItemSummary(row);
   return {
     id: item.id, title: item.title, summary: item.summary, reason: item.reason,
-    source: { name: item.source.name }, publishedAt: item.publishedAt, timelineAt: item.timelineAt,
+    source: { id: item.source.id, legacySourceId: item.source.legacySourceId, name: item.source.name }, publishedAt: item.publishedAt, timelineAt: item.timelineAt,
     category: item.category, tags: item.tags, score: item.score, selected: item.selected, channel: item.channel,
+    scoreKind: item.scoreKind, importanceTier: item.importanceTier, factStatus: item.factStatus,
     x: item.x ? {
       authorName: item.x.authorName, handle: item.x.handle, avatarUrl: item.x.avatarUrl,
       ...(item.x.avatarSrcSet ? { avatarSrcSet: item.x.avatarSrcSet } : {}), media: item.x.media,

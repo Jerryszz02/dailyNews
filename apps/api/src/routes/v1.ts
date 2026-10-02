@@ -1,4 +1,4 @@
-// Public API v1 (long-term). Field shapes follow reference/public-v1.openapi.json 2.1.0 (the paths stay /api/v1).
+// Public API v1 (long-term). Field shapes follow reference/public-v1.openapi.json 2.2.0 (the paths stay /api/v1).
 import { FEATURES } from "@aihot/industry/features";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { V1_CACHE_CONTROL } from "@aihot/contracts/http-policy";

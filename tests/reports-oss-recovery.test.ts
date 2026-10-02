@@ -8,6 +8,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { closeDb, sql } from "@aihot/backend/db";
 import { stopBoss } from "@aihot/backend/jobs/queue";
 import { catchUpReports, composeDaily, composeWeekly, composeMonthly } from "@aihot/backend/reports/compose";
+import { attachCurrentPublicationDecision } from "./publication-fixture.ts";
 
 const T = tag();
 const SOURCE = `report-recovery-${T}`;
@@ -28,10 +29,15 @@ after(async () => { await provider.close(); await stopBoss(); await closeDb(); }
 
 async function item(at: string) {
   const id = `recovery-${tag()}`;
+  const releasedAt = new Date(at);
   await sql`INSERT INTO articles (id, source_id, identity_key, url, title, discovered_at, timeline_at)
-    VALUES (${id}, ${SOURCE}, ${id}, 'https://example.com/report', ${id}, ${new Date(at)}, ${new Date(at)})`;
+    VALUES (${id}, ${SOURCE}, ${id}, 'https://example.com/report', ${id}, ${releasedAt}, ${releasedAt})`;
   await sql`INSERT INTO publications (article_id, title, source_id, channel, url, discovered_at, timeline_at, sort_at, eligible, selected, visible_after, visibility, score)
-    VALUES (${id}, ${id}, ${SOURCE}, 'news', 'https://example.com/report', ${new Date(at)}, ${new Date(at)}, ${new Date(at)}, true, true, ${new Date(at)}, 'public', 90)`;
+    VALUES (${id}, ${id}, ${SOURCE}, 'news', 'https://example.com/report', ${releasedAt}, ${releasedAt}, ${releasedAt}, true, true, ${releasedAt}, 'public', 90)`;
+  await attachCurrentPublicationDecision(id);
+  await sql`UPDATE analyses SET category='ai' WHERE id=(SELECT analysis_id FROM publications WHERE article_id=${id})`;
+  await sql`UPDATE publications SET policy_id='aihot-ai-article', category='ai', public_ready_at=${releasedAt}
+    WHERE article_id=${id}`;
   return id;
 }
 const report = async (kind: string, key: string) => (await sql`SELECT content, revision, generated_at FROM reports WHERE kind = ${kind} AND key = ${key}`)[0];
@@ -95,12 +101,12 @@ test("a correction finishing late cannot replace a newer published correction", 
     if (user.includes("slow correction")) { entered.open(); await finish.promise; }
     return original(user);
   };
-  await sql`UPDATE publications SET title = 'slow correction' WHERE article_id = ${id}`;
+  await sql`UPDATE publications SET title = ${`slow correction ${T}`} WHERE article_id = ${id}`;
   const slow = composeDaily("2024-04-02", "correction A");
   const result = Promise.allSettled([slow]);
   try {
     await entered.promise;
-    await sql`UPDATE publications SET title = 'new correction' WHERE article_id = ${id}`;
+    await sql`UPDATE publications SET title = ${`new correction ${T}`} WHERE article_id = ${id}`;
     await composeDaily("2024-04-02", "correction B");
     const saved = await report("daily", "2024-04-02");
     finish.open();

@@ -6,6 +6,8 @@ export type SourceKind = "rss" | "web_list" | "json_list" | "x_search" | "mp_acc
 
 export interface SourceRef {
   id: string;
+  /** Original Daily News source identity, when this source was migrated from a legacy section. */
+  legacySourceId: string | null;
   name: string;
   kind: SourceKind;
   firstParty: boolean;
@@ -57,6 +59,9 @@ export interface ItemSummary {
   category: CategoryKey | null;
   tags: string[];
   score: number | null;
+  scoreKind: "ai_attention" | "legacy_curation_total" | null;
+  importanceTier: string | null;
+  factStatus: string | null;
   selected: boolean;
   channel: "news" | "x";
   story: StoryRef | null;
@@ -64,8 +69,8 @@ export interface ItemSummary {
 }
 
 /** The fields rendered by a site feed card; full original text lives in the item detail. */
-export interface FeedItemSummary extends Pick<ItemSummary, "id" | "title" | "summary" | "reason" | "publishedAt" | "timelineAt" | "category" | "tags" | "score" | "selected" | "channel"> {
-  source: Pick<SourceRef, "name">;
+export interface FeedItemSummary extends Pick<ItemSummary, "id" | "title" | "summary" | "reason" | "publishedAt" | "timelineAt" | "category" | "tags" | "score" | "scoreKind" | "importanceTier" | "factStatus" | "selected" | "channel"> {
+  source: Pick<SourceRef, "id" | "legacySourceId" | "name">;
   x: (Pick<XPostView, "authorName" | "handle" | "avatarUrl" | "avatarSrcSet" | "media"> & {
     quoted: Omit<NonNullable<XPostView["quoted"]>, "url"> | null;
   }) | null;

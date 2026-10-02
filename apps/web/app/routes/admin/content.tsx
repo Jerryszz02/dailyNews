@@ -5,6 +5,7 @@ import type { Route } from "./+types/content";
 import { adminGet } from "../../lib/admin.server";
 import { VISIBILITY_LABEL } from "../../features/admin/labels";
 import { AdminPage, Badge, Button, Card, DataTable, Empty, Input, Time } from "../../features/admin/ui";
+import { scoreLabel } from "../../lib/score-labels";
 
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -52,11 +53,14 @@ export default function Content({ loaderData }: Route.ComponentProps) {
                   <span className="flex flex-wrap gap-1">
                     {r.selected && <Badge tone="accent">精选</Badge>}
                     {r.visibility && <Badge tone={r.visibility === "public" ? "muted" : "warn"}>{VISIBILITY_LABEL[r.visibility] ?? r.visibility}</Badge>}
+                    {r.policy_id === "classification-pending" && <Badge tone="warn">分类待处理</Badge>}
                     {!r.visibility && <Badge>{r.processing_state}</Badge>}
+                    {r.processing_error && <span title={r.processing_error} className="max-w-40 truncate text-ink-4">{r.processing_error}</span>}
+                    {r.processing_retry_at && <span className="text-ink-4">重试 <Time at={r.processing_retry_at} /></span>}
                   </span>
                 ),
               },
-              { key: "sc", label: "分数", align: "right", render: (r) => r.score ?? "—" },
+              { key: "sc", label: "策略分数", align: "right", render: (r) => r.score === null ? "—" : `${scoreLabel(r.score_kind)} ${r.score}` },
               { key: "d", label: "发现", render: (r) => <Time at={r.discovered_at} /> },
             ]}
           />

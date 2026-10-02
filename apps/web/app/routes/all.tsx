@@ -1,8 +1,9 @@
 import { SITE, withSubject } from "@aihot/industry/site";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLoaderData, useNavigation, useSearchParams } from "react-router";
 import type { Route } from "./+types/all";
 import type { PoolResponse } from "@aihot/contracts/site";
-import { isCategoryKey, isChannelKey } from "@aihot/contracts/taxonomy";
+import { CATEGORY_KEYS, CATEGORY_LABELS, isCategoryKey, isChannelKey } from "@aihot/contracts/taxonomy";
 import { loadOr404, queryString } from "../lib/api.server";
 import { listPath, pageMeta } from "../lib/seo";
 import { CategoryTabs, SearchField } from "../features/feed/Filters";
@@ -10,6 +11,7 @@ import { PillTabs } from "../components/ui/Tabs";
 import { DayList, Pagination } from "../features/feed/DayList";
 import { EmptyState } from "../components/ui/Page";
 import { RingMark } from "../components/Logo";
+import { commitPersonalPreferences, DEFAULT_PREFERENCES, normalizePreferences, personalOrder, readPersonalPreferences, type PersonalPreferences } from "../lib/personal-preferences";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
@@ -26,7 +28,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     `/api/site/pool${queryString({ channel: channel === "all" ? null : channel, category, tag, q, tab, page: page > 1 ? page : null })}`,
     { signal: request.signal, busyRedirect: "/all/search-busy" },
   );
-  return { data };
+  return { data, personal: url.searchParams.get("personal") === "1" };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -37,7 +39,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     title: q ? `搜索：${q}` : `全部${withSubject("动态")}`,
     description: `${SITE.name} 收录的全部${withSubject("动态")}，可按类别与标签筛选，支持中英文搜索。`,
     path: listPath("/all", { channel: f && f.channel !== "all" ? f.channel : null, category: f?.category, tag: f?.tag, q, tab: f?.tab === "relevance" ? "relevance" : null, page: page > 1 ? page : null }),
-    noindex: !!q,
+    noindex: !!q || !!loaderData?.personal,
   });
 }
 
@@ -56,13 +58,45 @@ function pageHref(params: URLSearchParams, page: number) {
   return s ? `/all?${s}` : "/all";
 }
 
+function viewHref(params: URLSearchParams, personal: boolean) {
+  const sp = new URLSearchParams(params);
+  sp.delete("page");
+  if (personal) sp.set("personal", "1");
+  else sp.delete("personal");
+  return sp.size ? `/all?${sp}` : "/all";
+}
+
+function words(text: string) {
+  return text.split(/[,，\n]/).map((word) => word.trim()).filter(Boolean);
+}
+
 export default function AllPage() {
-  const { data } = useLoaderData<typeof loader>();
+  const { data, personal } = useLoaderData<typeof loader>();
   const [params] = useSearchParams();
   const navigation = useNavigation();
+  const [mounted, setMounted] = useState(false);
+  const [preferences, setPreferences] = useState<PersonalPreferences>(DEFAULT_PREFERENCES);
+  const preferencesRef = useRef(preferences);
+  const [blockedDraft, setBlockedDraft] = useState("");
+  const [boostedDraft, setBoostedDraft] = useState("");
+  useEffect(() => {
+    let loaded: PersonalPreferences;
+    try { loaded = readPersonalPreferences(window.localStorage); } catch { loaded = normalizePreferences(null); }
+    preferencesRef.current = loaded;
+    setPreferences(loaded);
+    setBlockedDraft(loaded.blockedKeywords.join("，"));
+    setBoostedDraft(loaded.boostedKeywords.join("，"));
+    setMounted(true);
+  }, []);
+  const changePreferences = (update: (value: PersonalPreferences) => PersonalPreferences) => {
+    let storage: Storage | null = null;
+    try { storage = window.localStorage; } catch { /* storage disabled */ }
+    setPreferences(commitPersonalPreferences(preferencesRef, update, storage));
+  };
+  const shownItems = personal ? mounted ? personalOrder(data.items, preferences) : [] : data.items;
   const f = data.filters;
   const busy = navigation.state === "loading" && navigation.location?.pathname === "/all";
-  const keep = { channel: f.channel === "all" ? null : f.channel, category: f.category };
+  const keep = { channel: f.channel === "all" ? null : f.channel, category: f.category, personal: personal ? "1" : null };
   const searchTabHref = (tab: "time" | "relevance") => {
     const sp = new URLSearchParams(params);
     sp.delete("page");
@@ -88,7 +122,7 @@ export default function AllPage() {
       <div className="lg:hidden">
         <div className="flex items-baseline justify-between pb-3 pt-5">
           <h1 className="text-[22px] font-bold text-ink">{title ?? "全部动态"}</h1>
-          {!f.q && (
+          {!f.q && !personal && (
             <span className="text-[12.5px] text-ink-4">
               今日 <span className="num">{data.todayCount}</span> 条
             </span>
@@ -99,6 +133,31 @@ export default function AllPage() {
           <CategoryTabs base="/all" category={f.category} channel={f.channel} layoutId="all-cat-mobile" size="sm" className="min-w-0" />
         </div>
       </div>
+
+      <div className="mb-3 mt-3 flex flex-wrap items-center gap-3 text-[12.5px]">
+        <PillTabs size="xs" layoutId="all-personal" label="阅读方式" active={personal ? "personal" : "public"}
+          items={[{ key: "public", label: "公开顺序", to: viewHref(params, false) }, { key: "personal", label: "我的偏好", to: viewHref(params, true) }]} />
+        {personal && <span className="text-ink-4">只调整本页公开条目的阅读顺序；筛出偏好分类，屏蔽词仅降权。</span>}
+      </div>
+      {personal && mounted && (
+        <section aria-label="本机偏好" className="mb-4 rounded-tile border border-line bg-surface px-4 py-3 text-[12.5px] text-ink-3">
+          <p className="mb-2">偏好只保存在本机，不影响公共精选、全部动态和热点。</p>
+          <div className="flex flex-wrap gap-1.5">
+            {CATEGORY_KEYS.map((key) => {
+              const on = preferences.topicWeights[key] === "preferred";
+              return <button key={key} type="button" aria-pressed={on} onClick={() => changePreferences((current) => ({ ...current,
+                topicWeights: { ...current.topicWeights, [key]: current.topicWeights[key] === "preferred" ? "not-preferred" : "preferred" } }))}
+                className={`rounded-full border px-2.5 py-1 ${on ? "border-accent bg-accent-soft text-accent" : "border-line text-ink-4"}`}>{CATEGORY_LABELS[key]}</button>;
+            })}
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <label>降权关键词（逗号分隔）<input className="mt-1 w-full rounded-control border border-line bg-surface px-2 py-1.5 text-ink" value={blockedDraft}
+              onChange={(e) => setBlockedDraft(e.target.value)} onBlur={() => changePreferences((current) => ({ ...current, blockedKeywords: words(blockedDraft) }))} /></label>
+            <label>优先关键词（逗号分隔）<input className="mt-1 w-full rounded-control border border-line bg-surface px-2 py-1.5 text-ink" value={boostedDraft}
+              onChange={(e) => setBoostedDraft(e.target.value)} onBlur={() => changePreferences((current) => ({ ...current, boostedKeywords: words(boostedDraft) }))} /></label>
+          </div>
+        </section>
+      )}
 
       {f.q && (
         <div className="mb-3 mt-3 flex flex-wrap items-center justify-between gap-2 lg:mt-0">
@@ -116,7 +175,7 @@ export default function AllPage() {
       )}
 
       <div className={`transition-opacity duration-200 ${busy ? "opacity-50" : ""}`}>
-        {data.items.length === 0 ? (
+        {personal && !mounted ? null : shownItems.length === 0 ? (
           <div className="mt-2 lg:card">
             <EmptyState
               title="没有找到相关内容"
@@ -128,11 +187,11 @@ export default function AllPage() {
                 ) : undefined
               }
             >
-              {f.q ? "换个说法，或者去掉筛选再试。" : "这个筛选下暂时没有内容。"}
+              {personal ? "本页没有偏好分类的条目，可调整上方分类或翻到下一页。" : f.q ? "换个说法，或者去掉筛选再试。" : "这个筛选下暂时没有内容。"}
             </EmptyState>
           </div>
         ) : (
-          <DayList items={data.items} todayCount={f.q ? null : data.todayCount} showTags />
+          <DayList items={shownItems} todayCount={f.q || personal ? null : data.todayCount} showTags />
         )}
       </div>
       <Pagination page={data.page} pageCount={data.pageCount} href={(p) => pageHref(params, p)} />

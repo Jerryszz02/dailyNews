@@ -15,6 +15,7 @@ import { registerFeeds } from "./routes/feeds.ts";
 import { registerStatic } from "./routes/static.ts";
 import { registerAgent } from "./routes/agent.ts";
 import { registerMcp } from "./routes/mcp.ts";
+import { registerLegacyNews } from "./routes/legacy-news.ts";
 import { sendProblem } from "./http/respond.ts";
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -78,6 +79,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   registerFeeds(app);
   registerStatic(app);
   registerMcp(app);
+  registerLegacyNews(app);
   registerV1Fallbacks(app);
 
   app.setNotFoundHandler((req, reply) => {

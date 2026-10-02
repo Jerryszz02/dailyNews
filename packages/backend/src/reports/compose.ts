@@ -12,6 +12,7 @@ import { Conflict } from "../audit.ts";
 import { chatJson, ModelOutputError } from "../providers/llm.ts";
 import { completeReceipt, rejectReceivedResponse } from "../providers/receipts.ts";
 import { shutdownSignal } from "../jobs/queue.ts";
+import { currentDecisionCondition } from "../publication/scope.ts";
 
 export const REPORT_VERSION = promptVersion("report-daily-lead", "report-period");
 
@@ -38,6 +39,8 @@ export interface ReportEntry {
 export interface Candidate extends ReportEntry {
   category: string | null;
   factKey: string;
+  /** Later of the source timeline and the gates that first made this item a report candidate. */
+  eventAt: string;
 }
 
 function roleOf(kind: string, firstParty: boolean): string {
@@ -47,39 +50,79 @@ function roleOf(kind: string, firstParty: boolean): string {
   return "媒体";
 }
 
-export async function candidates(start: Date, end: Date): Promise<Candidate[]> {
+async function reportCandidates(start: Date, end: Date, mode: "selected" | "daily"): Promise<Candidate[]> {
+  const eventAt = mode === "daily"
+    ? sql`greatest(p.timeline_at, p.public_ready_at, CASE WHEN p.policy_id = 'aihot-ai-article'
+        THEN p.visible_after ELSE first_qualified.at END)`
+    : sql`greatest(p.timeline_at, p.public_ready_at, p.visible_after)`;
+  const admission = mode === "daily" ? sql`(
+    (p.policy_id = 'aihot-ai-article' AND p.selected AND p.visible_after IS NOT NULL)
+    OR (p.policy_id = 'dailynews-non-ai-fact' AND p.fact_id IS NOT NULL
+      AND fes.representative_article_id = p.article_id AND fes.primary_category = p.category
+      AND d.id = fes.decision_id AND d.policy_id = 'dailynews-non-ai-fact'
+      AND d.primary_category = p.category AND d.representative_article_id = p.article_id
+      AND d.importance_tier IS NOT NULL AND d.importance_tier <> 'noise'
+      AND d.evaluated_at <= ${end} AND first_qualified.at IS NOT NULL)
+  )` : sql`p.selected AND p.visible_after IS NOT NULL`;
   const rows = await sql.begin("isolation level read committed", async (tx) => {
-    // Wait for in-flight releases and keep later ones outside this snapshot. The following SELECT
-    // gets a fresh READ COMMITTED snapshot; model calls and report writes happen after the lock ends.
+    // Match the publication lock order: an in-flight revision or fact decision must finish before
+    // this cutoff snapshot, and a later publication must wait for the candidate read to finish.
+    await tx`SELECT pg_advisory_xact_lock(hashtext('dailynews-editorial-projection'))`;
     await tx`SELECT pg_advisory_xact_lock(hashtext('report_candidates'))`;
     return tx<{
       id: string; title: string; summary: string | null; url: string; category: string | null; score: number | null; first_party: boolean;
-      source_id: string; source_name: string; source_kind: string; fact_public_id: string | null; story_public_id: string | null; at: Date; backfill: boolean;
+      source_id: string; source_name: string; source_kind: string; fact_public_id: string | null; story_public_id: string | null;
+      at: Date; event_at: Date; policy_id: string;
     }[]>`
-      SELECT p.article_id AS id, p.title, p.summary, p.url, p.category, p.score, p.first_party, s.id AS source_id, s.name AS source_name,
-             s.kind AS source_kind, f.public_id AS fact_public_id, st.public_id::text AS story_public_id, p.timeline_at AS at, p.backfill
+      SELECT p.article_id AS id, p.title, p.summary, p.url, p.category,
+             CASE WHEN p.policy_id = 'dailynews-non-ai-fact' THEN d.score ELSE p.score END AS score,
+             p.first_party, s.id AS source_id, s.name AS source_name,
+             s.kind AS source_kind, f.public_id AS fact_public_id, st.public_id::text AS story_public_id,
+             p.timeline_at AS at, ${eventAt} AS event_at, p.policy_id
       FROM publications p JOIN sources s ON s.id = p.source_id
       LEFT JOIN facts f ON f.id = p.fact_id LEFT JOIN stories st ON st.id = f.story_id
-      -- Attribute each item by the later of arrival and release; either range can use its index.
-      WHERE p.visibility = 'public' AND p.selected AND NOT p.backfill
-        AND (
-          (p.visible_after <= p.timeline_at AND p.timeline_at >= ${start} AND p.timeline_at < ${end})
-          OR (p.visible_after > p.timeline_at AND p.visible_after >= ${start} AND p.visible_after < ${end})
-        )`;
+      LEFT JOIN fact_editorial_state fes ON fes.fact_id = p.fact_id
+      LEFT JOIN editorial_decisions d ON d.id = fes.decision_id
+      LEFT JOIN LATERAL (
+        SELECT min(prior.evaluated_at) AS at FROM editorial_decisions prior
+        WHERE prior.scope = 'fact' AND prior.subject_id = p.fact_id::text
+          AND prior.policy_id = 'dailynews-non-ai-fact' AND prior.primary_category = p.category
+          AND prior.representative_article_id = p.article_id
+          AND prior.importance_tier IS NOT NULL AND prior.importance_tier <> 'noise'
+      ) first_qualified ON true
+      WHERE p.visibility = 'public' AND p.eligible AND NOT p.backfill AND p.public_ready_at IS NOT NULL
+        AND ${currentDecisionCondition()} AND ${admission}
+        AND ${eventAt} >= ${start} AND ${eventAt} < ${end}`;
   });
-  // One entry per fact: first-party first, then score.
-  const byFact = new Map<string, Candidate>();
+  // One entry per fact. Scores are only comparable inside one policy; a cross-policy tie uses
+  // first-hand evidence, report time and a stable ID instead.
+  const byFact = new Map<string, Candidate & { policyId: string }>();
   for (const r of rows) {
     const key = r.fact_public_id ?? `a:${r.id}`;
-    const c: Candidate = {
+    const c: Candidate & { policyId: string } = {
       itemId: r.id, factId: r.fact_public_id, storyPublicId: r.story_public_id, title: r.title, summary: r.summary ?? "",
       sourceName: r.source_name, sourceUrl: r.url, sourceId: r.source_id, firstParty: r.first_party, role: roleOf(r.source_kind, r.first_party),
-      score: r.score === null ? null : Number(r.score), publishedAt: r.at.toISOString(), category: r.category, factKey: key,
+      score: r.score === null ? null : Number(r.score), publishedAt: r.at.toISOString(), category: r.category,
+      factKey: key, eventAt: r.event_at.toISOString(), policyId: r.policy_id,
     };
     const prev = byFact.get(key);
-    if (!prev || Number(c.firstParty) - Number(prev.firstParty) > 0 || (c.firstParty === prev.firstParty && (c.score ?? 0) > (prev.score ?? 0))) byFact.set(key, c);
+    const firstParty = Number(c.firstParty) - Number(prev?.firstParty ?? false);
+    const samePolicyScore = prev?.policyId === c.policyId ? (c.score ?? -1) - (prev.score ?? -1) : 0;
+    if (!prev || firstParty > 0 || (firstParty === 0 && (samePolicyScore > 0 ||
+      (samePolicyScore === 0 && (c.eventAt > prev.eventAt || (c.eventAt === prev.eventAt && c.itemId < prev.itemId)))))) byFact.set(key, c);
   }
-  return [...byFact.values()].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  return [...byFact.values()].map(({ policyId: _policy, ...candidate }) => candidate)
+    .sort((a, b) => b.eventAt.localeCompare(a.eventAt) || a.itemId.localeCompare(b.itemId));
+}
+
+/** Selected articles for weekly/monthly reports, retaining their existing coverage limit. */
+export function candidates(start: Date, end: Date): Promise<Candidate[]> {
+  return reportCandidates(start, end, "selected");
+}
+
+/** AI selections plus every current, non-noise non-AI fact's public representative. */
+export function dailyCandidates(start: Date, end: Date): Promise<Candidate[]> {
+  return reportCandidates(start, end, "daily");
 }
 
 /** Facts and items already covered by recent editions are not repeated. */
@@ -103,8 +146,9 @@ const LeadSchema = z.object({
   highlights: z.array(z.union([z.number(), z.string()])).max(6).catch([]),
 });
 
-async function writeLead(kind: string, key: string, entries: ReportEntry[], model: string) {
-  const list = entries.slice(0, 30).map((e, i) => `${i + 1}. ${e.title}｜${e.summary.slice(0, 120)}`).join("\n");
+async function writeLead(kind: string, key: string, entries: Candidate[], model: string) {
+  const list = entries.slice(0, 30).map((e, i) =>
+    `${i + 1}. [${SECTION_OF[e.category ?? ""] ?? DEFAULT_SECTION}] ${e.title}｜${e.summary.slice(0, 120)}`).join("\n");
   const res = await chatJson({
     model, purpose: "report_lead", subject: `report:${kind}:${key}`, promptVersion: REPORT_VERSION,
     system: promptText("report-daily-lead"),
@@ -112,7 +156,7 @@ async function writeLead(kind: string, key: string, entries: ReportEntry[], mode
   });
   const highlights = res.data.highlights
     .map((h) => entries[Number(h) - 1])
-    .filter((e): e is ReportEntry => !!e)
+    .filter((e): e is Candidate => !!e)
     .map((e) => e.itemId);
   return { lead: { title: res.data.title, leadParagraph: res.data.leadParagraph }, highlights, receiptId: res.receiptId };
 }
@@ -126,6 +170,29 @@ async function savedReport(kind: ReportKind, key: string) {
       ELSE coalesce(jsonb_array_length(content->'storyOrder'), (content->'metrics'->>'totalStories')::int, 0) END AS entries
     FROM reports WHERE kind = ${kind} AND key = ${key}`;
   return row;
+}
+
+function entryOf({ category: _category, factKey: _factKey, eventAt: _eventAt, ...entry }: Candidate): ReportEntry {
+  return entry;
+}
+
+/** Cover every represented category once, then fill by category rotation; never compare policy scores across categories. */
+export function selectDailyCandidates(fresh: Candidate[], limit = 24): Candidate[] {
+  const queues = CATEGORIES.map(({ key }) => fresh.filter((candidate) => candidate.category === key)
+    .sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || b.eventAt.localeCompare(a.eventAt) || a.itemId.localeCompare(b.itemId)));
+  const selected: Candidate[] = [];
+  const facts = new Set<string>();
+  while (selected.length < limit && queues.some((queue) => queue.length > 0)) {
+    for (const queue of queues) {
+      while (queue.length && facts.has(queue[0]!.factKey)) queue.shift();
+      const next = queue.shift();
+      if (!next) continue;
+      selected.push(next);
+      facts.add(next.factKey);
+      if (selected.length >= limit) break;
+    }
+  }
+  return selected.sort((a, b) => b.eventAt.localeCompare(a.eventAt) || a.itemId.localeCompare(b.itemId));
 }
 
 async function saveReport(kind: ReportKind, key: string, start: Date, end: Date, content: Record<string, unknown>, reason: string, model: string, receiptId: number, expectedRevision: number) {
@@ -159,36 +226,35 @@ export async function composeDaily(date: string, reason = "scheduled"): Promise<
   const end = new Date(beijingMidnight(date).getTime() + 8 * 3600 * 1000);
   const start = new Date(end.getTime() - 86400000);
   const covered = await recentlyCovered("daily", date);
-  const all = await candidates(start, end);
+  const all = await dailyCandidates(start, end);
   const fresh = all.filter((c) => !covered.has(c.factKey) && !covered.has(`a:${c.itemId}`));
+  const chosen = selectDailyCandidates(fresh);
   const perSection = new Map<string, Candidate[]>();
-  const flashes: Array<{ itemId: string; title: string; sourceName: string; sourceUrl: string; publishedAt: string }> = [];
-  for (const c of fresh) {
+  for (const c of chosen) {
     const label = SECTION_OF[c.category ?? ""] ?? DEFAULT_SECTION;
     const list = perSection.get(label) ?? [];
-    if (list.length < 8) list.push(c);
-    else if (flashes.length < 12) flashes.push({ itemId: c.itemId, title: c.title, sourceName: c.sourceName, sourceUrl: c.sourceUrl, publishedAt: c.publishedAt });
+    list.push(c);
     perSection.set(label, list);
   }
   const sections = SECTION_ORDER.filter((l) => perSection.get(l)?.length).map((label) => ({
     label,
-    items: perSection.get(label)!.map(({ category: _c, factKey: _f, ...entry }) => entry),
+    items: perSection.get(label)!.map(entryOf),
   }));
-  const ordered = sections.flatMap((s) => s.items).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  const ordered = chosen.map(entryOf);
   // An issue with nothing in it is a failure upstream, not a report: the run fails and is caught up later.
   if (ordered.length === 0) throw new Error(`daily ${date}: no selected items in its window`);
   const model = await modelFor("report");
-  const lead = await writeLead("daily", date, ordered, model);
+  const lead = await writeLead("daily", date, chosen, model);
   const content = {
     date,
     lead: lead.lead,
     highlights: lead.highlights,
     sections,
-    flashes,
+    storyOrder: chosen.map((candidate) => candidate.itemId),
+    flashes: [],
     metrics: {
       totalEvents: ordered.length,
       sourcesCount: new Set(ordered.map((e) => e.sourceId)).size,
-      modelsReleased: perSection.get("模型发布/更新")?.length ?? 0,
       firstPartyEvents: ordered.filter((e) => e.firstParty).length,
     },
     windowStart: start.toISOString(),
@@ -238,7 +304,7 @@ async function composePeriod(kind: "weekly" | "monthly", key: string, startDate:
     .map((t) => ({
       heading: t.heading,
       summary: t.summary,
-      storyRefs: t.refs.map((r) => top[Number(r) - 1]).filter((e): e is Candidate => !!e).map(({ category: _c, factKey: _f, ...e }) => e),
+      storyRefs: t.refs.map((r) => top[Number(r) - 1]).filter((e): e is Candidate => !!e).map(entryOf),
     }))
     // Only references to the listed items count; a theme citing none of them is dropped.
     .filter((t) => t.storyRefs.length > 0);
