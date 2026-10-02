@@ -37,7 +37,7 @@ const provider = await stub(async (_hit, request) => {
   if (step === "understand" && active.writingAnswer) { active.writingAsked!.open(); await active.writingAnswer.promise; }
   const content = step === "prefilter" ? { label: "PASS", reason: "AI model release" }
     : step === "score" ? { attentionScore: 80 }
-      : step === "structure" ? { category: "ai-models", tags: ["模型发布"], subjects: [], fact: { title: "新模型发布" } }
+      : step === "structure" ? { category: "ai", categoryReason: "模型发布", tags: ["模型发布"], subjects: [], fact: { title: "新模型发布" } }
         : { itemType: "model_release", authorRole: "principal", tags: ["模型发布"], editorialJudgment: "模型有明确的能力提升", titleZh: `新模型发布 ${T}`, summaryZh: "模型发布并提供了评测和价格。" };
   return { id: `stub-${active.calls.length}`, choices: [{ message: { content: JSON.stringify(content) } }], usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 } };
 });
@@ -117,7 +117,7 @@ test("SIGTERM during the final paid writing call still commits the complete anal
   assert.equal((await sql`SELECT 1 FROM receipts WHERE subject=${`article:${articleId}@1`} AND status='completed'`).length, 5);
 });
 
-for (const failScore of [false, true]) test(`SIGTERM during ${failScore ? "failed" : "successful"} first score drains slower structure and leaves a retryable job`, async () => {
+for (const failScore of [false, true]) test(`SIGTERM during ${failScore ? "failed" : "successful"} first score keeps the earlier classification receipt and leaves a retryable job`, async () => {
   active = { calls: [], scoreAsked: gate(), structureAsked: gate(), scoreAnswer: gate(), structureAnswer: gate(), failScore };
   const queue = `test.analyze-stop-${T}-${failScore}`;
   const boss = await getBoss();
@@ -129,14 +129,14 @@ for (const failScore of [false, true]) test(`SIGTERM during ${failScore ? "faile
   await sql`UPDATE articles SET processing_attempts=2,processing_error='prior temporary failure',processing_queued_at=now() WHERE id=${articleId}`;
   const jobId = await boss.send(queue, { articleId }, { singletonKey: articleId });
   const first = worker(queue);
-  await Promise.race([Promise.all([first.ready, active.scoreAsked.promise, active.structureAsked.promise]), first.done.then(() => assert.fail("worker exited before both requests"))]);
+  await Promise.race([Promise.all([first.ready, active.structureAsked.promise]), first.done.then(() => assert.fail("worker exited before structure"))]);
+  active.structureAnswer.open();
+  await Promise.race([active.scoreAsked.promise, first.done.then(() => assert.fail("worker exited before score"))]);
   first.child.kill("SIGTERM"); await first.stopping;
   active.scoreAnswer.open();
   await until(async () => !!(await sql`SELECT 1 FROM receipts WHERE subject=${`article:${articleId}@1`} AND purpose='score_article' AND status IN ('received','failed')`)[0], "score receipt");
-  assert.equal(first.child.exitCode, null, "the process stays alive while structure owns a paid response");
-  assert.equal((await sql`SELECT state FROM pgboss.job WHERE id=${jobId}`)[0]!.state, "active");
+  await first.done;
   assert.deepEqual(active.calls.filter(s => s !== "prefilter").sort(), ["score", "structure"], "no second score or writing starts during shutdown");
-  active.structureAnswer.open(); await first.done;
   const [article] = await sql`SELECT processing_state,processing_attempts,processing_error FROM articles WHERE id=${articleId}`;
   assert.deepEqual({ ...article }, { processing_state: "new", processing_attempts: 2, processing_error: "prior temporary failure" });
   assert.equal((await sql`SELECT 1 FROM analyses WHERE article_id=${articleId}`).length, 0, "an interrupted chain commits no terminal judgement");

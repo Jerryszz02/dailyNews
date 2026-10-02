@@ -8,12 +8,16 @@
  * 没归上类的资料在日报里放进第一个 key 为 industry 的类别所在的节（没有就放最后一节）。
  */
 export const CATEGORIES = [
-  { key: "ai-models", label: "模型", section: "模型发布/更新", guide: "新模型、模型版本、权重开放、模型能力与价格变化的发布与评测结果" },
-  { key: "ai-products", label: "产品", section: "产品发布/更新", guide: "AI 产品、功能、应用、工具、API 与平台的发布和更新" },
-  { key: "industry", label: "行业", section: "行业动态", guide: "公司经营、融资并购、人事、合作、诉讼、监管与政策、市场与基础设施" },
-  { key: "paper", label: "论文", section: "论文研究", guide: "研究论文、技术报告、基准与数据集" },
-  { key: "tip", label: "教程", section: "技巧与观点", guide: "教程、实践经验、使用技巧、提示词与工具用法、深度技术讲解" },
-  { key: "opinion", label: "观点", section: "技巧与观点", guide: "人物观点、评论、分析、访谈、现象与趋势讨论" },
+  { key: "ai", label: "人工智能", section: "人工智能", guide: "人工智能模型、产品、研究、应用、治理与行业进展；一般技术或财经新闻不能只因来源标签为 AI 而归入此类" },
+  { key: "technology", label: "科技", section: "科技", guide: "非 AI 为主的技术、互联网、软硬件与产业创新" },
+  { key: "finance", label: "财经", section: "财经", guide: "金融市场、宏观经济、企业财务、投资与商业交易" },
+  { key: "international", label: "国际", section: "国际", guide: "以跨国关系或国外公共事务为主的事件；专业领域主旨更明确时优先专业类别" },
+  { key: "china", label: "国内", section: "国内", guide: "中国国内公共事务与区域新闻；政策、财经等主旨更明确时优先专业类别" },
+  { key: "policy", label: "政策", section: "政策", guide: "法规、监管、公共政策与政府决策；AI 专属政策仍按核心主旨判断" },
+  { key: "society", label: "社会", section: "社会", guide: "民生、教育、医疗、公共安全与社会事件" },
+  { key: "science", label: "科学", section: "科学", guide: "非 AI 为主的基础研究、自然科学、航天与医学研究" },
+  { key: "sports", label: "体育", section: "体育", guide: "体育赛事、运动员与体育产业" },
+  { key: "entertainment", label: "娱乐", section: "娱乐", guide: "影视、音乐、游戏、文化娱乐与演艺" },
 ] as const;
 
 /**
@@ -28,7 +32,13 @@ export const ITEM_TYPES = ["model_release", "product_launch", "tool_or_prompt", 
 export const CATEGORY_TAGS = [
   "产品更新", "模型发布", "论文/研究", "开源/仓库", "教程/实践", "现象/趋势", "大佬观点", "评测/基准", "安全/对齐", "行业动态", "政策/监管",
   "非AI/通用工具", "其他",
+  "科技", "财经", "国际", "国内", "社会", "科学", "体育", "娱乐",
 ] as const;
+
+export const PRIMARY_CATEGORY_TAG: Readonly<Record<string, string>> = {
+  technology: "科技", finance: "财经", international: "国际", china: "国内",
+  policy: "政策/监管", society: "社会", science: "科学", sports: "体育", entertainment: "娱乐",
+};
 
 /** 可选的主题标签。 */
 export const TOPIC_TAGS = [

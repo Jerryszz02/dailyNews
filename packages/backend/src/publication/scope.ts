@@ -12,24 +12,38 @@ export function releasedCondition(now: Date) {
   return sql`(NOT p.selected OR p.visible_after <= ${now})`;
 }
 
+/** Material revision and source tier are checked at read time, closing the interval before a worker republishes. */
+export function currentDecisionCondition() {
+  return sql`p.input_revision IS NOT NULL AND p.analysis_id IS NOT NULL
+    AND p.policy_id IS DISTINCT FROM 'classification-pending' AND EXISTS (
+    SELECT 1 FROM articles current_article JOIN sources current_source ON current_source.id = current_article.source_id
+    WHERE current_article.id = p.article_id AND current_article.revision = p.input_revision
+      AND current_source.tier = p.policy_tier AND current_source.participation_mode = 'editorial'
+      AND EXISTS (
+        SELECT 1 FROM analyses current_analysis WHERE current_analysis.id = p.analysis_id
+          AND current_analysis.article_id = p.article_id AND current_analysis.input_revision = current_article.revision
+      )
+  )`;
+}
+
 /** Listed on public surfaces now: public, pool eligible, and past the release gate. */
 export function listedCondition(now: Date) {
-  return sql`p.visibility = 'public' AND p.eligible AND ${releasedCondition(now)}`;
+  return sql`p.visibility = 'public' AND p.eligible AND ${currentDecisionCondition()} AND ${releasedCondition(now)}`;
 }
 
 /** Story reports include older editorial material outside the pool, but never withdrawn or gated content. */
 export function storyReportCondition(now: Date) {
-  return sql`p.visibility = 'public' AND s.participation_mode = 'editorial' AND ${releasedCondition(now)}`;
+  return sql`p.visibility = 'public' AND s.participation_mode = 'editorial' AND ${currentDecisionCondition()} AND ${releasedCondition(now)}`;
 }
 
 /** Selected reports still behind the release gate: caches of their scope must expire when it opens. */
 export function pendingReleaseCondition(now: Date) {
-  return sql`p.visibility = 'public' AND p.selected AND p.visible_after > ${now}`;
+  return sql`p.visibility = 'public' AND p.selected AND ${currentDecisionCondition()} AND p.visible_after > ${now}`;
 }
 
 /** Selected set as the website shows it (home timeline, reading groups, topics): every selected report. */
 export function selectedCondition(now: Date) {
-  return sql`p.visibility = 'public' AND p.selected AND p.visible_after <= ${now}`;
+  return sql`p.visibility = 'public' AND p.selected AND ${currentDecisionCondition()} AND p.visible_after <= ${now}`;
 }
 
 

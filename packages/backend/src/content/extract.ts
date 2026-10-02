@@ -10,7 +10,8 @@ import { BudgetExceededError } from "../providers/receipts.ts";
 import { getArticle } from "../providers/socialdata.ts";
 import { onlyXArticleLink, xArticleText } from "../sources/x.ts";
 import { sanitizeBody, trimTrailingChrome } from "./sanitize.ts";
-import { contentHash } from "./materials.ts";
+import { contentHash, invalidateRevisedMaterialTx } from "./materials.ts";
+import { lockEditorialProjection } from "../publication/reprocess.ts";
 import { markdownBody } from "./markdown.ts";
 
 export interface ExtractedBody {
@@ -93,6 +94,7 @@ export async function extractArticleBody(articleId: string, allowJina = process.
   }
   // The body is new content: a new revision, so an analysis of the body-less input counts as stale.
   return sql.begin(async (tx) => {
+    await lockEditorialProjection(tx);
     const [row] = await tx<{ title: string; excerpt: string | null; content_hash: string | null }[]>`
       SELECT title, excerpt, content_hash FROM articles
       WHERE id = ${articleId} AND revision = ${a.revision} AND body_status <> 'ok' FOR UPDATE`;
@@ -109,6 +111,7 @@ export async function extractArticleBody(articleId: string, allowJina = process.
       WHERE id = ${articleId} RETURNING revision`;
     await tx`INSERT INTO article_revisions (article_id, revision, content_hash, title, body_text)
              VALUES (${articleId}, ${r!.revision}, ${hash}, ${row.title}, ${got.text})`;
+    await invalidateRevisedMaterialTx(tx, articleId);
     return "ok";
   });
 }
@@ -132,6 +135,7 @@ async function extractXArticle(articleId: string, tweetId: string, revision: num
     return markUnconfirmed(articleId, revision);
   }
   return sql.begin(async (tx) => {
+    await lockEditorialProjection(tx);
     const [row] = await tx<{ title: string; excerpt: string | null; body_text: string | null; x_post: { text?: string } | null; x_article: { title?: string | null; text?: string } | null }[]>`
       SELECT title, excerpt, body_text, x_post, x_article FROM articles
       WHERE id = ${articleId} AND revision = ${revision} AND body_status <> 'ok' FOR UPDATE`;
@@ -156,6 +160,7 @@ async function extractXArticle(articleId: string, tweetId: string, revision: num
       WHERE id = ${articleId} RETURNING revision`;
     await tx`INSERT INTO article_revisions (article_id, revision, content_hash, title, body_text)
              VALUES (${articleId}, ${r!.revision}, ${hash}, ${title}, ${bodyText})`;
+    await invalidateRevisedMaterialTx(tx, articleId);
     return "ok";
   });
 }

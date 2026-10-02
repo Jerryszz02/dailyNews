@@ -1,4 +1,5 @@
 import { tag } from "./setup.ts";
+import { attachCurrentPublicationDecision } from "./publication-fixture.ts";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, afterEach, test } from "node:test";
@@ -56,6 +57,7 @@ async function fixture(evidence: Evidence[], firstReport = ago(72)) {
       await sql`INSERT INTO fact_articles(fact_id,article_id,role) VALUES(${f!.id},${articleId},'report')`;
       await sql`INSERT INTO publications(article_id,title,source_id,channel,url,discovered_at,timeline_at,sort_at,eligible)
         VALUES(${articleId},${articleId},${sourceId},'news',${`https://example.org/${articleId}`},${ago(e.hours)},${ago(e.hours)},${ago(e.hours)},true)`;
+      await attachCurrentPublicationDecision(articleId);
     }
     await sql`INSERT INTO story_signals(story_id,article_id,participant_key,source_id,kind,observed_at)
       VALUES(${storyId},${articleId},${e.participant},${sourceId},${e.kind ?? "signal"},${ago(e.hours)})`;
@@ -68,6 +70,7 @@ async function fixture(evidence: Evidence[], firstReport = ago(72)) {
   await sql`INSERT INTO fact_articles(fact_id,article_id) VALUES(${fact!.id},${representative})`;
   await sql`INSERT INTO publications(article_id,title,source_id,channel,url,discovered_at,timeline_at,sort_at,eligible)
     VALUES(${representative},${id},${representativeSource},'news',${`https://example.org/${representative}`},${ago(10)},${ago(10)},${ago(10)},true)`;
+  await attachCurrentPublicationDecision(representative);
   return { storyId, sources };
 }
 

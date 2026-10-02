@@ -11,6 +11,7 @@ import { registerPublicationJobs } from "@aihot/backend/jobs/publication";
 import { registerSchedules } from "./schedules.ts";
 import { ensureContentTargets } from "@aihot/backend/notify/deliver";
 import { startHeartbeat } from "@aihot/backend/operations/heartbeat";
+import { reprocessActiveAnalyses } from "@aihot/backend/publication/reprocess";
 
 assertProductionSecrets([["auth", "IMG_PROXY_SIGN_SECRET"]]);
 
@@ -22,6 +23,7 @@ await registerEventJobs(boss);
 await registerNotifyJobs(boss);
 await registerPublicationJobs(boss);
 await registerSchedules(boss);
+await reprocessActiveAnalyses({ reason: "worker startup policy signature" });
 // A new site has no leaderboard until the first scheduled round: compute one now.
 if (FEATURES.leaderboard) {
   const [published] = await sql`SELECT 1 FROM lb_runs WHERE status = 'published' LIMIT 1`;

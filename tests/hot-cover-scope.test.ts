@@ -8,6 +8,7 @@ import { after, test } from 'node:test';
 import { sql, closeDb } from '@aihot/backend/db';
 import type { HotEntry } from '@aihot/backend/events/hot';
 import { loadHot } from '@aihot/backend/publication/stories';
+import { attachCurrentPublicationDecision } from './publication-fixture.ts';
 
 after(closeDb);
 
@@ -27,6 +28,7 @@ test('hot covers follow current visibility and full-text rights within one ranki
     await sql`INSERT INTO fact_articles (fact_id,article_id,role) VALUES (${fact!.id},${id},'report')`;
     await sql`INSERT INTO publications (article_id,source_id,title,url,timeline_at,discovered_at,sort_at,body_mode,eligible,channel,story_id,fact_id,score)
       VALUES (${id},${source},${id},${'https://example.org/'+id},${at},${at},${at},${image ? 'full' : 'summary'},true,'news',${story!.id},${fact!.id},${image === 'primary' ? 90 : 80})`;
+    await attachCurrentPublicationDecision(id);
   }
   const entry: HotEntry = { rank:1,storyId:story!.id,storyPublicId:story!.public_id,title:'封面范围',heat:10,trend:'flat',trendPct:0,badges:[],
     participantCount:2,sourceCount:1,signalCount:0,reportCount:3,sourceNames:[source],latestAt:at.toISOString(),firstReportAt:at.toISOString(),

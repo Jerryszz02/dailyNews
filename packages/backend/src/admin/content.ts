@@ -10,6 +10,7 @@ import { enqueue, QUEUES } from "../jobs/queue.ts";
 import { queueProcessing } from "../jobs/content.ts";
 import { identityKeyForUrl, normalizeUrl } from "../lib/url.ts";
 import { publishArticleTx, setSeoDecision } from "../publication/publish.ts";
+import { lockEditorialProjection, reprocessAnalysesTx } from "../publication/reprocess.ts";
 import { requestRegroup } from "../events/corrections.ts";
 import { computeHotRanking, storedHotRanking } from "../events/hot.ts";
 import { audit, auditHistory, Conflict } from "../audit.ts";
@@ -76,6 +77,7 @@ const STALE = "这条内容的人工设置已被修改，请刷新后再操作";
 
 async function overrideRow(id: string, tx: Tx) {
   // Use the same first lock as publication and automatic processing, including the first correction.
+  await lockEditorialProjection(tx);
   const [article] = await tx`SELECT id FROM articles WHERE id = ${id} FOR UPDATE`;
   if (!article) throw Object.assign(new Error("内容不存在"), { statusCode: 400 });
   const [o] = await tx<{ fields: Record<string, unknown>; visibility: string | null; version: number }[]>`SELECT fields, visibility, version FROM editorial_overrides WHERE article_id = ${id}`;
@@ -114,6 +116,7 @@ export async function setVisibility(id: string, input: { visibility: "public" | 
 export async function setSeoIndexed(id: string, input: { indexed: boolean; reason: string }, actor: string) {
   z.object({ indexed: z.boolean(), reason: z.string().trim().min(1) }).parse(input);
   return sql.begin(async (tx) => {
+    await lockEditorialProjection(tx);
     await tx`SELECT id FROM articles WHERE id = ${id} FOR UPDATE`;
     const [before] = await tx<{ indexable: boolean }[]>`SELECT indexable FROM publications WHERE article_id = ${id}`;
     if (!before) return null;
@@ -149,6 +152,9 @@ export async function overrideFields(id: string, input: { fields: unknown; clear
       INSERT INTO editorial_overrides (article_id, fields, reason, version, updated_by) VALUES (${id}, ${tx.json(next as never)}, ${input.reason}, 1, ${actor})
       ON CONFLICT (article_id) DO UPDATE SET fields = EXCLUDED.fields, reason = EXCLUDED.reason, version = editorial_overrides.version + 1, updated_by = EXCLUDED.updated_by, updated_at = now()`;
     const published = await publishArticleTx(tx, id);
+    if (before.fields.category !== next.category) {
+      await reprocessAnalysesTx(tx, { articleIds: [id], reason: "manual primary category changed" });
+    }
     if (published?.changed) {
       const [st] = await tx<{ story_id: number | null }[]>`SELECT story_id FROM publications WHERE article_id = ${id}`;
       if (st?.story_id) await enqueue(QUEUES.digest, { storyId: st.story_id, afterCorrection: true }, { singletonKey: `story:${st.story_id}:correction` }, tx);

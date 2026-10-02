@@ -15,7 +15,7 @@ export function channelOf(sourceKind: string, hasXPost: boolean): "x" | "news" {
   return sourceKind === "x_search" || hasXPost ? "x" : "news";
 }
 
-/** Public pool (/all): editorial sources, AI relevant, with a Chinese title and summary. */
+/** Public pool (/all): editorial sources, relevant to their routed category, with Chinese copy. */
 export function isPoolEligible(input: {
   participationMode: string;
   relevance: string | null;
@@ -34,7 +34,7 @@ export function hasItemPage(p: { visibility: string; sourceMode: string }): bool
   return p.visibility !== "withdrawn" && p.sourceMode === "editorial";
 }
 
-/** Selected: pool eligible, judged selected, and the source tier may enter the selection. */
+/** AI selection only: eligible, judged selected, and the AI source tier may enter selection. */
 export function isSelectable(eligible: boolean, judgedSelected: boolean | null, tier: string): boolean {
   return eligible && judgedSelected === true && tier !== "EXCLUDE_MP";
 }

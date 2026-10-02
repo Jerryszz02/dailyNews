@@ -7,6 +7,7 @@ import { sql } from "../db.ts";
 import { CAPABILITIES, invalidateModelCache, modelSources, type Capability, type CapabilityKey } from "../editorial/models.ts";
 import { MODELS } from "../providers/llm.ts";
 import { audit } from "../audit.ts";
+import { lockEditorialProjection, reprocessAnalysesTx } from "../publication/reprocess.ts";
 
 interface UsageRow {
   purpose: string;
@@ -97,11 +98,17 @@ export async function switchModel(capability: string, model: string | null, reas
     if (!!c.vision !== !!spec.vision) throw Object.assign(new Error(c.vision ? "this capability needs a vision model" : "a vision-only model cannot do this"), { statusCode: 400 });
   }
   const before = (await modelSources())[capability];
-  if (model === null) await sql`DELETE FROM settings WHERE key = ${`models.${capability}`}`;
-  else {
-    await sql`INSERT INTO settings (key, value, updated_by) VALUES (${`models.${capability}`}, ${sql.json({ model })}, ${actor})
-              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()`;
-  }
+  await sql.begin(async (tx) => {
+    await lockEditorialProjection(tx);
+    if (model === null) await tx`DELETE FROM settings WHERE key = ${`models.${capability}`}`;
+    else {
+      await tx`INSERT INTO settings (key, value, updated_by) VALUES (${`models.${capability}`}, ${tx.json({ model })}, ${actor})
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()`;
+    }
+    if (["structure", "prefilter", "score", "understand", "summarize"].includes(capability)) {
+      await reprocessAnalysesTx(tx, { reason: `model changed: ${capability}` });
+    }
+  });
   invalidateModelCache();
   const after = (await modelSources())[capability];
   await audit(actor, "models.switch", `capability:${capability}`, reason, before ?? null, after ?? null);

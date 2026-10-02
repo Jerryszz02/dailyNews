@@ -51,7 +51,7 @@ async function article(): Promise<string> {
     sourceId: SOURCE, url: `https://example.com/${T}-${n}`, title: `Test ${n}`, bodyText: BODY, bodyHtml: `<p>${BODY}</p>`, bodyStatus: "ok", via: "fetch", publishedAt: new Date(),
   });
   await sql`INSERT INTO analyses (article_id, input_revision, origin, relevance, category, title_zh, summary_zh, reason_zh, score, selected)
-            VALUES (${articleId}, 1, 'rule', 'pass', 'ai-models', ${`标题${n}-${T}`}, ${`SUMMARY-${n}-${T}`}, '理由', 90, true)`;
+            VALUES (${articleId}, 1, 'rule', 'pass', 'ai', ${`标题${n}-${T}`}, ${`SUMMARY-${n}-${T}`}, '理由', 90, true)`;
   return articleId;
 }
 
@@ -108,16 +108,34 @@ test("revoking a source's licence takes its articles off every exit", async () =
   const [queued] = await sql<{ value: { status: string } }[]>`SELECT value FROM settings WHERE key = ${`republish.source:${SOURCE}`}`;
   assert.equal(queued?.value.status, "queued", "the admin change queues a background republish");
 
-  const result = await republishSource(SOURCE); // what the queued job runs
-  assert.ok(result.reduced >= 1);
+  // No worker has run: the permission change and public revocation commit together.
   assert.equal((await get(`/api/site/items/${id}`)).status, 404);
   assert.equal((await get(`/items/${id}/markdown`)).status, 404);
   assert.equal((await get(`/api/site/stories/${story}`)).status, 404, "the story drops an isolated source's last report");
   assert.equal((await get(`/api/v1/stories/${story}`)).status, 404);
   assert.ok(!(await get("/feed/full.xml")).body.includes(`FULLTEXT-${T}`), "full feed drops the body");
   assert.ok(!(await get("/api/v1/items?mode=selected")).body.includes(id), "v1 drops the item");
+  const result = await republishSource(SOURCE); // recovery is now an idempotent replay
+  assert.equal(result.reduced, 0);
 
   await sql`UPDATE sources SET participation_mode = 'editorial', site_fulltext = true, syndicate_fulltext = true WHERE id = ${SOURCE}`;
+});
+
+test("individual site and syndication licence revocations apply before the background worker", async () => {
+  const id = await article();
+  await publishArticle(id, released());
+  const edit = async (patch: Record<string, unknown>) => {
+    const [s] = await sql<{ updated_at: Date }[]>`SELECT updated_at FROM sources WHERE id=${SOURCE}`;
+    await updateSource(SOURCE, { patch, version: s!.updated_at.toISOString(), reason: 'licence regression' }, 'test');
+  };
+  await edit({ syndicate_fulltext: false });
+  assert.ok(!(await get('/feed/full.xml')).body.includes(`FULLTEXT-${T}`));
+  assert.ok((await get(`/api/site/items/${id}`)).body.includes(`FULLTEXT-${T}`), 'site licence is still valid');
+  await edit({ syndicate_fulltext: true, site_fulltext: false });
+  assert.ok(!(await get(`/api/site/items/${id}`)).body.includes(`FULLTEXT-${T}`));
+  assert.ok(!(await get(`/items/${id}/markdown`)).body.includes(`FULLTEXT-${T}`));
+  assert.ok((await get('/api/v1/items?mode=all')).body.includes(id), 'the eligible summary remains public');
+  await edit({ site_fulltext: true, syndicate_fulltext: true });
 });
 
 test("a withdrawn item leaves every report exit", async () => {
@@ -282,7 +300,7 @@ test("a withdrawn item leaves the hot board and the hot APIs at once, not at the
   for (const url of exits) assert.ok(!(await get(url)).body.includes(rep!), `${url} still shows the withdrawn item`);
 });
 
-test("item pages follow the live rule: unsummarised editorial items keep one, hot_signal items have none", async () => {
+test("unclassified pending material and hot signals have no public item or evidence page", async () => {
   const SIGNAL = `${SOURCE}-signal`;
   await sql`INSERT INTO sources (id, name, kind, tier, participation_mode, site_fulltext, syndicate_fulltext, next_fetch_at)
             VALUES (${SIGNAL}, 'Test signal', 'rss', 'T1', 'hot_signal', true, false, '2100-01-01')`;
@@ -293,14 +311,12 @@ test("item pages follow the live rule: unsummarised editorial items keep one, ho
   await publishArticle(plain);
   const { articleId: signal } = await material(SIGNAL, "signal");
   await sql`INSERT INTO analyses (article_id, input_revision, origin, relevance, category, title_zh, summary_zh, score, selected)
-            VALUES (${signal}, 1, 'replay', 'pass', 'industry', ${`信号-${T}`}, ${`SIGNAL-SUMMARY-${T}`}, 80, false)`;
+            VALUES (${signal}, 1, 'replay', 'pass', 'ai', ${`信号-${T}`}, ${`SIGNAL-SUMMARY-${T}`}, 80, false)`;
   await publishArticle(signal);
 
   const page = await get(`/api/site/items/${plain}`);
-  assert.equal(page.status, 200, "an unsummarised editorial item keeps its page");
-  const detail = JSON.parse(page.body) as { summary: string | null; indexable: boolean; markdownAvailable: boolean };
-  assert.deepEqual([detail.summary, detail.indexable, detail.markdownAvailable], [null, false, true], "noindex, with its body for export");
-  assert.equal((await get(`/items/${plain}/markdown`)).status, 200);
+  assert.equal(page.status, 404, "pending classification cannot expose the raw article through a detail URL");
+  assert.equal((await get(`/items/${plain}/markdown`)).status, 404);
   assert.equal((await get(`/api/site/items/${signal}`)).status, 404, "hot_signal material has no page");
   assert.equal((await get(`/items/${signal}/markdown`)).status, 404);
 
@@ -309,9 +325,7 @@ test("item pages follow the live rule: unsummarised editorial items keep one, ho
   const [fact] = await sql<{ id: number }[]>`INSERT INTO facts (public_id, story_id, title) VALUES (${`f-${T}`}, ${story!.id}, ${`事实-${T}`}) RETURNING id`;
   await sql`INSERT INTO fact_articles (fact_id, article_id, role) VALUES (${fact!.id}, ${plain}, 'report'), (${fact!.id}, ${signal}, 'report')`;
   const storyPage = await get(`/api/site/stories/${publicId}`);
-  assert.equal(storyPage.status, 200, "a story whose only page is unsummarised still has a page");
-  assert.ok(storyPage.body.includes(plain), "it lists the unsummarised editorial report");
-  assert.ok(!storyPage.body.includes(signal) && !storyPage.body.includes(`SIGNAL-SUMMARY-${T}`), "and not the hot_signal one");
+  assert.equal(storyPage.status, 404, "a fact without any current classified evidence cannot have a public story page");
 });
 
 test("an early release keeps the selected ledger in order", async () => {

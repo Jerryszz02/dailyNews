@@ -139,12 +139,18 @@ async function processRevision(articleId: string, row: NonNullable<Awaited<Retur
   try {
     const result = await analyzeArticle(articleId, { attemptTag: opts.attemptTag });
     if (!result) return { state: "missing" };
+    if (result.stale) return { state: "stale" }; // the new inputs have their own job
+    if (result.classificationPending) {
+      if ((result.classificationRetryRemaining ?? 0) > 0 && result.classificationRetryTag) {
+        await queueProcessing(articleId, { step: "analyze", attemptTag: result.classificationRetryTag });
+      }
+      return { state: "classification-pending" };
+    }
     // Only a title or a feed summary: the article page first; extraction queues the analysis again.
     if (result.needsBody || !result.output) {
       await queueProcessing(articleId, { step: "extract" });
       return { state: "fetching-body" };
     }
-    if (result.stale) return { state: "stale" }; // the newer revision has its own job
     await publishArticle(articleId);
     // History is archived but founds no event (isHistorical).
     if (result.output.relevance === "pass" && !row.historical) await enqueue(QUEUES.group, { articleId }, { singletonKey: articleId, priority: PRIORITY.live });
@@ -193,7 +199,7 @@ async function afterFailure(articleId: string, revision: number, error: unknown)
   return { state: "retrying", retryAt };
 }
 
-export async function registerContentJobs(boss: PgBoss, concurrency = Number(process.env.ANALYZE_CONCURRENCY || 6)) {
+export async function registerContentJobs(boss: PgBoss, concurrency = Number(process.env.ANALYZE_CONCURRENCY || 2)) {
   await work(boss, QUEUES.analyze, { localConcurrency: concurrency, pollingIntervalSeconds: 2 }, async ({ articleId, attemptTag }) => {
     const row = await processingInput(articleId);
     if (!row) return { state: "missing" };
@@ -245,6 +251,7 @@ export async function sweepUnprocessed(): Promise<{ enqueued: number }> {
   const rows = await sql<{ id: string }[]>`
     SELECT id FROM articles
     WHERE processing_state = 'new' AND created_at < now() - interval '3 minutes'
+      AND (classification_retry_revision <> revision OR classification_retry_count < 2)
       AND (processing_retry_at IS NULL OR processing_retry_at <= now())
       AND (processing_queued_at IS NULL OR processing_queued_at < now() - ${QUEUED_STALE}::interval)
     ORDER BY discovered_at DESC LIMIT 500`;

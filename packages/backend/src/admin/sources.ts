@@ -8,6 +8,9 @@ import { enqueue, QUEUES } from "../jobs/queue.ts";
 import { invalidateStoryInputs } from "../events/derived-content.ts";
 import { resumeSourceArticles } from "../jobs/content.ts";
 import { republishKey } from "../jobs/publication.ts";
+import { lockEditorialProjection, reprocessAnalysesTx } from "../publication/reprocess.ts";
+import { publishArticleTx } from "../publication/publish.ts";
+import { reconcileEditorialPoliciesTx } from "../publication/editorial.ts";
 import { normalizeUrl } from "../lib/url.ts";
 import { fetchJsonList } from "../sources/json-list.ts";
 import { fetchRss } from "../sources/rss.ts";
@@ -113,6 +116,7 @@ const EDITABLE = z
 export async function updateSource(id: string, input: { patch: unknown; version: string; reason?: string }, actor: string) {
   const patch = EDITABLE.parse(input.patch);
   return sql.begin(async (tx) => {
+    await lockEditorialProjection(tx);
     // Creation and address edits share the lock: checking then inserting must not race.
     if (patch.config) await tx`SELECT pg_advisory_xact_lock(hashtext('admin-source-identity'))`;
     const [before] = await tx`SELECT * FROM sources WHERE id = ${id} FOR UPDATE`;
@@ -141,9 +145,18 @@ export async function updateSource(id: string, input: { patch: unknown; version:
       await invalidateStoryInputs(tx, articles.map((row) => row.id), new Date());
     }
     await audit(actor, "source.update", `source:${id}`, input.reason ?? null, Object.fromEntries(keys.map((k) => [k, before[k]])), patch, { db: tx });
-    // What public exits show for this source's articles is derived from these fields: re-derive them
-    // all (in the worker) so a revoked licence or an isolated source stops on every exit.
+    if (keys.some((k) => ["tier", "first_party", "owner_entity_id", "tags", "config", "name"].includes(k) && JSON.stringify(before[k]) !== JSON.stringify(patch[k]))) {
+      await reprocessAnalysesTx(tx, { sourceId: id, reason: "source analysis inputs changed" });
+    }
+    // Revocations take effect in this transaction, including the sync ledger. The queued rebuild
+    // remains an idempotent recovery/progress job, never the public permission boundary.
     if (keys.some((k) => PUBLICATION_FIELDS.includes(k) && JSON.stringify(before[k]) !== JSON.stringify(patch[k]))) {
+      const published = await tx<{ article_id: string }[]>`
+        SELECT article_id FROM publications WHERE source_id = ${id} ORDER BY article_id`;
+      const now = new Date();
+      for (const row of published) await publishArticleTx(tx, row.article_id,
+        { now, reconcileFacts: false, queueStaleAnalysis: false });
+      await reconcileEditorialPoliciesTx(tx, now);
       await tx`INSERT INTO settings (key, value, updated_by) VALUES (${republishKey(id)}, ${tx.json({ status: "queued", queuedAt: new Date().toISOString() })}, ${actor})
                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()`;
       await enqueue(QUEUES.republishSource, { sourceId: id }, { singletonKey: id }, tx);

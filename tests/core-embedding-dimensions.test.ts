@@ -61,7 +61,7 @@ async function report() {
   const { articleId } = await upsertMaterial({ sourceId: source, url: `https://example.org/${it.id}`, title: it.text,
     bodyText: "Synthetic report.", bodyStatus: "ok", via: "fetch", publishedAt: new Date() });
   await sql`INSERT INTO analyses(article_id,input_revision,origin,relevance,category,title_zh,summary_zh,score,selected,output)
-    VALUES(${articleId},1,'rule','pass','ai-models',${it.text},'摘要',80,false,${sql.json({ fact: { title: it.text } })})`;
+    VALUES(${articleId},1,'rule','pass','ai',${it.text},'摘要',80,false,${sql.json({ fact: { title: it.text } })})`;
   await publishArticle(articleId);
   return { id: articleId, text: reportText(it.text, "摘要") };
 }

@@ -25,7 +25,7 @@ const provider = await stub((_hit, req) => {
   if (system.includes("宽召回的AI相关性预筛")) answer = { label: input.includes("OFFTOPIC") ? "BLOCK" : "PASS", reason: "测试" };
   else if (system.includes("事件注意力评分器")) answer = { attentionScore: 80 };
   else if (system.includes("内容理解编辑")) answer = { itemType: "model_release", authorRole: "principal", tags: ["模型发布"], editorialJudgment: "测试判断", titleZh: "某实验室发布新模型", summaryZh: "某实验室发布新模型，并公布评测结果和价格。" };
-  else if (system.includes("资料结构化助手")) answer = { category: "ai-models", tags: ["模型发布"], subjects: [], fact: { title: "某实验室发布新模型" } };
+  else if (system.includes("资料结构化助手")) answer = { category: "ai", tags: ["模型发布"], subjects: [], fact: { title: "某实验室发布新模型" } };
   else throw new Error("unexpected model request");
   return { id: "stub", choices: [{ message: { content: JSON.stringify(answer) } }], usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 } };
 });
@@ -193,8 +193,8 @@ test("only skipped articles without a current-revision analysis resume", async (
   const stale = await material(sourceId, "stale");
   for (const id of [current, stale]) {
     await settleNonEditorial(id);
-    await sql`INSERT INTO analyses (article_id, input_revision, origin, relevance, title_zh, summary_zh, selected)
-              VALUES (${id}, 1, 'rule', 'pass', '原有中文标题', '原有中文摘要', false)`;
+    await sql`INSERT INTO analyses (article_id, input_revision, origin, relevance, category, title_zh, summary_zh, selected)
+              VALUES (${id}, 1, 'rule', 'pass', 'ai', '原有中文标题', '原有中文摘要', false)`;
   }
   await sql`UPDATE articles SET revision = 2 WHERE id = ${stale}`;
   const untouched: Array<{ id: string; state: string }> = [];

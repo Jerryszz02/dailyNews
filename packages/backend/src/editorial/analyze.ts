@@ -9,9 +9,9 @@
 //      topics and the event grouping need; it runs beside the scoring.
 // Material with only a title or a feed summary has its article page fetched before it is judged.
 import { z } from "zod";
-import { CATEGORY_KEYS } from "@aihot/contracts/taxonomy";
-import { CATEGORIES } from "@aihot/industry/taxonomy";
+import { CATEGORY_KEYS, isCategoryKey } from "@aihot/contracts/taxonomy";
 import { SELECTION } from "@aihot/industry/selection";
+import { PRIMARY_CATEGORY_TAG } from "@aihot/industry/taxonomy";
 import { sql } from "../db.ts";
 import { chatJson, MODELS, ModelOutputError, type ContentPart } from "../providers/llm.ts";
 import { completeReceipt, ProviderRejectedError, ReceiptUnknownError } from "../providers/receipts.ts";
@@ -21,12 +21,16 @@ import { buildMaterial, firstImagePart, loadAnalyzeInput, type AnalyzeInputArtic
 import { pageFetchable } from "../content/extract.ts";
 import { shutdownSignal } from "../jobs/queue.ts";
 import {
-  buildArticlePrompt, buildLongTweetPrompt, buildShortTweetPrompt, finalizeCopy, isShortTweetInput, looksZh, MAX_BODY_CHARS, missingEvidence,
+  buildArticlePrompt, buildNonAiCopyPrompt, buildLongTweetPrompt, buildShortTweetPrompt, finalizeCopy, isShortTweetInput, looksZh, MAX_BODY_CHARS, missingEvidence,
   needsShortTweetTranslation, parseTranslateOutput, PREFILTER_SYSTEM, prefilterUser, translateInputOf, UNDERSTAND_SYSTEM, understandUser,
   type IdentityGuard,
 } from "./writing.ts";
-import { CATEGORY_BY_ITEM_TYPE, CATEGORY_GUIDE, CATEGORY_TAGS, ENTITIES, ENTITY_TAGS, ITEM_TYPES, normalizeTags, TOPIC_TAGS } from "./vocabulary.ts";
+import { CATEGORY_BY_ITEM_TYPE, ENTITIES, ITEM_TYPES, normalizeTags } from "./vocabulary.ts";
 import { promptText, promptVersion } from "./prompts.ts";
+import {
+  CLASSIFICATION_CONFIG_VERSION, MAX_CLASSIFICATION_RETRIES, STRUCTURE_SYSTEM,
+  analysisSignature, currentAnalysisModels, policyIdForCategory, policyVersionForCategory, type AnalysisModels,
+} from "./policy.ts";
 
 export { buildMaterial, loadAnalyzeInput, type AnalyzeInputArticle };
 
@@ -35,6 +39,7 @@ export const PROMPT_VERSIONS = {
   score: promptVersion("selection-score"),
   understand: promptVersion("understand"),
   summarize: promptVersion("summarize-article", "summarize-article-empty", "summarize-short-post", "summarize-short-post-quoted", "summarize-long-post", "summarize-long-post-quoted", "identity-context"),
+  nonAiCopy: promptVersion("dailynews-non-ai-copy", "identity-context", "summarize-article-empty"),
   structure: promptVersion("structure"),
 } as const;
 /** Every step's prompt, as stored on each judgement. */
@@ -123,6 +128,7 @@ const FactSchema = z
 
 const StructureSchema = z.object({
   category: z.enum(CATEGORY_KEYS).nullable().catch(null),
+  categoryReason: z.string().max(300).catch(""),
   tags: z.array(z.string()).max(12).catch([]),
   subjects: z.array(z.string()).max(6).catch([]),
   fact: FactSchema,
@@ -139,20 +145,8 @@ const UnderstandSchema = z.object({
 
 const SummarizeSchema = z.object({ titleZh: z.string(), summaryZh: z.string(), bodyZh: z.string() });
 
-const ZH_COUNT = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"];
-
-/** The structure step's prompt (it writes nothing a reader sees), filled from the pack's vocabulary. */
-const STRUCTURE_SYSTEM = promptText("structure", {
-  categoryCount: ZH_COUNT[CATEGORIES.length] ?? String(CATEGORIES.length),
-  categoryGuide: CATEGORY_GUIDE,
-  categoryTags: CATEGORY_TAGS.join("、"),
-  topicTags: TOPIC_TAGS.join("、"),
-  entityTags: ENTITY_TAGS.join("、"),
-  entities: Object.entries(ENTITIES).map(([id, e]) => `${id}（${e.aliases.slice(0, 3).join("/")}）`).join("，"),
-});
-
 export interface AnalysisRun {
-  prefilter: { label: "PASS" | "BLOCK" | "UNKNOWN"; reason: string; model: string; receiptId: number; reused: boolean };
+  prefilter: { label: "PASS" | "BLOCK" | "UNKNOWN"; reason: string; model: string; receiptId: number; reused: boolean } | null;
   /**
    * The independent score calls and the tier threshold they are held against; absent when the material
    * is not scored. `refused`: the model's content filter declined it, so it is not selected.
@@ -172,7 +166,8 @@ export interface AnalysisRun {
     receiptIds: number[];
     reused: boolean;
   } | null;
-  structure: { model: string; category: string | null; tags: string[]; subjects: string[]; fact: z.infer<typeof FactSchema>; receiptId: number; reused: boolean } | null;
+  structure: { model: string; category: string | null; categoryReason: string; tags: string[]; subjects: string[]; fact: z.infer<typeof FactSchema>; receiptId: number; reused: boolean } | null;
+  classification: { originalCategory: string | null; effectiveCategory: string | null; override: "fact" | "manual" | null; fallback: { attempted: boolean; category: string | null; reason: string | null; receiptId: number | null }; pending: boolean };
 }
 
 const isContentFilter = (error: unknown) => error instanceof ProviderRejectedError && !error.retryable && /contentFilter|"1301"/.test(error.message);
@@ -182,7 +177,7 @@ export function waitsForPage(a: AnalyzeInputArticle): boolean {
   return a.bodyStatus === "pending" && !a.bodyText && !a.xPost && pageFetchable(a.url, a.source.kind);
 }
 
-type StepOpts = { attemptTag?: string; scoreModel?: string };
+type StepOpts = { attemptTag?: string; scoreModel?: string; resolvedModels?: AnalysisModels };
 type ReceiptObserver = (receiptId: number) => void;
 export class AnalysisInterruptedError extends Error {}
 
@@ -196,8 +191,8 @@ function checkAnalysisRunning() {
 const subjectOf = (a: AnalyzeInputArticle) => `article:${a.id}@${a.revision}`;
 const tagged = (attemptTag: string | undefined, step: string) => [attemptTag, step].filter(Boolean).join(":") || undefined;
 
-async function runPrefilter(a: AnalyzeInputArticle, opts: StepOpts): Promise<AnalysisRun["prefilter"]> {
-  const model = await modelFor("prefilter");
+async function runPrefilter(a: AnalyzeInputArticle, opts: StepOpts): Promise<NonNullable<AnalysisRun["prefilter"]>> {
+  const model = opts.resolvedModels?.prefilter.key ?? await modelFor("prefilter");
   checkAnalysisRunning();
   const res = await chatJson({
     model,
@@ -221,7 +216,7 @@ export async function runSelectionPrefilter(
   a: AnalyzeInputArticle,
   opts: StepOpts = {},
   onReceipt?: ReceiptObserver,
-): Promise<AnalysisRun["prefilter"]> {
+): Promise<NonNullable<AnalysisRun["prefilter"]>> {
   try {
     const result = await runPrefilter(a, opts);
     onReceipt?.(result.receiptId);
@@ -239,7 +234,7 @@ async function runScores(
   opts: StepOpts,
   onReceipt?: ReceiptObserver,
 ): Promise<NonNullable<AnalysisRun["scores"]>> {
-  const model = opts.scoreModel ?? (await modelFor("score"));
+  const model = opts.scoreModel ?? opts.resolvedModels?.score.key ?? (await modelFor("score"));
   const call = scoreCall(model);
   const input = buildScoreInput(a);
   const values: number[] = [];
@@ -280,28 +275,28 @@ export async function runSelectionScores(
   return threshold === null ? null : runScores(a, threshold, opts, onReceipt);
 }
 
-async function runStructure(a: AnalyzeInputArticle, opts: StepOpts): Promise<NonNullable<AnalysisRun["structure"]>> {
-  const model = await modelFor("structure");
+async function runStructure(a: AnalyzeInputArticle, opts: StepOpts, fallback = false): Promise<NonNullable<AnalysisRun["structure"]>> {
+  const model = opts.resolvedModels?.structure.key ?? await modelFor("structure");
   checkAnalysisRunning();
   const res = await chatJson({
     model,
     purpose: "structure_article",
     subject: subjectOf(a),
     promptVersion: PROMPT_VERSIONS.structure,
-    system: STRUCTURE_SYSTEM,
+    system: fallback ? `${STRUCTURE_SYSTEM}\n\n这篇资料已被 AI 专用预筛判为不适合 AI 版块。请独立复核是否明确属于其余九个主类；证据不足或仍为 AI 时返回 category=null。` : STRUCTURE_SYSTEM,
     user: buildMaterial(a),
     schema: StructureSchema,
     temperature: 0.2,
     maxTokens: 800,
-    attemptTag: tagged(opts.attemptTag, "structure"),
+    attemptTag: fallback ? "structure-non-ai-fallback" : tagged(opts.attemptTag, "structure"),
   });
   const subjects = [...new Set(res.data.subjects.map((s) => s.trim().toLowerCase()).filter((s) => s in ENTITIES))];
-  return { model: res.model, category: res.data.category, tags: normalizeTags(res.data.tags), subjects, fact: res.data.fact, receiptId: res.receiptId, reused: res.reused };
+  return { model: res.model, category: res.data.category, categoryReason: res.data.categoryReason, tags: normalizeTags(res.data.tags), subjects, fact: res.data.fact, receiptId: res.receiptId, reused: res.reused };
 }
 
 /** The content understanding; null when the model's content filter declines the material. */
 async function runUnderstand(a: AnalyzeInputArticle, opts: StepOpts): Promise<AnalysisRun["writing"]> {
-  const model = await modelFor("understand");
+  const model = opts.resolvedModels?.understand.key ?? await modelFor("understand");
   const text = understandUser(a);
   const call = (image: ContentPart | null) => {
     checkAnalysisRunning();
@@ -337,7 +332,7 @@ async function runUnderstand(a: AnalyzeInputArticle, opts: StepOpts): Promise<An
 }
 
 /** The title/summary prompts (articles, long and short posts). */
-async function runSummarize(a: AnalyzeInputArticle, opts: StepOpts): Promise<NonNullable<AnalysisRun["writing"]>> {
+async function runSummarize(a: AnalyzeInputArticle, opts: StepOpts, nonAi = false): Promise<NonNullable<AnalysisRun["writing"]>> {
   const t = translateInputOf(a);
   const isX = t.sourceKind === "x_search";
   const short = isShortTweetInput(t);
@@ -346,21 +341,21 @@ async function runSummarize(a: AnalyzeInputArticle, opts: StepOpts): Promise<Non
   // A short post already in Chinese is its own copy, and too little text is not written up from a title.
   if (short && !needsShortTweetTranslation(main)) return { kind: "verbatim", model: null, titleZh: main, summaryZh: main, ...plain };
   if (!short && t.text.trim().length < 20) return { kind: "none", model: null, titleZh: looksZh(t.title) ? t.title : "", summaryZh: "", ...plain };
-  const model = await modelFor("summarize");
+  const model = opts.resolvedModels?.summarize.key ?? await modelFor("summarize");
   checkAnalysisRunning();
   const res = await chatJson({
     model,
-    purpose: "summarize_article",
+    purpose: nonAi ? "summarize_non_ai_article" : "summarize_article",
     subject: subjectOf(a),
-    promptVersion: PROMPT_VERSIONS.summarize,
+    promptVersion: nonAi ? PROMPT_VERSIONS.nonAiCopy : PROMPT_VERSIONS.summarize,
     system: "",
-    user: short ? buildShortTweetPrompt(t) : isX ? buildLongTweetPrompt(t) : buildArticlePrompt(t),
+    user: nonAi ? buildNonAiCopyPrompt(t) : short ? buildShortTweetPrompt(t) : isX ? buildLongTweetPrompt(t) : buildArticlePrompt(t),
     schema: SummarizeSchema,
     json: false,
     parse: parseTranslateOutput,
     temperature: 0.2,
     maxTokens: 2048,
-    attemptTag: tagged(opts.attemptTag, "summarize"),
+    attemptTag: tagged(opts.attemptTag, nonAi ? "summarize-non-ai" : "summarize"),
   });
   const p = res.data;
   const draft = short
@@ -378,47 +373,104 @@ async function runSummarize(a: AnalyzeInputArticle, opts: StepOpts): Promise<Non
  */
 export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts & { stages?: "selection" | "all" } = {}): Promise<AnalysisRun> {
   checkAnalysisRunning();
-  const prefilter = await runSelectionPrefilter(a, opts);
-  // UNKNOWN is let through (its material is as complete as it will get); BLOCK stops here.
-  if (prefilter.label === "BLOCK") return { prefilter, scores: null, writing: null, structure: null };
+  const emptyClassification = { originalCategory: null, effectiveCategory: null, override: null, fallback: { attempted: false, category: null, reason: null, receiptId: null }, pending: false } as const;
   if (opts.stages === "selection") {
+    // SelectBench evaluates the original AI scorer independently of article routing.
+    const prefilter = await runSelectionPrefilter(a, opts);
+    if (prefilter.label === "BLOCK") return { prefilter, scores: null, writing: null, structure: null, classification: { ...emptyClassification } };
     const scores = await runSelectionScores(a, opts);
-    return { prefilter, scores, writing: null, structure: null };
+    return { prefilter, scores, writing: null, structure: null, classification: { ...emptyClassification } };
   }
-  // The structure step needs nothing from the scores: it runs beside them.
-  const structure = runStructure(a, opts).then((value) => ({ value }), (error: unknown) => ({ error }));
-  try {
-    const scores = await runSelectionScores(a, opts);
-    const sum = scores && !scores.refused && scores.values.length === SCORE_CALLS ? scores.values.reduce((total, v) => total + v, 0) : null;
-    const near = sum !== null && (sum >= scores!.threshold * SCORE_CALLS || sum > UNDERSTAND_FLOOR * SCORE_CALLS);
-    const writing = (near ? await runUnderstand(a, opts) : null) ?? (await runSummarize(a, opts));
-    const s = await structure;
-    if ("error" in s) throw s.error;
-    return { prefilter, scores, writing, structure: s.value };
-  } finally {
-    // A score/writing error or deploy must not let the job finish while a paid structure request
-    // still owns a response. It settles and stores its receipt before shutdown can close the DB.
-    await structure;
+  const structure = await runStructure(a, opts);
+  const override = isCategoryKey(a.editorialCategory) ? "fact" : isCategoryKey(a.manualCategory) ? "manual" : null;
+  let category = override === "fact" ? a.editorialCategory! : override === "manual" ? a.manualCategory! : structure.category;
+  const fallback: AnalysisRun["classification"]["fallback"] = { attempted: false, category: null, reason: null, receiptId: null };
+  if (!category) {
+    return { prefilter: null, scores: null, writing: null, structure, classification: { originalCategory: structure.category, effectiveCategory: null, override, fallback, pending: true } };
   }
+  if (category !== "ai") {
+    const writing = await runSummarize(a, opts, true);
+    return { prefilter: null, scores: null, writing, structure, classification: { originalCategory: structure.category, effectiveCategory: category, override, fallback, pending: false } };
+  }
+  const prefilter = await runSelectionPrefilter(a, opts);
+  if (prefilter.label === "BLOCK") {
+    if (!override && (a.classificationFallbackCount ?? 0) >= 1) {
+      const previous = a.classificationFallbackConfigVersion === CLASSIFICATION_CONFIG_VERSION ? a.classificationFallbackCategory : null;
+      fallback.category = previous ?? null;
+      fallback.reason = previous ? "沿用该资料版本已有的跨类复核" : "跨类复核已用尽或分类配置已变化";
+      if (previous && previous !== "ai" && isCategoryKey(previous)) {
+        const writing = await runSummarize(a, opts, true);
+        return { prefilter, scores: null, writing, structure, classification: { originalCategory: structure.category, effectiveCategory: previous, override, fallback, pending: false } };
+      }
+      if (!previous) return { prefilter, scores: null, writing: null, structure, classification: { originalCategory: structure.category, effectiveCategory: null, override, fallback, pending: true } };
+    }
+    if (!override && (a.classificationFallbackCount ?? 0) < 1) {
+      const review = await runStructure(a, opts, true);
+      fallback.attempted = true;
+      fallback.category = review.category;
+      fallback.reason = review.categoryReason;
+      fallback.receiptId = review.receiptId;
+      if (review.category && review.category !== "ai") {
+        category = review.category;
+        const writing = await runSummarize(a, opts, true);
+        return { prefilter, scores: null, writing, structure, classification: { originalCategory: structure.category, effectiveCategory: category, override, fallback, pending: false } };
+      }
+      if (!review.category) {
+        return { prefilter, scores: null, writing: null, structure, classification: { originalCategory: structure.category, effectiveCategory: null, override, fallback, pending: true } };
+      }
+    }
+    return { prefilter, scores: null, writing: null, structure, classification: { originalCategory: structure.category, effectiveCategory: "ai", override, fallback, pending: false } };
+  }
+  // UNKNOWN continues through the unchanged AI scoring path.
+  const scores = await runSelectionScores(a, opts);
+  const sum = scores && !scores.refused && scores.values.length === SCORE_CALLS ? scores.values.reduce((total, v) => total + v, 0) : null;
+  const near = sum !== null && (sum >= scores!.threshold * SCORE_CALLS || sum > UNDERSTAND_FLOOR * SCORE_CALLS);
+  const writing = (near ? await runUnderstand(a, opts) : null) ?? (await runSummarize(a, opts));
+  return { prefilter, scores, writing, structure, classification: { originalCategory: structure.category, effectiveCategory: "ai", override, fallback, pending: false } };
+}
+
+/** SelectBench runs only the unchanged AI prefilter and two-score rule. It does not create an
+ * article judgement, so category and Chinese-copy publication gates do not apply here. */
+export function normalizeSelection(run: Pick<AnalysisRun, "prefilter" | "scores">) {
+  const relevance = run.prefilter?.label === "BLOCK" ? "block" : "pass";
+  const values = run.scores && !run.scores.refused ? run.scores.values : null;
+  const sum = values?.length === SCORE_CALLS ? values.reduce((total, value) => total + value, 0) : null;
+  const threshold = run.scores?.threshold ?? null;
+  return {
+    relevance,
+    selected: relevance === "pass" && sum !== null && threshold !== null && sum >= threshold * SCORE_CALLS,
+    score: sum === null ? null : Math.floor(sum / SCORE_CALLS),
+    category: null,
+    reasonZh: null,
+  };
 }
 
 /** One judgement from the steps: the selection rule, the reader-facing copy and the structure. */
 export function normalizeAnalysis(run: AnalysisRun) {
-  const label = run.prefilter.label;
+  const label = run.prefilter?.label ?? null;
+  const category = run.classification.effectiveCategory;
   const titleZh = collapseWhitespace(run.writing?.titleZh ?? "");
   const summaryZh = (run.writing?.summaryZh ?? "").trim();
-  // Past the prefilter (PASS or UNKNOWN) an item is relevant, but without a usable Chinese title and
-  // summary it cannot be published: it waits.
-  const relevance = label === "BLOCK" ? "block" : run.writing && (!titleZh || !summaryZh) ? "unknown" : "pass";
+  // Unknown classification or missing Chinese copy remains pending; an AI BLOCK can become a
+  // non-AI pass only after the single explicit cross-category review.
+  const relevance = !category ? "unknown" : category === "ai" && label === "BLOCK" ? "block"
+    : !titleZh || !summaryZh || !looksZh(titleZh) || !looksZh(summaryZh) ? "unknown" : "pass";
   // Selected when the two scores add up to twice the tier threshold; the mean, floored,
   // is the score shown (it never decides a half point on its own).
   const values = run.scores && !run.scores.refused ? run.scores.values : null;
   const sum = values?.length === SCORE_CALLS ? values.reduce((total, v) => total + v, 0) : null;
   const score = sum === null ? null : Math.floor(sum / SCORE_CALLS);
   const threshold = run.scores?.threshold ?? null;
-  const selected = relevance === "pass" && sum !== null && threshold !== null && sum >= threshold * SCORE_CALLS;
+  const selected = category === "ai" && relevance === "pass" && sum !== null && threshold !== null && sum >= threshold * SCORE_CALLS;
   const subjects = run.structure?.subjects ?? [];
   const tags = [...(run.writing?.tags ?? run.structure?.tags ?? [])];
+  if (category && category !== "ai") {
+    const primary = PRIMARY_CATEGORY_TAG[category];
+    if (primary) {
+      const filtered = tags.filter((tag) => tag !== primary);
+      tags.splice(0, tags.length, primary, ...filtered);
+    }
+  }
   for (const s of subjects) {
     const display = ENTITIES[s]?.displayTag;
     if (display && !tags.includes(display)) tags.push(display);
@@ -431,7 +483,7 @@ export function normalizeAnalysis(run: AnalysisRun) {
     scoreModel: run.scores?.model ?? null,
     scoreRefused: run.scores?.refused ?? false,
     threshold,
-    category: run.structure?.category ?? null,
+    category,
     tags,
     subjects,
     titleZh,
@@ -449,6 +501,10 @@ export interface AnalyzeResult {
   output: ReturnType<typeof normalizeAnalysis> | null;
   receiptIds: number[];
   reused: boolean;
+  /** Requeue with classificationRetryTag while >0; after that retain pending for manual review. */
+  classificationPending?: boolean;
+  classificationRetryRemaining?: number;
+  classificationRetryTag?: string | null;
 }
 
 /**
@@ -460,35 +516,56 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
   if (!input) return null;
   // Its page first; extraction queues the analysis again (normally the queue already routed it there).
   if (waitsForPage(input)) return { analysisId: null, stale: false, needsBody: true, output: null, receiptIds: [], reused: true };
-  const run = await runAnalysis(input, opts);
+  const models = await currentAnalysisModels();
+  const inputSignature = analysisSignature(input, models);
+  const run = await runAnalysis(input, { ...opts, resolvedModels: models });
   const out = normalizeAnalysis(run);
   const receiptIds = [
-    run.prefilter.receiptId, ...(run.scores?.receiptIds ?? []), ...(run.writing?.receiptIds ?? []), ...(run.structure ? [run.structure.receiptId] : []),
+    ...(run.prefilter ? [run.prefilter.receiptId] : []), ...(run.scores?.receiptIds ?? []), ...(run.writing?.receiptIds ?? []),
+    ...(run.structure ? [run.structure.receiptId] : []), ...(run.classification.fallback.receiptId ? [run.classification.fallback.receiptId] : []),
   ];
   const w = run.writing;
   const detail = {
-    prefilter: { label: run.prefilter.label, reason: run.prefilter.reason },
+    prefilter: run.prefilter ? { label: run.prefilter.label, reason: run.prefilter.reason } : null,
     scores: out.scores, scoreModel: out.scoreModel, threshold: out.threshold, ...(out.scoreRefused ? { scoreRefused: true } : {}),
     ...(w ? { writer: w.kind, writerModel: w.model, itemType: w.itemType ?? null, authorRole: w.authorRole ?? null } : {}),
     ...(w?.identityGuard?.outcome === "fallback" ? { identityGuard: w.identityGuard } : {}),
     fact: out.fact,
+    classification: { ...run.classification, reason: run.structure?.categoryReason ?? "", version: CLASSIFICATION_CONFIG_VERSION },
+    actualModels: Object.fromEntries(Object.entries(models).map(([role, model]) => [role,
+      { key: model.key, service: model.service, model: model.model, baseUrl: model.baseUrl }])),
   };
   const committed = await sql.begin(async (tx) => {
     const [current] = await tx<{ revision: number }[]>`SELECT revision FROM articles WHERE id = ${articleId} FOR UPDATE`;
-    const stale = !current || current.revision !== input.revision;
+    const nowInput = current ? await loadAnalyzeInput(articleId, tx) : null;
+    const nowModels = await currentAnalysisModels(tx);
+    const stale = !nowInput || current?.revision !== input.revision || analysisSignature(nowInput, nowModels) !== inputSignature;
     const [row] = await tx<{ id: number }[]>`
       INSERT INTO analyses (article_id, input_revision, origin, model, prompt_version, receipt_ids, relevance, category, tags,
-        subjects, title_zh, summary_zh, reason_zh, score, selected, output)
-      VALUES (${articleId}, ${input.revision}, 'model', ${w?.model ?? run.prefilter.model}, ${ANALYZE_PROMPT_VERSION}, ${receiptIds},
+        subjects, title_zh, summary_zh, reason_zh, score, selected, output, policy_id, policy_version, classification_version, input_signature)
+      VALUES (${articleId}, ${input.revision}, 'model', ${w?.model ?? run.prefilter?.model ?? run.structure?.model ?? null}, ${ANALYZE_PROMPT_VERSION}, ${receiptIds},
         ${out.relevance}, ${out.category}, ${out.tags}, ${out.subjects}, ${out.titleZh}, ${out.summaryZh}, ${out.reasonZh},
-        ${out.score}, ${out.selected}, ${tx.json(detail as never)})
+        ${out.score}, ${out.selected}, ${tx.json(detail as never)}, ${policyIdForCategory(out.category)}, ${policyVersionForCategory(out.category)}, ${CLASSIFICATION_CONFIG_VERSION}, ${inputSignature})
       RETURNING id`;
     for (const id of receiptIds) await completeReceipt(tx, id);
     if (!stale) {
-      await tx`UPDATE articles SET processing_state = ${out.relevance === "block" ? "blocked" : "analyzed"}, processing_error = NULL WHERE id = ${articleId}`;
+      const retryCount = (input.classificationRetryCount ?? 0) + (run.classification.pending ? 1 : 0);
+      const fallbackCount = (input.classificationFallbackCount ?? 0) + (run.classification.fallback.attempted ? 1 : 0);
+      await tx`UPDATE articles SET processing_state = ${out.relevance === "block" ? "blocked" : "analyzed"},
+        processing_error = ${run.classification.pending ? "classification pending" : out.relevance === "unknown" ? "Chinese copy pending" : null},
+        classification_retry_revision = ${input.revision}, classification_retry_count = ${retryCount},
+        classification_fallback_revision = ${input.revision}, classification_fallback_count = ${fallbackCount},
+        classification_fallback_category = ${run.classification.fallback.attempted ? run.classification.fallback.category : input.classificationFallbackCategory ?? null},
+        classification_fallback_config_version = ${run.classification.fallback.attempted ? CLASSIFICATION_CONFIG_VERSION : input.classificationFallbackConfigVersion ?? null}
+        WHERE id = ${articleId}`;
     }
     return { analysisId: row!.id, stale };
   });
-  const reused = run.prefilter.reused && (run.scores?.reused ?? true) && (w?.reused ?? true) && (run.structure?.reused ?? true);
-  return { analysisId: committed.analysisId, stale: committed.stale, output: out, receiptIds, reused };
+  const reused = (run.prefilter?.reused ?? true) && (run.scores?.reused ?? true) && (w?.reused ?? true) && (run.structure?.reused ?? true);
+  const retries = Math.max(0, MAX_CLASSIFICATION_RETRIES - (input.classificationRetryCount ?? 0) - (run.classification.pending ? 1 : 0));
+  return { analysisId: committed.analysisId, stale: committed.stale, output: out, receiptIds, reused,
+    classificationPending: run.classification.pending,
+    classificationRetryRemaining: run.classification.pending ? retries : 0,
+    classificationRetryTag: run.classification.pending && retries > 0 ? `classification:${MAX_CLASSIFICATION_RETRIES - retries + 1}` : null,
+  };
 }

@@ -29,7 +29,7 @@ import { invalidateStoryInputs, lockStoryMembership } from "./derived-content.ts
 import { publishArticle } from "../publication/publish.ts";
 import { mergeStoryInto } from "./merge.ts";
 import {
-  BATCH_SYSTEM, BatchSchema, PAIR_SYSTEM, PairSchema, RELATE_PROMPT_VERSION, SIGNAL_SYSTEM, STORY_REVIEW_MIN_CONFIDENCE, SignalSchema, TIE_MIN_CONFIDENCE,
+  BATCH_SYSTEM, BatchSchema, PAIR_SYSTEM, PairSchema, RELATE_PROMPT_VERSION, SIGNAL_SYSTEM, SignalSchema,
   batchUser, firmlyTied, lexicalSimilarity, looksLikeRoundup, pairUser, reportText, sameOccurrence, signalTarget, storyForDevelopment, verdictsByFact,
   type CandidateView, type Relation, type ReportView, type Verdict,
 } from "./relate.ts";
@@ -40,6 +40,8 @@ const RECALL_MIN_COSINE = 0.6;
 const RECALL_TOP_FACTS = 10;
 /** A merge with a candidate less similar than this is confirmed by the review model before it is written. */
 const CONFIRM_BELOW_COSINE = 0.85;
+/** Different URLs need a confident relation judgement before joining a fact or story. */
+const AUTO_LINK_MIN_CONFIDENCE = 0.8;
 /** Discussion posts are judged only against clear candidates, and attach without a call when nearly identical. */
 const SIGNAL_MIN_COSINE = 0.72;
 const SIGNAL_AUTO_COSINE = 0.92;
@@ -81,12 +83,12 @@ async function judgeBatch(articleId: string, query: ReportView, cands: Candidate
 }
 
 /** The review model reads both reports on their own; a merge stands only when it agrees. */
-async function confirmMerge(articleId: string, query: ReportView, cand: CandidateView): Promise<{ relation: Relation; receiptId: number }> {
+async function confirmMerge(articleId: string, query: ReportView, cand: CandidateView): Promise<{ relation: Relation; confidence: number; receiptId: number }> {
   const res = await chatJson({
     model: await modelFor("groupReview"), purpose: "group_review", subject: `article:${articleId}:fact:${cand.factId}`, promptVersion: RELATE_PROMPT_VERSION,
     system: PAIR_SYSTEM, user: pairUser(query, cand.report), schema: PairSchema, temperature: 0, maxTokens: 400,
   });
-  return { relation: res.data.relation, receiptId: res.receiptId };
+  return { relation: res.data.relation, confidence: res.data.confidence, receiptId: res.receiptId };
 }
 
 async function judgeSignal(articleId: string, query: ReportView, cands: CandidateView[]): Promise<{ verdicts: Map<number, Verdict>; receiptId: number }> {
@@ -297,6 +299,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
   let storyId: number | null = null;
   let cands: CandidateView[] = [];
   let verdicts = new Map<number, Verdict>();
+  const rejectedByReview = new Set<number>();
   const receipts: number[] = [];
 
   if (sameUrl) {
@@ -311,20 +314,22 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
         verdicts = judged.verdicts;
         receipts.push(judged.receiptId);
         for (const pick of sameOccurrence(cands, verdicts)) {
+          if ((verdicts.get(pick.factId)?.confidence ?? 0) < AUTO_LINK_MIN_CONFIDENCE) continue;
           if (pick.score >= CONFIRM_BELOW_COSINE) {
             factId = pick.factId;
             break;
           }
           const review = await confirmMerge(articleId, query, pick);
           receipts.push(review.receiptId);
-          if (review.relation === "SAME_OCCURRENCE") {
+          if (review.relation === "SAME_OCCURRENCE" && review.confidence >= AUTO_LINK_MIN_CONFIDENCE) {
             factId = pick.factId;
             break;
           }
-          if (review.relation === "SAME_STORY" && pick.storyRoot) {
+          if (review.relation === "SAME_STORY" && review.confidence >= AUTO_LINK_MIN_CONFIDENCE && pick.storyRoot) {
             storyId = pick.storyId;
             break;
           }
+          rejectedByReview.add(pick.factId);
         }
         if (factId) {
           verdict = "same-fact";
@@ -332,7 +337,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
         } else if (storyId) {
           verdict = "new-fact-in-story";
         } else {
-          const dev = storyForDevelopment(cands, verdicts);
+          const dev = storyForDevelopment(cands.filter((c) => (verdicts.get(c.factId)?.confidence ?? 0) >= AUTO_LINK_MIN_CONFIDENCE), verdicts);
           if (dev) {
             verdict = "new-fact-in-story";
             storyId = dev.storyId;
@@ -395,7 +400,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
   // Other stories this report is firmly tied to: one story may have grown two roots. Best effort:
   // the report's own decision is written; a failed comparison is reported in the job's result.
   const tied = new Set<number>([written.storyId!]);
-  for (const c of cands) if (firmlyTied(verdicts.get(c.factId)?.relation, verdicts.get(c.factId)?.confidence)) tied.add(c.storyId);
+  for (const c of cands) if (!rejectedByReview.has(c.factId) && firmlyTied(verdicts.get(c.factId)?.relation, verdicts.get(c.factId)?.confidence)) tied.add(c.storyId);
   if (tied.size > 1) {
     try {
       result.consolidated = await consolidate([...tied]);

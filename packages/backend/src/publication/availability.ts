@@ -2,6 +2,7 @@
 // stays available as long as its page does (rules.hasItemPage), whether or not it is in the lists.
 import { sql } from "../db.ts";
 import { hasItemPage } from "./rules.ts";
+import { currentDecisionCondition } from "./scope.ts";
 
 export async function itemAvailability(ids: string[]): Promise<Record<string, "public" | "summary-only" | "unavailable">> {
   const clean = [...new Set(ids.filter((id) => /^[a-zA-Z0-9_-]{1,80}$/.test(id)))].slice(0, 500);
@@ -10,7 +11,8 @@ export async function itemAvailability(ids: string[]): Promise<Record<string, "p
   if (clean.length === 0) return out;
   const rows = await sql<{ id: string; visibility: string; source_mode: string }[]>`
     SELECT p.article_id AS id, p.visibility, s.participation_mode AS source_mode
-    FROM publications p JOIN sources s ON s.id = p.source_id WHERE p.article_id IN ${sql(clean)}`;
+    FROM publications p JOIN sources s ON s.id = p.source_id
+    WHERE p.article_id IN ${sql(clean)} AND ${currentDecisionCondition()}`;
   for (const r of rows) {
     if (!hasItemPage({ visibility: r.visibility, sourceMode: r.source_mode })) continue;
     out[r.id] = r.visibility === "summary-only" ? "summary-only" : "public";

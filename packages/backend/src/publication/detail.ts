@@ -1,4 +1,4 @@
-import { selectedCondition, listedCondition } from "./scope.ts";
+import { currentDecisionCondition, selectedCondition, listedCondition } from "./scope.ts";
 // Item detail and Markdown export, both behind the same visibility and licence rules.
 import type { ItemDetail, SiteItemDetail, OutlineEntry, StoryRef } from "@aihot/contracts/site";
 import TurndownService from "turndown";
@@ -40,7 +40,7 @@ async function loadRow(id: string): Promise<DetailRow | null> {
   const [row] = await sql<DetailRow[]>`
     SELECT ${ITEM_COLUMNS}, a.body_html, a.body_text, a.body_status, tr.body_html AS tr_html, tr.complete AS tr_complete
     ${ITEM_FROM}
-    WHERE p.article_id = ${id}`;
+    WHERE p.article_id = ${id} AND ${currentDecisionCondition()}`;
   return row ?? null;
 }
 

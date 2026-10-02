@@ -35,7 +35,7 @@ const provider = await stub(async (_hit, request) => {
   }
   const content = step === "prefilter" ? { label: original ? "BLOCK" : "PASS", reason: "local fixture" }
     : step === "score" ? { attentionScore: 80 }
-    : step === "structure" ? { category: "ai-models", tags: [], subjects: [], fact: null }
+    : step === "structure" ? { category: "ai", tags: [], subjects: [], fact: null }
     : { itemType: "model_release", authorRole: "principal", tags: ["模型发布"], editorialJudgment: "模型能力提升", titleZh: `新判断 ${T}`, summaryZh: "模型发布并提供评测和价格。" };
   return { choices: [{ message: { content: JSON.stringify(content) } }] };
 });
@@ -172,7 +172,7 @@ test("a temporary provider failure resumes the manual evaluation instead of rein
   assert.equal((await sql`SELECT processing_state FROM articles WHERE id=${id}`)[0]!.processing_state, "analyzed");
   assert.equal((await sql`SELECT selected FROM publications WHERE article_id=${id}`)[0]!.selected, true);
   assert.equal(calls.filter((s) => s === "prefilter").length, 2, "one original and one manual prefilter; recovery buys neither again");
-  assert.equal(calls.filter((s) => s === "structure").length, 1, "the paid structure response survives the score failure");
+  assert.equal(calls.filter((s) => s === "structure").length, 3, "initial classification, one BLOCK fallback, and manual classification; recovery reuses that paid response");
 });
 
 // Failure modes: an old paid call can fail after a new material revision has already finished;
