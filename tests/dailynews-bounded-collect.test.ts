@@ -1,7 +1,10 @@
 import "./setup.ts";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, rmdirSync, writeFileSync } from "node:fs";
 import http from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import { config } from "@aihot/backend/config";
 import { sql, closeDb } from "@aihot/backend/db";
@@ -81,6 +84,8 @@ test("trial rejects a source outside its manifest before any fetch or fetch-run 
   const database = new URL(process.env.DATABASE_URL!).pathname.slice(1);
   const trialId = `${prefix}-trial`;
   let receiptId: number | null = null;
+  const manifestDir = mkdtempSync(join(tmpdir(), "dailynews-bounded-"));
+  const manifestPath = join(manifestDir, "manifest.json");
   const oldPrivateFetch = config.allowPrivateNetworkFetch;
   const server = http.createServer((req, res) => {
     if (req.url === "/fail") { res.writeHead(503); res.end("unavailable"); return; }
@@ -116,8 +121,9 @@ test("trial rejects a source outside its manifest before any fetch or fetch-run 
     }
     const manifest = { id: trialId, sourceIds: ids.slice(0, 10), maxNormal: 100, maxHistorical: 20,
       collectionConcurrency: 4, modelConcurrency: 2, modelBudget: { perMinute: 20, perHour: 200, perDay: 1000 } };
-    const initialized = spawnSync(process.execPath, ["scripts/bounded-trial.ts", "init", "--manifest", "/dev/stdin"], {
-      env: process.env, input: JSON.stringify(manifest), encoding: "utf8", cwd: process.cwd(),
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    const initialized = spawnSync(process.execPath, ["scripts/bounded-trial.ts", "init", "--manifest", manifestPath], {
+      env: process.env, encoding: "utf8", cwd: process.cwd(),
     });
     assert.equal(initialized.status, 0, initialized.stderr);
     const trial = JSON.parse(initialized.stdout) as { sourceCount: number; settingsHash: string };
@@ -198,6 +204,8 @@ test("trial rejects a source outside its manifest before any fetch or fetch-run 
     assert.equal(postClose.provider.attemptsStartedAfterClose, 1);
     assert.equal(postClose.provider.mixedCosts.find((row) => row.subject_kind === "source")?.cost, 0.015);
   } finally {
+    rmSync(manifestPath, { force: true });
+    rmdirSync(manifestDir);
     for (const [key, value] of [["DAILYNEWS_TRIAL_MODE", previous.mode], ["DAILYNEWS_TRIAL_ID", previous.id],
       ["DAILYNEWS_TRIAL_SETTINGS_HASH", previous.hash], ["DAILYNEWS_TRIAL_DB_NAME", previous.db],
       ["DAILYNEWS_DEEPSEEK_PRICE_BAND", previous.band], ["DAILYNEWS_DEEPSEEK_PRICE_VALID_FROM", previous.from],
