@@ -9,6 +9,9 @@
 import { sql, type Db } from "../db.ts";
 import { sha256, stableJson } from "../lib/ids.ts";
 import { shutdownSignal } from "../lib/shutdown.ts";
+import { setTimeout as wait } from "node:timers/promises";
+import { observedTokens } from "./pricing.ts";
+import { assertTrialPaidSubject, boundedTrialEnabled } from "../dailynews/trial.ts";
 
 export class BudgetExceededError extends Error {
   readonly service: string;
@@ -44,12 +47,17 @@ export class ProviderRejectedError extends Error {
 export interface CallOutcome {
   response: unknown;
   requestId?: string | null;
+  responseModel?: string | null;
   usage?: Record<string, unknown> | null;
-  cost?: { amount: number; currency: string; basis: "actual" | "estimated" } | null;
+  cost?: { amount: number; currency: string; basis: "actual" | "estimated"; snapshot?: Record<string, unknown>; pricedAt?: Date } | null;
 }
 
 export interface ReceiptRequest {
   service: string;
+  /** Count this call in the global cross-provider LLM concurrency gate. */
+  resourceKind?: "llm";
+  /** Resolved model endpoint for the trial gate only; never persisted in receipt rows. */
+  providerBaseUrl?: string;
   model?: string | null;
   purpose: string;
   subject?: string | null;
@@ -68,6 +76,9 @@ export interface ReceiptResult {
 }
 
 const PENDING_STALE_MS = 10 * 60 * 1000;
+const MAX_ACTIVE_LLM = 2;
+const MAX_LLM_WAIT_MS = 4 * 60 * 1000;
+const TRIAL_LLM_LIMITS = { per_minute: 20, per_hour: 200, per_day: 1000 } as const;
 
 export function logicalKeyFor(req: ReceiptRequest): string {
   const identity = sha256(stableJson(req.identity));
@@ -85,7 +96,7 @@ interface ReceiptRow {
 async function checkBudget(tx: Db, service: string): Promise<void> {
   const [budget] = await tx<{ per_minute: number; per_hour: number; per_day: number }[]>`
     SELECT per_minute, per_hour, per_day FROM budgets WHERE service = ${service}`;
-  if (!budget) return; // default rows come with the migrations; a service an operator removed is unlimited
+  if (!budget) throw new BudgetExceededError(service, "missing", 3600);
   // Every request sent counts, retries of the same logical request included.
   const [counts] = await tx<{ minute: number; hour: number; day: number }[]>`
     SELECT
@@ -103,45 +114,64 @@ async function checkBudget(tx: Db, service: string): Promise<void> {
   if (c.day >= budget.per_day) throw new BudgetExceededError(service, "day", 3600);
 }
 
+/** The bounded trial has one explicit model budget across all chat providers, not a budget per alias. */
+async function checkTrialLlmBudget(tx: Db): Promise<void> {
+  if (!boundedTrialEnabled()) return;
+  const [budget] = await tx<{ per_minute: number; per_hour: number; per_day: number }[]>`
+    SELECT per_minute, per_hour, per_day FROM budgets WHERE service='llm-global'`;
+  if (!budget || Object.entries(TRIAL_LLM_LIMITS).some(([key, max]) => {
+    const limit = budget[key as keyof typeof TRIAL_LLM_LIMITS];
+    return limit <= 0 || limit > max;
+  })) throw new BudgetExceededError("llm-global", "missing-or-outside-trial-limit", 3600);
+  const [counts] = await tx<{ minute: number; hour: number; day: number }[]>`
+    SELECT count(*) FILTER (WHERE started_at > now()-interval '1 minute')::int AS minute,
+           count(*) FILTER (WHERE started_at > now()-interval '1 hour')::int AS hour,
+           count(*)::int AS day
+    FROM receipt_attempts
+    WHERE is_llm AND origin='live' AND started_at > now()-interval '1 day'`;
+  if (counts!.minute >= budget.per_minute) throw new BudgetExceededError("llm-global", "minute", 60);
+  if (counts!.hour >= budget.per_hour) throw new BudgetExceededError("llm-global", "hour", 600);
+  if (counts!.day >= budget.per_day) throw new BudgetExceededError("llm-global", "day", 3600);
+}
+
+async function checkLlmReservation(tx: Db): Promise<boolean> {
+  await checkTrialLlmBudget(tx);
+  await markStaleLlmAttempts(tx);
+  const [active] = await tx<{ n: number }[]>`
+    SELECT count(*)::int AS n FROM receipt_attempts WHERE is_llm AND origin='live' AND status='pending'`;
+  return active!.n < MAX_ACTIVE_LLM;
+}
+
+/** A crashed LLM call cannot own a slot forever; recovery still leaves its receipt unknown. */
+async function markStaleLlmAttempts(tx: Db): Promise<void> {
+  const cutoff = new Date(Date.now() - PENDING_STALE_MS);
+  const stale = await tx<{ id: number }[]>`
+    UPDATE receipts r SET status='unknown', error='placeholder went stale without a recorded result', updated_at=now()
+    WHERE r.status='pending' AND r.updated_at < ${cutoff} AND EXISTS (
+      SELECT 1 FROM receipt_attempts a WHERE a.receipt_id=r.id AND a.is_llm AND a.status='pending' AND a.started_at < ${cutoff})
+    RETURNING r.id`;
+  if (stale.length) await tx`
+    UPDATE receipt_attempts SET status='unknown', error='placeholder went stale without a recorded result', finished_at=now()
+    WHERE receipt_id IN ${tx(stale.map((r) => r.id))} AND is_llm AND status='pending'`;
+}
+
 /**
  * Runs a paid request at most once per logical key and returns its raw response.
  * The caller parses the response and commits business results, then calls completeReceipt.
  */
 export async function paidRequest(req: ReceiptRequest, call: () => Promise<CallOutcome>): Promise<ReceiptResult> {
   const logicalKey = logicalKeyFor(req);
-
-  const claimed = await sql.begin(async (tx) => {
-    // Serialise budget checks per service so concurrent workers cannot overshoot.
-    await tx`SELECT pg_advisory_xact_lock(hashtext(${"budget:" + req.service}))`;
-    const [existing] = await tx<ReceiptRow[]>`
-      SELECT id, status, response, created_at, updated_at FROM receipts WHERE logical_key = ${logicalKey} FOR UPDATE`;
-    if (existing?.status === "received" || existing?.status === "completed") return { kind: "reuse" as const, row: existing };
-    // Finish business writes from saved answers during shutdown, but never reserve or send the
-    // next paid page/batch. An answer already in flight still saves below, without this check.
+  const waitStarted = Date.now();
+  let claimed: Awaited<ReturnType<typeof claimPaidRequest>>;
+  while (true) {
+    // The trial cohort/settings can be revoked while a call waits for a shared slot.
+    await assertTrialPaidSubject(req.purpose, req.subject ?? "", sql, req);
+    claimed = await claimPaidRequest(req, logicalKey);
+    if (claimed.kind !== "capacity") break;
     shutdownSignal.signal.throwIfAborted();
-    if (existing) {
-      if (existing.status === "pending") {
-        if (Date.now() - existing.updated_at.getTime() < PENDING_STALE_MS) return { kind: "busy" as const, row: existing };
-        await markUnknown(tx, existing.id, "placeholder went stale without a recorded result");
-        return { kind: "unknown" as const, row: existing };
-      }
-      if (existing.status === "unknown") return { kind: "unknown" as const, row: existing };
-      // failed: the provider did not take the request, or its answer was unusable; a new attempt is allowed.
-      await checkBudget(tx, req.service);
-      const [r] = await tx<{ attempts: number }[]>`
-        UPDATE receipts SET status = 'pending', attempts = attempts + 1, error = NULL, updated_at = now() WHERE id = ${existing.id} RETURNING attempts`;
-      const attemptId = await startAttempt(tx, existing.id, r!.attempts, req);
-      return { kind: "call" as const, id: existing.id, attemptId };
-    }
-    await checkBudget(tx, req.service);
-    const [row] = await tx<{ id: number }[]>`
-      INSERT INTO receipts (logical_key, service, model, purpose, subject, status, request, attempts)
-      VALUES (${logicalKey}, ${req.service}, ${req.model ?? null}, ${req.purpose}, ${req.subject ?? null}, 'pending',
-              ${tx.json((req.requestSummary ?? {}) as never)}, 1)
-      RETURNING id`;
-    const attemptId = await startAttempt(tx, row!.id, 1, req);
-    return { kind: "call" as const, id: row!.id, attemptId };
-  });
+    if (Date.now() - waitStarted >= MAX_LLM_WAIT_MS) throw new BudgetExceededError("llm-global", "concurrency", 5);
+    await wait(250, undefined, { signal: shutdownSignal.signal });
+  }
 
   if (claimed.kind === "reuse") return { receiptId: claimed.row.id, response: claimed.row.response, reused: true };
   if (claimed.kind === "busy") throw new ReceiptBusyError(`Receipt ${claimed.row.id} is in flight`);
@@ -165,32 +195,92 @@ export async function paidRequest(req: ReceiptRequest, call: () => Promise<CallO
     throw error;
   }
 
+  const observed = observedTokens(outcome.usage);
   await sql.begin(async (tx) => {
     await tx`
       UPDATE receipts SET
         status = 'received',
         response = ${tx.json((outcome.response ?? null) as never)},
         request_id = ${outcome.requestId ?? null},
+        response_model = ${outcome.responseModel ?? null},
         usage = ${outcome.usage ? tx.json(outcome.usage as never) : null},
+        prompt_tokens = ${observed.promptTokens}, cache_hit_tokens = ${observed.cacheHitTokens},
+        cache_miss_tokens = ${observed.cacheMissTokens}, completion_tokens = ${observed.completionTokens},
         cost = ${outcome.cost?.amount ?? null},
         currency = ${outcome.cost?.currency ?? null},
         cost_basis = ${outcome.cost?.basis ?? null},
+        price_snapshot = ${outcome.cost?.snapshot ? tx.json(outcome.cost.snapshot as never) : null},
+        priced_at = ${outcome.cost?.pricedAt ?? null},
         received_at = now(),
         updated_at = now()
       WHERE id = ${receiptId}`;
     await tx`
       UPDATE receipt_attempts SET
-        status = 'received', request_id = ${outcome.requestId ?? null}, usage = ${outcome.usage ? tx.json(outcome.usage as never) : null},
+        status = 'received', request_id = ${outcome.requestId ?? null}, response_model = ${outcome.responseModel ?? null},
+        usage = ${outcome.usage ? tx.json(outcome.usage as never) : null},
+        prompt_tokens = ${observed.promptTokens}, cache_hit_tokens = ${observed.cacheHitTokens},
+        cache_miss_tokens = ${observed.cacheMissTokens}, completion_tokens = ${observed.completionTokens},
         cost = ${outcome.cost?.amount ?? null}, currency = ${outcome.cost?.currency ?? null}, cost_basis = ${outcome.cost?.basis ?? null},
+        price_snapshot = ${outcome.cost?.snapshot ? tx.json(outcome.cost.snapshot as never) : null},
+        priced_at = ${outcome.cost?.pricedAt ?? null},
         latency_ms = ${Date.now() - started}, finished_at = now()
       WHERE id = ${attemptId}`;
   });
   return { receiptId, response: outcome.response, reused: false };
 }
 
+async function claimPaidRequest(req: ReceiptRequest, logicalKey: string) {
+  return sql.begin(async (tx) => {
+    // All model presets, including default, take the same distributed lock before reserving a slot.
+    if (req.resourceKind === "llm") await tx`SELECT pg_advisory_xact_lock(hashtext('budget:llm-global'))`;
+    // Serialise budget checks per service so concurrent workers cannot overshoot.
+    await tx`SELECT pg_advisory_xact_lock(hashtext(${"budget:" + req.service}))`;
+    if (boundedTrialEnabled()) {
+      // A close updates this row. Hold its shared lock through attempt insertion so a
+      // close cannot commit between the trial check and the paid reservation.
+      await tx`SELECT id FROM dailynews_trials WHERE id=${process.env.DAILYNEWS_TRIAL_ID ?? ""} FOR SHARE`;
+      await assertTrialPaidSubject(req.purpose, req.subject ?? "", tx, req);
+    }
+    const [existing] = await tx<ReceiptRow[]>`
+      SELECT id, status, response, created_at, updated_at FROM receipts WHERE logical_key = ${logicalKey} FOR UPDATE`;
+    if (existing?.status === "received" || existing?.status === "completed") return { kind: "reuse" as const, row: existing };
+    // Finish business writes from saved answers during shutdown, but never reserve or send the
+    // next paid page/batch. An answer already in flight still saves below, without this check.
+    shutdownSignal.signal.throwIfAborted();
+    if (existing) {
+      if (existing.status === "pending") {
+        if (Date.now() - existing.updated_at.getTime() < PENDING_STALE_MS) return { kind: "busy" as const, row: existing };
+        await markUnknown(tx, existing.id, "placeholder went stale without a recorded result");
+        return { kind: "unknown" as const, row: existing };
+      }
+      if (existing.status === "unknown") return { kind: "unknown" as const, row: existing };
+      // failed: the provider did not take the request, or its answer was unusable; a new attempt is allowed.
+      await checkBudget(tx, req.service);
+      if (req.resourceKind === "llm") {
+        if (!await checkLlmReservation(tx)) return { kind: "capacity" as const };
+      }
+      const [r] = await tx<{ attempts: number }[]>`
+        UPDATE receipts SET status = 'pending', attempts = attempts + 1, error = NULL, updated_at = now() WHERE id = ${existing.id} RETURNING attempts`;
+      const attemptId = await startAttempt(tx, existing.id, r!.attempts, req);
+      return { kind: "call" as const, id: existing.id, attemptId };
+    }
+    await checkBudget(tx, req.service);
+    if (req.resourceKind === "llm") {
+      if (!await checkLlmReservation(tx)) return { kind: "capacity" as const };
+    }
+    const [row] = await tx<{ id: number }[]>`
+      INSERT INTO receipts (logical_key, service, model, purpose, subject, status, request, attempts)
+      VALUES (${logicalKey}, ${req.service}, ${req.model ?? null}, ${req.purpose}, ${req.subject ?? null}, 'pending',
+              ${tx.json((req.requestSummary ?? {}) as never)}, 1)
+      RETURNING id`;
+    const attemptId = await startAttempt(tx, row!.id, 1, req);
+    return { kind: "call" as const, id: row!.id, attemptId };
+  });
+}
+
 async function startAttempt(tx: Db, receiptId: number, attempt: number, req: ReceiptRequest): Promise<number> {
   const [row] = await tx<{ id: number }[]>`
-    INSERT INTO receipt_attempts (receipt_id, attempt, service, model, status) VALUES (${receiptId}, ${attempt}, ${req.service}, ${req.model ?? null}, 'pending')
+    INSERT INTO receipt_attempts (receipt_id, attempt, service, model, status, is_llm) VALUES (${receiptId}, ${attempt}, ${req.service}, ${req.model ?? null}, 'pending', ${req.resourceKind === "llm"})
     RETURNING id`;
   return row!.id;
 }

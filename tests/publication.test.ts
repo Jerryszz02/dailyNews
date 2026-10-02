@@ -71,6 +71,25 @@ async function get(url: string, headers: Record<string, string> = {}) {
   return { status: res.statusCode, body: res.body, etag: res.headers.etag as string | undefined };
 }
 
+test("public item, v1 and RSS share the Chinese source display name without renaming the source", async () => {
+  const [source] = await sql<{ name: string }[]>`SELECT name FROM sources WHERE id=${SOURCE}`;
+  await sql`UPDATE sources SET name='BBC · World' WHERE id=${SOURCE}`;
+  try {
+    const id = await article();
+    await publishArticle(id, released());
+    const detail = JSON.parse((await get(`/api/site/items/${id}`)).body);
+    assert.equal(detail.source.name, "英国广播公司 · 国际");
+    const v1 = JSON.parse((await get("/api/v1/items?mode=selected")).body);
+    assert.equal(v1.items.find((item: { id: string }) => item.id === id)?.source.name, "英国广播公司 · 国际");
+    const rss = await get("/feed/all.xml");
+    assert.equal(rss.status, 200);
+    assert.match(rss.body, /英国广播公司 · 国际/);
+    assert.equal((await sql<{ name: string }[]>`SELECT name FROM sources WHERE id=${SOURCE}`)[0]!.name, "BBC · World");
+  } finally {
+    await sql`UPDATE sources SET name=${source!.name} WHERE id=${SOURCE}`;
+  }
+});
+
 test("site reading sends one language while exports retain both, including after withdrawal", async () => {
   const id = await article();
   await sql`UPDATE articles SET language = 'en', body_html = '<h2>Original heading</h2><p>Original full body</p>' WHERE id = ${id}`;

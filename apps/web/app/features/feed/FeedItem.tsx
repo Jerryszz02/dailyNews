@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import { IntentLink } from "../../components/ui/IntentLink";
 import type { GroupInfo, FeedItemSummary, TimelineFilters } from "@aihot/contracts/site";
 import { CATEGORY_LABELS } from "@aihot/contracts/taxonomy";
-import { SelectedBadge } from "../../components/ui/Badge";
+import { HistoryBadge, SelectedBadge } from "../../components/ui/Badge";
 import { FactJudgment, ScoreLabel } from "../../components/ui/Score";
 import { MediaThumbs, SourceLine, StarButton } from "./parts";
 import { GroupDevelopments, GroupSources, LatestDevelopment } from "./ReadingGroup";
@@ -37,6 +37,7 @@ export const FeedItem = memo(function FeedItem({ item, group, filters, read = fa
             <SelectedBadge />
           </span>
         )}
+        {item.backfill && <HistoryBadge />}
         <span className="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
           <span className="hidden lg:inline-flex">
             <ScoreLabel score={item.score} scoreKind={item.scoreKind} />

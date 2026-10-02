@@ -2,6 +2,7 @@
 // ten minutes per process (the page itself is cached for five); an older copy is served while the
 // counts are read again, so no reader waits for the full-table counts.
 import type { SiteStats } from "@aihot/contracts/site";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import { sql } from "../db.ts";
 import { cached } from "../lib/cache.ts";
 import { selectedCondition } from "../publication/scope.ts";
@@ -42,8 +43,8 @@ async function querySiteStats(now: Date): Promise<SiteStats> {
     ...totals,
     sourceKinds: Object.fromEntries(kinds.map((k) => [k.kind, k.n])),
     day: { collected, selected: selectedDay },
-    sampleSources: sample.map((s) => ({ name: s.name, kind: s.kind, heatOnly: s.heat_only })),
-    latest,
+    sampleSources: sample.map((s) => ({ name: displaySourceName(s.name), kind: s.kind, heatOnly: s.heat_only })),
+    latest: latest.map((item) => ({ ...item, source: displaySourceName(item.source) })),
   };
   return value;
 }

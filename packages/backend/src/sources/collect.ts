@@ -5,6 +5,7 @@ import { identityKeyFor, upsertMaterial } from "../content/materials.ts";
 import { identityKeyForUrl } from "../lib/url.ts";
 import { enqueue, QUEUES, shutdownSignal } from "../jobs/queue.ts";
 import { queueProcessing } from "../jobs/content.ts";
+import { admitArticle, assertTrialRuntime, beginTrialSource } from "../dailynews/trial.ts";
 import { BudgetExceededError, completeReceipt } from "../providers/receipts.ts";
 import { fetchRss } from "./rss.ts";
 import { allowed, fetchDetail, fetchWebList, type DetailNeed } from "./web-list.ts";
@@ -23,6 +24,7 @@ export interface CollectResult {
   created: number;
   revised: number;
   error?: string;
+  trial?: { id: string; admittedNormal: number; admittedBackfill: number; notAdmitted: number; unchanged: number };
 }
 
 
@@ -60,24 +62,59 @@ async function storedTitles(identities: string[]): Promise<Map<string, string>> 
 }
 
 const DAY_MS = 86_400_000;
+export const BOUNDED_TRIAL_CANDIDATES_PER_SOURCE = 100;
+
+/** Old items missed by a first-import slice are never recast as normal new material. */
+export function boundedIncrementalCandidates(candidates: Candidate[], baseline: Date, dateFromDetail: boolean): Candidate[] {
+  return candidates.filter((c) => dateFromDetail || !c.publishedAt || c.publishedAt > baseline)
+    .slice(0, BOUNDED_TRIAL_CANDIDATES_PER_SOURCE);
+}
+
 /** A listing title that is no headline: a label that swallowed its summary, or a call to action. */
 const needsTitle = (title: string) => title.length > 100 || /^(read more|learn more|continue reading|more|阅读全文|阅读更多|查看详情|了解更多)$/i.test(title.trim());
 
-async function store(sourceId: string, candidates: Candidate[], backfill: string | null): Promise<{ created: number; revised: number }> {
+async function store(sourceId: string, candidates: Candidate[], backfill: string | null, trialId: string | null): Promise<{
+  created: number; revised: number; admittedNormal: number; admittedBackfill: number; notAdmitted: number; unchanged: number;
+}> {
   let created = 0;
   let revised = 0;
+  let admittedNormal = 0;
+  let admittedBackfill = 0;
+  let notAdmitted = 0;
+  let unchanged = 0;
   for (const c of candidates) {
     const material = { ...c, sourceId, via: "fetch" as const, backfill };
     const res = await upsertMaterial(material);
     if (res.created) created += 1;
     if (res.revised) revised += 1;
+    if (!res.created && !res.revised) { unchanged += 1; continue; }
+    if (trialId) {
+      // The immutable trial ledger, rather than the number of fetched rows, controls paid work.
+      // A first import remains backfill even when the source timestamp is recent.
+      const lane = res.backfill ? "backfill" : "normal";
+      const admission = await admitArticle(res.articleId, { lane }, sql);
+      if (!admission.admitted) { notAdmitted += 1; continue; }
+      if (admission.reason === "admitted") {
+        if (lane === "normal") admittedNormal += 1;
+        else admittedBackfill += 1;
+      }
+    }
     // Extraction first when the source wants full text and none came with the listing, else analysis.
-    if (res.created || res.revised) await queueProcessing(res.articleId);
+    await queueProcessing(res.articleId);
   }
-  return { created, revised };
+  return { created, revised, admittedNormal, admittedBackfill, notAdmitted, unchanged };
 }
 
-export async function collectSource(sourceId: string, opts: { force?: boolean } = {}): Promise<CollectResult> {
+export async function collectSource(sourceId: string, opts: { force?: boolean; trialId?: string } = {}): Promise<CollectResult> {
+  // Query the persisted boundary even when env was omitted: an existing trial DB may never
+  // become an unrestricted collector by starting this entrypoint without its runtime flags.
+  const trial = await assertTrialRuntime(sql);
+  const bounded = trial !== null;
+  const trialId = opts.trialId ?? trial?.id ?? null;
+  if (bounded && !trialId || trialId && (!bounded || trialId !== process.env.DAILYNEWS_TRIAL_ID))
+    throw new Error("bounded trial ID and runtime mode must agree");
+  if (trial && trial.status !== "open")
+    return { sourceId, status: "skipped", found: 0, created: 0, revised: 0, error: "trial frozen" };
   const source = await loadSource(sourceId);
   if (!source) return { sourceId, status: "skipped", found: 0, created: 0, revised: 0, error: "missing" };
   if (!source.enabled && !opts.force) return { sourceId, status: "skipped", found: 0, created: 0, revised: 0, error: "paused" };
@@ -90,11 +127,17 @@ export async function collectSource(sourceId: string, opts: { force?: boolean } 
     return { sourceId, status: "skipped", found: 0, created: 0, revised: 0 };
   }
 
+  // This is the first *actual* source attempt, not manifest creation or preflight. The trial API
+  // atomically freezes this timestamp (or the source's existing initializedAt) before network I/O.
+  const trialBaseline = trialId ? await beginTrialSource(sourceId, sql) : null;
+  if (trialId && !trialBaseline) throw new Error("bounded trial source has no baseline");
+
   const [run] = await sql<{ id: number }[]>`INSERT INTO fetch_runs (source_id) VALUES (${sourceId}) RETURNING id`;
   const firstImport = !source.cursor?.initializedAt;
   let created = 0;
   let revised = 0;
   let found = 0;
+  let trialCounts = { admittedNormal: 0, admittedBackfill: 0, notAdmitted: 0, unchanged: 0 };
   try {
     // A config entry this kind does not implement fails the run, visibly, instead of being ignored.
     const unsupported = unsupportedConfig(source.kind, source.config);
@@ -165,6 +208,11 @@ export async function collectSource(sourceId: string, opts: { force?: boolean } 
     if (firstImport) {
       const cutoff = Date.now() - backfillMonths * 30 * 86400000;
       candidates = candidates.filter((c) => !c.publishedAt || !Number.isFinite(c.publishedAt.getTime()) || c.publishedAt.getTime() >= cutoff).slice(0, backfillLimit);
+    } else if (trialBaseline) {
+      // A source's initial import is history regardless of timestamp. Later listings can be huge
+      // (OpenAI's feed has >1,000 entries); old published material is never a trial "new" item.
+      // When the feed's date is not authoritative, the detail rule checks the article page below.
+      candidates = boundedIncrementalCandidates(candidates, trialBaseline, source.config.detail?.publishedAtAuthoritative === true);
     }
     // Process all candidates already returned before advancing the success cursor.
 
@@ -210,7 +258,7 @@ export async function collectSource(sourceId: string, opts: { force?: boolean } 
       }
     }
 
-    ({ created, revised } = await store(sourceId, candidates, firstImport ? "first-import" : null));
+    ({ created, revised, ...trialCounts } = await store(sourceId, candidates, firstImport ? "first-import" : null, trialId ?? null));
 
     // A Jina listing round that was pending when this run started has been received by now.
     delete nextCursor.jinaListingRound;
@@ -222,11 +270,13 @@ export async function collectSource(sourceId: string, opts: { force?: boolean } 
           health = 'ok', cursor = ${tx.json(nextCursor as never)}, updated_at = now(),
           next_fetch_at = now() + make_interval(mins => interval_minutes)
         WHERE id = ${sourceId}`;
+      const runDetail = trialId ? { ...(detail ?? {}), boundedTrial: { id: trialId, revised, ...trialCounts } } : detail;
       await tx`UPDATE fetch_runs SET status = 'ok', finished_at = now(), found_count = ${found}, new_count = ${created},
-                  detail = ${detail ? tx.json(detail as never) : null} WHERE id = ${run!.id}`;
+                  detail = ${runDetail ? tx.json(runDetail as never) : null} WHERE id = ${run!.id}`;
       for (const receiptId of paidReceiptIds) await completeReceipt(tx, receiptId);
     });
-    return { sourceId, status: "ok", found, created, revised };
+    return { sourceId, status: "ok", found, created, revised,
+      ...(trialId ? { trial: { id: trialId, ...trialCounts } } : {}) };
   } catch (error) {
     if (shutdownSignal.signal.aborted) throw error;
     const message = String(error instanceof Error ? error.message : error).slice(0, 1000);
@@ -239,8 +289,10 @@ export async function collectSource(sourceId: string, opts: { force?: boolean } 
         next_fetch_at = now() + make_interval(mins => CASE WHEN ${budget} THEN 15 ELSE LEAST(interval_minutes * (fail_count + 2), 360) END),
         updated_at = now()
       WHERE id = ${sourceId}`;
-    await sql`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${found}, new_count = ${created}, error = ${message} WHERE id = ${run!.id}`;
-    return { sourceId, status: "failed", found, created, revised, error: message };
+    await sql`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${found}, new_count = ${created}, error = ${message},
+      detail = ${trialId ? sql.json({ boundedTrial: { id: trialId, revised, ...trialCounts } } as never) : null} WHERE id = ${run!.id}`;
+    return { sourceId, status: "failed", found, created, revised, error: message,
+      ...(trialId ? { trial: { id: trialId, ...trialCounts } } : {}) };
   }
 }
 
@@ -273,6 +325,7 @@ const shardMinutes = (mode: string) => X_SHARD_MINUTES[mode] ?? 60;
  * kept in each account's cursor, so they survive a change of shards.
  */
 export async function collectXShard(key: string, sourceIds: string[]): Promise<{ key: string; status: "ok" | "failed" | "skipped"; accounts: number; found: number; created: number; error?: string }> {
+  if (await assertTrialRuntime(sql)) throw new Error("X shard collection is outside the bounded trial entrypoint");
   const members = (
     await sql<SourceRow[]>`
       SELECT id, name, kind, config, tier, participation_mode, first_party, interval_minutes, enabled, cursor, fail_count
@@ -301,7 +354,7 @@ export async function collectXShard(key: string, sourceIds: string[]): Promise<{
     for (const m of members) {
       const handle = shardHandle(m)!.toLowerCase();
       const mine = read.tweets.filter((t) => t.user.screen_name.toLowerCase() === handle);
-      const stored = await store(m.id, mine.map(tweetToCandidate).map((c) => rewriteUrl(c, m)).filter((c) => !noiseFiltered(c, m)), null);
+      const stored = await store(m.id, mine.map(tweetToCandidate).map((c) => rewriteUrl(c, m)).filter((c) => !noiseFiltered(c, m)), null, null);
       found += mine.length;
       created += stored.created;
       counts.set(m.id, { found: mine.length, created: stored.created });

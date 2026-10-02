@@ -6,13 +6,14 @@ import { SITE } from "@aihot/industry/site";
 import { CATEGORIES } from "@aihot/industry/taxonomy";
 import { promptText, promptVersion } from "../editorial/prompts.ts";
 import { modelFor } from "../editorial/models.ts";
-import { addDays, beijingDate, beijingMidnight, isoWeekLabel, isoWeekRange } from "@aihot/contracts/time";
+import { addDays, beijingDate, beijingMidnight, isValidDate, isoWeekLabel, isoWeekRange, monthRange } from "@aihot/contracts/time";
 import { sql } from "../db.ts";
 import { Conflict } from "../audit.ts";
 import { chatJson, ModelOutputError } from "../providers/llm.ts";
 import { completeReceipt, rejectReceivedResponse } from "../providers/receipts.ts";
 import { shutdownSignal } from "../jobs/queue.ts";
 import { currentDecisionCondition } from "../publication/scope.ts";
+import { boundedTrialEnabled } from "../dailynews/trial.ts";
 
 export const REPORT_VERSION = promptVersion("report-daily-lead", "report-period");
 
@@ -221,9 +222,10 @@ async function saveReport(kind: ReportKind, key: string, start: Date, end: Date,
 
 /** Daily report for Beijing date D covers [D-1 08:00, D 08:00) Beijing time. */
 export async function composeDaily(date: string, reason = "scheduled"): Promise<{ key: string; entries: number }> {
+  assertTrialReportDue("daily", date);
+  const end = new Date(beijingMidnight(date).getTime() + 8 * 3600 * 1000);
   const previous = await savedReport("daily", date);
   if (previous && automatic(reason)) return { key: date, entries: previous.entries };
-  const end = new Date(beijingMidnight(date).getTime() + 8 * 3600 * 1000);
   const start = new Date(end.getTime() - 86400000);
   const covered = await recentlyCovered("daily", date);
   const all = await dailyCandidates(start, end);
@@ -331,12 +333,14 @@ async function composePeriod(kind: "weekly" | "monthly", key: string, startDate:
 }
 
 export async function composeWeekly(label: string, reason = "scheduled") {
+  assertTrialReportDue("weekly", label);
   const range = isoWeekRange(label);
   if (!range) throw new Error(`bad week label ${label}`);
   return composePeriod("weekly", label, range.start, range.end, reason);
 }
 
 export async function composeMonthly(label: string, reason = "scheduled") {
+  assertTrialReportDue("monthly", label);
   const m = /^(\d{4})-(\d{2})$/.exec(label);
   if (!m) throw new Error(`bad month label ${label}`);
   const start = `${label}-01`;
@@ -371,6 +375,22 @@ export function dueMonthly(now = new Date()): string {
   const back = due ? 1 : 2;
   const month = (y * 12 + (m - 1) - back);
   return `${Math.floor(month / 12)}-${String((month % 12) + 1).padStart(2, "0")}`;
+}
+
+/** Shared CLI/composer boundary: a trial issue cannot publish an unfinished window. */
+export function assertTrialReportDue(kind: ReportKind, key: string): void {
+  if (!boundedTrialEnabled()) return;
+  if (kind === "daily") {
+    if (!isValidDate(key)) throw new Error(`daily ${key}: invalid report date`);
+    const end = new Date(beijingMidnight(key).getTime() + 8 * 3600 * 1000);
+    if (Date.now() < end.getTime()) {
+      throw new Error(`daily ${key}: report window has not ended`);
+    }
+  } else if (!(kind === "weekly" ? isoWeekRange(key) : monthRange(key))) {
+    throw new Error(`${kind} ${key}: invalid report period`);
+  } else if (key > (kind === "weekly" ? dueWeekly() : dueMonthly())) {
+    throw new Error(`${kind} ${key}: report window is not due`);
+  }
 }
 
 const nextWeek = (label: string) => isoWeekLabel(addDays(isoWeekRange(label)!.start, 7));

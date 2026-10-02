@@ -1,0 +1,28 @@
+{
+  "id": "p5-2026-10-03",
+  "sourceIds": [
+    "dn-apple-newsroom-678029df2ef0",
+    "dn-bbc-25b2d27a78f1",
+    "dn-chinanews-9536d2d7c183",
+    "dn-chinanews-e34894180204",
+    "dn-cnbc-e49c9082deca",
+    "dn-cnn-2c835545d85b",
+    "dn-deadline-804da737cff2",
+    "dn-fed-b3a7beab67c0",
+    "dn-ithome-1019f540ec62",
+    "dn-nba-533ef335b03c",
+    "dn-openai-d7c663cc6e40",
+    "dn-qbitai-31dd73b95c93",
+    "dn-wired-c465b48c1ddf",
+    "dn-xinhua-f77f0b3178db"
+  ],
+  "maxNormal": 100,
+  "maxHistorical": 20,
+  "collectionConcurrency": 4,
+  "modelConcurrency": 2,
+  "modelBudget": {
+    "perMinute": 20,
+    "perHour": 200,
+    "perDay": 1000
+  }
+}

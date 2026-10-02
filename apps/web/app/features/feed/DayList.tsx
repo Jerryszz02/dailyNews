@@ -27,7 +27,7 @@ export function DayList({ items, todayCount = null, showTags = true, animate = f
     <div>
       {days.map(({ day, items: list }) => (
         <section key={day} aria-label={day}>
-          <DayHeader day={day} today={today} count={day === today ? todayCount : null} />
+          <DayHeader day={day} today={today} count={day === today ? todayCount : null} countKind="new" />
           <ol className="lg:pt-1">
             {list.map((it) => (
               <TimelineSlot key={it.id} at={it.timelineAt} fresh={animate} delay={animate ? Math.min(order++, 12) * 25 : 0}>

@@ -16,7 +16,8 @@ import { stopBoss } from "@aihot/backend/jobs/queue";
 
 const usage = { prompt_tokens: 80, completion_tokens: 20, total_tokens: 100 };
 let answer: (hit: number) => string = () => '{"ok":true}';
-const provider = await stub((hit) => ({ id: `stub-${hit}`, choices: [{ message: { content: answer(hit) } }], usage }));
+const provider = await stub((hit) => ({ id: `stub-${hit}`, model: "deepseek-v4.1-flash",
+  choices: [{ message: { content: answer(hit) } }], usage }));
 process.env.DEEPSEEK_BASE_URL = `${provider.url}/v1`;
 process.env.DEEPSEEK_API_KEY = "test-key";
 
@@ -26,6 +27,8 @@ const ask = (subject: string) =>
 let savedBudget: { per_minute: number; per_hour: number; per_day: number } | undefined;
 before(async () => {
   [savedBudget] = await sql<{ per_minute: number; per_hour: number; per_day: number }[]>`SELECT per_minute, per_hour, per_day FROM budgets WHERE service = 'deepseek'`;
+  await sql`INSERT INTO budgets (service, per_minute, per_hour, per_day, note)
+    VALUES ('invariant-recovery', 100, 100, 100, 'offline receipt recovery test') ON CONFLICT (service) DO NOTHING`;
 });
 after(async () => {
   if (savedBudget) await sql`UPDATE budgets SET per_minute = ${savedBudget.per_minute}, per_hour = ${savedBudget.per_hour}, per_day = ${savedBudget.per_day} WHERE service = 'deepseek'`;
@@ -50,6 +53,9 @@ test("an answer already received is reused instead of bought again", async () =>
   assert.equal(first.reused, false);
   assert.equal(second.reused, true);
   assert.equal(second.receiptId, first.receiptId);
+  const [saved] = await sql<{ model: string; response_model: string; prompt_tokens: number; completion_tokens: number }[]>`
+    SELECT model,response_model,prompt_tokens,completion_tokens FROM receipts WHERE id=${first.receiptId}`;
+  assert.deepEqual(saved, { model: "deepseek-flash", response_model: "deepseek-v4.1-flash", prompt_tokens: 80, completion_tokens: 20 });
 });
 
 test("retries of unusable answers stop at the budget, and every request sent is counted", async () => {
@@ -105,8 +111,7 @@ test("with the valve off nothing is sent", async () => {
 });
 
 test("an unknown outcome is released automatically once, so a lost answer costs at most one repeat", async () => {
-  // A service without a budget row: the budget tests above may have used up deepseek's.
-  const req = { service: "invariant-unbudgeted", purpose: "invariant_test", subject: `lost-${tag()}`, identity: { lost: tag() } };
+  const req = { service: "invariant-recovery", purpose: "invariant_test", subject: `lost-${tag()}`, identity: { lost: tag() } };
   let sent = 0;
   const lost = () => {
     sent += 1;
@@ -140,7 +145,7 @@ async function stoppedArticle(purpose: string, needsBody = false) {
   const { articleId } = await upsertMaterial({ sourceId, url: `https://example.com/recovery-${key}`, title: "Recovery", via: "fetch",
     bodyStatus: needsBody ? "pending" : "ok", bodyText: needsBody ? undefined : "body" });
   const subject = needsBody ? `article:${articleId}` : `article:${articleId}@1`;
-  await assert.rejects(paidRequest({ service: "invariant-unbudgeted", purpose, subject, identity: { key } },
+  await assert.rejects(paidRequest({ service: "invariant-recovery", purpose, subject, identity: { key } },
     () => Promise.reject(new Error("socket hang up after sending"))));
   await sql`UPDATE articles SET processing_state = 'failed', processing_attempts = 3,
     processing_retry_at = now() + interval '1 hour', processing_error = 'receipt outcome unknown' WHERE id = ${articleId}`;

@@ -1,6 +1,7 @@
 // Reports through the public read layer: website DTOs and the v1 shapes. Only real reports are
 // listed; a missing date is a 404, never another day. Withdrawn citations are marked, not shown.
 import type { ReportCitation, ReportDetail, ReportIndexEntry, ReportNavigationEntry, ReportKind } from "@aihot/contracts/site";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import { sql } from "../db.ts";
 import { listedCondition } from "./scope.ts";
 import { cached, type Cached } from "../lib/cache.ts";
@@ -127,7 +128,7 @@ function citationFrom(raw: Record<string, any>, avail: Map<string, Availability>
     itemId: id,
     title: String(raw.title ?? ""),
     summary: raw.summary ?? null,
-    sourceName: String(raw.sourceName ?? raw.source?.name ?? ""),
+    sourceName: displaySourceName(String(raw.sourceName ?? raw.source?.name ?? "")),
     sourceUrl: String(raw.sourceUrl ?? raw.links?.original ?? ""),
     sourceId: raw.sourceId ?? a?.sourceId ?? null,
     sourceIconUrl: a?.sourceIcon ? proxiedImage(a.sourceIcon, "avatar") : null,
@@ -364,7 +365,7 @@ export async function v1Period(kind: "weekly" | "monthly", key: string | "latest
         items: (theme.storyRefs ?? []).filter(ok).map((item: any) => ({
           title: String(item.title ?? ""),
           summary: String(item.summary ?? ""),
-          source: { name: String(item.sourceName ?? "") },
+          source: { name: displaySourceName(String(item.sourceName ?? "")) },
           publishedAt: item.publishedAt ? String(item.publishedAt) : null,
           links: links(item),
           attribution: attribution(item.itemId ? itemUrl(item.itemId) : url),
@@ -400,14 +401,14 @@ export async function v1Daily(date: string | "latest") {
         items: (s.items ?? []).filter(ok).map((i: any) => ({
           title: String(i.title),
           summary: String(i.summary ?? ""),
-          source: { name: String(i.sourceName ?? "") },
+          source: { name: displaySourceName(String(i.sourceName ?? "")) },
           links: links(i),
           attribution: attribution(i.itemId ? itemUrl(i.itemId) : url),
         })),
       })),
       flashes: (c.flashes ?? []).filter(ok).map((i: any) => ({
         title: String(i.title),
-        source: { name: String(i.sourceName ?? "") },
+        source: { name: displaySourceName(String(i.sourceName ?? "")) },
         links: links(i),
         publishedAt: new Date(i.publishedAt ?? r.generated_at).toISOString(),
         attribution: attribution(i.itemId ? itemUrl(i.itemId) : url),

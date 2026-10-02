@@ -35,8 +35,7 @@ export function parseFirecrawlSearch(value: unknown, source: SourceRow): Candida
 
 export async function fetchFirecrawlFallback(source: SourceRow): Promise<{ candidates: Candidate[]; receiptId: number }> {
   if (!firecrawlFallbackEnabled(source)) throw new FetchError("Firecrawl fallback disabled");
-  // The shared receipt layer treats a missing budget row as unlimited. This new service must
-  // fail closed when an operator removes its row rather than accidentally gaining that default.
+  // The shared receipt layer fails closed without a budget; check here as well for a source-specific error.
   const [budget] = await sql<{ per_minute: number; per_hour: number; per_day: number }[]>`
     SELECT per_minute, per_hour, per_day FROM budgets WHERE service = 'firecrawl'`;
   if (!budget) throw new FetchError("Firecrawl budget row missing");

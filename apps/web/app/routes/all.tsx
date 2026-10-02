@@ -124,7 +124,7 @@ export default function AllPage() {
           <h1 className="text-[22px] font-bold text-ink">{title ?? "全部动态"}</h1>
           {!f.q && !personal && (
             <span className="text-[12.5px] text-ink-4">
-              今日 <span className="num">{data.todayCount}</span> 条
+              今日新增 <span className="num">{data.todayCount}</span> 条
             </span>
           )}
         </div>

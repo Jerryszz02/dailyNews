@@ -6,6 +6,7 @@ import { config, credential } from "../config.ts";
 import { sql } from "../db.ts";
 import { sha256 } from "../lib/ids.ts";
 import { completeReceipt, paidRequest, ProviderRejectedError } from "./receipts.ts";
+import { boundedTrialEnabled, TrialBoundaryError, trialEmbeddingItemAllowed } from "../dailynews/trial.ts";
 
 const own = !!credential("models", "EMBEDDING_API_KEY");
 export const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || (own ? "text-embedding-3-small" : "text-embedding-v4");
@@ -75,6 +76,11 @@ async function embedBatch(texts: string[], subject: string): Promise<{ vectors: 
 export async function ensureEmbeddings(kind: "fact" | "article" | "story", items: Array<{ id: string; text: string }>): Promise<Map<string, number[]>> {
   const out = new Map<string, number[]>();
   if (items.length === 0) return out;
+  if (boundedTrialEnabled()) {
+    for (const item of items) if (!await trialEmbeddingItemAllowed(kind, item.id)) {
+      throw new TrialBoundaryError(`embedding ${kind}:${item.id} is outside cohort`);
+    }
+  }
   const hashes = new Map(items.map((item) => [item.id, sha256(item.text)]));
   const now = Date.now();
   const uncached = items.filter((item) => {
@@ -104,6 +110,11 @@ export async function ensureEmbeddings(kind: "fact" | "article" | "story", items
   });
   for (let i = 0; i < missing.length; i += 10) {
     const batch = missing.slice(i, i + 10);
+    if (boundedTrialEnabled()) {
+      for (const item of batch) if (!await trialEmbeddingItemAllowed(kind, item.id)) {
+        throw new TrialBoundaryError(`embedding ${kind}:${item.id} is outside cohort`);
+      }
+    }
     const { vectors, receiptId } = await embedBatch(batch.map((b) => b.text.slice(0, 2000)), `${kind}:${batch[0]!.id}`);
     await sql.begin(async (tx) => {
       for (let j = 0; j < batch.length; j++) {

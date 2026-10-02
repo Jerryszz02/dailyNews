@@ -6,6 +6,7 @@ import { config, credential } from "../config.ts";
 import { sha256 } from "../lib/ids.ts";
 import { completeReceipt, paidRequest, ProviderRejectedError, rejectReceivedResponse } from "./receipts.ts";
 import { sql } from "../db.ts";
+import { estimateDeepSeekFlash } from "./pricing.ts";
 
 export interface ModelSpec {
   key: string;
@@ -164,8 +165,15 @@ export async function chatJson<S extends z.ZodType>(opts: ChatJsonOptions<S>): P
   const baseUrl = credential("models", spec.baseUrlEnv);
   const apiKey = credential("models", spec.apiKeyEnv);
   if (!baseUrl || !apiKey || !spec.model) throw new Error(`Model ${opts.model} is not configured (${spec.baseUrlEnv}, ${spec.apiKeyEnv}${spec.key === "default" ? ", LLM_MODEL" : ""})`);
+  // Price estimates only apply to the official API; compatible gateways may bill differently.
+  let officialDeepSeek = false;
+  try { officialDeepSeek = new URL(baseUrl).hostname === "api.deepseek.com"; } catch { /* fetch reports a bad endpoint */ }
 
   const temperature = opts.temperature ?? 0.2;
+  const timeoutMs = opts.timeoutMs ?? 120_000;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 300_000) {
+    throw new Error("LLM timeout must be between 1 and 300000 ms so a live request cannot outlast its receipt slot");
+  }
   const maxTokens = Math.max(opts.maxTokens ?? 1500, 512) + (spec.key.endsWith("-think") ? 4000 : 0);
   const userText = typeof opts.user === "string" ? opts.user : JSON.stringify(opts.user);
   const body: Record<string, unknown> = {
@@ -185,6 +193,8 @@ export async function chatJson<S extends z.ZodType>(opts: ChatJsonOptions<S>): P
   const receipt = await paidRequest(
     {
       service: spec.service,
+      resourceKind: "llm",
+      providerBaseUrl: baseUrl,
       model: spec.model,
       purpose: opts.purpose,
       subject: opts.subject,
@@ -200,7 +210,7 @@ export async function chatJson<S extends z.ZodType>(opts: ChatJsonOptions<S>): P
           method: "POST",
           headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
           body: JSON.stringify(body),
-          signal: AbortSignal.timeout(opts.timeoutMs ?? 120_000),
+          signal: AbortSignal.timeout(timeoutMs),
         });
       } catch (error) {
         if (isConnectFailure(error)) throw new ProviderRejectedError(`connect failed: ${String(error)}`, null, true);
@@ -219,11 +229,18 @@ export async function chatJson<S extends z.ZodType>(opts: ChatJsonOptions<S>): P
         json = { unparsable: text.slice(0, 20000) };
       }
       const usage = (json.usage as Record<string, unknown> | undefined) ?? null;
+      const responseModel = typeof json.model === "string" ? json.model : null;
+      const pricedAt = new Date();
+      const price = officialDeepSeek
+        ? estimateDeepSeekFlash(spec.model, responseModel, usage, pricedAt)
+        : null;
       return {
         response: { ...json, _latencyMs: Date.now() - started },
         requestId: (json.id as string | undefined) ?? res.headers.get("x-request-id"),
+        responseModel,
         usage,
-        cost: null,
+        cost: price ? { amount: price.amount, currency: price.currency, basis: price.basis,
+          snapshot: price.snapshot, pricedAt: price.pricedAt } : null,
       };
     },
   );

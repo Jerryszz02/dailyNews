@@ -4,6 +4,7 @@
 import { PgBoss, type SendOptions, type WorkOptions } from "pg-boss";
 import { config } from "../config.ts";
 import { sql, type Db } from "../db.ts";
+import { trialQueueAllowed } from "../dailynews/trial.ts";
 import { shutdownSignal } from "../lib/shutdown.ts";
 export { shutdownSignal } from "../lib/shutdown.ts";
 
@@ -99,6 +100,7 @@ function queueDb(tx: Db) {
 
 /** Enqueues a job. With `tx`, the job commits atomically with the caller's business write. */
 export async function enqueue<Q extends QueueName>(name: Q, data: JobData[Q], options: SendOptions = {}, tx?: Db): Promise<string | null> {
+  if (!await trialQueueAllowed(name, data, tx ?? sql)) return null;
   await ensureQueue(name);
   const b = await getBoss();
   return b.send(name, data, tx ? { ...options, db: queueDb(tx) } : options);

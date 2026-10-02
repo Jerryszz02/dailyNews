@@ -1,6 +1,7 @@
 import { listedCondition, selectedCondition } from "./scope.ts";
 // v1 items and the selected sync (snapshot + changes), read from the same public read layer.
 import type { PublicApiCategoryKey } from "@aihot/contracts/taxonomy";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import { sql, type Db } from "../db.ts";
 import { decodeCursor, encodeCursor, InvalidCursorError, queryBinding } from "../lib/cursor.ts";
 import { newShortId } from "../lib/ids.ts";
@@ -120,6 +121,7 @@ function minimalOf(item: V1ItemPayload) {
 function withLedgerDecisionFields(item: V1ItemPayload): V1ItemPayload {
   return {
     ...item,
+    source: { ...item.source, name: displaySourceName(item.source.name) },
     scoreKind: item.scoreKind ?? null,
     importanceTier: item.importanceTier ?? null,
     factStatus: item.factStatus ?? null,

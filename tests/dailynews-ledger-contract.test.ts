@@ -14,7 +14,7 @@ after(async () => { await stopBoss(); await closeDb(); });
 
 test("pre-P4 selected ledger payloads receive explicit null metadata without changing the current item projection", async () => {
   await sql`INSERT INTO sources(id,name,kind,tier,participation_mode,next_fetch_at)
-    VALUES(${source},'旧账本契约测试','rss','T1','editorial','2100-01-01')`;
+    VALUES(${source},'BBC · World','rss','T1','editorial','2100-01-01')`;
   // Other invariant files may leave selected entries waiting behind a release gate. Read after
   // the latest existing gate instead of editing their ledger rows or depending on test order.
   const [gate] = await sql<{ latest: Date | null }[]>`SELECT max(visible_at) AS latest FROM selected_ledger`;
@@ -33,7 +33,9 @@ test("pre-P4 selected ledger payloads receive explicit null metadata without cha
   const [entry] = await sql<{ seq: number }[]>`
     SELECT max(seq)::int AS seq FROM selected_ledger WHERE article_id=${articleId} AND op='upsert'`;
   assert.ok(entry?.seq);
-  await sql`UPDATE selected_ledger SET payload=payload - ARRAY['scoreKind','importanceTier','factStatus']::text[] WHERE seq=${entry!.seq}`;
+  await sql`UPDATE selected_ledger SET payload=jsonb_set(
+    payload - ARRAY['scoreKind','importanceTier','factStatus']::text[], '{source,name}', to_jsonb('BBC · World'::text))
+    WHERE seq=${entry!.seq}`;
   const [stored] = await sql<{ has_kind: boolean; has_tier: boolean; has_status: boolean }[]>`
     SELECT payload ? 'scoreKind' AS has_kind, payload ? 'importanceTier' AS has_tier,
       payload ? 'factStatus' AS has_status FROM selected_ledger WHERE seq=${entry!.seq}`;
@@ -48,8 +50,10 @@ test("pre-P4 selected ledger payloads receive explicit null metadata without cha
     assert.deepEqual({ scoreKind: item.scoreKind, importanceTier: item.importanceTier, factStatus: item.factStatus },
       { scoreKind: null, importanceTier: null, factStatus: null });
     assert.equal(item.score, 72, "the historical score remains unchanged and does not imply its policy");
+    assert.equal(item.source.name, "英国广播公司 · 国际", "historical ledger source names are localized on read");
   }
   const current = await v1Items({ mode: "selected", window: "7d", by: "published", category: "ai", q: null, limit: 100, cursor: null });
+  assert.equal(current.items.find((item) => item.id === articleId)?.source.name, "英国广播公司 · 国际");
   assert.equal(current.items.find((item) => item.id === articleId)?.scoreKind, "ai_attention",
     "items reads the current publication projection independently of historical ledger JSON");
 });

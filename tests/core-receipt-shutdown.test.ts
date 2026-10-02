@@ -12,6 +12,8 @@ after(closeDb);
 
 test("shutdown drains and reuses paid results while refusing new pages and retries before budget reservation", async () => {
   const service = `shutdown-${tag()}`;
+  await sql`INSERT INTO budgets (service, per_minute, per_hour, per_day, note)
+    VALUES (${service}, 20, 20, 20, 'offline shutdown test')`;
   const request = (page: number) => ({ service, purpose: "source_fetch", identity: { page } });
   let calls = 0;
   await assert.rejects(paidRequest(request(0), async () => {

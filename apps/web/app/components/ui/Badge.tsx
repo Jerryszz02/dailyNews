@@ -29,3 +29,8 @@ export function SelectedBadge() {
     </Badge>
   );
 }
+
+/** A source's first import remains visibly historical even if editors selected it. */
+export function HistoryBadge() {
+  return <Badge title="首次导入或历史回灌的资料，不计入今日新增">历史收录</Badge>;
+}

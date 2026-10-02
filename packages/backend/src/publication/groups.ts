@@ -2,6 +2,7 @@ import { selectedCondition, listedCondition } from "./scope.ts";
 // Reading-group expansions: the reports behind "另有 N 家信源报道" and the developments behind
 // "展开 N 条进展". Members must pass the same visibility, pool eligibility and parent-page filters.
 import type { CategoryKey, ChannelKey } from "@aihot/contracts/taxonomy";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import type { DevelopmentsResponse, GroupReportsResponse } from "@aihot/contracts/site";
 import { sql } from "../db.ts";
 import { decodeCursor, encodeCursor, InvalidCursorError, queryBinding } from "../lib/cursor.ts";
@@ -64,7 +65,7 @@ export async function loadGroupReports(q: GroupReportsQuery, now = new Date()): 
         id: m.id,
         title: m.title,
         summary: m.summary,
-        source: { id: m.source_id, legacySourceId: m.legacy_source_id, name: m.source_name, kind: m.source_kind as never, firstParty: m.first_party, iconUrl: proxiedImage(m.icon_url, "avatar") },
+        source: { id: m.source_id, legacySourceId: m.legacy_source_id, name: displaySourceName(m.source_name), kind: m.source_kind as never, firstParty: m.first_party, iconUrl: proxiedImage(m.icon_url, "avatar") },
         timelineAt: m.timeline_at.toISOString(),
         originalUrl: m.url,
         selected: m.selected,

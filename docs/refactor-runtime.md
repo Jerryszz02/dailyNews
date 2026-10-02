@@ -78,6 +78,8 @@ worker 启动与五分钟任务检查最近 72 小时正常新增资料的签名
 
 ## 后续阶段
 
-P2 PR [#16](https://github.com/Jerryszz02/dailyNews/pull/16) 依赖 #15；P3 PR [#17](https://github.com/Jerryszz02/dailyNews/pull/17) 依赖 #16。两者当前提交的 app-tests 与 database-tests 通过，Vercel 为 Account is blocked，均未合并。P4 完成离线产品验收后独立提交依赖 PR。P5 将在明确预算与固定样本保护下真实试运行，报告质量、费用、延迟和积压；离线通过不代表 P5 完成。
+P2 PR [#16](https://github.com/Jerryszz02/dailyNews/pull/16) 依赖 #15；P3 PR [#17](https://github.com/Jerryszz02/dailyNews/pull/17) 依赖 #16；P4 PR [#18](https://github.com/Jerryszz02/dailyNews/pull/18)（`3f6802d`）依赖 #17。当前提交的 app-tests 与 database-tests 均通过，Vercel 为 Account is blocked，均未合并。
+
+P5 的固定 cohort、显式预算、跨服务双并发与 token/成本回执已通过离线测试，正在独立库进行真实试运行。配置、来源证据与阶段结果见 [P5 记录](p5-bounded-trial.md)。离线通过不代表真实质量达标。
 
 每次改动本说明描述的入口、数据流或安全阀，同 PR 更新本文件。生产切换、删旧库、采购和恢复历史 burn-in/soak/observer/heartbeat 不在授权内。

@@ -7,6 +7,8 @@ after(closeDb);
 
 test("stale recovery waiting on a response transaction preserves its committed answer and attempt", async () => {
   const request = { service: "invariant-recovery-race", purpose: "invariant_test", identity: { race: tag() } };
+  await sql`INSERT INTO budgets (service, per_minute, per_hour, per_day, note)
+    VALUES (${request.service}, 20, 20, 20, 'offline receipt race test') ON CONFLICT (service) DO NOTHING`;
   const asked = gate();
   const answer = gate();
   let sent = 0;
