@@ -1,3 +1,20 @@
+# Daily News 重构实施说明
+
+当前分支以固定 AIHOT commit `3343fe2b20db4be7269113752d82d3992fc52b6b` 为底座。已批准计划见 `docs/planning/aihot-v2-refactor-plan.md`；实际阶段证据见 `docs/refactor-runtime.md`。
+
+## 新运行入口
+
+- Node >=24.11；npm workspaces：`apps/*`、`packages/*`、`industry`。
+- `apps/web` 只通过 HTTP 访问 API；公开出口只读 `packages/backend/src/publication/`。
+- 采集和模型默认关闭，模型及付费采集必须经过预算与回执；不自动启用上游示范来源。
+- 只对独立 PostgreSQL 运行 `node scripts/migrate.ts`；禁止把 AIHOT migrations 应用到旧 Supabase。
+- 检查：`npm run typecheck`、`npm run build`、`npm run test:web`；隔离 `_test` / `_ci` 库迁移后运行 `npm test`；服务启动后 `node scripts/smoke.ts --base http://127.0.0.1:3300`。
+- 前台保持中文、十个唯一主分类；AI 原标准与非 AI 确定性规则不可混成一个评分。
+- 保留 MIT/NOTICE 与 `reference/baselines/`。不自动同步上游、不部署生产、不恢复历史观察任务。
+- 下方是旧实现说明。`src/`、旧 `scripts/news*.ts`、`api/`、`supabase/` 和 `public/daily-news.json` 暂保留作兼容/迁移基准，不能用旧 npm 命令判断新底座可用。生产旧系统仍以原提交和部署为准。
+
+---
+
 # Daily News Agent Notes
 
 ## Project Shape
