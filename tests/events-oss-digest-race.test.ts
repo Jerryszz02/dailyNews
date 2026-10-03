@@ -75,7 +75,7 @@ for (const change of ["withdraw", "source", "correction"]) {
   });
 }
 
-test("生成只用当前公开可用报道，零输入不调用模型", async () => {
+test("生成只用当前公开可用报道，零输入不调用模型且事件页面关闭", async () => {
   const p = await pair("input-gates", { eligibleB: false });
   const pending = await article(await source(), "尚未释放的输入", { pending: true });
   await sql`INSERT INTO fact_articles(fact_id,article_id,role) VALUES(${p.factId},${pending},'report')`;
@@ -83,7 +83,11 @@ test("生成只用当前公开可用报道，零输入不调用模型", async ()
   const hits = provider.hits();
   assert.equal((await composeStoryDigest(p.id)).updated, false);
   assert.equal(provider.hits(), hits);
-  assert.ok(await loadStoryDetail(p.id), "非eligible的合法历史稿仍有事件页面");
+  assert.equal(await loadStoryDetail(p.id), null, "只剩非eligible或未释放报道时事件不得公开");
+  const [privateStory] = await sql<{ title: string; digest: string | null }[]>`
+    SELECT title, digest FROM stories WHERE id=${p.id}`;
+  assert.equal(privateStory!.title, "事件更新中");
+  assert.equal(privateStory!.digest, null, "撤回的旧综述仍须在存储投影中失效");
 });
 
 test("输入缩减和旧无provenance版本强制重写，纯新增可保留已验证上下文", async () => {

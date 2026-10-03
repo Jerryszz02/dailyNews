@@ -170,8 +170,12 @@ test("R02: Markdown exports only the licensed summary", async () => {
 
 test("R02: an unlicensed X post without a summary cannot enable Markdown", async () => {
   const f = await fixture({ summary: false });
-  await summaryDetail(f);
-  await summaryMarkdown(f);
+  // A missing Chinese summary now fails the shared public gate, including detail reads.
+  for (const path of [`/api/site/items/${f.id}`, `/api/site/items/${f.id}/original`]) {
+    const response = await get(path, 404, /application\/problem\+json/);
+    noContent(response.body, f);
+  }
+  noContent((await get(`/items/${f.id}/markdown`, 404, /text\/plain/)).body, f);
 });
 
 test("R03: every list projection retains the item without unlicensed X content", async () => {

@@ -8,7 +8,8 @@ import { breadcrumbLd, pageMeta, siteUrl, titled } from "../lib/seo";
 import { fullDateTime, relativeTime } from "../lib/format";
 import { markRead } from "../lib/local-state";
 import { SelectedBadge } from "../components/ui/Badge";
-import { ScoreLabel } from "../components/ui/Score";
+import { FactJudgment, ScoreLabel } from "../components/ui/Score";
+import { scoreLabel } from "../lib/score-labels";
 import { PillTabs } from "../components/ui/Tabs";
 import { ArticleLayout, RailSection } from "../components/ui/Page";
 import { Menu, MenuItem } from "../components/ui/Menu";
@@ -182,10 +183,11 @@ export default function ItemPage() {
       {moreMenu}
     </div>
   );
-  const verdict = (item.selected || item.score !== null) && (
+  const verdict = (item.selected || item.score !== null || item.factStatus !== null) && (
     <div className="flex items-center gap-2">
       {item.selected && <SelectedBadge />}
-      <ScoreLabel score={item.score} />
+      <ScoreLabel score={item.score} scoreKind={item.scoreKind} />
+      {item.scoreKind === "legacy_curation_total" && <FactJudgment tier={item.importanceTier} status={item.factStatus} />}
     </div>
   );
 
@@ -229,7 +231,7 @@ export default function ItemPage() {
           <p className="text-[13.5px] leading-[1.8] text-ink-2">{item.reason}</p>
         </RailSection>
       ) : (
-        verdict && <RailSection title="AI 评分">{verdict}</RailSection>
+        verdict && <RailSection title={scoreLabel(item.scoreKind)}>{verdict}</RailSection>
       )}
       {item.tags.length > 0 && (
         <RailSection title="标签">
@@ -296,7 +298,7 @@ export default function ItemPage() {
             )}
             {item.score !== null && (
               <span className="ml-1 lg:hidden">
-                <ScoreLabel score={item.score} />
+                <ScoreLabel score={item.score} scoreKind={item.scoreKind} />
               </span>
             )}
           </div>
@@ -305,7 +307,7 @@ export default function ItemPage() {
 
           {item.summary && (
             <section className={isX ? "mt-4" : "mt-7 xl:mt-8"}>
-              <div className="mb-2 text-[12px] font-semibold text-accent">{summaryOnly ? "摘要" : "AI 导读"}</div>
+              <div className="mb-2 text-[12px] font-semibold text-accent">{summaryOnly ? "摘要" : item.category === "ai" ? "AI 导读" : "新闻摘要"}</div>
               <p className="text-[18px] leading-[1.7] text-ink xl:text-[20px] xl:leading-[1.7]">{item.summary}</p>
             </section>
           )}

@@ -1,4 +1,4 @@
-import { currentDecisionCondition, selectedCondition, listedCondition } from "./scope.ts";
+import { currentDecisionCondition, releasedCondition, selectedCondition, listedCondition } from "./scope.ts";
 // Item detail and Markdown export, both behind the same visibility and licence rules.
 import type { ItemDetail, SiteItemDetail, OutlineEntry, StoryRef } from "@aihot/contracts/site";
 import TurndownService from "turndown";
@@ -36,20 +36,20 @@ function withOutline(html: string): { html: string; outline: OutlineEntry[] } {
   return { html: out, outline };
 }
 
-async function loadRow(id: string): Promise<DetailRow | null> {
+async function loadRow(id: string, now: Date): Promise<DetailRow | null> {
   const [row] = await sql<DetailRow[]>`
     SELECT ${ITEM_COLUMNS}, a.body_html, a.body_text, a.body_status, tr.body_html AS tr_html, tr.complete AS tr_complete
     ${ITEM_FROM}
-    WHERE p.article_id = ${id} AND ${currentDecisionCondition()}`;
+    WHERE p.article_id = ${id} AND ${currentDecisionCondition()} AND ${releasedCondition(now)}`;
   return row ?? null;
 }
 
 /**
- * Public detail (rules.hasItemPage): items the lists leave out (low relevance, merged duplicates, no
- * Chinese summary yet) keep a noindex page; withdrawn and hot_signal items are a 404.
+ * Public detail uses the current eligible decision and release gate. Low-scoring eligible material
+ * stays readable; pending, blocked, withdrawn and hot-signal material is unavailable.
  */
 export async function loadItemDetail(id: string, now = new Date()): Promise<DetailResult> {
-  const row = await loadRow(id);
+  const row = await loadRow(id, now);
   if (!row || !hasItemPage({ visibility: row.visibility, sourceMode: row.source_mode })) return { kind: "not_found" };
 
   const summary = toItemSummary(row);
@@ -155,7 +155,7 @@ export function markdownAvailable(row: {
 const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced", bulletListMarker: "-" });
 
 export async function exportMarkdown(id: string): Promise<{ filename: string; body: string } | null> {
-  const row = await loadRow(id);
+  const row = await loadRow(id, new Date());
   if (!row || !markdownAvailable(row)) return null;
   const lines: string[] = [];
   lines.push(`# ${row.title}`, "");

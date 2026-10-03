@@ -74,7 +74,7 @@ export function registerOg(app: FastifyInstance) {
       title: d.title,
       subtitle: d.summary,
       meta: `${d.source.name.replace(/（[^）]*）\s*$/, "")} · ${beijingDate(d.timelineAt)}`,
-      badge: d.selected && d.score !== null ? { value: String(Math.round(d.score)), label: "精选评分" } : null,
+      badge: d.selected && d.score !== null ? { value: String(Math.round(d.score)), label: d.scoreKind === "legacy_curation_total" ? "公共重要性" : "AI 注意力" } : null,
     }, 3600, ARTICLE_IMAGE_CACHE);
   });
 
@@ -92,6 +92,7 @@ export function registerOg(app: FastifyInstance) {
       source: d.source.name.replace(/（[^）]*）\s*$/, ""),
       date: beijingDate(d.timelineAt),
       score: d.selected ? d.score : null,
+      scoreLabel: d.scoreKind === "legacy_curation_total" ? "公共重要性" : "AI 注意力",
     };
     const tag = `"poster-${posterEtag(poster)}"`;
     reply.header("ETag", tag).header("Cache-Control", ARTICLE_IMAGE_CACHE).header("X-Accel-Expires", ARTICLE_IMAGE_ORIGIN_SECONDS);

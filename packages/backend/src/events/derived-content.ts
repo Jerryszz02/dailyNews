@@ -47,7 +47,7 @@ export async function invalidateStoryInputs(db: Db, articleIds: string[], now = 
     SELECT id,title,summary,digest,latest,version,origin FROM stories
     WHERE id=ANY(${ids}::bigint[]) AND merged_into IS NULL ORDER BY id FOR UPDATE`;
   for (const story of stories) {
-    // 公开历史稿也能维持事件；模型输入在digestReports中另加eligible要求。
+    // 只有仍满足当前公开资格的报道才能维持事件和它的安全回退标题。
     const reports = await db<Array<{ fact_id: number; title: string }>>`
       SELECT fa.fact_id,p.title FROM facts f JOIN fact_articles fa ON fa.fact_id=f.id
       JOIN publications p ON p.article_id=fa.article_id JOIN sources s ON s.id=p.source_id

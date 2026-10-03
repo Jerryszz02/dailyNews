@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "{{siteName}} Public API",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "description": "Anonymous, read-only API for clients and Agents. No API key is required.\n\nPicking an endpoint: show recent or today's items -> /api/v1/items. Show what is trending right now -> /api/v1/hot-topics. Show the daily digest -> /api/v1/dailies/latest. Keep a complete local copy of the selected set -> /api/v1/selected/snapshot once, then /api/v1/selected/changes forever.\n\nHow often to poll: use each response's Cache-Control s-maxage as the minimum interval, and always send If-None-Match: an unchanged resource answers 304 with an empty body. On 429 or 503, honour Retry-After. There is no push channel (no SSE, webhooks or streaming): poll on an interval.\n\nTitles and summaries are generated from third-party sources; the original is always linked in links.original.",
     "termsOfService": "{{siteUrl}}/terms"
   },
@@ -3949,6 +3949,9 @@
           "discoveredAt",
           "category",
           "score",
+          "scoreKind",
+          "importanceTier",
+          "factStatus",
           "selected"
         ],
         "properties": {
@@ -4025,7 +4028,34 @@
               "null"
             ],
             "minimum": 0,
-            "maximum": 100
+            "maximum": 100,
+            "description": "Policy-specific score. Compare only items with the same non-null scoreKind; AI attention and non-AI legacy curation totals are different scales."
+          },
+          "scoreKind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "ai_attention",
+              "legacy_curation_total",
+              null
+            ],
+            "description": "The policy scale for score. Historical selected-ledger payloads written before this field existed return null rather than an inferred scale. /api/v1/items independently reflects the current publication projection."
+          },
+          "importanceTier": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The non-AI fact importance tier recorded in this payload. Historical selected-ledger payloads without this metadata return null."
+          },
+          "factStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The non-AI fact status recorded in this payload. Historical selected-ledger payloads without this metadata return null."
           },
           "selected": {
             "type": "boolean"
@@ -4053,6 +4083,9 @@
           "discoveredAt",
           "category",
           "score",
+          "scoreKind",
+          "importanceTier",
+          "factStatus",
           "selected"
         ],
         "properties": {
@@ -4112,7 +4145,34 @@
               "null"
             ],
             "minimum": 0,
-            "maximum": 100
+            "maximum": 100,
+            "description": "Policy-specific score. Compare only items with the same non-null scoreKind; AI attention and non-AI legacy curation totals are different scales."
+          },
+          "scoreKind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "ai_attention",
+              "legacy_curation_total",
+              null
+            ],
+            "description": "The policy scale for score. Historical selected-ledger payloads written before this field existed return null rather than an inferred scale. /api/v1/items independently reflects the current publication projection."
+          },
+          "importanceTier": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The non-AI fact importance tier recorded in this payload. Historical selected-ledger payloads without this metadata return null."
+          },
+          "factStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The non-AI fact status recorded in this payload. Historical selected-ledger payloads without this metadata return null."
           },
           "selected": {
             "type": "boolean"

@@ -25,6 +25,7 @@ before(async () => {
 });
 after(async () => {
   await sql`DELETE FROM reports WHERE kind = 'daily' AND key IN ('2020-01-02', '2020-01-03', '2020-01-04', '2020-01-05')`;
+  await sql`DELETE FROM articles WHERE source_id = ${SOURCE}`;
   await provider.close();
   await stopBoss();
   await closeDb();

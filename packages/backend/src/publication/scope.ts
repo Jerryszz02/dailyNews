@@ -14,7 +14,7 @@ export function releasedCondition(now: Date) {
 
 /** Material revision and source tier are checked at read time, closing the interval before a worker republishes. */
 export function currentDecisionCondition() {
-  return sql`p.input_revision IS NOT NULL AND p.analysis_id IS NOT NULL
+  return sql`p.eligible AND p.input_revision IS NOT NULL AND p.analysis_id IS NOT NULL
     AND p.policy_id IS DISTINCT FROM 'classification-pending' AND EXISTS (
     SELECT 1 FROM articles current_article JOIN sources current_source ON current_source.id = current_article.source_id
     WHERE current_article.id = p.article_id AND current_article.revision = p.input_revision

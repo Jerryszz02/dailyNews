@@ -7,10 +7,10 @@
 | 请求 | 执行已批准的 AIHOT 重构计划 P1–P5，分阶段实现与本地有界验证 |
 | 更新时间 | 2026-10-03（Asia/Shanghai） |
 | 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews` |
-| 工作模式 | 实施模式；独立 worktree，P3 分支 `agent/aihot-p3-sources` 依赖 P2/P1；规范目录与旧服务保留 |
+| 工作模式 | 实施模式；独立 worktree，P4 分支 `agent/aihot-p4-product` 依赖 P3/P2/P1；规范目录与旧服务保留 |
 | 现行代码基准 | 交接 `ce3f9263c3901839a85794aecea8bc55e67bf0e4`；旧规则固定 `8519831714b0d6c8183336c81e8190dceddf7843` |
 | AIHOT 目标基准 | `3343fe2b20db4be7269113752d82d3992fc52b6b`；固定版本，不自动同步上游 |
-| 新计划状态 | P0 已批准；P1 PR #15 代码 CI 已通过、未合并；P2 本地出口通过；P3 配置/fixture 离线验证通过；P4–P5 待实施，未生产切换 |
+| 新计划状态 | P0 已批准；P1–P3 PR #15/#16/#17 代码 CI 通过、未合并；P4 产品出口本地验证通过；P5 待实施，未生产切换 |
 
 本目录保存需求、方案与历史记录；当前已实现行为以对应分支代码以及 [现有架构](../architecture.md)、[运行手册](../runbook.md) 为准。新计划不会因为写入文档或建立 PR 就自动成为已实现事实。
 
@@ -26,7 +26,7 @@
 
 规范 checkout/旧产品仍是 Vite + React + TypeScript 事件级简报，包含十类导航、事件归并、公共重要性、热点和冻结日报；现有生产形态由代码定义为 Supabase 持久状态与受保护刷新入口。后台的实际部署、Cron、数据量和健康状态本次未验证。
 
-实施分支已导入固定 AIHOT 的 web/api/worker 和 PostgreSQL 底座，离线运行已验证；分类和双策略本地出口通过，来源配置离线验证通过，产品适配尚未完成。详见 [实施记录](../refactor-runtime.md)。
+实施分支已导入固定 AIHOT 的 web/api/worker 和 PostgreSQL 底座，离线运行已验证；分类和双策略本地出口通过，来源配置离线验证通过，P4 产品/API/日报公开契约已完成本地验收。详见 [实施记录](../refactor-runtime.md)。
 
 ## 文档集合与权威边界
 
@@ -59,7 +59,7 @@
 
 ## 本次检查
 
-P1 的类型、构建、迁移、后端 566 项 + 新增安全测试 2 项、网页 31 项、smoke 30 项及 Chrome 空页面已验证；详见 [实施记录](../refactor-runtime.md)。planning audit 与 whitespace 检查随 PR 执行。
+P1 的类型、构建、迁移、后端 566 项 + 新增安全测试 2 项、网页 31 项、smoke 30 项及 Chrome 空页面已验证；详见 [实施记录](../refactor-runtime.md)。P2/P3 联合后端 604/604、P4 后端 618/618 与 31 项 smoke 及 Chrome 分类/详情通过；planning audit 与 whitespace 检查随 PR 执行。
 
 以下是文档 PR #14 的历史检查范围。实施阶段结果逐阶段记录，尚未执行的检查不计为通过。已核验 main 交接 SHA、AIHOT 固定 SHA 和规范目录干净状态；未检查生产健康。
 

@@ -436,8 +436,9 @@ test("share images keep detail metadata and access rules while conditional reads
   const source = d.source.name.replace(/（[^）]*）\s*$/, "");
   const date = beijingDate(d.timelineAt);
   const card = { kicker, title: d.title, subtitle: d.summary, meta: `${source} · ${date}`,
-    badge: d.selected && d.score !== null ? { value: String(Math.round(d.score)), label: "精选评分" } : null };
-  const poster = { url: `${config.siteUrl}/items/${id}`, kicker, title: d.title, summary: d.summary, source, date, score: d.selected ? d.score : null };
+    badge: d.selected && d.score !== null ? { value: String(Math.round(d.score)), label: d.scoreKind === "legacy_curation_total" ? "公共重要性" : "AI 注意力" } : null };
+  const poster = { url: `${config.siteUrl}/items/${id}`, kicker, title: d.title, summary: d.summary, source, date, score: d.selected ? d.score : null,
+    scoreLabel: d.scoreKind === "legacy_curation_total" ? "公共重要性" : "AI 注意力" };
   const paths = [[`/og/items/${id}.png`, `"og-${ogEtag(card)}"`], [`/og/posters/${id}.png`, `"poster-${posterEtag(poster)}"`]];
   const queries: string[] = [];
   const previous = sql.options.debug;
@@ -464,7 +465,8 @@ test("minimal sync projection preserves snapshot fields, pagination bindings and
   const full = JSON.parse((await get('/api/v1/selected/snapshot?fields=default&limit=1000')).body);
   const minimal = JSON.parse((await get('/api/v1/selected/snapshot?fields=minimal&limit=1000')).body);
   const project = (i: any) => ({ id: i.id, title: i.title, source: i.source, publishedAt: i.publishedAt,
-    discoveredAt: i.discoveredAt, category: i.category, score: i.score, selected: i.selected, links: { aihot: i.links.aihot } });
+    discoveredAt: i.discoveredAt, category: i.category, score: i.score, scoreKind: i.scoreKind,
+    importanceTier: i.importanceTier, factStatus: i.factStatus, selected: i.selected, links: { aihot: i.links.aihot } });
   assert.deepEqual(minimal.items, full.items.map(project));
   assert.ok(minimal.items.some((i: any) => i.id === id));
   for (const fields of ['default', 'minimal']) {

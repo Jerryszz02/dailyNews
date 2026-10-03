@@ -130,9 +130,15 @@ export interface AdminContentRow {
   source: string;
   discovered_at: Timestamp;
   processing_state: string;
+  processing_error: string | null;
+  processing_retry_at: Timestamp | null;
   visibility: string | null;
   selected: boolean | null;
   score: number | null;
+  score_kind: "ai_attention" | "legacy_curation_total" | null;
+  importance_tier: string | null;
+  fact_status: string | null;
+  policy_id: string | null;
 }
 
 export interface AdminContentSearch {
@@ -154,6 +160,13 @@ export interface AdminPublication {
   category: string | null;
   tags: string[];
   score: number | null;
+  score_kind: "ai_attention" | "legacy_curation_total" | null;
+  importance_tier: string | null;
+  fact_status: string | null;
+  policy_id: string | null;
+  policy_version: string | null;
+  input_revision: number | null;
+  policy_tier: string | null;
   source_id: string;
   channel: string;
   first_party: boolean;
@@ -180,7 +193,8 @@ export interface AdminContentChain {
   article: {
     id: string; source_id: string; url: string; identity_key: string; title: string; author: string | null; language: string | null;
     published_at: Timestamp | null; published_at_claim: string | null; discovered_at: Timestamp; timeline_at: Timestamp; backfill: boolean;
-    body_status: string; revision: number; processing_state: string; processing_error: string | null; grouped_at: Timestamp | null; body_chars: number | null;
+    body_status: string; revision: number; processing_state: string; processing_error: string | null;
+    processing_retry_at: Timestamp | null; processing_attempts: number; grouped_at: Timestamp | null; body_chars: number | null;
     source_name: string; source_kind: string; tier: string; participation_mode: string; site_fulltext: boolean; syndicate_fulltext: boolean;
   };
   discoveries: Array<{ source_id: string; via: string; discovered_at: Timestamp }>;

@@ -100,13 +100,22 @@ test("只撤全文许可或暂停不改变仍公开摘要的事件文字", async
   assert.equal((await get(`/api/site/items/${p.a}`)).statusCode, 200);
 });
 
-test("更正清除旧事件主张；非eligible历史报道仍可维持事件页面", async () => {
+test("更正清除旧事件主张；只剩非eligible报道时事件页面关闭", async () => {
   const corrected = await pair("correction");
   await overrideFields(corrected.a, { fields: { title: "已更正的安全标题", summary: "已更正的安全摘要" }, reason: "测试更正", version: 0 }, "test");
   await cleanStory(corrected);
   const historical = await pair("historical", { eligibleB: false });
+  assert.equal((await get(`/api/site/stories/${historical.publicId}`)).statusCode, 200);
   await withdraw(historical.a);
-  await cleanStory(historical);
+  assert.equal(await loadStoryDetail(historical.id), null);
+  for (const url of [`/api/site/stories/${historical.publicId}`, `/api/v1/stories/${historical.publicId}`,
+    `/api/site/items/${historical.b}`]) {
+    const response = await get(url);
+    assert.equal(response.statusCode, 404, url);
+    assert.ok(!response.body.includes(historical.marker), `${url}仍含撤回主张`);
+  }
+  const hidden = await client.callTool({ name: MCP_TOOL_NAMES.story, arguments: { public_id: historical.publicId } });
+  assert.ok(!JSON.stringify(hidden).includes(historical.marker));
   await withdraw(historical.b);
   assert.equal((await get(`/api/site/stories/${historical.publicId}`)).statusCode, 404);
 });

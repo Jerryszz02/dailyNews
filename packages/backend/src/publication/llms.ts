@@ -18,7 +18,7 @@ export async function loadLlmsAvailability() {
 
 export const PUBLIC_VERSIONS = {
   mcp: "2.0.0",
-  v1OpenApi: "2.1.0",
+  v1OpenApi: "2.2.0",
 };
 
 export function llmsTxt(opts: { hasDailies: boolean; hasWeekly: boolean; hasMonthly: boolean; hasLeaderboard: boolean }): string {

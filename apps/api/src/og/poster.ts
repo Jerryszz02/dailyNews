@@ -10,7 +10,7 @@ import { SITE } from "@aihot/industry/site";
 import { config } from "@aihot/backend/config";
 import { fonts, h, nameMark, OG_PNG, SITE_HOST, type Node } from "./render.ts";
 
-export const POSTER_TEMPLATE_VERSION = "poster-2026-09-29.1";
+export const POSTER_TEMPLATE_VERSION = "poster-2026-10-03.1";
 const WIDTH = 1080;
 const HEIGHT = 1440;
 const CACHE_DIR = path.join(config.dataDir, "ogcache");
@@ -23,6 +23,7 @@ export interface Poster {
   source: string;
   date: string;
   score: number | null;
+  scoreLabel?: string;
 }
 
 
@@ -63,7 +64,7 @@ async function tree(p: Poster): Promise<Node> {
         h("div", { width: 12, height: 12, borderRadius: 999, backgroundColor: ACCENT, marginRight: 16 }),
         h("div", { display: "flex", fontSize: 30, fontWeight: 700, color: ACCENT, letterSpacing: 1 }, clamp(p.kicker, 20)),
         p.score !== null
-          ? h("div", { display: "flex", marginLeft: 20, padding: "4px 16px", borderRadius: 999, backgroundColor: "rgba(23,107,117,0.09)", fontSize: 26, color: "#0f5a63" }, `精选 · ${Math.round(p.score)} 分`)
+          ? h("div", { display: "flex", marginLeft: 20, padding: "4px 16px", borderRadius: 999, backgroundColor: "rgba(23,107,117,0.09)", fontSize: 26, color: "#0f5a63" }, `${p.scoreLabel ?? "精选"} · ${Math.round(p.score)} 分`)
           : null,
       ].filter(Boolean)),
       h("div", { display: "flex", marginTop: 30, fontSize: titleSize, fontWeight: 700, lineHeight: 1.3, color: INK }, title),

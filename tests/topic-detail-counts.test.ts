@@ -26,8 +26,8 @@ async function article(name: string, tags: string[], timeline: number, release =
   const url = `https://example.test/${id}`;
   await sql`INSERT INTO articles(id,source_id,identity_key,url,title,discovered_at,timeline_at)
     VALUES(${id},${SOURCE},${id},${url},${name},${at},${at})`;
-  await sql`INSERT INTO publications(article_id,title,summary,source_id,channel,url,discovered_at,timeline_at,sort_at,selected,visible_after,tags)
-    VALUES(${id},${name},'test',${SOURCE},'news',${url},${at},${at},${at},true,${new Date(release)},${tags})`;
+  await sql`INSERT INTO publications(article_id,title,summary,category,source_id,channel,url,discovered_at,timeline_at,sort_at,eligible,selected,visible_after,tags)
+    VALUES(${id},${name},'test','policy',${SOURCE},'news',${url},${at},${at},${at},true,true,${new Date(release)},${tags})`;
   await attachCurrentPublicationDecision(id);
   return id;
 }
