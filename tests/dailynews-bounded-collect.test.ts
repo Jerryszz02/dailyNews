@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { config } from "@aihot/backend/config";
 import { sql, closeDb } from "@aihot/backend/db";
+import { stopBoss } from "@aihot/backend/jobs/queue";
 import { boundedIncrementalCandidates, collectSource } from "@aihot/backend/sources/collect";
 import { validateManifest, mapBounded } from "../scripts/bounded-trial.ts";
 import { modelExecutionBounds, trialReport } from "../scripts/bounded-trial-report.ts";
@@ -90,6 +91,12 @@ test("trial rejects a source outside its manifest before any fetch or fetch-run 
   const server = http.createServer((req, res) => {
     if (req.url === "/fail") { res.writeHead(503); res.end("unavailable"); return; }
     res.writeHead(200, { "content-type": "application/rss+xml" });
+    if (req.url === "/admission") {
+      res.end(`<rss version="2.0"><channel><title>试运行订阅</title><item><title>准入回滚样本</title>` +
+        `<link>https://127.0.0.1/${prefix}/admission-item</link><guid>https://127.0.0.1/${prefix}/admission-item</guid>` +
+        `<pubDate>${new Date().toUTCString()}</pubDate></item></channel></rss>`);
+      return;
+    }
     res.end("<rss version=\"2.0\"><channel><title>空订阅</title></channel></rss>");
   });
   try {
@@ -111,7 +118,7 @@ test("trial rejects a source outside its manifest before any fetch or fetch-run 
       const id = ids[i]!;
       const adapter = i === 8 ? "web_list" : i === 9 ? "sitemap" : "rss";
       const kind = i === 8 || i === 9 ? "web_list" : "rss";
-      const sourceConfig = { ...(i < 2 ? { feedUrl: `${base}/${i === 0 ? "fail" : "ok"}` } : {}),
+      const sourceConfig = { ...(i < 3 ? { feedUrl: `${base}/${i === 0 ? "fail" : i === 2 ? "admission" : "ok"}` } : {}),
         ...(i === 8 ? { url: `${base}/list`, itemSelector: "article", linkSelector: "a", titleSelector: "h2" } : {}),
         ...(i === 9 ? { url: `${base}/sitemap.xml` } : {}),
         dailyNews: { migrationStatus: "verified", adapter, allowedHosts: ["127.0.0.1"],
@@ -160,6 +167,24 @@ test("trial rejects a source outside its manifest before any fetch or fetch-run 
     assert.equal(report.sources.find((row) => row.source_id === ids[1])?.status, "ok");
     assert.equal(report.cohort.normal, 0);
     assert.equal(report.qualityLabels.status, "awaiting-human-review");
+    await sql`ALTER TABLE dailynews_trial_articles ADD CONSTRAINT dailynews_collect_admission_failure
+      CHECK (source_id NOT LIKE 'bounded-%-2')`;
+    try {
+      const interrupted = await collectSource(ids[2]!);
+      assert.equal(interrupted.status, "failed", "a failed ledger insert must fail collection");
+      assert.equal((await sql`SELECT id FROM articles WHERE source_id=${ids[2]!}`).length, 0,
+        "material must roll back with its failed trial admission");
+      assert.equal((await sql<{ cursor: { initializedAt?: string } }[]>`SELECT cursor FROM sources WHERE id=${ids[2]!}`)[0]?.cursor?.initializedAt,
+        undefined, "a failed admission must leave the first-import cursor unchanged");
+      assert.equal((await sql`SELECT article_id FROM dailynews_trial_articles WHERE trial_id=${trialId} AND source_id=${ids[2]!}`).length, 0);
+    } finally {
+      await sql`ALTER TABLE dailynews_trial_articles DROP CONSTRAINT dailynews_collect_admission_failure`;
+    }
+    const resumed = await collectSource(ids[2]!);
+    assert.equal(resumed.status, "ok");
+    assert.equal(resumed.created, 1);
+    assert.equal(resumed.trial?.admittedBackfill, 1);
+    assert.equal((await sql`SELECT article_id FROM dailynews_trial_articles WHERE trial_id=${trialId} AND source_id=${ids[2]!}`).length, 1);
     const cli = (...args: string[]) => spawnSync(process.execPath, ["scripts/bounded-trial.ts", ...args], {
       env: process.env, encoding: "utf8", cwd: process.cwd(),
     });
@@ -176,8 +201,8 @@ test("trial rejects a source outside its manifest before any fetch or fetch-run 
     const freeze = cli("freeze", "--id", trialId);
     process.env.DAILYNEWS_DEEPSEEK_PRICE_VALID_UNTIL = validUntil;
     assert.equal(freeze.status, 0, freeze.stderr);
-    assert.equal((await collectSource(ids[2]!)).status, "skipped", "freeze stops collection before network");
-    assert.equal((await sql`SELECT id FROM fetch_runs WHERE source_id=${ids[2]!}`).length, 0);
+    assert.equal((await collectSource(ids[3]!)).status, "skipped", "freeze stops collection before network");
+    assert.equal((await sql`SELECT id FROM fetch_runs WHERE source_id=${ids[3]!}`).length, 0);
     // Processing of already admitted material can continue after freeze. Its expense is still
     // part of the trial, even though new collection/admission is closed.
     const [receipt] = await sql<{ id: number }[]>`
@@ -217,6 +242,8 @@ test("trial rejects a source outside its manifest before any fetch or fetch-run 
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
     }
     if (receiptId) await sql`DELETE FROM receipts WHERE id=${receiptId}`;
+    await sql`DELETE FROM dailynews_trial_articles WHERE trial_id=${trialId}`;
+    await sql`DELETE FROM articles WHERE source_id=${ids[2]!}`;
     await sql`DELETE FROM dailynews_trial_sources WHERE trial_id=${trialId}`;
     await sql`DELETE FROM dailynews_trials WHERE id=${trialId}`;
     await sql`DELETE FROM fetch_runs WHERE source_id=ANY(${ids}::text[])`;
@@ -228,6 +255,7 @@ test("trial rejects a source outside its manifest before any fetch or fetch-run 
     }
     config.allowPrivateNetworkFetch = oldPrivateFetch;
     if (server.listening) await new Promise<void>((resolve) => server.close(() => resolve()));
+    await stopBoss();
     await closeDb();
   }
 });

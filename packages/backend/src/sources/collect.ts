@@ -84,15 +84,24 @@ async function store(sourceId: string, candidates: Candidate[], backfill: string
   let unchanged = 0;
   for (const c of candidates) {
     const material = { ...c, sourceId, via: "fetch" as const, backfill };
-    const res = await upsertMaterial(material);
+    // In a bounded trial, an interrupted admission must not leave a committed article that
+    // the next fetch treats as unchanged and therefore never admits. Keep the material and
+    // its immutable ledger entry in the same transaction; queueing can resume from that ledger.
+    const { res, admission, lane } = trialId ? await sql.begin(async (tx) => {
+      const res = await upsertMaterial(material, tx);
+      if (!res.created && !res.revised) return { res, admission: null, lane: null };
+      const lane = res.backfill ? "backfill" : "normal";
+      const admission = await admitArticle(res.articleId, { lane }, tx);
+      // A quota or old source timestamp intentionally archives the material without paid work.
+      // Every other refusal means this run lost its boundary and must leave no partial write.
+      if (!admission.admitted && admission.reason !== "quota" && admission.reason !== "not-new")
+        throw new Error(`bounded trial admission failed: ${admission.reason}`);
+      return { res, admission, lane };
+    }) : { res: await upsertMaterial(material), admission: null, lane: null };
     if (res.created) created += 1;
     if (res.revised) revised += 1;
     if (!res.created && !res.revised) { unchanged += 1; continue; }
-    if (trialId) {
-      // The immutable trial ledger, rather than the number of fetched rows, controls paid work.
-      // A first import remains backfill even when the source timestamp is recent.
-      const lane = res.backfill ? "backfill" : "normal";
-      const admission = await admitArticle(res.articleId, { lane }, sql);
+    if (admission) {
       if (!admission.admitted) { notAdmitted += 1; continue; }
       if (admission.reason === "admitted") {
         if (lane === "normal") admittedNormal += 1;
