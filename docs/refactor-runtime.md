@@ -80,6 +80,6 @@ worker 启动与五分钟任务检查最近 72 小时正常新增资料的签名
 
 P2 PR [#16](https://github.com/Jerryszz02/dailyNews/pull/16) 依赖 #15；P3 PR [#17](https://github.com/Jerryszz02/dailyNews/pull/17) 依赖 #16；P4 PR [#18](https://github.com/Jerryszz02/dailyNews/pull/18)（`3f6802d`）依赖 #17。当前提交的 app-tests 与 database-tests 均通过，Vercel 为 Account is blocked，均未合并。
 
-P5 的固定 cohort、显式预算、跨服务双并发与 token/成本回执已通过离线测试，正在独立库进行真实试运行。配置、来源证据与阶段结果见 [P5 记录](p5-bounded-trial.md)。离线通过不代表真实质量达标。
+P5 PR [#19](https://github.com/Jerryszz02/dailyNews/pull/19) 依赖 #18；代码提交 `3898739` 的 app-tests 与 database-tests 已通过，Vercel 仍为 Account is blocked，未合并。独立库的本次有界试运行已于上海 08:01 关闭：31 条正常新增、20 条历史资料、233 次模型调用，估算 USD 0.052668186；真实 08:00 日报含 24 个不重复的正常新增事实。worker 与有限前台控制器已停止，只读预览保留在 3310/3311。100 条新增与 200 条人工金标准未达到，视频提取污染、派生标题限定语丢失仍未完成代码修复。配置、费用、恢复、质量问题和未达标项见 [P5 记录](p5-bounded-trial.md)。代码 CI 通过不代表真实质量达标；本次日报没有通过 AI 精选门槛的正常稿，不能称作两路真实日报的完整覆盖。
 
 每次改动本说明描述的入口、数据流或安全阀，同 PR 更新本文件。生产切换、删旧库、采购和恢复历史 burn-in/soak/observer/heartbeat 不在授权内。

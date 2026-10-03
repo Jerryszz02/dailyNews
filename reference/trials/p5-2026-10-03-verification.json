@@ -1,0 +1,817 @@
+{
+  "trialId": "p5-2026-10-03",
+  "asOf": "2026-10-03T00:01:48.143Z",
+  "localValidation": {
+    "migrations": 45,
+    "backendTestsPassed": 634,
+    "webTestsPassed": 35,
+    "smokeChecksPassed": 31,
+    "typecheck": "passed",
+    "webBuild": "passed",
+    "portableCliManifestTestsPassed": 4,
+    "reportMetricTestsPassed": 4
+  },
+  "scope": {
+    "publications_outside_cohort": 0,
+    "analyses_outside_cohort": 0,
+    "article_receipts_outside_cohort": 0,
+    "enabled_sources": 14,
+    "normal_before_source_baseline": 0
+  },
+  "receiptStatuses": [
+    {
+      "status": "completed",
+      "count": 233
+    }
+  ],
+  "attemptStatuses": [
+    {
+      "status": "received",
+      "count": 233
+    }
+  ],
+  "policies": [
+    {
+      "lane": "backfill",
+      "policy_id": "aihot-ai-article",
+      "count": 8
+    },
+    {
+      "lane": "backfill",
+      "policy_id": "dailynews-non-ai-fact",
+      "count": 12
+    },
+    {
+      "lane": "normal",
+      "policy_id": "aihot-ai-article",
+      "count": 3
+    },
+    {
+      "lane": "normal",
+      "policy_id": "dailynews-non-ai-fact",
+      "count": 28
+    }
+  ],
+  "bodyStatuses": [
+    {
+      "lane": "backfill",
+      "body_status": "ok",
+      "count": 19
+    },
+    {
+      "lane": "backfill",
+      "body_status": "unconfirmed",
+      "count": 1
+    },
+    {
+      "lane": "normal",
+      "body_status": "ok",
+      "count": 30
+    },
+    {
+      "lane": "normal",
+      "body_status": "unconfirmed",
+      "count": 1
+    }
+  ],
+  "editorialOverrides": [
+    {
+      "article_id": "a5u6qgocjmtnopn4qldxth8b3",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5源文抽查纠错：原文 case reopened 指调查重启，没有庭审开庭的证据；保留模型原始分析和回执。",
+      "overridden_fields": [
+        "summary"
+      ]
+    },
+    {
+      "article_id": "d2c2npmnkz4lf6dsu217m7nai",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5源文抽查纠错：赛事名称遵循该视频主标题 World Series，不把受访者 World Cup 冠军头衔代入赛事名称；同步失效并纠正fact29/story派生文字。",
+      "overridden_fields": [
+        "title"
+      ]
+    },
+    {
+      "article_id": "daq5hpghixqt7ip8ft35u8lw3",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5源文抽查纠错：Chain of Craters Road 是专名，保留原名避免误拆成夏威夷岛链；不改变海拱坍塌事实。",
+      "overridden_fields": [
+        "summary"
+      ]
+    },
+    {
+      "article_id": "gz1hz4cy0674h0rlsolayajfp",
+      "version": 2,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5同案源文冲突补充澄清：较晚CNN视频简介与本篇长文的任职描述不同，将代表稿标题和摘要同步为两种说法均有归属的待核实表述；通过正式派生失效流程使事实标题不只呈现旧稿一侧，不认定哪篇已获独立核实，保留原纠错和原始分析。",
+      "overridden_fields": [
+        "title",
+        "summary"
+      ]
+    },
+    {
+      "article_id": "l6jfvsw95xr50popq21oapzzp",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5同案源文冲突澄清：CNN视频简介称dismissed，较早同案长文称调离培训后转任航司内其他岗位。并列披露两种说法，不以其中一篇为已独立核实事实，不将忠实翻译视频简介误记为模型编造；保留原分析与所有调用回执。",
+      "overridden_fields": [
+        "title",
+        "summary"
+      ]
+    },
+    {
+      "article_id": "myshxyhoexq1p3dtvsi5tp3wd",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5源文抽查纠错：该视频可核文字只称新增就业29,000，不自行加非农限定；保留报道归属并通过派生失效纠正fact30/story。",
+      "overridden_fields": [
+        "title"
+      ]
+    },
+    {
+      "article_id": "n6v1qqp2opm2omqmo4z9e6qgo",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5源文抽查纠错：保留报道与拟议语气，避免事件派生标题把未确认的制片厂管理安排写成既成事实；通过正式文章覆盖及派生文字失效传播更正。",
+      "overridden_fields": [
+        "title"
+      ]
+    },
+    {
+      "article_id": "qgq8h4d0fezcxc0uad2ubgb3e",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5源文抽查纠错：保留该视频自身标题支持的任命和调查信息，移除来自同页其他视频侧栏的引语；来源提取污染仍作为本批缺陷记录。",
+      "overridden_fields": [
+        "summary"
+      ]
+    },
+    {
+      "article_id": "qp3jz5q9u2oxrdhaad3mnphjd",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5源文抽查纠错：保留受访者称和感到的主观归属，不把其感受派生为已证实未获及时处理的客观结论；沿正式文章覆盖与派生文字失效流程修复fact35。",
+      "overridden_fields": [
+        "title"
+      ]
+    },
+    {
+      "article_id": "vur3cimfauojb6hpj7kt5tm43",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5源文抽查纠错：当前只有标题和明确含预计的excerpt，正文尚未确认；保留预测限定语，通过派生文字失效纠正fact25/story，不把预计值改写为已发生数字。",
+      "overridden_fields": [
+        "title"
+      ]
+    },
+    {
+      "article_id": "wo8nwirsqllbg5iyymyzuxv8r",
+      "version": 1,
+      "updated_by": "codex:p5-source-review",
+      "reason": "P5源文抽查纠错：原文为3000多词，不将英文博文词数写成中文字数；保留原分析与所有调用回执。",
+      "overridden_fields": [
+        "summary"
+      ]
+    }
+  ],
+  "restartRecovery": {
+    "beforeAt": "2026-10-02T20:49:01.020Z",
+    "alreadyReceived": [
+      {
+        "id": 18,
+        "purpose": "structure_article",
+        "beforeStatus": "received",
+        "beforeAttempts": 1,
+        "afterStatus": "completed",
+        "afterAttempts": 1
+      },
+      {
+        "id": 19,
+        "purpose": "structure_article",
+        "beforeStatus": "received",
+        "beforeAttempts": 1,
+        "afterStatus": "completed",
+        "afterAttempts": 1
+      },
+      {
+        "id": 20,
+        "purpose": "prefilter_article",
+        "beforeStatus": "received",
+        "beforeAttempts": 1,
+        "afterStatus": "completed",
+        "afterAttempts": 1
+      }
+    ],
+    "allReusedWithoutAnotherAttempt": true
+  },
+  "admittedReportKeys": [
+    {
+      "kind": "daily",
+      "report_key": "2026-10-03",
+      "admitted_at": "2026-10-03T00:00:10.137Z"
+    }
+  ],
+  "editions": [
+    {
+      "id": 1,
+      "kind": "daily",
+      "key": "2026-10-03",
+      "window_start": "2026-10-02T00:00:00.000Z",
+      "window_end": "2026-10-03T00:00:00.000Z",
+      "revision": 1,
+      "generated_at": "2026-10-03T00:00:11.961Z",
+      "origin": "model",
+      "model": "default",
+      "contentSha256": "9f49ddd6ae05841ddbd85163dc642a5447854638aab390c23ac631dc510929cd",
+      "title": "国庆假期第二天跨区域人员流动预计超3亿人次",
+      "entryCount": 24,
+      "entryIds": [
+        "k6e07sy7zjkv01taxzlfxort0",
+        "q6m6i6ypp5xoxtwk4u729q0eh",
+        "a7viv3xwwuh0yqg3dncku1fac",
+        "myshxyhoexq1p3dtvsi5tp3wd",
+        "fd6ik8kxygh0rr3vdbo8dg1b7",
+        "gz1hz4cy0674h0rlsolayajfp",
+        "to0mpwdszpq9t9bkq5b7yfwje",
+        "eym24ghrgsr3n3i7o2xpvx077",
+        "sl6lhd6j6m67ej12j0sjr5lk9",
+        "qp3jz5q9u2oxrdhaad3mnphjd",
+        "vur3cimfauojb6hpj7kt5tm43",
+        "lvd8srf0w1y1504oo8efxp5at",
+        "f3rcqmzljl83xmlo4fp326h35",
+        "ntd80qj4s3meilopywnt5hmor",
+        "hv4hbbkaim5i3fg1dhnkhp59u",
+        "daq5hpghixqt7ip8ft35u8lw3",
+        "d2c2npmnkz4lf6dsu217m7nai",
+        "ncfb0zo9sxdju2bkdrrf6ra22",
+        "de7l9krexvyurut13zx9y9z6n",
+        "qtb7xof5b4h8f8eehjjhz5bpd",
+        "nrpp365ko7yig4vy9ljailqyy",
+        "zzhlkd4fv8rfxgh4nng7u3luo",
+        "tfrjr6plp0ewchiltu4nknbmh",
+        "n6v1qqp2opm2omqmo4z9e6qgo"
+      ],
+      "uniqueEntries": true,
+      "uniqueFacts": true,
+      "allInCohort": true,
+      "allNormal": true,
+      "noLaterPublicReadiness": true,
+      "generatedAfterWindow": true,
+      "sourceDates": [
+        {
+          "articleId": "vur3cimfauojb6hpj7kt5tm43",
+          "originalPublishedAt": "2026-10-02T22:49:45.000Z",
+          "publicTimelineAt": "2026-10-02T23:00:00.665Z"
+        },
+        {
+          "articleId": "gz1hz4cy0674h0rlsolayajfp",
+          "originalPublishedAt": "2026-10-02T21:54:06.258Z",
+          "publicTimelineAt": "2026-10-02T22:00:01.355Z"
+        },
+        {
+          "articleId": "ntd80qj4s3meilopywnt5hmor",
+          "originalPublishedAt": "2026-10-02T22:26:36.417Z",
+          "publicTimelineAt": "2026-10-02T22:30:01.309Z"
+        },
+        {
+          "articleId": "n6v1qqp2opm2omqmo4z9e6qgo",
+          "originalPublishedAt": "2026-10-02T22:05:12.000Z",
+          "publicTimelineAt": "2026-10-02T22:30:01.948Z"
+        },
+        {
+          "articleId": "a7viv3xwwuh0yqg3dncku1fac",
+          "originalPublishedAt": "2026-10-02T23:20:42.000Z",
+          "publicTimelineAt": "2026-10-02T23:30:01.505Z"
+        },
+        {
+          "articleId": "tfrjr6plp0ewchiltu4nknbmh",
+          "originalPublishedAt": "2026-10-02T23:15:00.000Z",
+          "publicTimelineAt": "2026-10-02T23:30:01.859Z"
+        },
+        {
+          "articleId": "fd6ik8kxygh0rr3vdbo8dg1b7",
+          "originalPublishedAt": "2026-10-02T20:45:00.000Z",
+          "publicTimelineAt": "2026-10-02T20:46:40.045Z"
+        },
+        {
+          "articleId": "hv4hbbkaim5i3fg1dhnkhp59u",
+          "originalPublishedAt": "2026-10-02T20:40:43.067Z",
+          "publicTimelineAt": "2026-10-02T20:46:39.769Z"
+        },
+        {
+          "articleId": "daq5hpghixqt7ip8ft35u8lw3",
+          "originalPublishedAt": "2026-10-02T21:00:41.391Z",
+          "publicTimelineAt": "2026-10-02T22:00:02.376Z"
+        },
+        {
+          "articleId": "sl6lhd6j6m67ej12j0sjr5lk9",
+          "originalPublishedAt": "2026-10-02T21:43:35.377Z",
+          "publicTimelineAt": "2026-10-02T22:00:01.367Z"
+        },
+        {
+          "articleId": "f3rcqmzljl83xmlo4fp326h35",
+          "originalPublishedAt": "2026-10-02T22:48:01.000Z",
+          "publicTimelineAt": "2026-10-02T23:00:00.705Z"
+        },
+        {
+          "articleId": "zzhlkd4fv8rfxgh4nng7u3luo",
+          "originalPublishedAt": "2026-10-02T23:11:52.000Z",
+          "publicTimelineAt": "2026-10-02T23:30:01.869Z"
+        },
+        {
+          "articleId": "myshxyhoexq1p3dtvsi5tp3wd",
+          "originalPublishedAt": "2026-10-02T22:33:32.653Z",
+          "publicTimelineAt": "2026-10-02T23:00:01.215Z"
+        },
+        {
+          "articleId": "qp3jz5q9u2oxrdhaad3mnphjd",
+          "originalPublishedAt": "2026-10-02T23:07:30.603Z",
+          "publicTimelineAt": "2026-10-02T23:30:01.416Z"
+        },
+        {
+          "articleId": "to0mpwdszpq9t9bkq5b7yfwje",
+          "originalPublishedAt": "2026-10-02T22:54:30.725Z",
+          "publicTimelineAt": "2026-10-02T23:00:01.198Z"
+        },
+        {
+          "articleId": "de7l9krexvyurut13zx9y9z6n",
+          "originalPublishedAt": "2026-10-02T21:29:17.954Z",
+          "publicTimelineAt": "2026-10-02T22:00:01.374Z"
+        },
+        {
+          "articleId": "lvd8srf0w1y1504oo8efxp5at",
+          "originalPublishedAt": "2026-10-02T22:52:07.000Z",
+          "publicTimelineAt": "2026-10-02T23:00:00.638Z"
+        },
+        {
+          "articleId": "ncfb0zo9sxdju2bkdrrf6ra22",
+          "originalPublishedAt": "2026-10-02T21:23:59.000Z",
+          "publicTimelineAt": "2026-10-02T22:00:03.754Z"
+        },
+        {
+          "articleId": "d2c2npmnkz4lf6dsu217m7nai",
+          "originalPublishedAt": "2026-10-02T22:38:58.104Z",
+          "publicTimelineAt": "2026-10-02T23:00:01.207Z"
+        },
+        {
+          "articleId": "q6m6i6ypp5xoxtwk4u729q0eh",
+          "originalPublishedAt": "2026-10-02T23:29:31.000Z",
+          "publicTimelineAt": "2026-10-02T23:50:01.453Z"
+        },
+        {
+          "articleId": "eym24ghrgsr3n3i7o2xpvx077",
+          "originalPublishedAt": "2026-10-02T21:25:31.476Z",
+          "publicTimelineAt": "2026-10-02T22:00:01.382Z"
+        },
+        {
+          "articleId": "k6e07sy7zjkv01taxzlfxort0",
+          "originalPublishedAt": "2026-10-02T23:34:15.000Z",
+          "publicTimelineAt": "2026-10-02T23:50:01.443Z"
+        },
+        {
+          "articleId": "nrpp365ko7yig4vy9ljailqyy",
+          "originalPublishedAt": "2026-10-02T22:12:22.000Z",
+          "publicTimelineAt": "2026-10-02T22:30:01.937Z"
+        },
+        {
+          "articleId": "qtb7xof5b4h8f8eehjjhz5bpd",
+          "originalPublishedAt": "2026-10-02T23:39:01.000Z",
+          "publicTimelineAt": "2026-10-02T23:50:02.976Z"
+        }
+      ],
+      "sections": [
+        {
+          "name": "科技",
+          "entries": 3
+        },
+        {
+          "name": "财经",
+          "entries": 2
+        },
+        {
+          "name": "国际",
+          "entries": 4
+        },
+        {
+          "name": "社会",
+          "entries": 6
+        },
+        {
+          "name": "科学",
+          "entries": 1
+        },
+        {
+          "name": "体育",
+          "entries": 3
+        },
+        {
+          "name": "娱乐",
+          "entries": 5
+        }
+      ]
+    }
+  ],
+  "closedBoundary": {
+    "at": "2026-10-03T00:01:48.367Z",
+    "before": {
+      "status": "closed",
+      "attempts": 233,
+      "active_attempts": 0,
+      "admissions": 51,
+      "reports": 1,
+      "report_admissions": 1,
+      "source_runs": 128
+    },
+    "after": {
+      "status": "closed",
+      "attempts": 233,
+      "active_attempts": 0,
+      "admissions": 51,
+      "reports": 1,
+      "report_admissions": 1,
+      "source_runs": 128
+    },
+    "unchanged": true,
+    "rejectedBeforeCollection": true,
+    "rejection": "trial p5-2026-10-03 is closed",
+    "exitCode": 1,
+    "pages": [
+      {
+        "path": "/all",
+        "status": 200,
+        "contentSha256": "1521c594a16bd02cc90cdd035c6c86655364f28712bd441bb209179cb0c6c9c4"
+      },
+      {
+        "path": "/daily/2026-10-03",
+        "status": 200,
+        "contentSha256": "20eb40eecbcc4b91983ed3b26a136b79f2799a104079e35298031dbc63a0c278"
+      },
+      {
+        "path": "/api/v1/dailies/2026-10-03",
+        "status": 200,
+        "contentSha256": "7377f3f6acee68c6d550c0b7f33398f4a3da34475cda95f3796212a6b7a3597f"
+      },
+      {
+        "path": "/feed/daily.xml",
+        "status": 200,
+        "contentSha256": "92abd88ec38b426be63c1a1f8c61dcdff4c076c8a025028c088cd658b59f0e4c"
+      }
+    ],
+    "netNewModelAttempts": 0
+  },
+  "controlledSourceRetry": {
+    "at": "2026-10-02T20:43:30.597Z",
+    "fault": "local synthetic HTTP 503 before BBC feed network request; retry uses real source",
+    "cursorUnchangedOnFailure": true,
+    "failed": {
+      "sourceId": "dn-bbc-25b2d27a78f1",
+      "status": "failed",
+      "found": 0,
+      "created": 0,
+      "revised": 0,
+      "error": "HTTP 503",
+      "trial": {
+        "id": "p5-2026-10-03",
+        "admittedNormal": 0,
+        "admittedBackfill": 0,
+        "notAdmitted": 0,
+        "unchanged": 0
+      }
+    },
+    "retried": {
+      "sourceId": "dn-bbc-25b2d27a78f1",
+      "status": "ok",
+      "found": 33,
+      "created": 32,
+      "revised": 0,
+      "trial": {
+        "id": "p5-2026-10-03",
+        "admittedNormal": 0,
+        "admittedBackfill": 0,
+        "notAdmitted": 32,
+        "unchanged": 1
+      }
+    }
+  },
+  "realBudgetPause": {
+    "articles": [
+      {
+        "id": "zzhlkd4fv8rfxgh4nng7u3luo",
+        "error": "Budget for llm exhausted (minute)",
+        "state": "new",
+        "retryAt": "2026-10-03T07:31:13.92+08:00",
+        "processingAttempts": 0
+      },
+      {
+        "id": "clw00c2v4rt6o8377ywpqbrws",
+        "error": "Budget for llm exhausted (minute)",
+        "state": "new",
+        "retryAt": "2026-10-03T07:31:13.907+08:00",
+        "processingAttempts": 0
+      }
+    ],
+    "observedAt": "2026-10-03T07:34:45.148495+08:00",
+    "modelAttempts": 190,
+    "activeProviderReservations": 0
+  },
+  "realBudgetRecovery": {
+    "articles": [
+      {
+        "id": "clw00c2v4rt6o8377ywpqbrws",
+        "error": null,
+        "state": "analyzed",
+        "retryAt": null,
+        "hasPublication": true,
+        "processingAttempts": 0
+      },
+      {
+        "id": "zzhlkd4fv8rfxgh4nng7u3luo",
+        "error": null,
+        "state": "analyzed",
+        "retryAt": null,
+        "hasPublication": true,
+        "processingAttempts": 0
+      }
+    ],
+    "observedAt": "2026-10-03T07:37:36.621486+08:00",
+    "modelAttempts": 195,
+    "activeProviderReservations": 0
+  },
+  "pageReadWithoutModelCalls": {
+    "at": "2026-10-03T05:21:33.931474+08:00",
+    "receiptsBefore": 83,
+    "receiptsAfter": 83,
+    "workerStopped": true,
+    "previewModelCallsEnabled": false,
+    "netNewCalls": 0
+  },
+  "prematureDailyObservedError": "daily 2026-10-03: report window has not ended",
+  "backupRestore": {
+    "at": "2026-10-02T21:26:22.292Z",
+    "sourceDatabase": "dailynews_p5_trial",
+    "restoredDatabase": "dailynews_p5_restore_test",
+    "archiveSha256": "a69f6bcf3e632381c9897b1e2cba71a3641240d3d0e699735f01cb0b1e69ee8c",
+    "match": true,
+    "results": [
+      {
+        "table": "dailynews_trials",
+        "source": {
+          "count": 1,
+          "hash": "a2eca3b568f37532cd6362b4b65e0375"
+        },
+        "restored": {
+          "count": 1,
+          "hash": "a2eca3b568f37532cd6362b4b65e0375"
+        },
+        "match": true
+      },
+      {
+        "table": "dailynews_trial_sources",
+        "source": {
+          "count": 14,
+          "hash": "bf5aa6acb49000b44027fd18d972f919"
+        },
+        "restored": {
+          "count": 14,
+          "hash": "bf5aa6acb49000b44027fd18d972f919"
+        },
+        "match": true
+      },
+      {
+        "table": "dailynews_trial_articles",
+        "source": {
+          "count": 22,
+          "hash": "3c3b33c3c8e990e536664d2a353be14c"
+        },
+        "restored": {
+          "count": 22,
+          "hash": "3c3b33c3c8e990e536664d2a353be14c"
+        },
+        "match": true
+      },
+      {
+        "table": "dailynews_trial_reports",
+        "source": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "restored": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "match": true
+      },
+      {
+        "table": "sources",
+        "source": {
+          "count": 187,
+          "hash": "72405c66c757f8e494da58193dc4c942"
+        },
+        "restored": {
+          "count": 187,
+          "hash": "72405c66c757f8e494da58193dc4c942"
+        },
+        "match": true
+      },
+      {
+        "table": "articles",
+        "source": {
+          "count": 128,
+          "hash": "761468867351173ff58ec378ad4b2181"
+        },
+        "restored": {
+          "count": 128,
+          "hash": "761468867351173ff58ec378ad4b2181"
+        },
+        "match": true
+      },
+      {
+        "table": "analyses",
+        "source": {
+          "count": 23,
+          "hash": "f802980588fea35e8b9a8d75a7762417"
+        },
+        "restored": {
+          "count": 23,
+          "hash": "f802980588fea35e8b9a8d75a7762417"
+        },
+        "match": true
+      },
+      {
+        "table": "publications",
+        "source": {
+          "count": 22,
+          "hash": "6351e53fdf6dbf121633c4f4a1a96cad"
+        },
+        "restored": {
+          "count": 22,
+          "hash": "6351e53fdf6dbf121633c4f4a1a96cad"
+        },
+        "match": true
+      },
+      {
+        "table": "editorial_overrides",
+        "source": {
+          "count": 1,
+          "hash": "85ca9414f1a0161e67bb7e7259518564"
+        },
+        "restored": {
+          "count": 1,
+          "hash": "85ca9414f1a0161e67bb7e7259518564"
+        },
+        "match": true
+      },
+      {
+        "table": "editorial_decisions",
+        "source": {
+          "count": 17,
+          "hash": "54d36cf349a0f731dd432390604ca732"
+        },
+        "restored": {
+          "count": 17,
+          "hash": "54d36cf349a0f731dd432390604ca732"
+        },
+        "match": true
+      },
+      {
+        "table": "fact_editorial_state",
+        "source": {
+          "count": 14,
+          "hash": "85aa376638c25c9591605ce46f8fe7a9"
+        },
+        "restored": {
+          "count": 14,
+          "hash": "85aa376638c25c9591605ce46f8fe7a9"
+        },
+        "match": true
+      },
+      {
+        "table": "stories",
+        "source": {
+          "count": 14,
+          "hash": "b4c46ada7c615eabd1e94567e3601f2b"
+        },
+        "restored": {
+          "count": 14,
+          "hash": "b4c46ada7c615eabd1e94567e3601f2b"
+        },
+        "match": true
+      },
+      {
+        "table": "facts",
+        "source": {
+          "count": 14,
+          "hash": "626a56905d1843dd8b87e2bc2d9dc6e5"
+        },
+        "restored": {
+          "count": 14,
+          "hash": "626a56905d1843dd8b87e2bc2d9dc6e5"
+        },
+        "match": true
+      },
+      {
+        "table": "fact_articles",
+        "source": {
+          "count": 14,
+          "hash": "7df47d9f90ab352efccda964c4afa93f"
+        },
+        "restored": {
+          "count": 14,
+          "hash": "7df47d9f90ab352efccda964c4afa93f"
+        },
+        "match": true
+      },
+      {
+        "table": "selected_ledger",
+        "source": {
+          "count": 12,
+          "hash": "bd29774d8c5bd072a1c87c136e657134"
+        },
+        "restored": {
+          "count": 12,
+          "hash": "bd29774d8c5bd072a1c87c136e657134"
+        },
+        "match": true
+      },
+      {
+        "table": "selected_state",
+        "source": {
+          "count": 7,
+          "hash": "fdc8f65cc6e90568d5cad3719e4cfd04"
+        },
+        "restored": {
+          "count": 7,
+          "hash": "fdc8f65cc6e90568d5cad3719e4cfd04"
+        },
+        "match": true
+      },
+      {
+        "table": "receipts",
+        "source": {
+          "count": 86,
+          "hash": "0e698cef33f4211aadf8a50215abd45a"
+        },
+        "restored": {
+          "count": 86,
+          "hash": "0e698cef33f4211aadf8a50215abd45a"
+        },
+        "match": true
+      },
+      {
+        "table": "receipt_attempts",
+        "source": {
+          "count": 86,
+          "hash": "e6c0167431f5025029d6400952dc8662"
+        },
+        "restored": {
+          "count": 86,
+          "hash": "e6c0167431f5025029d6400952dc8662"
+        },
+        "match": true
+      },
+      {
+        "table": "reports",
+        "source": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "restored": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "match": true
+      }
+    ]
+  },
+  "accountBalanceObservation": {
+    "beforeAt": "2026-10-02T20:16:45.541Z",
+    "afterAt": "2026-10-03T00:01:48.598Z",
+    "accountChanges": [
+      {
+        "currency": "CNY",
+        "observedBalanceDecrease": 0.35
+      }
+    ],
+    "trialAttributedBilledCost": null,
+    "differenceFromUsdEstimate": null,
+    "note": "Shared-account balance delta is not a trial-attributed bill. The CNY balance and USD token estimate are not directly subtracted; no exchange rate is assumed."
+  },
+  "processShutdown": {
+    "at": "2026-10-03T00:01:23Z",
+    "workerPid": 60429,
+    "workerStopped": true,
+    "finiteControllerPid": 63372,
+    "finiteControllerStopped": true,
+    "previewApiPid": 58094,
+    "previewApiRunning": true,
+    "previewWebPid": 58095,
+    "previewWebRunning": true,
+    "previewModelCallsEnabled": false,
+    "previewUrl": "http://127.0.0.1:3310",
+    "processIdentityVerifiedBeforeStop": true,
+    "persistentAutomationCreated": false
+  }
+}
