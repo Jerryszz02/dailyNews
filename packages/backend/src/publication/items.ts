@@ -2,6 +2,7 @@
 // items through these functions; visibility, release gate and body licences are applied here.
 import type { CategoryKey, ChannelKey } from "@aihot/contracts/taxonomy";
 import type { FeedItemSummary, ItemSummary, MediaView, SourceKind, XPostView } from "@aihot/contracts/site";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import { sql, type Db } from "../db.ts";
 import { proxiedImage, proxiedImageSet } from "../media/imgproxy.ts";
 import { displayTags } from "./rules.ts";
@@ -169,7 +170,7 @@ export function toItemSummary(row: ItemRow): ItemSummary {
     source: {
       id: row.source_id,
       legacySourceId: row.legacy_source_id ?? null,
-      name: row.source_name,
+      name: displaySourceName(row.source_name),
       kind: row.source_kind,
       firstParty: row.first_party,
       iconUrl: proxiedImage(row.source_icon, "avatar"),
@@ -186,6 +187,7 @@ export function toItemSummary(row: ItemRow): ItemSummary {
     importanceTier: row.importance_tier ?? null,
     factStatus: row.fact_status ?? null,
     selected: row.selected,
+    backfill: row.backfill ?? false,
     channel: row.channel,
     story: row.story_public_id ? { publicId: row.story_public_id, title: row.story_title ?? "" } : null,
     x,
@@ -198,7 +200,7 @@ export function toFeedItemSummary(row: ItemRow): FeedItemSummary {
   return {
     id: item.id, title: item.title, summary: item.summary, reason: item.reason,
     source: { id: item.source.id, legacySourceId: item.source.legacySourceId, name: item.source.name }, publishedAt: item.publishedAt, timelineAt: item.timelineAt,
-    category: item.category, tags: item.tags, score: item.score, selected: item.selected, channel: item.channel,
+    category: item.category, tags: item.tags, score: item.score, selected: item.selected, backfill: item.backfill, channel: item.channel,
     scoreKind: item.scoreKind, importanceTier: item.importanceTier, factStatus: item.factStatus,
     x: item.x ? {
       authorName: item.x.authorName, handle: item.x.handle, avatarUrl: item.x.avatarUrl,

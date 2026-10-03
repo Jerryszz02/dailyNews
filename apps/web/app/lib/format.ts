@@ -1,4 +1,5 @@
 import { beijingDate, beijingTime, beijingWeekday } from "@aihot/contracts/time";
+import { displaySourceName } from "@aihot/contracts/source-display";
 
 export { beijingDate, beijingTime, beijingWeekday };
 
@@ -39,7 +40,7 @@ export function monthDayTime(iso: string): string {
 export function shortSourceName(name: string): string {
   const m = /^X[:：]\s*(.+?)\s*\(@[^)]+\)\s*$/.exec(name);
   if (m) return m[1]!.replace(/（.*?）/g, "").trim();
-  return name.replace(/（RSS）|（网页）|（API）/g, "").trim();
+  return displaySourceName(name.replace(/（RSS）|（网页）|（API）/g, "").trim());
 }
 
 export function sourceInitial(name: string): string {

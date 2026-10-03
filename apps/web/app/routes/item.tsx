@@ -7,7 +7,7 @@ import { loadOr404 } from "../lib/api.server";
 import { breadcrumbLd, pageMeta, siteUrl, titled } from "../lib/seo";
 import { fullDateTime, relativeTime } from "../lib/format";
 import { markRead } from "../lib/local-state";
-import { SelectedBadge } from "../components/ui/Badge";
+import { HistoryBadge, SelectedBadge } from "../components/ui/Badge";
 import { FactJudgment, ScoreLabel } from "../components/ui/Score";
 import { scoreLabel } from "../lib/score-labels";
 import { PillTabs } from "../components/ui/Tabs";
@@ -183,9 +183,10 @@ export default function ItemPage() {
       {moreMenu}
     </div>
   );
-  const verdict = (item.selected || item.score !== null || item.factStatus !== null) && (
+  const verdict = (item.selected || item.backfill || item.score !== null || item.factStatus !== null) && (
     <div className="flex items-center gap-2">
       {item.selected && <SelectedBadge />}
+      {item.backfill && <HistoryBadge />}
       <ScoreLabel score={item.score} scoreKind={item.scoreKind} />
       {item.scoreKind === "legacy_curation_total" && <FactJudgment tier={item.importanceTier} status={item.factStatus} />}
     </div>
@@ -231,7 +232,7 @@ export default function ItemPage() {
           <p className="text-[13.5px] leading-[1.8] text-ink-2">{item.reason}</p>
         </RailSection>
       ) : (
-        verdict && <RailSection title={scoreLabel(item.scoreKind)}>{verdict}</RailSection>
+        verdict && <RailSection title={item.backfill && !item.selected && item.score === null && item.factStatus === null ? "收录信息" : scoreLabel(item.scoreKind)}>{verdict}</RailSection>
       )}
       {item.tags.length > 0 && (
         <RailSection title="标签">
@@ -296,6 +297,7 @@ export default function ItemPage() {
                 <SelectedBadge />
               </span>
             )}
+            {item.backfill && <span className="ml-1 lg:hidden"><HistoryBadge /></span>}
             {item.score !== null && (
               <span className="ml-1 lg:hidden">
                 <ScoreLabel score={item.score} scoreKind={item.scoreKind} />

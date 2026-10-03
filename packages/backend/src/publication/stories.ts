@@ -1,6 +1,7 @@
 // Stories (events) and the hot ranking through the public read layer. The website sees heat values;
 // v1 / MCP / Skill only see ranks and counts.
 import type { HeatPoint, HotResponse, StoryDetail, StoryReportView } from "@aihot/contracts/site";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import { sql } from "../db.ts";
 import { proxiedImage, proxiedImageSet } from "../media/imgproxy.ts";
 import { latestHotRanking, rankingExtras } from "./hot.ts";
@@ -46,6 +47,7 @@ interface ReportRow {
   summary: string | null;
   url: string;
   selected: boolean;
+  backfill: boolean;
   at: Date;
   source_id: string;
   legacy_source_id: string | null;
@@ -65,7 +67,7 @@ interface ReportRow {
  */
 async function storyReports(storyId: number, now: Date): Promise<ReportRow[]> {
   return sql<ReportRow[]>`
-    SELECT DISTINCT ON (p.article_id) p.article_id AS id, p.title, p.summary, p.url, p.selected,
+    SELECT DISTINCT ON (p.article_id) p.article_id AS id, p.title, p.summary, p.url, p.selected, p.backfill,
       coalesce(p.published_at, p.discovered_at) AS at, s.id AS source_id, s.legacy_source_id, s.name AS source_name, s.kind AS source_kind,
       p.first_party, s.icon_url, f.public_id AS fact_public_id, f.id AS fact_id
     FROM facts f JOIN fact_articles fa ON fa.fact_id = f.id JOIN publications p ON p.article_id = fa.article_id
@@ -79,10 +81,11 @@ function reportView(r: ReportRow): StoryReportView {
     id: r.id,
     title: r.title,
     summary: r.summary,
-    source: { id: r.source_id, legacySourceId: r.legacy_source_id, name: r.source_name, kind: r.source_kind as never, firstParty: r.first_party, iconUrl: proxiedImage(r.icon_url, "avatar") },
+    source: { id: r.source_id, legacySourceId: r.legacy_source_id, name: displaySourceName(r.source_name), kind: r.source_kind as never, firstParty: r.first_party, iconUrl: proxiedImage(r.icon_url, "avatar") },
     publishedAt: r.at.toISOString(),
     originalUrl: r.url,
     selected: r.selected,
+    backfill: r.backfill,
     factId: r.fact_public_id,
   };
 }
@@ -158,7 +161,7 @@ export async function loadStoryDetail(storyId: number, now = new Date()): Promis
     digest: s.digest,
     digestUpdatedAt: s.digest_updated_at?.toISOString() ?? null,
     summary: s.summary,
-    excerpt: !s.digest && !s.summary && origin?.summary ? { text: origin.summary, sourceName: origin.source_name } : null,
+    excerpt: !s.digest && !s.summary && origin?.summary ? { text: origin.summary, sourceName: displaySourceName(origin.source_name) } : null,
     latest: s.latest,
     whyHot: {
       participants48h: Number(why?.p48 ?? 0),
@@ -257,10 +260,10 @@ export async function loadHot(): Promise<HotResponse> {
         sourceCount: e.sourceCount,
         signalCount: e.signalCount,
         reportCount: e.reportCount,
-        sourceNames: e.sourceNames,
+        sourceNames: e.sourceNames.map(displaySourceName),
         latestAt: e.latestAt,
         firstReportAt: e.firstReportAt,
-        representative: e.representativeItemId ? { id: e.representativeItemId, url: e.representativeUrl ?? "", sourceName: e.representativeSource ?? "" } : null,
+        representative: e.representativeItemId ? { id: e.representativeItemId, url: e.representativeUrl ?? "", sourceName: displaySourceName(e.representativeSource ?? "") } : null,
         participants: extras.participants(e),
         spark: sparks.get(e.storyId) ?? [],
         summary: text.summary,
@@ -281,7 +284,7 @@ export async function v1HotTopics() {
     rank: e.rank,
     id: e.representativeItemId ?? e.storyPublicId,
     title: e.title,
-    source: { name: e.representativeSource ?? e.sourceNames[0] ?? SITE.name },
+    source: { name: displaySourceName(e.representativeSource ?? e.sourceNames[0] ?? SITE.name) },
     links: {
       aihot: e.representativeItemId ? itemUrl(e.representativeItemId) : storyUrl(e.storyPublicId),
       original: e.representativeUrl ?? storyUrl(e.storyPublicId),
@@ -290,7 +293,7 @@ export async function v1HotTopics() {
     sourceCount: e.sourceCount,
     signalCount: e.signalCount,
     participantCount: e.participantCount,
-    sourceNames: e.sourceNames,
+    sourceNames: e.sourceNames.map(displaySourceName),
     latestAt: new Date(e.latestAt).toISOString(),
   }));
   return { schemaVersion: 1 as const, count: items.length, items };
@@ -321,7 +324,7 @@ export async function v1Story(storyId: number) {
         id: r.id,
         title: r.title,
         summary: r.summary,
-        source: { name: r.source_name, firstParty: r.first_party },
+        source: { name: displaySourceName(r.source_name), firstParty: r.first_party },
         publishedAt: r.at.toISOString(),
         links: { aihot: itemUrl(r.id), original: r.url },
       })),

@@ -3,6 +3,7 @@ import { listedCondition, selectedCondition } from "./scope.ts";
 // publication time. Summary feeds never carry content:encoded; full feeds inline bodies only for
 // sources that explicitly allow redistribution. Titles come from the site's name and categories.
 import { CATEGORY_LABELS, PUBLIC_API_CATEGORY_KEYS, type PublicApiCategoryKey } from "@aihot/contracts/taxonomy";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import { SITE, withSubject } from "@aihot/industry/site";
 import { config } from "../config.ts";
 import { sql } from "../db.ts";
@@ -103,7 +104,7 @@ function itemXml(r: FeedRow, includeContent: boolean): string {
       <description>${cdata(description)}</description>${content}${category}
       <pubDate>${rfc822(pub)}</pubDate>
       <guid isPermaLink="false">${escapeXml(r.id)}</guid>
-      <author>${AUTHOR} (${escapeXml(r.source_name)})</author>
+      <author>${AUTHOR} (${escapeXml(displaySourceName(r.source_name))})</author>
     </item>`;
 }
 

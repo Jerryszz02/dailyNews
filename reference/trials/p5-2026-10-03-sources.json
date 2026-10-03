@@ -1,0 +1,427 @@
+{
+  "version": 1,
+  "scope": "仅新建本地 dailynews_p5_trial；不修改默认来源种子或生产配置",
+  "sources": [
+    {
+      "id": "dn-apple-newsroom-678029df2ef0",
+      "name": "苹果新闻室 Apple Newsroom · Newsroom",
+      "adapter": "rss",
+      "language": "en-US",
+      "categoryHint": "technology",
+      "configOverrides": {
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.apple.com/newsroom/rss-feed.rss",
+        "listingResult": "read",
+        "listingCount": 20,
+        "readerUrl": "https://www.apple.com/newsroom/2026/09/final-cut-camera-now-supports-variable-aperture-on-iphone-18-pro/",
+        "readerHttpStatus": 200,
+        "readerAllowed": true
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-bbc-25b2d27a78f1",
+      "name": "BBC · World",
+      "adapter": "rss",
+      "language": "en-US",
+      "categoryHint": "international",
+      "configOverrides": {
+        "detail": {
+          "maxFetches": 10,
+          "publishedAtRegex": "\"datePublished\"\\s*:\\s*\"([^\"]+)\"",
+          "publishedAtAuthoritative": true,
+          "upgradeDatePrecision": true
+        },
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "listingResult": "read",
+        "listingCount": 33,
+        "readerUrl": "https://www.bbc.co.uk/news/articles/ck3r5dxxwqzpo?at_medium=RSS&at_campaign=rss",
+        "readerHttpStatus": 200,
+        "readerAllowed": true,
+        "dateRuleReason": "RSS pubDate 与原文 datePublished 不一致；仅采纳首次发布日期，缺失不回退更新时间。",
+        "dateRuleVerifiedAt": "2026-10-02T20:32:55.081Z",
+        "originalPublishedAt": "2026-10-02T16:26:09.180Z",
+        "readableBodyChars": 1181
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-chinanews-9536d2d7c183",
+      "name": "中国新闻网 · 财经",
+      "adapter": "rss",
+      "language": "zh-CN",
+      "categoryHint": "finance",
+      "configOverrides": {
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.chinanews.com.cn/rss/finance.xml",
+        "listingResult": "read",
+        "listingCount": 30,
+        "readerUrl": "https://www.chinanews.com.cn/cj/2026/10-02/10707331.shtml",
+        "readerHttpStatus": 200,
+        "readerAllowed": true
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-chinanews-e34894180204",
+      "name": "中国新闻网 · 社会",
+      "adapter": "rss",
+      "language": "zh-CN",
+      "categoryHint": "society",
+      "configOverrides": {
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.chinanews.com.cn/rss/society.xml",
+        "listingResult": "read",
+        "listingCount": 30,
+        "readerUrl": "https://www.chinanews.com.cn/sh/2026/10-02/10707322.shtml",
+        "readerHttpStatus": 200,
+        "readerAllowed": true
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-cnbc-e49c9082deca",
+      "name": "CNBC · Business",
+      "adapter": "rss",
+      "language": "en-US",
+      "categoryHint": "finance",
+      "configOverrides": {
+        "detail": {
+          "maxFetches": 10,
+          "publishedAtRegex": "\"datePublished\"\\s*:\\s*\"([^\"]+)\"",
+          "publishedAtAuthoritative": true,
+          "upgradeDatePrecision": true
+        },
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.cnbc.com/id/100727362/device/rss/rss.html",
+        "listingResult": "read",
+        "listingCount": 30,
+        "readerUrl": "https://www.cnbc.com/2026/10/02/diesel-oil-trump-europe-export-ban.html",
+        "readerHttpStatus": 200,
+        "readerAllowed": true,
+        "dateRuleReason": "RSS pubDate 与原文 datePublished 不一致；仅采纳首次发布日期，缺失不回退更新时间。",
+        "dateRuleVerifiedAt": "2026-10-02T20:32:55.081Z",
+        "originalPublishedAt": "2026-10-02T07:51:56.000Z",
+        "readableBodyChars": 3892
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-cnn-2c835545d85b",
+      "name": "CNN · World",
+      "adapter": "sitemap",
+      "language": "en-US",
+      "categoryHint": "international",
+      "configOverrides": {
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.cnn.com/sitemap/news.xml",
+        "listingResult": "read",
+        "listingCount": 100,
+        "readerUrl": "https://www.cnn.com/2026/10/01/us/catalina-island-medical-helicopter-crash-hnk",
+        "readerHttpStatus": 200,
+        "readerAllowed": true
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-deadline-804da737cff2",
+      "name": "Deadline 影视行业新闻 · Film",
+      "adapter": "rss",
+      "language": "en-US",
+      "categoryHint": "entertainment",
+      "configOverrides": {
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://deadline.com/feed/",
+        "listingResult": "read",
+        "listingCount": 12,
+        "readerUrl": "https://deadline.com/2026/10/kennedy-center-honors-capital-one-arena-1237145621/",
+        "readerHttpStatus": 200,
+        "readerAllowed": true
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-fed-b3a7beab67c0",
+      "name": "美联储 · Press Releases",
+      "adapter": "rss",
+      "language": "en-US",
+      "categoryHint": "policy",
+      "configOverrides": {
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.federalreserve.gov/feeds/press_all.xml",
+        "listingResult": "read",
+        "listingCount": 20,
+        "readerUrl": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20261002a.htm",
+        "readerHttpStatus": 200,
+        "readerAllowed": true
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-ithome-1019f540ec62",
+      "name": "IT之家 · 科技",
+      "adapter": "rss",
+      "language": "zh-CN",
+      "categoryHint": "technology",
+      "configOverrides": {
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.ithome.com/rss/",
+        "listingResult": "read",
+        "listingCount": 60,
+        "readerUrl": "https://www.ithome.com/1/009/373.htm",
+        "readerHttpStatus": 200,
+        "readerAllowed": true
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-nba-533ef335b03c",
+      "name": "NBA官网 · NBA News",
+      "adapter": "web_list",
+      "language": "en-US",
+      "categoryHint": "sports",
+      "configOverrides": {
+        "itemSelector": "a[class*=\"ArticleTile_tileHeadlineLink\"], a[class*=\"HeroArticleTile_link\"]",
+        "titleSelector": "h3, h4",
+        "detail": {
+          "maxFetches": 10,
+          "titleSelector": "h1",
+          "titleAuthoritative": true,
+          "publishedAtAuthoritative": true,
+          "upgradeDatePrecision": true,
+          "publishedAtUtcOffset": "-04:00",
+          "publishedAtRegex": "\"datePublished\"\\s*:\\s*\"([^\"]+)\""
+        },
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        },
+        "linkSelector": "a"
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.nba.com/news",
+        "listingResult": "read",
+        "listingCount": 19,
+        "readerUrl": "https://www.nba.com/news/5-takeaways-new-york-knicks-media-day-2026",
+        "readerHttpStatus": 200,
+        "readerAllowed": true,
+        "dateRuleVerifiedAt": "2026-10-02T20:32:55.081Z",
+        "originalPublishedAt": "2026-09-28T21:58:14.000Z",
+        "readableBodyChars": 7884,
+        "productionParserCount": 19
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-openai-d7c663cc6e40",
+      "name": "OpenAI · News",
+      "adapter": "rss",
+      "language": "en-US",
+      "categoryHint": "ai",
+      "configOverrides": {
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://openai.com/news/rss.xml",
+        "listingResult": "read",
+        "listingCount": 1245,
+        "readerUrl": "https://openai.com/index/practical-guide-building-gpt-6",
+        "readerHttpStatus": 403,
+        "readerAllowed": true,
+        "visitorCheck": "Chrome 原文可读；后端 HTTP 403，抽取失败应保留，不绕过验证。",
+        "visitorUrl": "https://openai.com/zh-Hans-CN/index/practical-guide-building-gpt-6/"
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-qbitai-31dd73b95c93",
+      "name": "量子位 · AI",
+      "adapter": "web_list",
+      "language": "zh-CN",
+      "categoryHint": "ai",
+      "configOverrides": {
+        "itemSelector": ".text_box",
+        "linkSelector": "h4 a",
+        "titleSelector": "h4 a",
+        "detail": {
+          "maxFetches": 10,
+          "titleSelector": "h1",
+          "titleAuthoritative": true,
+          "publishedAtAuthoritative": true,
+          "upgradeDatePrecision": true,
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtSelector": ".article_info"
+        },
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.qbitai.com/",
+        "listingResult": "read",
+        "listingCount": 20,
+        "readerUrl": "https://www.qbitai.com/2026/10/500098.html",
+        "readerHttpStatus": 200,
+        "readerAllowed": true,
+        "dateRuleVerifiedAt": "2026-10-02T20:32:55.081Z",
+        "originalPublishedAt": "2026-10-02T07:34:15.000Z",
+        "readableBodyChars": 10138,
+        "productionParserCount": 20
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-wired-c465b48c1ddf",
+      "name": "Wired · Science",
+      "adapter": "rss",
+      "language": "en-US",
+      "categoryHint": "science",
+      "configOverrides": {
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.wired.com/feed/category/science/latest/rss",
+        "listingResult": "read",
+        "listingCount": 20,
+        "readerUrl": "https://www.wired.com/story/measles-is-forcing-hospitals-to-adapt-to-a-new-normal/",
+        "readerHttpStatus": 200,
+        "readerAllowed": true,
+        "caveat": "保留 mayHavePaywall=true；本次请求可读不能保证所有访问免费。"
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    },
+    {
+      "id": "dn-xinhua-f77f0b3178db",
+      "name": "新华网 · 要闻",
+      "adapter": "web_list",
+      "language": "zh-CN",
+      "categoryHint": "china",
+      "configOverrides": {
+        "itemSelector": ".scroll-articles",
+        "linkSelector": ".tit a",
+        "titleSelector": ".tit a",
+        "detail": {
+          "maxFetches": 10,
+          "titleSelector": "h1",
+          "titleAuthoritative": true,
+          "publishedAtAuthoritative": true,
+          "upgradeDatePrecision": true,
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtSelector": ".mheader .info"
+        },
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 1,
+          "initialBackfillMonths": 1
+        }
+      },
+      "evidence": {
+        "checkedAt": "2026-10-02T20:19:46.439Z",
+        "listingUrl": "https://www.news.cn/",
+        "listingResult": "read",
+        "listingCount": 15,
+        "readerUrl": "https://www.news.cn/politics/20261002/8f7ee91122a14c6b82d3bea8dcae6a5f/c.html",
+        "readerHttpStatus": 200,
+        "readerAllowed": true,
+        "dateRuleVerifiedAt": "2026-10-02T20:32:55.081Z",
+        "originalPublishedAt": "2026-10-02T10:20:08.000Z",
+        "readableBodyChars": 3761,
+        "productionParserCount": 15
+      },
+      "siteFulltext": false,
+      "syndicateFulltext": false
+    }
+  ]
+}

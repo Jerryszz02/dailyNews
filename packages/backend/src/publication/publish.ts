@@ -4,6 +4,7 @@
 import { invalidateStoryInputs } from "../events/derived-content.ts";
 import { SITE } from "@aihot/industry/site";
 import { toPublicApiCategory } from "@aihot/contracts/taxonomy";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import { config } from "../config.ts";
 import { one, sql, type Tx } from "../db.ts";
 import { sha256, stableJson } from "../lib/ids.ts";
@@ -154,7 +155,7 @@ export function v1Payload(p: {
     title: p.title,
     originalTitle: p.originalTitle,
     summary: p.summary,
-    source: { name: p.sourceName },
+    source: { name: displaySourceName(p.sourceName) },
     links: { aihot, original: p.url },
     publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
     discoveredAt: p.discoveredAt.toISOString(),

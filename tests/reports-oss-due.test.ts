@@ -9,7 +9,7 @@ import { upsertMaterial } from "@aihot/backend/content/materials";
 import { stopBoss } from "@aihot/backend/jobs/queue";
 import { publishArticle } from "@aihot/backend/publication/publish";
 import { loadReport } from "@aihot/backend/publication/reports";
-import { composeDaily, dueDaily, dueMonthly, dueWeekly } from "@aihot/backend/reports/compose";
+import { composeDaily, composeMonthly, composeWeekly, dueDaily, dueMonthly, dueWeekly } from "@aihot/backend/reports/compose";
 
 const T = tag();
 const SOURCE = `test-reports-${T}`;
@@ -38,4 +38,20 @@ test("a daily with nothing in its window is refused, not published empty", async
   await assert.rejects(composeDaily(date), /no selected items/);
   const [row] = await sql`SELECT 1 FROM reports WHERE kind = 'daily' AND key = ${date}`;
   assert.equal(row, undefined);
+});
+
+test("bounded trial refuses future report windows before reading candidates or calling a model", async () => {
+  const previous = process.env.DAILYNEWS_TRIAL_MODE;
+  process.env.DAILYNEWS_TRIAL_MODE = "bounded";
+  try {
+    await assert.rejects(composeDaily("2030-99-99"), /invalid report date/);
+    await assert.rejects(composeDaily("2098-01-15"), /window has not ended/);
+    await assert.rejects(composeWeekly("2098-W99"), /invalid report period/);
+    await assert.rejects(composeWeekly("2098-W12"), /window is not due/);
+    await assert.rejects(composeMonthly("2098-99"), /invalid report period/);
+    await assert.rejects(composeMonthly("2098-03"), /window is not due/);
+  } finally {
+    if (previous === undefined) delete process.env.DAILYNEWS_TRIAL_MODE;
+    else process.env.DAILYNEWS_TRIAL_MODE = previous;
+  }
 });

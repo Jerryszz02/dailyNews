@@ -63,13 +63,15 @@ export interface ItemSummary {
   importanceTier: string | null;
   factStatus: string | null;
   selected: boolean;
+  /** Imported from source history; can still have an editorial selection and original publication date. */
+  backfill?: boolean;
   channel: "news" | "x";
   story: StoryRef | null;
   x: XPostView | null;
 }
 
 /** The fields rendered by a site feed card; full original text lives in the item detail. */
-export interface FeedItemSummary extends Pick<ItemSummary, "id" | "title" | "summary" | "reason" | "publishedAt" | "timelineAt" | "category" | "tags" | "score" | "scoreKind" | "importanceTier" | "factStatus" | "selected" | "channel"> {
+export interface FeedItemSummary extends Pick<ItemSummary, "id" | "title" | "summary" | "reason" | "publishedAt" | "timelineAt" | "category" | "tags" | "score" | "scoreKind" | "importanceTier" | "factStatus" | "selected" | "backfill" | "channel"> {
   source: Pick<SourceRef, "id" | "legacySourceId" | "name">;
   x: (Pick<XPostView, "authorName" | "handle" | "avatarUrl" | "avatarSrcSet" | "media"> & {
     quoted: Omit<NonNullable<XPostView["quoted"]>, "url"> | null;
@@ -131,6 +133,7 @@ export interface PoolResponse {
   page: number;
   pageCount: number;
   total: number;
+  /** Public items first collected normally with a timeline date of today; history imports are excluded. */
   todayCount: number;
   freshness: string;
   generatedAt: string;
@@ -257,6 +260,7 @@ export interface StoryReportView {
   publishedAt: string;
   originalUrl: string;
   selected: boolean;
+  backfill?: boolean;
   factId: string;
 }
 

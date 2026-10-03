@@ -1,5 +1,6 @@
 // Reading the latest published hot ranking. The web shows heat values; machine exits only ranks.
 import type { HotParticipant, HotStripEntry } from "@aihot/contracts/site";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import { sql } from "../db.ts";
 import { proxiedImage, proxiedImageSet } from "../media/imgproxy.ts";
 
@@ -28,7 +29,7 @@ async function queryLatestHotRanking(): Promise<HotRanking | null> {
   const entries = row.entries.flatMap(e => {
     const story = byId.get(e.storyId);
     return story?.article_id ? [{ ...e, title: story.title, representativeItemId: story.article_id,
-      representativeUrl: story.url, representativeSource: story.source_name }] : [];
+      representativeUrl: story.url, representativeSource: displaySourceName(story.source_name ?? "") }] : [];
   });
   return { id: row.id, computedAt: row.computedAt, ruleVersion: row.ruleVersion, entries, coverage: row.coverage };
 }

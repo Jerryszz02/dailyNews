@@ -7,7 +7,7 @@ import { data as routeData } from "react-router";
 import { breadcrumbLd, pageMeta, titled } from "../lib/seo";
 import { beijingDate, beijingTime, monthDayTime, relativeTime, shortSourceName } from "../lib/format";
 import { HeatChart } from "../features/story/HeatChart";
-import { Badge, SelectedBadge } from "../components/ui/Badge";
+import { Badge, HistoryBadge, SelectedBadge } from "../components/ui/Badge";
 import { PillTabs } from "../components/ui/Tabs";
 import { Select } from "../components/ui/Controls";
 import { IconArrowLeft, IconChevronRight, IconClock, IconDoc, IconUsers } from "../components/icons";
@@ -129,6 +129,7 @@ function TimelineRow({ r }: { r: StoryReportView }) {
         <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-[12px] leading-[20px] text-ink-4 lg:mt-0">
           <span className="min-w-0 truncate">{r.source.name.replace(/（RSS）|（网页）|（API）/g, "")}</span>
           {r.selected && <SelectedBadge />}
+          {r.backfill && <HistoryBadge />}
         </div>
         <Link to={`/items/${r.id}`} prefetch="intent" className="mt-1 block text-[16px] font-[650] leading-[1.6] text-ink transition-colors hover:text-accent lg:text-[15.5px]">
           {r.title}

@@ -32,6 +32,8 @@ const provider = await stub((_hit, req) => {
 Object.assign(process.env, { LLM_BASE_URL: `${provider.url}/v1`, LLM_API_KEY: "test-key", LLM_MODEL: "one-model", MODEL_CALLS_ENABLED: "true" });
 
 before(async () => {
+  await sql`INSERT INTO budgets (service, per_minute, per_hour, per_day, note)
+    VALUES ('llm', 20, 20, 20, 'offline default model test') ON CONFLICT (service) DO NOTHING`;
   await sql`INSERT INTO sources (id, name, kind, tier, participation_mode, next_fetch_at) VALUES (${SOURCE}, 'Test default model', 'rss', 'T1', 'editorial', '2100-01-01')`;
 });
 after(async () => {

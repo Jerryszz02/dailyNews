@@ -40,7 +40,7 @@ function fromResponse(r: TimelineResponse): ListState {
 const WEEKDAY_SHORT = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
 /** Sticky day header: a quiet row on desktop, a grey full-width bar on phones. */
-export function DayHeader({ day, today, count, collapsed, onToggle }: { day: string; today: string; count: number | null; collapsed?: boolean; onToggle?: () => void }) {
+export function DayHeader({ day, today, count, countKind = "total", collapsed, onToggle }: { day: string; today: string; count: number | null; countKind?: "total" | "new"; collapsed?: boolean; onToggle?: () => void }) {
   const [, m, d] = day.split("-").map(Number) as [number, number, number];
   const date = `${m}月${d}日`;
   const weekday = beijingWeekday(day);
@@ -76,7 +76,7 @@ export function DayHeader({ day, today, count, collapsed, onToggle }: { day: str
           {count !== null && (
             <>
               {" · "}
-              <span className="num">{count}</span> 条
+              {countKind === "new" && "新增 "}<span className="num">{count}</span> 条
             </>
           )}
         </span>

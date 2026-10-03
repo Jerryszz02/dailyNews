@@ -1,6 +1,7 @@
 import { currentDecisionCondition, releasedCondition, selectedCondition, listedCondition } from "./scope.ts";
 // Item detail and Markdown export, both behind the same visibility and licence rules.
 import type { ItemDetail, SiteItemDetail, OutlineEntry, StoryRef } from "@aihot/contracts/site";
+import { displaySourceName } from "@aihot/contracts/source-display";
 import TurndownService from "turndown";
 import { sql } from "../db.ts";
 import { proxyBodyImages } from "../media/imgproxy.ts";
@@ -160,7 +161,7 @@ export async function exportMarkdown(id: string): Promise<{ filename: string; bo
   const lines: string[] = [];
   lines.push(`# ${row.title}`, "");
   if (row.original_title) lines.push(`> 原标题：${row.original_title}`, "");
-  lines.push(`- 来源：${row.source_name}`);
+  lines.push(`- 来源：${displaySourceName(row.source_name)}`);
   lines.push(`- 发布时间：${(row.published_at ?? row.discovered_at).toISOString()}`);
   lines.push(`- ${SITE.name}：${itemUrl(row.id)}`);
   lines.push(`- 原文：${row.url}`, "");

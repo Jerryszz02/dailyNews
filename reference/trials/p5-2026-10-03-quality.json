@@ -1,0 +1,172 @@
+{
+  "trialId": "p5-2026-10-03",
+  "scope": "Machine source comparison during the bounded trial; not a human-labeled accuracy benchmark",
+  "reviewSnapshotAt": "2026-10-03T00:01:48.143Z",
+  "reviewedArticles": 51,
+  "reviewedNormal": 31,
+  "reviewedHistorical": 20,
+  "humanGoldLabels": 0,
+  "observations": {
+    "analysisPublicationCategoryMismatches": 0,
+    "aiRouteArticles": 11,
+    "nonAiRouteArticles": 40,
+    "distinctAssociatedFacts": 41,
+    "multiArticleFactsObserved": 2,
+    "sourceSupportedMergeExamples": 2,
+    "mergeQualityValidated": false,
+    "classificationAccuracy": null,
+    "aiSelectionPrecision": null,
+    "aiSelectionRecall": null,
+    "originalReportingIndependentlyVerified": false,
+    "editorialOverrideArticles": 11
+  },
+  "findings": [
+    {
+      "id": "bbc-investigation-reopened",
+      "articleId": "a5u6qgocjmtnopn4qldxth8b3",
+      "field": "publication.summary",
+      "issue": "An investigation being reopened was translated as a court hearing being reopened.",
+      "status": "corrected-through-audited-article-override",
+      "correction": "案件调查重新启动",
+      "originalModelOutputPreserved": true
+    },
+    {
+      "id": "cnn-employment-status",
+      "articleId": "gz1hz4cy0674h0rlsolayajfp",
+      "factId": 16,
+      "field": "facts.title",
+      "issue": "The fact title says the suspect was removed from the airline, while the source says he was moved from training to another role at that airline.",
+      "status": "corrected-through-audited-article-override-and-derived-content-invalidation",
+      "mitigation": "The article override invalidated the old derived story and fact text. The existing invalidation flow replaced the fact title with the corrected public article title; its original summary already described reassignment.",
+      "verifiedAt": "2026-10-02T22:32:52.443Z",
+      "auditEventsAt": [
+        "2026-10-02T22:14:31.672Z",
+        "2026-10-02T22:14:35.760Z"
+      ],
+      "limitation": "The original model error remains a quality finding even though the public text has been corrected. No direct database rewrite was used.",
+      "originalModelOutputPreserved": true
+    },
+    {
+      "id": "bbc-road-proper-name",
+      "articleId": "daq5hpghixqt7ip8ft35u8lw3",
+      "field": "publication.summary",
+      "issue": "The proper name Chain of Craters Road was split into an awkward geographic phrase in Chinese.",
+      "status": "corrected-through-audited-article-override",
+      "severity": "minor-translation-defect",
+      "correction": "The summary retains the original proper name Chain of Craters Road."
+    },
+    {
+      "id": "deadline-proposed-management",
+      "articleId": "n6v1qqp2opm2omqmo4z9e6qgo",
+      "factId": 24,
+      "field": "facts.title",
+      "issue": "The fact title stated an unconfirmed management plan as a definite arrangement, while the publication title and source retained the proposed status.",
+      "status": "corrected-through-audited-article-override-and-derived-content-invalidation",
+      "correction": "The corrected fact title retains both source attribution and 拟."
+    },
+    {
+      "id": "cnn-video-sidebar-extraction",
+      "articleIds": [
+        "ntd80qj4s3meilopywnt5hmor",
+        "qgq8h4d0fezcxc0uad2ubgb3e",
+        "to0mpwdszpq9t9bkq5b7yfwje",
+        "d2c2npmnkz4lf6dsu217m7nai",
+        "myshxyhoexq1p3dtvsi5tp3wd",
+        "qp3jz5q9u2oxrdhaad3mnphjd",
+        "l6jfvsw95xr50popq21oapzzp"
+      ],
+      "field": "articles.body_text",
+      "issue": "The extracted video pages include sidebar video lists rather than a full transcript. One summary quoted a different same-case video title from that sidebar.",
+      "status": "open-source-extraction-limitation",
+      "mitigation": "An audited override removed the sidebar quotation from the Cornell video summary. Its remaining sentence is supported by the main video title; the bread video summary stays within its own title and introduction.",
+      "notClaimed": "Sidebar contamination is not by itself proof that the quoted words were invented by the model."
+    },
+    {
+      "id": "chinanews-predicted-travel-volume",
+      "articleId": "vur3cimfauojb6hpj7kt5tm43",
+      "factId": 25,
+      "field": "facts.title and stories.title",
+      "issue": "The source excerpt and publication say the travel volume is expected to exceed 300 million trips; the derived titles omitted the prediction qualifier.",
+      "status": "corrected-through-audited-article-override-and-derived-content-invalidation",
+      "limitation": "Full body extraction is unconfirmed; the current summary is supported by the feed excerpt, not a complete article body."
+    },
+    {
+      "id": "cnn-mountain-bike-event-name",
+      "articleId": "d2c2npmnkz4lf6dsu217m7nai",
+      "factId": 29,
+      "field": "facts.title and stories.title",
+      "issue": "The main video title says World Series, but the derived titles substituted World Cup, a term also used for the interviewee's separate champion title.",
+      "status": "corrected-through-audited-article-override-and-derived-content-invalidation",
+      "correction": "The event name follows the source's main title; this review does not independently resolve the competition's organizational relationship."
+    },
+    {
+      "id": "cnn-employment-added-qualifier",
+      "articleId": "myshxyhoexq1p3dtvsi5tp3wd",
+      "factId": 30,
+      "field": "facts.title and stories.title",
+      "issue": "The video page's available text says 29,000 jobs; the derived titles added the nonfarm qualifier without direct support in that extracted text.",
+      "status": "corrected-through-audited-article-override-and-derived-content-invalidation",
+      "correction": "The corrected title retains CNN attribution and the reported jobs number, without adding a category of employment."
+    },
+    {
+      "id": "ithome-aws-word-count",
+      "articleId": "wo8nwirsqllbg5iyymyzuxv8r",
+      "factId": 34,
+      "field": "publication.summary",
+      "issue": "The source describes a blog post of more than 3,000 words; the summary substituted the Chinese character unit.",
+      "status": "corrected-through-audited-article-override",
+      "correction": "3000 多词"
+    },
+    {
+      "id": "cnn-cornell-subjective-perception",
+      "articleId": "qp3jz5q9u2oxrdhaad3mnphjd",
+      "factId": 35,
+      "field": "facts.title",
+      "issue": "The source attributes a felt lack of urgency to the interviewee; the derived fact title presented delayed handling as an established outcome.",
+      "status": "corrected-through-audited-article-override-and-derived-content-invalidation",
+      "correction": "The title retains the interviewee attribution and the subjective perception."
+    },
+    {
+      "id": "cnn-flydubai-conflicting-source-descriptions",
+      "articleIds": [
+        "gz1hz4cy0674h0rlsolayajfp",
+        "l6jfvsw95xr50popq21oapzzp"
+      ],
+      "factId": 16,
+      "field": "publication.title, publication.summary, facts.title and stories.title",
+      "issue": "The later video introduction says dismissed by the airline, while the earlier same-case text says removed from training and given another role at that airline. The later summary faithfully translated its own source, so this is not an unsupported model claim.",
+      "status": "conflict-disclosed-through-audited-editorial-clarifications",
+      "sourceConflictResolved": false,
+      "correction": "Both public articles now attribute both descriptions and state that the employment status needs verification. The fact and story titles are neutral. No account is treated as independently established.",
+      "originalModelOutputPreserved": true
+    }
+  ],
+  "dateVerification": [
+    {
+      "source": "dn-cnn-2c835545d85b",
+      "checkedAt": "2026-10-02T23:52:37.503Z",
+      "articlePagesHttp200": 13,
+      "jsonLdPublishedDatesMatchAdmission": 13,
+      "normalPublishedAfterSourceBaseline": 12,
+      "historicalPublishedBeforeSourceBaseline": 1,
+      "basis": "Publisher page JSON-LD datePublished, separately checked against news sitemap publication date; not independent verification of the publisher reporting"
+    },
+    {
+      "source": "dn-deadline-804da737cff2",
+      "checkedAt": "2026-10-02T23:52:47.378Z",
+      "articlePagesHttp200": 8,
+      "jsonLdPublishedDatesMatchAdmission": 8,
+      "normalPublishedAfterSourceBaseline": 7,
+      "historicalPublishedBeforeSourceBaseline": 1,
+      "basis": "Publisher page JSON-LD datePublished, separately checked against RSS publication date; not independent verification of the publisher reporting"
+    }
+  ],
+  "limitations": [
+    "No human gold labels; classification accuracy and AI selection precision/recall remain unknown.",
+    "Only two multi-article facts were observed; wrong-merge and missed-merge rates cannot be inferred.",
+    "Derived titles repeatedly lost modality or attribution; editorial corrections do not fix the generation path.",
+    "Seven CNN video extractions include sidebar lists and lack a full transcript; one Chinanews article has only a source excerpt.",
+    "Sampling began around Shanghai 04:38 and ended with the 07:50 collection; the formal daily window is not fully sampled.",
+    "The normal-addition target of 100 and the 200-item human benchmark were not reached."
+  ]
+}

@@ -12,6 +12,7 @@ import { isHistorical } from "../content/materials.ts";
 import { publishArticle } from "../publication/publish.ts";
 import { BudgetExceededError, ProviderRejectedError, ReceiptBusyError, ReceiptUnknownError } from "../providers/receipts.ts";
 import { ModelOutputError } from "../providers/llm.ts";
+import { assertTrialRuntime, trialArticleAllowed } from "../dailynews/trial.ts";
 import { enqueue, QUEUES, shutdownSignal, work } from "./queue.ts";
 
 /** Minutes to wait after the n-th failed attempt; one more failure after the last ends in "failed". */
@@ -67,6 +68,7 @@ const PRIORITY = { live: 0, liveSignal: -1, history: -2 } as const;
  */
 export async function queueProcessing(articleId: string, opts: { step?: Step; attemptTag?: string; db?: Db } = {}): Promise<string | null> {
   const db = opts.db ?? sql;
+  if (!await trialArticleAllowed(articleId, db)) return null;
   const r = await route(articleId, db);
   if (!r) return null;
   const step = opts.step ?? r.step;
@@ -125,11 +127,13 @@ async function processingInput(articleId: string) {
 
 /** attemptTag makes an explicit re-evaluation a new (paid) request; the same tag reuses its receipt. */
 export async function processArticle(articleId: string, opts: { attemptTag?: string } = {}): Promise<{ state: string }> {
+  if (!await trialArticleAllowed(articleId)) return { state: "outside-trial" };
   const row = await processingInput(articleId);
   return row ? processRevision(articleId, row, opts) : { state: "missing" };
 }
 
 async function processRevision(articleId: string, row: NonNullable<Awaited<ReturnType<typeof processingInput>>>, opts: { attemptTag?: string }): Promise<{ state: string }> {
+  if (!await trialArticleAllowed(articleId)) return { state: "outside-trial" };
   if (row.participation_mode !== "editorial") {
     // Normally queued straight for grouping (queueProcessing); an explicit re-evaluation lands here.
     const { group } = await settleNonEditorial(articleId);
@@ -217,6 +221,7 @@ export async function registerContentJobs(boss: PgBoss, concurrency = Number(pro
  */
 export async function registerExtractionJobs(boss: PgBoss) {
   await work(boss, QUEUES.extractBody, { localConcurrency: 4, pollingIntervalSeconds: 2 }, async ({ articleId }) => {
+    if (!await trialArticleAllowed(articleId)) return { state: "outside-trial" };
     const [input] = await sql<{ revision: number }[]>`SELECT revision FROM articles WHERE id = ${articleId}`;
     if (!input) return { state: "missing" };
     try {
@@ -248,9 +253,12 @@ export async function registerExtractionJobs(boss: PgBoss) {
  * a lost job, a retry that came due). Articles already queued or running are left alone.
  */
 export async function sweepUnprocessed(): Promise<{ enqueued: number }> {
+  const trial = await assertTrialRuntime();
   const rows = await sql<{ id: string }[]>`
     SELECT id FROM articles
     WHERE processing_state = 'new' AND created_at < now() - interval '3 minutes'
+      AND (${trial?.id ?? null}::text IS NULL OR EXISTS (
+        SELECT 1 FROM dailynews_trial_articles ta WHERE ta.trial_id=${trial?.id ?? null} AND ta.article_id=articles.id))
       AND (classification_retry_revision <> revision OR classification_retry_count < 2)
       AND (processing_retry_at IS NULL OR processing_retry_at <= now())
       AND (processing_queued_at IS NULL OR processing_queued_at < now() - ${QUEUED_STALE}::interval)

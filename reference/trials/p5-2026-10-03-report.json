@@ -1,0 +1,773 @@
+{
+  "trial": {
+    "id": "p5-2026-10-03",
+    "status": "closed",
+    "manifestHash": "740636184b0e96556b45f0811d5445ad8e316691fffa0e9ed8e3d0dc46fa00f6",
+    "settingsHash": "2b1679a0e89e4e94002358cb2fd554232808aaa344dc4ed14c6ec1d34194951f",
+    "startedAt": "2026-10-02T20:37:00.408Z",
+    "frozenAt": "2026-10-03T00:00:12.074Z",
+    "closedAt": "2026-10-03T00:01:23.396Z",
+    "asOf": "2026-10-03T00:01:48.062Z",
+    "limits": {
+      "sources": [
+        10,
+        15
+      ],
+      "normal": 100,
+      "historical": 20,
+      "collectConcurrency": 4,
+      "modelConcurrency": 2
+    }
+  },
+  "sources": [
+    {
+      "source_id": "dn-apple-newsroom-678029df2ef0",
+      "initialized_at": "2026-10-02T20:38:04.416Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 180,
+      "created": 1,
+      "revised": 0,
+      "unchanged": 0,
+      "admitted_normal": 0,
+      "admitted_backfill": 1,
+      "not_admitted": 0,
+      "status": "ok",
+      "duplicateOrUnchanged": 0
+    },
+    {
+      "source_id": "dn-bbc-25b2d27a78f1",
+      "initialized_at": "2026-10-02T20:38:04.423Z",
+      "attempts": 11,
+      "ok": 10,
+      "failed": 1,
+      "last_status": "ok",
+      "last_error": "HTTP 503",
+      "found": 340,
+      "created": 36,
+      "revised": 1,
+      "unchanged": 271,
+      "admitted_normal": 1,
+      "admitted_backfill": 1,
+      "not_admitted": 35,
+      "status": "ok",
+      "duplicateOrUnchanged": 271
+    },
+    {
+      "source_id": "dn-chinanews-9536d2d7c183",
+      "initialized_at": "2026-10-02T20:38:04.423Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 270,
+      "created": 3,
+      "revised": 0,
+      "unchanged": 4,
+      "admitted_normal": 2,
+      "admitted_backfill": 1,
+      "not_admitted": 0,
+      "status": "ok",
+      "duplicateOrUnchanged": 4
+    },
+    {
+      "source_id": "dn-chinanews-e34894180204",
+      "initialized_at": "2026-10-02T20:38:04.423Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 270,
+      "created": 2,
+      "revised": 0,
+      "unchanged": 2,
+      "admitted_normal": 1,
+      "admitted_backfill": 1,
+      "not_admitted": 0,
+      "status": "ok",
+      "duplicateOrUnchanged": 2
+    },
+    {
+      "source_id": "dn-cnbc-e49c9082deca",
+      "initialized_at": "2026-10-02T20:38:04.994Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 270,
+      "created": 30,
+      "revised": 0,
+      "unchanged": 211,
+      "admitted_normal": 0,
+      "admitted_backfill": 1,
+      "not_admitted": 29,
+      "status": "ok",
+      "duplicateOrUnchanged": 211
+    },
+    {
+      "source_id": "dn-cnn-2c835545d85b",
+      "initialized_at": "2026-10-02T20:38:04.994Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 900,
+      "created": 13,
+      "revised": 0,
+      "unchanged": 36,
+      "admitted_normal": 12,
+      "admitted_backfill": 1,
+      "not_admitted": 0,
+      "status": "ok",
+      "duplicateOrUnchanged": 36
+    },
+    {
+      "source_id": "dn-deadline-804da737cff2",
+      "initialized_at": "2026-10-02T20:38:05.003Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 108,
+      "created": 8,
+      "revised": 2,
+      "unchanged": 12,
+      "admitted_normal": 7,
+      "admitted_backfill": 1,
+      "not_admitted": 0,
+      "status": "ok",
+      "duplicateOrUnchanged": 12
+    },
+    {
+      "source_id": "dn-fed-b3a7beab67c0",
+      "initialized_at": "2026-10-02T20:38:05.557Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 180,
+      "created": 2,
+      "revised": 0,
+      "unchanged": 7,
+      "admitted_normal": 1,
+      "admitted_backfill": 1,
+      "not_admitted": 0,
+      "status": "ok",
+      "duplicateOrUnchanged": 7
+    },
+    {
+      "source_id": "dn-ithome-1019f540ec62",
+      "initialized_at": "2026-10-02T20:38:05.982Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 540,
+      "created": 7,
+      "revised": 0,
+      "unchanged": 4,
+      "admitted_normal": 6,
+      "admitted_backfill": 1,
+      "not_admitted": 0,
+      "status": "ok",
+      "duplicateOrUnchanged": 4
+    },
+    {
+      "source_id": "dn-nba-533ef335b03c",
+      "initialized_at": "2026-10-02T20:38:06.454Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 171,
+      "created": 20,
+      "revised": 0,
+      "unchanged": 133,
+      "admitted_normal": 1,
+      "admitted_backfill": 1,
+      "not_admitted": 18,
+      "status": "ok",
+      "duplicateOrUnchanged": 133
+    },
+    {
+      "source_id": "dn-openai-d7c663cc6e40",
+      "initialized_at": "2026-10-02T20:38:06.644Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 11205,
+      "created": 1,
+      "revised": 0,
+      "unchanged": 0,
+      "admitted_normal": 0,
+      "admitted_backfill": 1,
+      "not_admitted": 0,
+      "status": "ok",
+      "duplicateOrUnchanged": 0
+    },
+    {
+      "source_id": "dn-qbitai-31dd73b95c93",
+      "initialized_at": "2026-10-02T20:38:06.829Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 180,
+      "created": 20,
+      "revised": 0,
+      "unchanged": 141,
+      "admitted_normal": 0,
+      "admitted_backfill": 7,
+      "not_admitted": 13,
+      "status": "ok",
+      "duplicateOrUnchanged": 141
+    },
+    {
+      "source_id": "dn-wired-c465b48c1ddf",
+      "initialized_at": "2026-10-02T20:38:07.020Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 180,
+      "created": 1,
+      "revised": 0,
+      "unchanged": 0,
+      "admitted_normal": 0,
+      "admitted_backfill": 1,
+      "not_admitted": 0,
+      "status": "ok",
+      "duplicateOrUnchanged": 0
+    },
+    {
+      "source_id": "dn-xinhua-f77f0b3178db",
+      "initialized_at": "2026-10-02T20:38:07.124Z",
+      "attempts": 9,
+      "ok": 9,
+      "failed": 0,
+      "last_status": "ok",
+      "last_error": null,
+      "found": 135,
+      "created": 16,
+      "revised": 0,
+      "unchanged": 105,
+      "admitted_normal": 0,
+      "admitted_backfill": 1,
+      "not_admitted": 15,
+      "status": "ok",
+      "duplicateOrUnchanged": 105
+    }
+  ],
+  "failedSources": [
+    {
+      "sourceId": "dn-bbc-25b2d27a78f1",
+      "attempts": 1,
+      "lastError": "HTTP 503"
+    }
+  ],
+  "cohort": {
+    "normal": 31,
+    "backfill": 20,
+    "publicCount": 51,
+    "selected": 10,
+    "normalPublic": 31,
+    "normalSelected": 4,
+    "backfillPublic": 20,
+    "backfillSelected": 6,
+    "pending": 0,
+    "failed": 0,
+    "unpublished": 0,
+    "p50_ms": 520028,
+    "p95_ms": 3105646.4999999977
+  },
+  "backlog": {
+    "processingPending": 0,
+    "failed": 0,
+    "unpublished": 0
+  },
+  "latency": {
+    "basis": "discovery to current public projection readiness, including its selected release gate; not first visitor delivery",
+    "byLane": [
+      {
+        "lane": "backfill",
+        "publicCount": 20,
+        "p50_ms": 736012,
+        "p95_ms": 1401673.7999999989
+      },
+      {
+        "lane": "normal",
+        "publicCount": 31,
+        "p50_ms": 14029,
+        "p95_ms": 4203741.499999998
+      }
+    ]
+  },
+  "sample": {
+    "normalTarget": 100,
+    "normalObserved": 31,
+    "sufficientForTarget": false
+  },
+  "provider": {
+    "scope": "isolated database, all live attempts since trial creation",
+    "attempts": [
+      {
+        "service": "llm",
+        "purpose": "group_article",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 3,
+        "retries": 0,
+        "prompt_tokens": 2757,
+        "cache_hit_tokens": 768,
+        "cache_miss_tokens": 1989,
+        "completion_tokens": 300,
+        "cost": 0.000480654,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-02T20:50:53.282Z",
+        "last_priced_at": "2026-10-02T23:50:09.522Z",
+        "latency_p50_ms": 993,
+        "latency_p95_ms": 1057.8
+      },
+      {
+        "service": "llm",
+        "purpose": "group_review",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 2,
+        "retries": 0,
+        "prompt_tokens": 1736,
+        "cache_hit_tokens": 384,
+        "cache_miss_tokens": 1352,
+        "completion_tokens": 212,
+        "cost": 0.000331152,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-02T22:30:10.962Z",
+        "last_priced_at": "2026-10-02T23:50:10.577Z",
+        "latency_p50_ms": 973,
+        "latency_p95_ms": 1036.9
+      },
+      {
+        "service": "llm",
+        "purpose": "prefilter_article",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 12,
+        "retries": 0,
+        "prompt_tokens": 34327,
+        "cache_hit_tokens": 4352,
+        "cache_miss_tokens": 29975,
+        "completion_tokens": 249,
+        "cost": 0.004658706,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-02T20:48:05.180Z",
+        "last_priced_at": "2026-10-02T23:39:10.109Z",
+        "latency_p50_ms": 758.5,
+        "latency_p95_ms": 1043.4499999999998
+      },
+      {
+        "service": "llm",
+        "purpose": "report_lead",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 1,
+        "retries": 0,
+        "prompt_tokens": 2163,
+        "cache_hit_tokens": 0,
+        "cache_miss_tokens": 2163,
+        "completion_tokens": 193,
+        "cost": 0.00044025,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-03T00:00:11.952Z",
+        "last_priced_at": "2026-10-03T00:00:11.952Z",
+        "latency_p50_ms": 1797,
+        "latency_p95_ms": 1797
+      },
+      {
+        "service": "llm",
+        "purpose": "score_article",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 24,
+        "retries": 0,
+        "prompt_tokens": 114084,
+        "cache_hit_tokens": 80000,
+        "cache_miss_tokens": 34084,
+        "completion_tokens": 168,
+        "cost": 0.0054534,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-02T20:48:05.760Z",
+        "last_priced_at": "2026-10-02T23:39:11.220Z",
+        "latency_p50_ms": 576.5,
+        "latency_p95_ms": 960.7499999999999
+      },
+      {
+        "service": "llm",
+        "purpose": "story_digest",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 57,
+        "retries": 0,
+        "prompt_tokens": 18907,
+        "cache_hit_tokens": 512,
+        "cache_miss_tokens": 18395,
+        "completion_tokens": 8472,
+        "cost": 0.007843986,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-02T20:49:33.635Z",
+        "last_priced_at": "2026-10-02T23:54:18.206Z",
+        "latency_p50_ms": 1061,
+        "latency_p95_ms": 1519
+      },
+      {
+        "service": "llm",
+        "purpose": "structure_article",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 67,
+        "retries": 0,
+        "prompt_tokens": 123564,
+        "cache_hit_tokens": 56448,
+        "cache_miss_tokens": 67116,
+        "completion_tokens": 7628,
+        "cost": 0.014813544,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-02T20:48:01.537Z",
+        "last_priced_at": "2026-10-02T23:54:14.288Z",
+        "latency_p50_ms": 1098,
+        "latency_p95_ms": 1428.1
+      },
+      {
+        "service": "llm",
+        "purpose": "summarize_article",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 3,
+        "retries": 0,
+        "prompt_tokens": 10250,
+        "cache_hit_tokens": 4608,
+        "cache_miss_tokens": 5642,
+        "completion_tokens": 337,
+        "cost": 0.001062324,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-02T20:50:24.656Z",
+        "last_priced_at": "2026-10-02T23:35:21.481Z",
+        "latency_p50_ms": 938,
+        "latency_p95_ms": 1223.3
+      },
+      {
+        "service": "llm",
+        "purpose": "summarize_non_ai_article",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 55,
+        "retries": 0,
+        "prompt_tokens": 104442,
+        "cache_hit_tokens": 59900,
+        "cache_miss_tokens": 44542,
+        "completion_tokens": 7703,
+        "cost": 0.0114828,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-02T20:48:02.831Z",
+        "last_priced_at": "2026-10-02T23:54:15.598Z",
+        "latency_p50_ms": 1216,
+        "latency_p95_ms": 1959.1
+      },
+      {
+        "service": "llm",
+        "purpose": "understand_article",
+        "model": "deepseek-flash",
+        "response_model": "deepseek-flash",
+        "status": "received",
+        "currency": "USD",
+        "cost_basis": "estimated",
+        "attempts": 9,
+        "retries": 0,
+        "prompt_tokens": 60563,
+        "cache_hit_tokens": 29440,
+        "cache_miss_tokens": 31123,
+        "completion_tokens": 2241,
+        "cost": 0.00610137,
+        "unpriced": 0,
+        "unknown": 0,
+        "price_snapshots": [
+          {
+            "id": "deepseek-v4.1-flash-2026-10-03",
+            "band": "off_peak",
+            "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+            "validFrom": "2026-10-02T20:00:00.000Z",
+            "validUntil": "2026-10-03T23:59:59.000Z",
+            "responseModel": "deepseek-flash",
+            "usdPerMillion": {
+              "output": 0.6,
+              "cacheHitInput": 0.003,
+              "cacheMissInput": 0.15
+            },
+            "requestedModel": "deepseek-flash"
+          }
+        ],
+        "first_priced_at": "2026-10-02T20:48:07.713Z",
+        "last_priced_at": "2026-10-02T23:39:12.874Z",
+        "latency_p50_ms": 1502,
+        "latency_p95_ms": 1981.6
+      }
+    ],
+    "receiptReuseCount": null,
+    "attemptsStartedAfterClose": 0,
+    "executionBounds": {
+      "attempts": 233,
+      "peakReservedSlots": 2,
+      "peakPerMinute": 20,
+      "peakPerHour": 97,
+      "peakPerDay": 233
+    },
+    "accountBilledCost": null,
+    "accountBilledDifference": null,
+    "computedCost": {
+      "amount": 0.052668186,
+      "currency": "USD",
+      "basis": "estimated"
+    },
+    "directArticleCosts": [
+      {
+        "lane": "backfill",
+        "attempts": 67,
+        "cost": 0.025874574,
+        "unpriced": 0
+      },
+      {
+        "lane": "normal",
+        "attempts": 108,
+        "cost": 0.018509376,
+        "unpriced": 0
+      }
+    ],
+    "mixedCosts": [
+      {
+        "subject_kind": "report",
+        "attempts": 1,
+        "cost": 0.00044025,
+        "unpriced": 0
+      },
+      {
+        "subject_kind": "story",
+        "attempts": 57,
+        "cost": 0.007843986,
+        "unpriced": 0
+      }
+    ],
+    "directArticleCostPer100Normal": 0.059707664516129036,
+    "totalCostPer100Normal": null,
+    "blendedSampleCostPerPublic": 0.0010327095294117648,
+    "blendedSampleCostPerSelected": 0.0052668186,
+    "costNote": "首轮回灌与正常增量分开；总成本含来源与历史调用，混跑时不推算日常每100条费用。"
+  },
+  "qualityLabels": {
+    "status": "awaiting-human-review",
+    "denominator": 0,
+    "fields": [
+      "AI误筛",
+      "AI漏选",
+      "非AI规则差异",
+      "分类错误",
+      "错并",
+      "漏并",
+      "摘要事实错误"
+    ],
+    "note": "模板留空；无人工金标准时不得宣称准确率达标。"
+  }
+}
