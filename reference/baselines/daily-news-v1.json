@@ -1,0 +1,451 @@
+{
+  "repository": "https://github.com/Jerryszz02/dailyNews",
+  "commit": "8519831714b0d6c8183336c81e8190dceddf7843",
+  "handoffCommit": "ce3f9263c3901839a85794aecea8bc55e67bf0e4",
+  "files": [
+    {
+      "path": ".codex/environments/environment.toml",
+      "sha256": "18ea3c008d796a6505327d4ad3b17a78983fb0dc7cd36e20520a97e57b45f856"
+    },
+    {
+      "path": ".env.example",
+      "sha256": "2bbae8d85f1c3742344df8d0a842a1482ea2e36971828d99372d607367b80f6d"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "cbd1f655b9c25530e3b725c91fdcebb422099524089dbabe0980b15c6a2c8ef9"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "6056380796e80df5c425affdd8b21ab56475ffcef4e4c52a55090f992d4bd9df"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "8920dfd0132b41aefe9baa35759419f6bbd6edd0e2bea4babed1e5bb7d473603"
+    },
+    {
+      "path": "README.md",
+      "sha256": "2d64a1fab1158c9a0f61bedd4ecc8448fa3a6144256d8e33d5c6ae93a064ac94"
+    },
+    {
+      "path": "api/cron.ts",
+      "sha256": "ea0bafb50cff26023af0474f32267c4fe8ab3f189778f2ded60668558fdf7147"
+    },
+    {
+      "path": "api/health.ts",
+      "sha256": "e1e73608626738d15ce7205bbb9472d30040dc9d648332b72416198727f666ce"
+    },
+    {
+      "path": "api/news.ts",
+      "sha256": "5c2d3ebcd8786ee1baf400b2006742384fcdd7653428591c0bcb8bab567fbd13"
+    },
+    {
+      "path": "api/refresh.ts",
+      "sha256": "b68e88b93e0dd8669a1df8743153f8b9ebfa7fd34649efab05d9e0821c0fef5b"
+    },
+    {
+      "path": "docs/architecture.md",
+      "sha256": "d490705ae2f15c342f9adc09dd132b796682e7e3d09422523bc2d95f62abc417"
+    },
+    {
+      "path": "docs/planning/README.md",
+      "sha256": "c43f859731b6a7d7e95706cac7647baaea096f473488b5b1be95cd818cb0aaf2"
+    },
+    {
+      "path": "docs/planning/api-design.md",
+      "sha256": "522e3020412cfafa912da5a965d8ba71082286b82bf23e2fe9a3505a575fe943"
+    },
+    {
+      "path": "docs/planning/database-design.md",
+      "sha256": "e6529e617ec61e247dff9d67307800fc76a2efa6c2c25429bd2079bd08296126"
+    },
+    {
+      "path": "docs/planning/news-curation-refactor-plan.md",
+      "sha256": "903cfc1ac7d2e8982e932d6cc1922fdbf11c32f41e3fb8b5c1a0bb160759782f"
+    },
+    {
+      "path": "docs/planning/prd.md",
+      "sha256": "86bd0ad7de8eaf2aa4053fcb0f5770a249365ad3fecaf63cf2862b12e35b4b2e"
+    },
+    {
+      "path": "docs/planning/production-acceptance-2026-07-13.md",
+      "sha256": "ee014653cea3d98fd0b5cf5345869ddd2d4b0cba48c7024d47387bf0f368090e"
+    },
+    {
+      "path": "docs/planning/release-plan.md",
+      "sha256": "7b07034bbf8dc1a7d8ffaa2cbfdda43e1efb8a25d2faa24114aa5172dfdcefe8"
+    },
+    {
+      "path": "docs/planning/security-privacy.md",
+      "sha256": "bf47e528f284ad4b803afedd642fe52c1d2b1b00e10f6cd5468535c673e69830"
+    },
+    {
+      "path": "docs/planning/source-collection-scaling-plan.md",
+      "sha256": "0af6ba270361451e626389392e9768232e8d0160521d32b0eb33ea6b82454acc"
+    },
+    {
+      "path": "docs/planning/technical-design.md",
+      "sha256": "21293c1c3415066bcfb5a5f44e9d4c4437ae9805bcc948daa33f06a46a2608e5"
+    },
+    {
+      "path": "docs/planning/test-plan.md",
+      "sha256": "aa5ab0918d40dc099e3cc791408181bace87c7259ea6efb8ff9cd4abf98c576c"
+    },
+    {
+      "path": "docs/runbook.md",
+      "sha256": "46757ee2b48e78e2db4a1066fb830bac61fba2058daed40fc1ff0558bb337664"
+    },
+    {
+      "path": "index.html",
+      "sha256": "ba6f4dcb9cad168d70ac0876df2c0fbc45ffbe9b73eeb175075078ba3850f3b4"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "2045cf955e428c931132487aebb6623ece6a1952df9b35114728fd6286807c0c"
+    },
+    {
+      "path": "package.json",
+      "sha256": "8af486b172fc398868f273fe0db30c06a79fd61a978297fc659787cadf140e83"
+    },
+    {
+      "path": "public/daily-news.json",
+      "sha256": "38cbdbbd00865a735ba01095d26a1bdfccdcea959dd5fbbd4c2c8f1e40af9f36"
+    },
+    {
+      "path": "scripts/bootstrapSupabase.ts",
+      "sha256": "3cb676389e33ee1cebd7cf76640d7feed15a87bcdd41206647cdee4aaa179d9d"
+    },
+    {
+      "path": "scripts/collectionScaling.test.ts",
+      "sha256": "689d8b0a1d37ba659b6e214b1a54cd8173031b255ade775e0fd8e282afdff8bc"
+    },
+    {
+      "path": "scripts/generateDailyNews.test.ts",
+      "sha256": "af333dcf5ef82cf8f1432fe1503dc9b2e4b82162480ef6aba9cc594fe20d2181"
+    },
+    {
+      "path": "scripts/generateDailyNews.ts",
+      "sha256": "de62800cdf0c582370c6ab8822bac6ac37dcab80f018d14d9f01a843bd2f19d9"
+    },
+    {
+      "path": "scripts/inMemoryNewsStore.ts",
+      "sha256": "e8c8f7103687bb6ab77949732a1f9055203321c50180e0058a02d065b93ff04c"
+    },
+    {
+      "path": "scripts/newsApi.test.ts",
+      "sha256": "9f5df48cb8a07d26346e3fbc6d1fe2e8b2ba576674f1759e4a53af4d115b407a"
+    },
+    {
+      "path": "scripts/newsApi.ts",
+      "sha256": "b89ba4ec9f5cb65e7c6c20e62362f9c57ff8bec7e075bd862aad48296cb95004"
+    },
+    {
+      "path": "scripts/newsRefresh.test.ts",
+      "sha256": "8e06f566319e6ad149df4708205bd42e7e24c55279b0d2f8536aebfdd6da2f53"
+    },
+    {
+      "path": "scripts/newsRefresh.ts",
+      "sha256": "fd6e25dfa222500f51074d6792c11048c2c43bc1d2efb39edd355867021b2022"
+    },
+    {
+      "path": "scripts/newsServer.ts",
+      "sha256": "14d43bf0812c4a61d34eb204934cf3581bfaf9a06881b04a22ec19adf6bc332d"
+    },
+    {
+      "path": "scripts/newsService.test.ts",
+      "sha256": "a91cd8fea9a4125b0862eed0d1cf83fa50ee7f33dd689e63f9ef7749f0f2f213"
+    },
+    {
+      "path": "scripts/newsService.ts",
+      "sha256": "6f6698c76e8ae085d9bdf60d994d1d49c9b3e6a47ef29ad55b6e9cac77d428ff"
+    },
+    {
+      "path": "scripts/newsStore.contract.test.ts",
+      "sha256": "675a9e540875ac7154d5dd4d750599666d0e5f17c226c0c9f07b05d6312c3451"
+    },
+    {
+      "path": "scripts/newsStore.ts",
+      "sha256": "8fd2ba4a25dad28db8686f233a85100a27fc38c89af6ed57cd4228295ea7ff7c"
+    },
+    {
+      "path": "scripts/newsStoreFactory.ts",
+      "sha256": "3e594c55b74f9f44da2d0dd1fe7391bb7524b59c3e4b87e62f340fe23898b9e8"
+    },
+    {
+      "path": "scripts/productionAcceptanceAudit.test.ts",
+      "sha256": "437bd0a5c1c7251774ed89c34c8b511e3451be5aa4e34441c8bb95d173cfadaf"
+    },
+    {
+      "path": "scripts/productionAcceptanceAudit.ts",
+      "sha256": "5d4fa7573d34a0fd3b02163bd53dea7e9356edeb7d7cae253a30570d6cbfd6f8"
+    },
+    {
+      "path": "scripts/productionAcceptanceCommand.test.ts",
+      "sha256": "25a55b42f09a14a193122d1315151c74da431b8521b88a92108df4b8299bcc50"
+    },
+    {
+      "path": "scripts/productionAcceptanceCommand.ts",
+      "sha256": "96d01b8bb91d9df2f6ef9c1927f79aeca713e8186f33c4549e8bd7626b7cc513"
+    },
+    {
+      "path": "scripts/productionAcceptanceLaunchAgent.ts",
+      "sha256": "59edc34a4a413c1bea031531d95be6b5bbb2c8d9e55e9c4f402f8b95f2d855cb"
+    },
+    {
+      "path": "scripts/productionAcceptanceMonitor.test.ts",
+      "sha256": "7c8297bc1fb907ec9c5883d274230486eec47511b24d3364d041ac0f19729c53"
+    },
+    {
+      "path": "scripts/productionAcceptanceMonitor.ts",
+      "sha256": "7e5ad10aad9c9037064d7112b87ce3ac4da8949ff1560a2724e932b478f4cb69"
+    },
+    {
+      "path": "scripts/productionAcceptanceRules.test.ts",
+      "sha256": "5721d7ece616c3fe3f04e23e405a4717e07811f3675088e27607bc0ee7f85b4c"
+    },
+    {
+      "path": "scripts/productionAcceptanceRules.ts",
+      "sha256": "2189a1ffe778ab821e0dce2fb26c166aec25b8033f8d01643a59727b7e160ddb"
+    },
+    {
+      "path": "scripts/reportStore.test.ts",
+      "sha256": "ab6cfe6901cefe1ae88b9da59ebd7c789b9f0b9f33c73cf9a3391d371a2787a1"
+    },
+    {
+      "path": "scripts/reportStore.ts",
+      "sha256": "712158eeaf7e4b79cb1e2a5c89d213210114222603d73d5d7194e9efda719b12"
+    },
+    {
+      "path": "scripts/semanticDedupe.test.ts",
+      "sha256": "b27f008295b5d82e002f93d57001d679c066dbb38139fca5a49b1254c4d10100"
+    },
+    {
+      "path": "scripts/semanticDedupe.ts",
+      "sha256": "b005eeb95e3a44d3e0f49f6e70194c7702c6d758baa2380971264a63d919f8c4"
+    },
+    {
+      "path": "scripts/sourceNetworkPolicy.test.ts",
+      "sha256": "dcbf6137f3a6b60888a8ea2daf599c44cf0f5643af20379634dd0450ada2c301"
+    },
+    {
+      "path": "scripts/sourceNetworkPolicy.ts",
+      "sha256": "7dbf70f9edd7f5acb3450d4c897defb70fdeae3d66d8e63aff29ea50b658af48"
+    },
+    {
+      "path": "scripts/supabaseNewsStore.test.ts",
+      "sha256": "6ae19f530929059140a4aebeb781f83b497d3cc419fca39770c8b378110d3fd7"
+    },
+    {
+      "path": "scripts/supabaseNewsStore.ts",
+      "sha256": "cc35524f7b38d61e445910af4e3531f027b594b671d167fa3c28c253f2b21cb3"
+    },
+    {
+      "path": "scripts/upgradeDailyNewsReport.ts",
+      "sha256": "3f06a54636dd722bbe57ab63081baf3303800a3c44fe9429f0acbb2b9fe518b3"
+    },
+    {
+      "path": "scripts/xSource.test.ts",
+      "sha256": "7e83ab5f1ab993265651bf75c956bbd0698e801ece75d9019478dcda78f0ae2e"
+    },
+    {
+      "path": "scripts/xSource.ts",
+      "sha256": "f265305446b4dd726d9e5b06dda4446abdf38aba33dd8f0752b25415f65b74e3"
+    },
+    {
+      "path": "src/App.test.ts",
+      "sha256": "42f3f7f9db7224e581dc7c5d2239ae31821cf2f969ff957c3b6efb549d853ec9"
+    },
+    {
+      "path": "src/App.tsx",
+      "sha256": "761deb2e7ff3b1f89a9f3d624b3dc3b9a7458f3ac7095b1e1ef9dcde6c8b0d58"
+    },
+    {
+      "path": "src/config/expandedSources.ts",
+      "sha256": "07c59f45c6c0985dd5fc023eeae985ba7596d64008bc6bdf010ab2efe48596e2"
+    },
+    {
+      "path": "src/config/preferences.ts",
+      "sha256": "b8ffaeaa974ae1c33b2c86de20315ee1759921c8fb3dcdbe48f2a131770c1cf3"
+    },
+    {
+      "path": "src/config/scoring.ts",
+      "sha256": "c3d8d59a150fa3e47083660a22b4d35cbab40e014035222d70e02dc737c62138"
+    },
+    {
+      "path": "src/config/sources.test.ts",
+      "sha256": "fc80ba10d029964a5d8df399d7fcafeb9d45a08363ced86d8f4b2ed10039fb92"
+    },
+    {
+      "path": "src/config/sources.ts",
+      "sha256": "78598055994b53a7ad8f8fac32d848fad6bcdf55d8dde401114a6b3fdd6029eb"
+    },
+    {
+      "path": "src/config/xAccounts.ts",
+      "sha256": "272fc9f70f3b235e2e7c5e846072d992eeec186c8e8cb8e7cfaf6620c7f63166"
+    },
+    {
+      "path": "src/data/firecrawlSnapshot.ts",
+      "sha256": "a407dc68b3ea0d077449987f0a52329fa79232741e122b0b08795d6bd2056c6a"
+    },
+    {
+      "path": "src/lib/articleIdentity.ts",
+      "sha256": "cea2fde19b498f06453497ecccfddac3b5f655c655dd068a17b5c8a5f2ee0188"
+    },
+    {
+      "path": "src/lib/contentFreshness.test.ts",
+      "sha256": "a60505951e94546da7afac44e40d07ec520b0396e16072dba1e72d7048fb1980"
+    },
+    {
+      "path": "src/lib/contentFreshness.ts",
+      "sha256": "15cd2428606e6a45ac24f12e9d2e1fe5f5496fa77f37f314462d1f05bca90003"
+    },
+    {
+      "path": "src/lib/curation.test.ts",
+      "sha256": "3f7db10d7ca1dfdf2c8f172a9f5f8795963c4ae854becb1e6cf71046a8a8cc69"
+    },
+    {
+      "path": "src/lib/curation.ts",
+      "sha256": "3afcb5b321b9918da5208a700f5994b6deb29dd0969da84ba3b4d0865ec8051a"
+    },
+    {
+      "path": "src/lib/dedupe.ts",
+      "sha256": "98fd44aa29e12dd827d01d97ceb521ac90dee0db6803fe3b03cfc1e8b9e88dc3"
+    },
+    {
+      "path": "src/lib/freshness.test.ts",
+      "sha256": "a13cd5f9bd2f27be56323de2dbf8da4f0a81cffc6df58f8c1c842df17a326e2e"
+    },
+    {
+      "path": "src/lib/freshness.ts",
+      "sha256": "57764e15ebeacaa53442d9c92247730c008304b12da878531d2b06047490050f"
+    },
+    {
+      "path": "src/lib/newsOrdering.test.ts",
+      "sha256": "08d9a71087e548e16a91dcb1854da05920a4f90a18621e090101a68c4a3ef11b"
+    },
+    {
+      "path": "src/lib/newsOrdering.ts",
+      "sha256": "82dbbd22fbcc029847678c75b0b2017414933f11194d4e2bff1359a813411df4"
+    },
+    {
+      "path": "src/lib/newsPipeline.ts",
+      "sha256": "831e4d3ce9300cf9451bc978dd9d76ca8cae871d66ca7be3f204d2fbb8aa86ad"
+    },
+    {
+      "path": "src/lib/scoring.test.ts",
+      "sha256": "9a363ce5b8daf12f4fb0c454737819fae43977df2344b83cbdd1f8c1a361f844"
+    },
+    {
+      "path": "src/lib/scoring.ts",
+      "sha256": "ac0d89673e4ad447e00e8429aca2a73919786121158eb005f1a2ba1f52b20dc0"
+    },
+    {
+      "path": "src/lib/sourceAdmission.test.ts",
+      "sha256": "73d1878b85a750f867f4404979338f3a8504dab4966d490a8cca44972f4f245d"
+    },
+    {
+      "path": "src/lib/sourceAdmission.ts",
+      "sha256": "df69f54cbc26fce48fa44f8cd85491a6a6977c91f8cb46e25061d32ca2485e89"
+    },
+    {
+      "path": "src/lib/sourceCoverage.test.ts",
+      "sha256": "9af97f8a0a119825541a3678401ae0cff8d954f538e2cbe9968dfde0e24f18ca"
+    },
+    {
+      "path": "src/lib/sourceCoverage.ts",
+      "sha256": "8543bdf7a4c63ec1d78e61f8f2922e36501f398308c304278b73c72d249c1329"
+    },
+    {
+      "path": "src/lib/text.ts",
+      "sha256": "3a7dabf1ee3900ecd069ba1ad2bab28367977bd336acd0c2b930881ca2273d9a"
+    },
+    {
+      "path": "src/lib/trust.ts",
+      "sha256": "9899ad50a2f97b14fe43ef55591492d185b8f745f0b8a3e1af6a75d6526c03e0"
+    },
+    {
+      "path": "src/lib/webReport.test.ts",
+      "sha256": "25778ac0fccd68ebae81597f4b0a61352f026912b9daabdb2328ce8d9ad70946"
+    },
+    {
+      "path": "src/lib/webReport.ts",
+      "sha256": "87a9f43c984c0fa3d8dc4798966f60827a05e848710d01dfde40179a71e4e9f0"
+    },
+    {
+      "path": "src/main.tsx",
+      "sha256": "294f62f7961cca8822a5474309fbc9f35bf45b61fc815fc7d8ecc17b64afe583"
+    },
+    {
+      "path": "src/styles.css",
+      "sha256": "12fa5f5982deaf4e4096700667b249fea8534fb0225a078770735e5735a3d26c"
+    },
+    {
+      "path": "src/types.ts",
+      "sha256": "81537f535c7e573866abd9e64942cf564576dbbe2b9921696f9f6a82b482f254"
+    },
+    {
+      "path": "supabase/.temp/cli-latest",
+      "sha256": "0daaac4eb443724f347b3d1df0dbacffb1e0755f345412d1f9032eb664aa9b18"
+    },
+    {
+      "path": "supabase/config.toml",
+      "sha256": "3be7a278fdc1635cb14f512194fea5f3a87cac1732b047f5664c9614070087f8"
+    },
+    {
+      "path": "supabase/migrations/20260713090000_daily_news_store.sql",
+      "sha256": "5aa81f36b95004bbda31b92ee5ec9892e70f23ca1f244ab3ee1894eabaa594eb"
+    },
+    {
+      "path": "supabase/migrations/20260713101500_runtime_hardening.sql",
+      "sha256": "a3a6f6a81a1ba2d5468cfef029dcb2786c59671dbeb0ae162cf372c0a4a76cbf"
+    },
+    {
+      "path": "supabase/migrations/20260723093000_atomic_refresh_commit.sql",
+      "sha256": "6b38d9faa4647dfc5e481548f883e2f2ee3a85c68c7cfcbbc0a902025488fb7a"
+    },
+    {
+      "path": "supabase/migrations/20260803010000_news_pipeline_stability.sql",
+      "sha256": "ff0452a1e868271006a460e350e2ccb9e924c8647474906632126ff3e058630a"
+    },
+    {
+      "path": "supabase/migrations/20260809010000_source_coverage_deadline.sql",
+      "sha256": "936ba901ab50869b1376f80353a9aa6a55c7c37b510b74704d234289467ad054"
+    },
+    {
+      "path": "supabase/migrations/20260810040000_reduce_refresh_frequency.sql",
+      "sha256": "4e00303acc9b9d80c0a85f952375f906620064bcb0ba8245ca147b8e90dffaff"
+    },
+    {
+      "path": "supabase/migrations/20260904090000_full_source_refresh.sql",
+      "sha256": "a3496c39a97bb10d434f661b13e10597263a02b547d90b9ea9c89d69b9a23704"
+    },
+    {
+      "path": "supabase/migrations/20260913091000_x_collection_cursor.sql",
+      "sha256": "ba3ca24ac97a18a77011140def6aa4b3dfe7e44677eddc0b587366e13c32fd09"
+    },
+    {
+      "path": "supabase/migrations/20260913092000_collection_duration.sql",
+      "sha256": "acd76d8bbcef8a55a8839d99121698ac292ec87620618d17e8f2da038784f77f"
+    },
+    {
+      "path": "supabase/tests/daily_news_store_test.sql",
+      "sha256": "019bd819baf6395e6c4cbc1b153044bd0aad3d8557ce030e983245e21528b68c"
+    },
+    {
+      "path": "supabase/tests/x_collection_cursor_test.sql",
+      "sha256": "ed839663cf3ac6630e147f2380850a01c5924efb5fab01461d64956ff8a35ea6"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "c6404e3f17b90cca0519ef9dfff5e326aa6d7197bbc92e0775ceedeb5d5b05ab"
+    },
+    {
+      "path": "vercel.json",
+      "sha256": "1742ac5f430078830a56a7d3bcdb828d17dc9212a2c03674b5665ab640f83062"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "0295f86f53a62efeb7fc363ea953e71762aba7fd112390f2f1e086fa486b5e63"
+    }
+  ]
+}
