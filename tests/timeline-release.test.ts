@@ -7,6 +7,7 @@ import { closeDb, sql } from "@aihot/backend/db";
 import { beijingDate } from "@aihot/contracts/time";
 import { loadTimeline } from "@aihot/backend/publication/timeline";
 import { buildApp } from "../apps/api/src/app.ts";
+import { attachCurrentPublicationDecision } from "./publication-fixture.ts";
 
 const T = tag();
 const SOURCE = `timeline-release-${T}`;
@@ -34,6 +35,7 @@ async function item(scope: string, release = RELEASE) {
     VALUES (${id}, ${SOURCE}, ${id}, 'https://example.test/release', ${id}, ${at}, ${at})`;
   await sql`INSERT INTO publications (article_id, title, source_id, channel, url, discovered_at, timeline_at, sort_at, eligible, selected, visible_after, visibility, tags)
     VALUES (${id}, ${id}, ${SOURCE}, 'news', 'https://example.test/release', ${at}, ${at}, ${at}, true, true, ${new Date(release)}, 'public', ${[query(scope).tag]})`;
+  await attachCurrentPublicationDecision(id);
   return id;
 }
 function bounded(headers: Record<string, unknown>, deadline: number) {

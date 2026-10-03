@@ -22,6 +22,8 @@ import { recoverStaleWork } from "@aihot/backend/operations/recover";
 import { forwardPendingFeedback } from "@aihot/backend/operations/feedback";
 import { backupConfigured, runBackup } from "@aihot/backend/operations/backup";
 import { sourceHealthWeekly } from "@aihot/backend/operations/reports";
+import { reprocessActiveAnalyses } from "@aihot/backend/publication/reprocess";
+import { reconcileEditorialPolicies } from "@aihot/backend/publication/editorial";
 
 interface Scheduled {
   name: string;
@@ -33,6 +35,8 @@ interface Scheduled {
 const collecting = process.env.COLLECT_ENABLED === "true";
 
 export const SCHEDULES: Scheduled[] = [
+  { name: "editorial.reclassify", cron: "*/5 * * * *", run: () => reprocessActiveAnalyses() },
+  { name: "editorial.reevaluate", cron: "* * * * *", run: () => reconcileEditorialPolicies() },
   { name: "content.sweep", cron: "*/5 * * * *", run: sweepUnprocessed },
   // Full-text translations of newly selected items (model calls; off with MODEL_CALLS_ENABLED=false).
   { name: "content.translate", cron: "*/5 * * * *", run: () => translatePending() },

@@ -1,8 +1,8 @@
-import { evidenceCondition, listedCondition, releasedCondition, selectedCondition } from "./scope.ts";
+import { currentDecisionCondition, evidenceCondition, listedCondition, releasedCondition, selectedCondition } from "./scope.ts";
 // Sitemap from the same public metadata as pages: reports, topics and their pages,
 // the latest 500 stories, leaderboard pages and indexable items. Cached ~5 minutes and rebuilt in the
-// background after that (crawlers get the previous copy meanwhile); if the database fails, the last
-// successful sitemap is served (never an empty one). Bounded.
+// background after that (crawlers get the previous copy meanwhile). Dynamic item and story URLs
+// are checked against the current read scope on every response; if that check fails, serve 503.
 import { FEATURES } from "@aihot/industry/features";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -82,7 +82,9 @@ async function build(): Promise<SitemapSnapshot> {
   // Model pages exist only for models on a public top-30 board; source pages for every registered source.
   if (FEATURES.leaderboard) for (const loc of await leaderboardDetailUrls()) entries.push({ loc, changefreq: "weekly", priority: 0.4 });
   const items = await sql<{ id: string; t: Date }[]>`
-    SELECT article_id AS id, updated_at AS t FROM publications p WHERE p.visibility = 'public' AND p.indexable AND ${releasedCondition(now)} ORDER BY timeline_at DESC LIMIT ${MAX_URLS - entries.length}`;
+    SELECT article_id AS id, updated_at AS t FROM publications p
+    WHERE p.visibility = 'public' AND p.indexable AND ${currentDecisionCondition()} AND ${releasedCondition(now)}
+    ORDER BY timeline_at DESC LIMIT ${MAX_URLS - entries.length}`;
   for (const it of items) entries.push({ loc: `/items/${it.id}`, lastmod: it.t, changefreq: "monthly", priority: 0.5 });
 
   const body = entries
@@ -108,7 +110,48 @@ export async function sitemapXml(): Promise<string> {
 }
 
 export function sitemapSnapshot(): Promise<SitemapSnapshot> {
-  return sitemap.get();
+  return sitemap.get().then(filterUnavailableUrls);
+}
+
+/** A cached XML document can outlive a material revision in another process. Check its dynamic
+ * item and story URLs against today's read-time scope before returning it. If that check cannot
+ * reach the database, the route returns 503 instead of serving a possibly revoked URL. */
+async function filterUnavailableUrls(snapshot: SitemapSnapshot): Promise<SitemapSnapshot> {
+  const blocks = [...snapshot.xml.matchAll(/<url>\s*<loc>([^<]+)<\/loc>[\s\S]*?<\/url>\n?/g)];
+  const itemIds: string[] = [];
+  const storyIds: string[] = [];
+  for (const block of blocks) {
+    let pathname: string;
+    try { pathname = new URL(block[1]!).pathname; } catch { continue; }
+    const item = /^\/items\/([a-zA-Z0-9_-]+)$/.exec(pathname);
+    const story = /^\/story\/([a-zA-Z0-9_-]+)$/.exec(pathname);
+    if (item) itemIds.push(item[1]!);
+    if (story) storyIds.push(story[1]!);
+  }
+  if (!itemIds.length && !storyIds.length) return snapshot;
+  const now = new Date();
+  const [items, stories] = await Promise.all([
+    itemIds.length ? sql<{ id: string }[]>`
+      SELECT p.article_id AS id FROM publications p WHERE p.article_id = ANY(${itemIds}::text[])
+        AND p.visibility = 'public' AND p.indexable AND ${currentDecisionCondition()} AND ${releasedCondition(now)}` : Promise.resolve([]),
+    storyIds.length ? sql<{ id: string }[]>`
+      SELECT st.public_id::text AS id FROM stories st WHERE st.public_id::text = ANY(${storyIds}::text[])
+        AND st.merged_into IS NULL AND EXISTS (
+          SELECT 1 FROM facts f JOIN fact_articles fa ON fa.fact_id = f.id JOIN publications p ON p.article_id = fa.article_id
+          WHERE f.story_id = st.id AND ${evidenceCondition()} AND ${listedCondition(now)})` : Promise.resolve([]),
+  ]);
+  const availableItems = new Set(items.map((row) => row.id));
+  const availableStories = new Set(stories.map((row) => row.id));
+  const xml = snapshot.xml.replace(/<url>\s*<loc>([^<]+)<\/loc>[\s\S]*?<\/url>\n?/g, (block, loc: string) => {
+    let pathname: string;
+    try { pathname = new URL(loc).pathname; } catch { return block; }
+    const item = /^\/items\/([a-zA-Z0-9_-]+)$/.exec(pathname);
+    const story = /^\/story\/([a-zA-Z0-9_-]+)$/.exec(pathname);
+    if (item && !availableItems.has(item[1]!)) return "";
+    if (story && !availableStories.has(story[1]!)) return "";
+    return block;
+  });
+  return xml === snapshot.xml ? snapshot : { ...snapshot, xml };
 }
 
 async function refreshSitemap(): Promise<SitemapSnapshot> {

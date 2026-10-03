@@ -6,6 +6,7 @@ import { closeDb, sql } from '@aihot/backend/db';
 import { loadHotStrip, rankingExtras } from '@aihot/backend/publication/hot';
 import type { HotEntry } from '@aihot/backend/events/hot';
 import { proxiedImage } from '@aihot/backend/media/imgproxy';
+import { attachCurrentPublicationDecision } from './publication-fixture.ts';
 
 const t = `hotfaces-${tag()}`;
 // Listed in the ranking's stored order, which the faces must not follow.
@@ -47,6 +48,7 @@ test('faces are 精选组 sources by tier (T1, T1.5, T2), at most 6; 氛围组 o
   // One report may cover these three events; avatar order still comes from the same ten sources.
   await sql`INSERT INTO publications (article_id,source_id,title,url,timeline_at,discovered_at,sort_at,eligible,channel)
     VALUES (${sourceId(1)},${sourceId(1)},${name(1)},${'https://example.org/'+sourceId(1)},now(),now(),now(),true,'news')`;
+  await attachCurrentPublicationDecision(sourceId(1));
   const entries: HotEntry[] = [];
   const at = new Date('2099-01-01T00:00:00Z');
   for (let i=0;i<3;i++) {

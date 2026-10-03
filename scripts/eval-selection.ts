@@ -14,7 +14,7 @@ import { closeDb, sql } from "@aihot/backend/db";
 import {
   SELECTION_PROMPT_VERSION,
   buildScoreInput,
-  normalizeAnalysis,
+  normalizeSelection,
   runSelectionPrefilter,
   runSelectionScores,
   tierThreshold,
@@ -129,14 +129,12 @@ for (const model of models) {
     try {
       const prefilter = await runSelectionPrefilter(input, {}, (id) => receiptIds.push(id));
       if (prefilter.label === "BLOCK") {
-        const run: AnalysisRun = { prefilter, scores: null, writing: null, structure: null };
-        return { r, out: normalizeAnalysis(run), receiptIds, error: null as string | null };
+        return { r, out: normalizeSelection({ prefilter, scores: null }), receiptIds, error: null as string | null };
       }
 
       const threshold = tierThreshold(input.source.tier);
       if (threshold === null) {
-        const run: AnalysisRun = { prefilter, scores: null, writing: null, structure: null };
-        return { r, out: normalizeAnalysis(run), receiptIds, error: null as string | null };
+        return { r, out: normalizeSelection({ prefilter, scores: null }), receiptIds, error: null as string | null };
       }
 
       const key = buildScoreInput(input);
@@ -155,8 +153,7 @@ for (const model of models) {
 
       // Model output is independent of source tier; the decision threshold is not.
       const scores = shared.scores ? { ...shared.scores, threshold } : null;
-      const run: AnalysisRun = { prefilter, scores, writing: null, structure: null };
-      return { r, out: normalizeAnalysis(run), receiptIds, error: null as string | null };
+      return { r, out: normalizeSelection({ prefilter, scores }), receiptIds, error: null as string | null };
     } catch (error) {
       return { r, out: null, receiptIds, error: String(error).slice(0, 200) };
     }

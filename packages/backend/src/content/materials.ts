@@ -1,6 +1,9 @@
 // The single entrance for new material from every channel (collectors, external reports, imports).
 // It owns identity, revisions and the timeline rule, so no entrance can bypass them.
-import { sql, type Db } from "../db.ts";
+import { sql, type Db, type Tx } from "../db.ts";
+import { reconcileEditorialPoliciesTx } from "../publication/editorial.ts";
+import { invalidatePolicyProjectionTx } from "../publication/publish.ts";
+import { lockEditorialProjection } from "../publication/reprocess.ts";
 import { newArticleId, sha256 } from "../lib/ids.ts";
 import { identityKeyForUrl } from "../lib/url.ts";
 import { collapseWhitespace } from "../lib/text.ts";
@@ -159,6 +162,9 @@ async function upsertIn(db: Db, m: MaterialInput): Promise<MaterialResult> {
     return { articleId: newId, created: true, revised: false, backfill: t.backfill };
   }
 
+  // A real revision must remove the old selected projection in the same transaction. Take the
+  // publication lock before the article row lock, matching publishing and admin mutations.
+  await lockEditorialProjection(db as Tx);
   const [existing] = await db<{ id: string; source_id: string; revision: number; content_hash: string | null; backfill: boolean; title: string; body_text: string | null; excerpt: string | null }[]>`
     SELECT id, source_id, revision, content_hash, backfill, title, body_text, excerpt FROM articles WHERE identity_key = ${identityKey} FOR UPDATE`;
   await db`INSERT INTO article_discoveries (article_id, source_id, via, discovered_at)
@@ -206,5 +212,14 @@ async function upsertIn(db: Db, m: MaterialInput): Promise<MaterialResult> {
     RETURNING revision`;
   await db`INSERT INTO article_revisions (article_id, revision, content_hash, title, body_text)
            VALUES (${existing!.id}, ${row!.revision}, ${next}, ${title}, ${bodyText})`;
+  await invalidateRevisedMaterialTx(db as Tx, existing!.id);
   return { articleId: existing!.id, created: false, revised: true, backfill: existing!.backfill };
+}
+
+/** Revoke a previous revision before commit, including its sync ledger entry and fact decision. */
+export async function invalidateRevisedMaterialTx(tx: Tx, articleId: string): Promise<void> {
+  const now = new Date();
+  await invalidatePolicyProjectionTx(tx, articleId, now);
+  const [linked] = await tx`SELECT 1 FROM fact_articles WHERE article_id = ${articleId} LIMIT 1`;
+  if (linked) await reconcileEditorialPoliciesTx(tx, now);
 }

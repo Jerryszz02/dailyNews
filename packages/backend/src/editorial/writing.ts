@@ -291,6 +291,17 @@ export function buildArticlePrompt(input: TranslateInput): string {
   });
 }
 
+/** Non-AI copy uses a separate neutral prompt; editorial importance stays deterministic after grouping. */
+export function buildNonAiCopyPrompt(input: TranslateInput): string {
+  return promptText("dailynews-non-ai-copy", {
+    publishedDate: anchorDate(input.publishedAt),
+    sourceName: sourceName(input.sourceName),
+    identity: identityPrompt(input),
+    title: input.title,
+    body: input.text ? clampText(cleanArticleTextForLLM(input.text), 6000) : promptText("summarize-article-empty"),
+  });
+}
+
 /** The quoted post's block, appended after a blank line when there is one. */
 function quotedBlock(input: TranslateInput, name: string): string {
   if (!input.quotedText) return "";

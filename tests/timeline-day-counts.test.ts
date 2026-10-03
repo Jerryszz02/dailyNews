@@ -4,6 +4,7 @@ import { after, test } from "node:test";
 import { closeDb, sql } from "@aihot/backend/db";
 import { beijingDate, beijingMidnight } from "@aihot/contracts/time";
 import { countTimelineDays, loadTimeline } from "@aihot/backend/publication/timeline";
+import { attachCurrentPublicationDecision } from "./publication-fixture.ts";
 
 after(closeDb);
 const reference = (grouped: readonly { anchor: number }[], days: ReadonlySet<string>) => {
@@ -68,6 +69,7 @@ test("real grouped timeline pagination keeps whole-day counts across midnight", 
         VALUES(${id},${source},${id},'https://example.test/days',${id},${date},${date})`;
       await sql`INSERT INTO publications(article_id,title,source_id,channel,url,discovered_at,timeline_at,sort_at,eligible,selected,visible_after,visibility,tags,fact_id,story_id)
         VALUES(${id},${id},${source},'news','https://example.test/days',${date},${date},${date},true,true,${date},'public',${[T]},${fact},${story})`;
+      await attachCurrentPublicationDecision(id);
       if (fact !== null) await sql`INSERT INTO fact_articles(fact_id,article_id,role) VALUES(${fact},${id},'report')`;
       return id;
     };

@@ -24,7 +24,7 @@ export async function article(sourceId: string, title: string, opts: { eligible?
     bodyText: "虚构测试正文", bodyHtml: "<p>虚构测试正文</p>", bodyStatus: "ok", via: "fetch", publishedAt: new Date(Date.now() - 60_000) });
   articles.push(articleId);
   await sql`INSERT INTO analyses(article_id,input_revision,origin,relevance,category,title_zh,summary_zh,reason_zh,score,selected)
-    VALUES(${articleId},1,'rule',${opts.eligible === false ? 'block' : 'pass'},'ai-models',${title},${title + '摘要'},'测试',90,true)`;
+    VALUES(${articleId},1,'rule',${opts.eligible === false ? 'block' : 'pass'},'ai',${title},${title + '摘要'},'测试',90,true)`;
   await publishArticle(articleId, opts.pending ? {} : { releasedAt: new Date(Date.now() - 60_000) });
   return articleId;
 }

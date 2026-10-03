@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { closeDb, sql } from "@aihot/backend/db";
 import { loadTopicDirectory, loadTopicPage, listTopics } from "@aihot/backend/publication/topics";
+import { attachCurrentPublicationDecision } from "./publication-fixture.ts";
 
 const T = tag();
 const SOURCE = `topic-counts-${T}`;
@@ -27,6 +28,7 @@ async function article(name: string, tags: string[], timeline: number, release =
     VALUES(${id},${SOURCE},${id},${url},${name},${at},${at})`;
   await sql`INSERT INTO publications(article_id,title,summary,source_id,channel,url,discovered_at,timeline_at,sort_at,selected,visible_after,tags)
     VALUES(${id},${name},'test',${SOURCE},'news',${url},${at},${at},${at},true,${new Date(release)},${tags})`;
+  await attachCurrentPublicationDecision(id);
   return id;
 }
 

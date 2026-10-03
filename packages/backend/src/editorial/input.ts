@@ -1,6 +1,6 @@
 // What the judging steps read about an article: loaded once per analysis and rendered per step.
 import { beijingDate, beijingTime } from "@aihot/contracts/time";
-import { sql } from "../db.ts";
+import { sql, type Db } from "../db.ts";
 import { collapseWhitespace, truncate } from "../lib/text.ts";
 import { produceImage } from "../media/images.ts";
 import type { ContentPart } from "../providers/llm.ts";
@@ -32,6 +32,13 @@ export interface AnalyzeInputArticle {
   };
   /** Stored Chinese translation of the body (e.g. a full post whose original was truncated). */
   translationZh?: string | null;
+  manualCategory?: string | null;
+  editorialCategory?: string | null;
+  overrideVersion?: number;
+  classificationFallbackCount?: number;
+  classificationFallbackCategory?: string | null;
+  classificationFallbackConfigVersion?: string | null;
+  classificationRetryCount?: number;
 }
 
 /**
@@ -44,18 +51,24 @@ export function withXArticle(xPost: Record<string, any> | null, article: { title
   return { ...xPost, text: parts.filter(Boolean).join("\n\n") };
 }
 
-export async function loadAnalyzeInput(articleId: string): Promise<AnalyzeInputArticle | null> {
-  const [row] = await sql<{
+export async function loadAnalyzeInput(articleId: string, db: Db = sql): Promise<AnalyzeInputArticle | null> {
+  const [row] = await db<{
     id: string; revision: number; title: string; url: string; author: string | null; published_at: Date | null; discovered_at: Date;
     body_text: string | null; excerpt: string | null; body_status: string; x_post: Record<string, any> | null; x_article: { title?: string; text?: string } | null;
     media: Array<Record<string, any>>; source_name: string; source_kind: string; tier: string; first_party: boolean; source_tags: string[]; owner_entity_id: string | null;
-    config: Record<string, any>; translation_zh: string | null;
+    config: Record<string, any>; translation_zh: string | null; override_fields: Record<string, unknown> | null; override_version: number | null;
+    editorial_category: string | null; classification_fallback_count: number; classification_fallback_revision: number;
+    classification_fallback_category: string | null; classification_fallback_config_version: string | null;
+    classification_retry_count: number; classification_retry_revision: number;
   }[]>`
     SELECT a.id, a.revision, a.title, a.url, a.author, a.published_at, a.discovered_at, a.body_text, a.excerpt, a.body_status, a.x_post, a.x_article, a.media,
+           a.editorial_category, a.classification_fallback_count, a.classification_fallback_revision,
+           a.classification_fallback_category, a.classification_fallback_config_version, a.classification_retry_count, a.classification_retry_revision,
            s.name AS source_name, s.kind AS source_kind, s.tier, s.first_party, s.tags AS source_tags, s.owner_entity_id, s.config,
-           tr.body_text AS translation_zh
+           tr.body_text AS translation_zh, o.fields AS override_fields, o.version AS override_version
     FROM articles a JOIN sources s ON s.id = a.source_id
     LEFT JOIN translations tr ON tr.article_id = a.id AND tr.lang = 'zh' AND tr.revision >= a.revision
+    LEFT JOIN editorial_overrides o ON o.article_id = a.id
     WHERE a.id = ${articleId}`;
   if (!row) return null;
   return {
@@ -66,6 +79,13 @@ export async function loadAnalyzeInput(articleId: string): Promise<AnalyzeInputA
       fetchesBody: row.config?.fetchPublicContent === true || !!row.config?.detail || row.source_kind === "web_list",
     },
     translationZh: row.translation_zh,
+    manualCategory: typeof row.override_fields?.category === "string" ? row.override_fields.category : null,
+    editorialCategory: row.editorial_category,
+    overrideVersion: row.override_version ?? 0,
+    classificationFallbackCount: row.classification_fallback_revision === row.revision ? row.classification_fallback_count : 0,
+    classificationFallbackCategory: row.classification_fallback_revision === row.revision ? row.classification_fallback_category : null,
+    classificationFallbackConfigVersion: row.classification_fallback_revision === row.revision ? row.classification_fallback_config_version : null,
+    classificationRetryCount: row.classification_retry_revision === row.revision ? row.classification_retry_count : 0,
   };
 }
 

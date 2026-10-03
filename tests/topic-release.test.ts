@@ -34,7 +34,7 @@ async function article(name: string, tags: string[], timeline: number, pending =
   const { articleId } = await upsertMaterial({ sourceId: SOURCE, url: `https://example.test/${T}/${name}`, title: `原文 ${name}`, bodyText: "测试正文", bodyStatus: "ok", via: "fetch", publishedAt: new Date(timeline), discoveredAt: new Date(timeline) });
   ids.push(articleId);
   await sql`INSERT INTO analyses (article_id,input_revision,origin,relevance,category,title_zh,summary_zh,reason_zh,score,selected,tags)
-    VALUES (${articleId},1,'rule','pass','ai-models',${`标题 ${name}`},'测试摘要','理由',90,true,${tags})`;
+    VALUES (${articleId},1,'rule','pass','ai',${`标题 ${name}`},'测试摘要','理由',90,true,${tags})`;
   await publishArticle(articleId, pending ? {} : { releasedAt: new Date(START - DAY) });
   return articleId;
 }

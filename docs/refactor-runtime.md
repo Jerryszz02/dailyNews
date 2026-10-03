@@ -42,10 +42,22 @@ node --env-file=.env apps/web/server.ts
 - `scripts/smoke.ts` 的 30 个网页/机器出口检查通过（含 RSS、API、MCP、品牌资源）。Chrome 首页显示 Daily News 与空内容状态。
 - 离线 smoke 数据库的 sources、articles、receipts 均为 0；没有把旧 fallback 填入新公开池。
 
-CI 采用固定上游的 Node 24、PostgreSQL 17、构建/测试、Compose smoke；其结果需按 PR 当前提交另查。本机没有 Docker，不能把本地直接 PostgreSQL 验证说成已完成本机 Compose 验证。
+P1 PR [#15](https://github.com/Jerryszz02/dailyNews/pull/15)（`be72e51`）的 app-tests 与 database-tests 已通过；Vercel 检查为 Account is blocked，PR 保持未合并。CI 使用 Node 24、PostgreSQL 17、构建/测试与 Compose smoke。本机没有 Docker，不能把本地直接 PostgreSQL 验证说成已完成本机 Compose 验证。
+
+## P2 分类与双策略（本地出口通过）
+
+`industry/taxonomy.ts` 的主分类固定为十类，AI 的七个内容类型单独保留。结构分类先执行，只有 AI 分支进入原版 prefilter、双评分和内容理解。原版 `selection.ts` 与核心提示词通过字节级快照检查；UNKNOWN 继续分析，BLOCK 每篇每个 revision 最多一次非 AI 复核，重复任务复用结论。空分类在同 revision 最多两次尝试，之后保留待处理，新材料或显式重评才恢复。未分类或分析已失效的材料也不能通过详情、Markdown 或事件证据页绕过公开门槛；这是相对基准未分析材料可保留 noindex 详情页的明确适配。
+
+非 AI 的公共重要性、事实状态和 top/important/watchlist 集合由 `dailynews/non-ai.ts` 确定性适配器计算。固定旧 SHA 的原函数生成 70 个 fact 的 golden 数据，逐项对照九类与集合限额。分数类型 `legacy_curation_total` 与 AI 注意力评分分别记录，不能跨策略混排。分类与组稿的来源提示只提供背景，不强制主分类。
+
+0042/0043 增加 append-only `editorial_decisions`、`fact_editorial_state`、发布策略元数据、分类重试及分析签名。模型分析提交与发布都校验 material revision、人工分类、来源 tier、完整 taxonomy/渲染提示词、模型和规则版本。不同 URL 自动归并要求初判与需要时的复判都达到 0.8；同 URL 的确定性去重保留。
+
+worker 启动与五分钟任务检查最近 72 小时正常新增资料的签名，时间边界重算每分钟执行。来源/模型/人工分类变更显式失效并入队；旧历史只接受明确 article IDs。签名固定的任务复用同一付费身份。测试可显式允许历史 rule/replay fixture；默认运行不接受未签名的新模型结果。
+
+已覆盖代表稿替换、40 条集合挤出、旁及/综合稿排除、跨策略改类、101 个成员分批重评、材料修订即时撤销、许可变更及账本 remove/upsert。2026-10-03 在新建隔离库完成 P2/P3 联合全量回归：604/604 通过（其中来源迁移新增 6 项属于 P3）；类型检查、网页构建和 31 项网页测试通过。旧规则 70 个 fact 的差分一致，AI 核心快照未变。PR 检查另行记录，不沿用 P1 结果。
 
 ## 后续阶段
 
-P2：十主类、前置分类、双策略、fact/集合级编辑投影与版本失效。P3：187 个栏目的来源映射、适配与失败隔离。P4：产品/API/偏好/日报公开契约。P5：核实 DeepSeek 模型与价格后，在明确预算内真实试运行并报告质量、费用、延迟和积压。当前离线通过不代表这些阶段完成。
+P2 本地出口通过，PR 等待当前提交的 CI。P3：187 个栏目的来源映射、适配与失败隔离。P4：产品/API/偏好/日报公开契约。P5：核实 DeepSeek 模型与价格后，在明确预算内真实试运行并报告质量、费用、延迟和积压。当前离线通过不代表这些阶段完成。
 
 每次改动本说明描述的入口、数据流或安全阀，同 PR 更新本文件。生产切换、删旧库、采购和恢复历史 burn-in/soak/observer/heartbeat 不在授权内。

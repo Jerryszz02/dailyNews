@@ -1,0 +1,2475 @@
+{
+  "baseline": "8519831714b0d6c8183336c81e8190dceddf7843",
+  "now": "2026-10-03T08:00:00.000Z",
+  "inputs": [
+    {
+      "factId": "technology",
+      "primaryCategory": "technology",
+      "evidence": [
+        {
+          "articleId": "technology",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/technology",
+          "title": "全国重大科技芯片突破首次公布",
+          "summary": "全国重大科技芯片突破首次公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "technology",
+          "categories": [
+            "technology"
+          ],
+          "publishedAt": "2026-10-03T07:30:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "finance",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance",
+          "title": "央行发布利率新规并正式生效",
+          "summary": "央行发布利率新规并正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T02:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "international",
+      "primaryCategory": "international",
+      "evidence": [
+        {
+          "articleId": "international",
+          "legacySourceId": "aljazeera",
+          "url": "https://aljazeera.com/international",
+          "title": "全球冲突升级后宣布紧急停火",
+          "summary": "全球冲突升级后宣布紧急停火。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "international",
+          "categories": [
+            "international"
+          ],
+          "publishedAt": "2026-10-02T20:00:00.000Z",
+          "sourceCredibility": 78,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "china",
+      "primaryCategory": "china",
+      "evidence": [
+        {
+          "articleId": "china",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/china",
+          "title": "全国重要公共服务政策正式实施",
+          "summary": "全国重要公共服务政策正式实施。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "china",
+          "categories": [
+            "china"
+          ],
+          "publishedAt": "2026-10-02T08:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy",
+          "title": "监管部门发布全国新规明确执行时间",
+          "summary": "监管部门发布全国新规明确执行时间。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T07:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "society",
+      "primaryCategory": "society",
+      "evidence": [
+        {
+          "articleId": "society",
+          "legacySourceId": "ap",
+          "url": "https://apnews.com/society",
+          "title": "社区活动公布阶段成果",
+          "summary": "社区活动公布阶段成果。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "society",
+          "categories": [
+            "society"
+          ],
+          "publishedAt": "2026-10-02T07:00:00.000Z",
+          "sourceCredibility": 91,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "science",
+      "primaryCategory": "science",
+      "evidence": [
+        {
+          "articleId": "science",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/science",
+          "title": "全国空间研究首次取得突破",
+          "summary": "全国空间研究首次取得突破。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "science",
+          "categories": [
+            "science"
+          ],
+          "publishedAt": "2026-10-01T08:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "sports",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "sports",
+          "legacySourceId": "nba",
+          "url": "https://nba.com/sports",
+          "title": "球队比赛前景排名与观点盘点",
+          "summary": "球队比赛前景排名与观点盘点。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T06:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "entertainment",
+      "primaryCategory": "entertainment",
+      "evidence": [
+        {
+          "articleId": "entertainment",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/entertainment",
+          "title": "地方电影节公布节目单",
+          "summary": "地方电影节公布节目单。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "entertainment",
+          "categories": [
+            "entertainment"
+          ],
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead",
+          "title": "消息人士称冠军球队重大交易接近达成",
+          "summary": "消息人士称冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "same-host",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "same-host-a",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/same-host-a",
+          "title": "全国金融政策发布并明确实施时间",
+          "summary": "全国金融政策发布并明确实施时间。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T07:30:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        },
+        {
+          "articleId": "same-host-b",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/same-host-b",
+          "title": "全国金融政策发布并明确实施时间",
+          "summary": "全国金融政策发布并明确实施时间。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "multi-host",
+      "primaryCategory": "international",
+      "evidence": [
+        {
+          "articleId": "multi-host-a",
+          "legacySourceId": "aljazeera",
+          "url": "https://aljazeera.com/multi-host-a",
+          "title": "地区冲突停火协议正式签署",
+          "summary": "地区冲突停火协议正式签署。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "international",
+          "categories": [
+            "international"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 78,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        },
+        {
+          "articleId": "multi-host-b",
+          "legacySourceId": "ap",
+          "url": "https://apnews.com/multi-host-b",
+          "title": "地区冲突停火协议正式签署",
+          "summary": "地区冲突停火协议正式签署。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "international",
+          "categories": [
+            "international"
+          ],
+          "publishedAt": "2026-10-03T07:00:00.000Z",
+          "sourceCredibility": 91,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "old-impact",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "old-impact",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/old-impact",
+          "title": "全国重大监管新规正式生效",
+          "summary": "全国重大监管新规正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-09-30T08:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-0",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-0",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-0",
+          "title": "全国重大政策监管新规第0项正式生效",
+          "summary": "全国重大政策监管新规第0项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-1",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-1",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-1",
+          "title": "全国重大政策监管新规第1项正式生效",
+          "summary": "全国重大政策监管新规第1项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-2",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-2",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-2",
+          "title": "全国重大政策监管新规第2项正式生效",
+          "summary": "全国重大政策监管新规第2项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-3",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-3",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-3",
+          "title": "全国重大政策监管新规第3项正式生效",
+          "summary": "全国重大政策监管新规第3项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-4",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-4",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-4",
+          "title": "全国重大政策监管新规第4项正式生效",
+          "summary": "全国重大政策监管新规第4项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-5",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-5",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-5",
+          "title": "全国重大政策监管新规第5项正式生效",
+          "summary": "全国重大政策监管新规第5项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-6",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-6",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-6",
+          "title": "全国重大政策监管新规第6项正式生效",
+          "summary": "全国重大政策监管新规第6项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-7",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-7",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-7",
+          "title": "全国重大政策监管新规第7项正式生效",
+          "summary": "全国重大政策监管新规第7项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-8",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-8",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-8",
+          "title": "全国重大政策监管新规第8项正式生效",
+          "summary": "全国重大政策监管新规第8项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-9",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-9",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-9",
+          "title": "全国重大政策监管新规第9项正式生效",
+          "summary": "全国重大政策监管新规第9项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-10",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-10",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-10",
+          "title": "全国重大政策监管新规第10项正式生效",
+          "summary": "全国重大政策监管新规第10项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "policy-cap-11",
+      "primaryCategory": "policy",
+      "evidence": [
+        {
+          "articleId": "policy-cap-11",
+          "legacySourceId": "xinhua",
+          "url": "https://news.cn/policy-cap-11",
+          "title": "全国重大政策监管新规第11项正式生效",
+          "summary": "全国重大政策监管新规第11项正式生效。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "policy",
+          "categories": [
+            "policy"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-0",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-0",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-0",
+          "title": "央行金融市场第0项调整公布",
+          "summary": "央行金融市场第0项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-1",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-1",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-1",
+          "title": "央行金融市场第1项调整公布",
+          "summary": "央行金融市场第1项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-2",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-2",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-2",
+          "title": "央行金融市场第2项调整公布",
+          "summary": "央行金融市场第2项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-3",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-3",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-3",
+          "title": "央行金融市场第3项调整公布",
+          "summary": "央行金融市场第3项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-4",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-4",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-4",
+          "title": "央行金融市场第4项调整公布",
+          "summary": "央行金融市场第4项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-5",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-5",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-5",
+          "title": "央行金融市场第5项调整公布",
+          "summary": "央行金融市场第5项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-6",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-6",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-6",
+          "title": "央行金融市场第6项调整公布",
+          "summary": "央行金融市场第6项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-7",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-7",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-7",
+          "title": "央行金融市场第7项调整公布",
+          "summary": "央行金融市场第7项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-8",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-8",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-8",
+          "title": "央行金融市场第8项调整公布",
+          "summary": "央行金融市场第8项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-9",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-9",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-9",
+          "title": "央行金融市场第9项调整公布",
+          "summary": "央行金融市场第9项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-10",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-10",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-10",
+          "title": "央行金融市场第10项调整公布",
+          "summary": "央行金融市场第10项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-11",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-11",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-11",
+          "title": "央行金融市场第11项调整公布",
+          "summary": "央行金融市场第11项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-12",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-12",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-12",
+          "title": "央行金融市场第12项调整公布",
+          "summary": "央行金融市场第12项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-13",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-13",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-13",
+          "title": "央行金融市场第13项调整公布",
+          "summary": "央行金融市场第13项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-14",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-14",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-14",
+          "title": "央行金融市场第14项调整公布",
+          "summary": "央行金融市场第14项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-15",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-15",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-15",
+          "title": "央行金融市场第15项调整公布",
+          "summary": "央行金融市场第15项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-16",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-16",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-16",
+          "title": "央行金融市场第16项调整公布",
+          "summary": "央行金融市场第16项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-17",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-17",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-17",
+          "title": "央行金融市场第17项调整公布",
+          "summary": "央行金融市场第17项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-18",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-18",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-18",
+          "title": "央行金融市场第18项调整公布",
+          "summary": "央行金融市场第18项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-19",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-19",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-19",
+          "title": "央行金融市场第19项调整公布",
+          "summary": "央行金融市场第19项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-20",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-20",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-20",
+          "title": "央行金融市场第20项调整公布",
+          "summary": "央行金融市场第20项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-21",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-21",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-21",
+          "title": "央行金融市场第21项调整公布",
+          "summary": "央行金融市场第21项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-22",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-22",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-22",
+          "title": "央行金融市场第22项调整公布",
+          "summary": "央行金融市场第22项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-23",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-23",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-23",
+          "title": "央行金融市场第23项调整公布",
+          "summary": "央行金融市场第23项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-24",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-24",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-24",
+          "title": "央行金融市场第24项调整公布",
+          "summary": "央行金融市场第24项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-25",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-25",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-25",
+          "title": "央行金融市场第25项调整公布",
+          "summary": "央行金融市场第25项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-26",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-26",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-26",
+          "title": "央行金融市场第26项调整公布",
+          "summary": "央行金融市场第26项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-27",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-27",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-27",
+          "title": "央行金融市场第27项调整公布",
+          "summary": "央行金融市场第27项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-28",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-28",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-28",
+          "title": "央行金融市场第28项调整公布",
+          "summary": "央行金融市场第28项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-29",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-29",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-29",
+          "title": "央行金融市场第29项调整公布",
+          "summary": "央行金融市场第29项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-30",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-30",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-30",
+          "title": "央行金融市场第30项调整公布",
+          "summary": "央行金融市场第30项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-31",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-31",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-31",
+          "title": "央行金融市场第31项调整公布",
+          "summary": "央行金融市场第31项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-32",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-32",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-32",
+          "title": "央行金融市场第32项调整公布",
+          "summary": "央行金融市场第32项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "finance-cap-33",
+      "primaryCategory": "finance",
+      "evidence": [
+        {
+          "articleId": "finance-cap-33",
+          "legacySourceId": "caixin",
+          "url": "https://caixin.com/finance-cap-33",
+          "title": "央行金融市场第33项调整公布",
+          "summary": "央行金融市场第33项调整公布。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "finance",
+          "categories": [
+            "finance"
+          ],
+          "publishedAt": "2026-10-03T05:00:00.000Z",
+          "sourceCredibility": 82,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": true
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-0",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-0",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-0",
+          "title": "消息人士称第0笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第0笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-1",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-1",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-1",
+          "title": "消息人士称第1笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第1笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-2",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-2",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-2",
+          "title": "消息人士称第2笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第2笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-3",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-3",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-3",
+          "title": "消息人士称第3笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第3笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-4",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-4",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-4",
+          "title": "消息人士称第4笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第4笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-5",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-5",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-5",
+          "title": "消息人士称第5笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第5笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-6",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-6",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-6",
+          "title": "消息人士称第6笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第6笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-7",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-7",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-7",
+          "title": "消息人士称第7笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第7笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-8",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-8",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-8",
+          "title": "消息人士称第8笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第8笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-9",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-9",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-9",
+          "title": "消息人士称第9笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第9笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    },
+    {
+      "factId": "lead-cap-10",
+      "primaryCategory": "sports",
+      "evidence": [
+        {
+          "articleId": "lead-cap-10",
+          "legacySourceId": "x-shams",
+          "url": "https://x.com/lead-cap-10",
+          "title": "消息人士称第10笔冠军球队重大交易接近达成",
+          "summary": "消息人士称第10笔冠军球队重大交易接近达成。有关部门披露具体范围、阶段安排、实际影响和后续进展，报道提供必要背景与事实细节。",
+          "primaryCategory": "sports",
+          "categories": [
+            "sports"
+          ],
+          "publishedAt": "2026-10-03T07:45:00.000Z",
+          "sourceCredibility": 58,
+          "mediaType": "social",
+          "signalRole": "discussion",
+          "mayHavePaywall": false
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "facts": [
+      {
+        "factId": "technology",
+        "importance": {
+          "publicImpact": 66,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 73
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance",
+        "importance": {
+          "publicImpact": 80,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 82
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "international",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 78,
+          "sourceSignificance": 60,
+          "evidenceStrength": 62,
+          "total": 96
+        },
+        "tier": "must_know",
+        "status": "developing"
+      },
+      {
+        "factId": "china",
+        "importance": {
+          "publicImpact": 86,
+          "urgency": 65,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 82
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy",
+        "importance": {
+          "publicImpact": 94,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 95
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "society",
+        "importance": {
+          "publicImpact": 36,
+          "urgency": 42,
+          "sourceSignificance": 60,
+          "evidenceStrength": 86,
+          "total": 37
+        },
+        "tier": "noise",
+        "status": "confirmed"
+      },
+      {
+        "factId": "science",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 42,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 68
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "sports",
+        "importance": {
+          "publicImpact": 3,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 86,
+          "total": 20
+        },
+        "tier": "noise",
+        "status": "confirmed"
+      },
+      {
+        "factId": "entertainment",
+        "importance": {
+          "publicImpact": 22,
+          "urgency": 45,
+          "sourceSignificance": 60,
+          "evidenceStrength": 70,
+          "total": 27
+        },
+        "tier": "special_interest",
+        "status": "confirmed"
+      },
+      {
+        "factId": "lead",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "same-host",
+        "importance": {
+          "publicImpact": 82,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 86
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "multi-host",
+        "importance": {
+          "publicImpact": 96,
+          "urgency": 90,
+          "sourceSignificance": 66,
+          "evidenceStrength": 98,
+          "total": 95
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "old-impact",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 20,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 84
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-0",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-1",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-2",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-3",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-4",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-5",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-6",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-7",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-8",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-9",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-10",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "policy-cap-11",
+        "importance": {
+          "publicImpact": 100,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 84,
+          "total": 98
+        },
+        "tier": "must_know",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-0",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-1",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-2",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-3",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-4",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-5",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-6",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-7",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-8",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-9",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-10",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-11",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-12",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-13",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-14",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-15",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-16",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-17",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-18",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-19",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-20",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-21",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-22",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-23",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-24",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-25",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-26",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-27",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-28",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-29",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-30",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-31",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-32",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "finance-cap-33",
+        "importance": {
+          "publicImpact": 74,
+          "urgency": 90,
+          "sourceSignificance": 60,
+          "evidenceStrength": 61,
+          "total": 77
+        },
+        "tier": "important",
+        "status": "confirmed"
+      },
+      {
+        "factId": "lead-cap-0",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-1",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-2",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-3",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-4",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-5",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-6",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-7",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-8",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-9",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      },
+      {
+        "factId": "lead-cap-10",
+        "importance": {
+          "publicImpact": 34,
+          "urgency": 100,
+          "sourceSignificance": 60,
+          "evidenceStrength": 35,
+          "total": 47
+        },
+        "tier": "special_interest",
+        "status": "unverified"
+      }
+    ],
+    "topIds": [
+      "policy",
+      "multi-host",
+      "same-host",
+      "policy-cap-0",
+      "international",
+      "policy-cap-1",
+      "policy-cap-2",
+      "policy-cap-3",
+      "policy-cap-4",
+      "policy-cap-5"
+    ],
+    "importantIds": [
+      "finance",
+      "finance-cap-0",
+      "finance-cap-1",
+      "policy-cap-6",
+      "policy-cap-7",
+      "policy-cap-8",
+      "policy-cap-9",
+      "policy-cap-10",
+      "policy-cap-11",
+      "old-impact",
+      "china",
+      "finance-cap-2",
+      "finance-cap-3",
+      "finance-cap-4",
+      "finance-cap-5",
+      "finance-cap-6",
+      "finance-cap-7",
+      "finance-cap-8",
+      "finance-cap-9",
+      "finance-cap-10",
+      "finance-cap-11",
+      "finance-cap-12",
+      "finance-cap-13",
+      "finance-cap-14",
+      "finance-cap-15",
+      "finance-cap-16",
+      "finance-cap-17",
+      "finance-cap-18",
+      "finance-cap-19",
+      "finance-cap-20"
+    ],
+    "watchlistIds": [
+      "lead",
+      "lead-cap-0",
+      "lead-cap-1",
+      "lead-cap-2",
+      "lead-cap-3",
+      "lead-cap-4",
+      "lead-cap-5",
+      "lead-cap-6"
+    ]
+  }
+}
