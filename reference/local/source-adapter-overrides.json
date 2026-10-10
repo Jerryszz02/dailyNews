@@ -1,0 +1,98 @@
+{
+  "checkedAt": "2026-10-10T17:36:01.484Z",
+  "sources": [
+    {
+      "id": "dn-anthropic-46ed46f2e57d",
+      "configOverrides": {
+        "url": "https://www.anthropic.com/news",
+        "itemSelector": "a[class*=\"PublicationList\"][class*=\"listItem\"][href^=\"/news/\"]",
+        "titleSelector": "span[class*=\"__title\"]",
+        "publishedAtSelector": "time",
+        "publishedAtUtcOffset": "+00:00",
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T17:36:01.484Z",
+      "evidence": {
+        "listingUrl": "https://www.anthropic.com/news",
+        "listingStatus": 200,
+        "candidateCount": 10,
+        "readerUrl": "https://www.anthropic.com/news/2026-usage-policy-update",
+        "readerStatus": 200,
+        "bodyChars": 7823,
+        "publishedAt": "2026-10-08T17:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-cas-e787b896b68f",
+      "configOverrides": {
+        "url": "https://www.cas.cn/",
+        "itemSelector": "a[href*=\"/syky/\"][href$=\".shtml\"]",
+        "detail": {
+          "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "checkedAt": "2026-10-10T17:36:01.484Z",
+      "evidence": {
+        "listingUrl": "https://www.cas.cn/",
+        "listingStatus": 200,
+        "candidateCount": 6,
+        "readerUrl": "https://www.cas.cn/syky/202610/t20261010_5122060.shtml",
+        "readerStatus": 200,
+        "bodyChars": 989,
+        "publishedAt": "2026-10-10T13:46:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-gov-cn-57fefc2bc972",
+      "configOverrides": {
+        "url": "https://www.gov.cn/",
+        "itemSelector": "a[href*=\"/zhengce/content/\"][href*=\"content_\"]",
+        "detail": {
+          "publishedAtRegex": "<div[^>]+style=\"display:none\">(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2})",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "checkedAt": "2026-10-10T17:36:01.484Z",
+      "evidence": {
+        "listingUrl": "https://www.gov.cn/",
+        "listingStatus": 200,
+        "candidateCount": 4,
+        "readerUrl": "https://www.gov.cn/zhengce/content/202610/content_7082737.htm",
+        "readerStatus": 200,
+        "bodyChars": 856,
+        "publishedAt": "2026-10-08T09:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-qwen-3bd13fab628b",
+      "configOverrides": {
+        "url": "https://qwenlm.github.io/",
+        "itemSelector": "main article.post-entry",
+        "linkSelector": "a.entry-link",
+        "titleSelector": ".entry-header h2",
+        "publishedAtSelector": ".entry-footer span",
+        "publishedAtUtcOffset": "+08:00"
+      },
+      "checkedAt": "2026-10-10T17:36:01.484Z",
+      "evidence": {
+        "listingUrl": "https://qwenlm.github.io/",
+        "listingStatus": 200,
+        "candidateCount": 5,
+        "readerUrl": "https://qwenlm.github.io/blog/qwen3guard/",
+        "readerStatus": 200,
+        "bodyChars": 13207,
+        "publishedAt": "2025-09-22T20:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "limitation": "Original host is archived; latest listing item is 2025-09-23. Official homepage points to qwen.ai/research, which is outside preserved allowedHosts and is not enabled here."
+      }
+    }
+  ]
+}

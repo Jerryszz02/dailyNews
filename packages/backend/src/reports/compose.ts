@@ -5,6 +5,7 @@ import { z } from "zod";
 import { SITE } from "@aihot/industry/site";
 import { CATEGORIES } from "@aihot/industry/taxonomy";
 import { promptText, promptVersion } from "../editorial/prompts.ts";
+import { copyEvidenceIssues } from "../editorial/evidence.ts";
 import { modelFor } from "../editorial/models.ts";
 import { addDays, beijingDate, beijingMidnight, isValidDate, isoWeekLabel, isoWeekRange, monthRange } from "@aihot/contracts/time";
 import { sql } from "../db.ts";
@@ -155,11 +156,19 @@ async function writeLead(kind: string, key: string, entries: Candidate[], model:
     system: promptText("report-daily-lead"),
     user: list, schema: LeadSchema, temperature: 0.3, maxTokens: 800,
   });
+  await validateReportEvidence(entries.slice(0, 30), `${res.data.title}\n${res.data.leadParagraph}`, res.receiptId);
   const highlights = res.data.highlights
     .map((h) => entries[Number(h) - 1])
     .filter((e): e is Candidate => !!e)
     .map((e) => e.itemId);
   return { lead: { title: res.data.title, leadParagraph: res.data.leadParagraph }, highlights, receiptId: res.receiptId };
+}
+
+async function validateReportEvidence(entries: Candidate[], output: string, receiptId: number) {
+  const issues = entries.flatMap(e => copyEvidenceIssues({ title: e.title, text: e.summary }, output));
+  if (!issues.length) return;
+  await rejectReceivedResponse(receiptId, `report evidence: ${[...new Set(issues)].join(",")}`);
+  throw new ModelOutputError("Report held for evidence correction", receiptId);
 }
 
 type ReportKind = "daily" | "weekly" | "monthly";
@@ -301,6 +310,11 @@ async function composePeriod(kind: "weekly" | "monthly", key: string, startDate:
     model, purpose: `report_${kind}`, subject: `report:${kind}:${key}`, promptVersion: REPORT_VERSION,
     ...periodPrompt(kind, startDate, endDateInclusive, top), schema: PeriodSchema, temperature: 0.3, maxTokens: 2500,
   });
+  await validateReportEvidence(top, `${res.data.headline}\n${res.data.overview}`, res.receiptId);
+  for (const theme of res.data.themes) {
+    const referenced = theme.refs.map(r => top[Number(r) - 1]).filter((e): e is Candidate => !!e);
+    await validateReportEvidence(referenced, `${theme.heading}\n${theme.summary}`, res.receiptId);
+  }
   const headline = res.data.headline.trim();
   const themes = res.data.themes
     .map((t) => ({

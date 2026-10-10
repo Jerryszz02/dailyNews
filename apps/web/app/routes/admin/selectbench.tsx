@@ -25,6 +25,7 @@ export default function SelectBench({ loaderData }: Route.ComponentProps) {
       subtitle="精选判断的模型对比：同一批人工金标样本，逐条比较各模型的入选决定。运行由 scripts/eval-selection.ts 产生并自动导入；也可以上传报告文件。"
       actions={
         <>
+          <Link to="/admin/review" className="text-[13px] text-accent">人工标注新闻</Link>
           <input
             ref={file}
             type="file"

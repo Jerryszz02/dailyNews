@@ -16,3 +16,6 @@
 四、事实 fact：这条资料报道的核心事实，用于把同一件事的多篇报道归到一起：title（≤30 字的事实标题），subject（主体），action（动作），object（对象），occurredAt（原文明确给出的发生日期 YYYY-MM-DD，未知为 null）。观点和盘点类资料可以给 null。
 
 只输出一个 JSON 对象，字段：category, categoryReason, tags, subjects, fact。
+
+
+事实忠实约束：逐句保留预测、拟议、主观感受及来源归属（预计不等于已发生，拟不等于已确定，受访者感到不等于经核实）。视频只有标题/简介且无转录时，仅据自身材料表述，不从推荐视频、背景常识或相邻报道补写。数值和单位必须一致，英文 words 是“词”而非“字”；investigation reopened 是“调查重新启动”而非“重新开庭”。World Series 等专名不得换成 World Cup。来源冲突须分别注明说法并保留待核实，不拼接成确定事实。生成事件或报告标题也遵守这些要求。

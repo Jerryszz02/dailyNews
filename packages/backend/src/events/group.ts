@@ -17,6 +17,7 @@
 import { beijingDate } from "@aihot/contracts/time";
 import { candidateViews, recallFacts, relatedPosts, vectorsFor } from "./recall.ts";
 import { consolidate, liveStory, type Consolidation } from "./consolidate.ts";
+import { copyEvidenceIssues } from "../editorial/evidence.ts";
 import { modelFor } from "../editorial/models.ts";
 import { sql, type Db, type Tx } from "../db.ts";
 import { newShortId, newUuid } from "../lib/ids.ts";
@@ -281,7 +282,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
     SELECT id, relevance, title_zh, summary_zh, output FROM analyses WHERE article_id = ${articleId} ORDER BY input_revision DESC, id DESC LIMIT 1`;
   // 人工更正优先；旧analysis的事件框架不能把被改掉的主张重新带回来。
   const corrected = !!publication && (publication.title !== an?.title_zh || publication.summary !== an?.summary_zh);
-  const frame = (corrected ? null : an?.output?.fact ?? null) as Record<string, any> | null;
+  let frame = (corrected ? null : an?.output?.fact ?? null) as Record<string, any> | null;
   if (!an || an.relevance !== "pass") {
     await markGrouped(articleId);
     await publishArticle(articleId, { batchEditorial: opts.batchEditorial });
@@ -289,11 +290,14 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
   }
   const title = publication?.title || an.title_zh || a.title;
   const summary = publication ? publication.summary : an.summary_zh;
+  // A frame whose headline already contradicts the safe copy cannot supply grouping actions either.
+  if (frame && copyEvidenceIssues({ title, text: summary ?? "" }, String(frame.title ?? "")).length) frame = null;
   const query: ReportView = {
     title, source: a.source_name, firstParty: a.first_party, at: observedAt, summary,
     frame: frame ? { subject: frame.subject, action: frame.action, object: frame.object, occurredAt: frame.occurredAt } : null,
   };
-  const newTitle = String(frame?.title || title).slice(0, 60);
+  // Published copy already carries attribution and modality; structure is not a second headline writer.
+  const newTitle = title;
 
   const { sameUrl, referenced } = await relatedPosts(a);
   let verdict: GroupResult["verdict"] = "new-story";

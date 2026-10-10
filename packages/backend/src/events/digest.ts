@@ -4,8 +4,9 @@ import { z } from "zod";
 import { modelFor } from "../editorial/models.ts";
 import { beijingDate, beijingTime } from "@aihot/contracts/time";
 import { sql } from "../db.ts";
-import { chatJson } from "../providers/llm.ts";
-import { completeReceipt } from "../providers/receipts.ts";
+import { copyEvidenceIssues } from "../editorial/evidence.ts";
+import { chatJson, ModelOutputError } from "../providers/llm.ts";
+import { completeReceipt, rejectReceivedResponse } from "../providers/receipts.ts";
 import { digestReports, digestInputsHash } from "./derived-content.ts";
 import { promptText, promptVersion } from "../editorial/prompts.ts";
 
@@ -57,6 +58,11 @@ export async function composeStoryDigest(storyId: number, opts: { afterCorrectio
     model: await modelFor("digest"), purpose: "story_digest", subject: `story:${storyId}@${ids.length}`, promptVersion: DIGEST_PROMPT_VERSION,
     system: SYSTEM, user, schema: Schema, temperature: 0.3, maxTokens: 1200,
   });
+  const issues = window.flatMap(r => copyEvidenceIssues({ title: r.title, text: r.summary ?? "" }, `${res.data.digest}\n${res.data.latest}`));
+  if (issues.length) {
+    await rejectReceivedResponse(res.receiptId, `digest evidence: ${[...new Set(issues)].join(",")}`);
+    throw new ModelOutputError("Story digest held for evidence correction", res.receiptId);
+  }
   return sql.begin(async (tx) => {
     const [current] = await tx<{ version: number }[]>`SELECT version FROM stories WHERE id=${storyId} AND merged_into IS NULL FOR UPDATE`;
     // 不持锁等待HTTP；回来后与撤回/合并/其他生成串行，再核对所有当前输入。
@@ -68,7 +74,7 @@ export async function composeStoryDigest(storyId: number, opts: { afterCorrectio
     await tx`INSERT INTO story_digests (story_id,version,digest,latest,receipt_id,article_ids,inputs_hash,context_article_ids)
       VALUES (${storyId},${version},${res.data.digest},${res.data.latest || null},${res.receiptId},${ids},${inputsHash},${contextIds})`;
     await tx`UPDATE stories SET digest=${res.data.digest},latest=${res.data.latest || null},digest_updated_at=now(),
-      title=CASE WHEN origin='manual' OR ${res.data.title}='' THEN title ELSE ${res.data.title} END,
+      title=CASE WHEN origin='manual' OR ${window.at(-1)!.title}='' THEN title ELSE ${window.at(-1)!.title} END,
       version=${version},updated_at=now() WHERE id=${storyId}`;
     await completeReceipt(tx, res.receiptId);
     return { updated: true, version };

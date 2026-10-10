@@ -7,10 +7,10 @@
 | 请求 | 先本地自用和测试，保留原信源配置及 DeepSeek Flash，规划质量修复、真实更新和网页点选标注 |
 | 核对日期 | 2026-10-10（Europe/London） |
 | 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews` |
-| 工作模式 | 独立 worktree，分支 `agent/local-news-quality-plan`；本轮只读核对并交付计划，不改产品代码或运行配置 |
+| 工作模式 | 独立 worktree，分支 `agent/local-news-quality-plan`；用户已批准计划，继续本分支实施内容修复、标注页和本地真实更新 |
 | 当前代码基准 | 刷新远程后 `main=origin/main=8d3e1998f5039ba9b8d67c33e6d893c91bf4647f`；包含已合并的 PR #20、#21 |
 | 对照基准 | 旧版 `8519831714b0d6c8183336c81e8190dceddf7843`；AIHOT `3343fe2b20db4be7269113752d82d3992fc52b6b`，固定版本、不自动同步 |
-| 当前计划状态 | [本地新闻与质量计划](local-news-quality-plan.md) **计划中，待确认**；模型、信源保留和本地承载方向已经用户明确，不再作为开放选择 |
+| 当前计划状态 | [本地新闻与质量计划](local-news-quality-plan.md) **已批准，实施中**；模型、信源保留和本地承载方向已经用户明确，不再作为开放选择 |
 | 当前本地快照 | 2026-10-10 读回 `127.0.0.1:3300/api/health`：数据库正常、release 为 `8d3e199`；187 个栏目、启用 0、文章 0、回执 0 |
 | 原重构状态 | P1–P5 及提速代码已合并；[提速记录](../news-refresh-performance.md)有离线证据，P5 真实质量与端到端性能仍待验收；云上线按用户最新决定暂停 |
 
@@ -32,7 +32,7 @@ P5 历史记录包含 14 个栏目、31 条正常新增与 20 条历史资料，
 
 | 文档 | 定位与本次处理 |
 | --- | --- |
-| [local-news-quality-plan.md](local-news-quality-plan.md) | 新增；本地恢复、质量修复、点选标注及真实更新验收，待确认后实施 |
+| [local-news-quality-plan.md](local-news-quality-plan.md) | 新增；本地恢复、质量修复、点选标注及真实更新验收，已批准并开始实施 |
 | [news-refresh-performance-plan.md](news-refresh-performance-plan.md) | 已批准；核心实现与离线回归完成，完整端到端性能与部署待验收 |
 | [news-deployment-plan.md](news-deployment-plan.md) | 更新为暂停的云方案；以后恢复云部署时再核对平台、价格和接入 |
 | [aihot-v2-refactor-plan.md](aihot-v2-refactor-plan.md) | 已批准基线；更新当前主干和后续本地计划入口，历史试运行设计保留 |
@@ -60,4 +60,4 @@ P5 历史记录包含 14 个栏目、31 条正常新增与 20 条历史资料，
 
 ## 当前待确认
 
-本次计划待用户确认后实施。承载平台、已有 Key、Flash 选择与个人模型费用授权已明确，无需重复询问。实施时发现的具体源站适配或 X 凭据依赖逐项记录；人工判断通过计划中的页面逐批完成。
+本次计划已获用户确认，正在实施。承载平台、已有 Key、Flash 选择与个人模型费用授权已明确，无需重复询问。实施时发现的具体源站适配或 X 凭据依赖逐项记录；人工判断通过计划中的页面逐批完成。

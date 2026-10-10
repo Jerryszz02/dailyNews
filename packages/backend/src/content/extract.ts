@@ -23,8 +23,44 @@ export interface ExtractedBody {
 
 const MIN_BODY_CHARS = 200;
 
-export function readable(html: string, url: string): ExtractedBody | null {
+/** Video landing pages are not transcripts: Readability often selects recommended clips. */
+export function videoTranscript(html: string, url: string): { video: boolean; transcript: string | null } {
   const { document } = parseHTML(html);
+  const objects: Record<string, unknown>[] = [];
+  const visit = (value: unknown) => {
+    if (Array.isArray(value)) value.forEach(visit);
+    else if (value && typeof value === "object") {
+      const row = value as Record<string, unknown>;
+      objects.push(row);
+      Object.values(row).forEach(visit);
+    }
+  };
+  for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
+    try { visit(JSON.parse(script.textContent ?? "")); } catch { /* malformed metadata */ }
+  }
+  const videos = objects.filter(row => [row["@type"]].flat().includes("VideoObject"));
+  const articlePage = objects.some(row => [row["@type"]].flat().some(type => /^(?:NewsArticle|Article|BlogPosting)$/i.test(String(type))));
+  const video = /\/(?:videos?|video)\//i.test(new URL(url).pathname) ||
+    /video/i.test(document.querySelector('meta[property="og:type"]')?.getAttribute("content") ?? "") || (videos.length > 0 && !articlePage);
+  // A related clip's transcript must never stand in for this page's clip.
+  const normalized = (value: unknown) => {
+    try { const u = new URL(String(value), url); return `${u.origin}${u.pathname.replace(/\/$/, "")}`; } catch { return ""; }
+  };
+  const own = videos.find(row => [row.url, row.mainEntityOfPage, row["@id"]].some(value =>
+    normalized(value && typeof value === "object" ? (value as Record<string, unknown>)["@id"] : value) === normalized(url)));
+  const transcript = typeof own?.transcript === "string" ? stripTags(sanitizeBody(own.transcript, url)).trim() : null;
+  return { video, transcript: transcript && transcript.length >= MIN_BODY_CHARS ? transcript : null };
+}
+
+export function readable(html: string, url: string): ExtractedBody | null {
+  const video = videoTranscript(html, url);
+  if (video.video) {
+    if (!video.transcript) return null;
+    const clean = sanitizeBody(`<p>${video.transcript.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`, url);
+    return { html: clean, text: video.transcript, images: [], via: "readability" };
+  }
+  const { document } = parseHTML(html);
+  for (const node of document.querySelectorAll('aside, nav, footer, [role="navigation"], [class*="related"], [class*="recommend"], [class*="sidebar"]')) node.remove();
   try {
     const base = document.createElement("base");
     base.setAttribute("href", url);
@@ -52,13 +88,16 @@ export async function extractFromUrl(url: string, opts: { allowJina: boolean; su
     const res = await guardedFetch(url, { timeoutMs: 20_000, maxBytes: 6 * 1024 * 1024 });
     const type = res.headers.get("content-type") ?? "";
     if (res.status === 200 && /html/.test(type)) {
-      const got = readable(res.text(), res.url);
+      const html = res.text();
+      // Jina would flatten the same recommendations; a transcript-less video stays unconfirmed.
+      if (videoTranscript(html, res.url).video) return readable(html, res.url);
+      const got = readable(html, res.url);
       if (got) return got;
     }
   } catch {
     // fall through to Jina
   }
-  if (!opts.allowJina) return null;
+  if (!opts.allowJina || /\/(?:videos?|video)\//i.test(new URL(url).pathname)) return null;
   try {
     const page = await jinaRead(url, { purpose: "body_fallback", subject: opts.subject });
     const html = markdownBody(page.markdown, url);

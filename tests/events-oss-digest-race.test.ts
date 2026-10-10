@@ -221,3 +221,16 @@ test("已移走成员的旧综述依赖仍在撤回时失效", async () => {
   assert.ok(current);
   assert.ok(!JSON.stringify(current).includes(p.marker));
 });
+
+
+test("unsafe model digest is held; model headline cannot replace a source-attributed prediction title", async () => {
+  const title = "据交通部门预计出行量超过3亿人次";
+  const a = await article(await source(), title);
+  const st = await story([{ id: a, role: "primary" }], "旧模型标题");
+  answer = () => ({ title: "出行量突破3亿人次", digest: "出行量已经突破3亿人次，交通部门介绍有关情况。", latest: "出行量突破3亿人次" });
+  await assert.rejects(composeStoryDigest(st.id), /held for evidence correction/);
+  assert.equal((await sql`SELECT 1 FROM story_digests WHERE story_id=${st.id}`).length, 0);
+  answer = () => ({ title: "出行量突破3亿人次", digest: "据交通部门预计，出行量将超过3亿人次；尚待实际数据。", latest: "预计出行量超过3亿人次" });
+  assert.equal((await composeStoryDigest(st.id)).updated, true);
+  assert.equal((await sql`SELECT title FROM stories WHERE id=${st.id}`)[0]!.title, title);
+});
