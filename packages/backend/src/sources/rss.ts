@@ -2,7 +2,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { guardedFetch } from "../lib/http-fetch.ts";
 import { collapseWhitespace, stripTags } from "../lib/text.ts";
-import { sanitizeBody } from "../content/sanitize.ts";
+import { sanitizeBody, trimTrailingChrome } from "../content/sanitize.ts";
 import { identityKeyForUrl } from "../lib/url.ts";
 import { sha256, stableJson } from "../lib/ids.ts";
 import { FetchError, type Candidate, type SourceRow } from "./types.ts";
@@ -97,7 +97,7 @@ export function isTeaser(text: string): boolean {
 function feedText(bodyHtml: string | null, summaryHtml: string, source: SourceRow): Pick<Candidate, "excerpt" | "bodyHtml" | "bodyText" | "bodyStatus"> {
   const bodyText = bodyHtml ? stripTags(bodyHtml) : null;
   const teaser = !!bodyText && source.participation_mode === "editorial" && isTeaser(bodyText);
-  const excerpt = summaryHtml ? collapseWhitespace(stripTags(summaryHtml)).slice(0, 2000) : teaser ? collapseWhitespace(bodyText!) : null;
+  const excerpt = summaryHtml ? collapseWhitespace(stripTags(trimTrailingChrome(sanitizeBody(summaryHtml)))).slice(0, 2000) : teaser ? collapseWhitespace(bodyText!) : null;
   return bodyText && bodyText.length > 280 && !teaser
     ? { excerpt, bodyHtml, bodyText, bodyStatus: "ok" }
     : { excerpt, bodyHtml: null, bodyText: null, bodyStatus: "pending" };
@@ -161,11 +161,11 @@ export async function fetchRss(source: SourceRow, opts: { force?: boolean } = {}
       const contentEncoded = text(it["content:encoded"]);
       const description = text(it.description);
       const bodyHtmlRaw = contentEncoded || (summaryIsBody ? description : "");
-      const bodyHtml = bodyHtmlRaw ? sanitizeBody(bodyHtmlRaw, link) : null;
+      const bodyHtml = bodyHtmlRaw ? trimTrailingChrome(sanitizeBody(bodyHtmlRaw, link)) : null;
       const enclosure = arr(it.enclosure as Record<string, string> | Array<Record<string, string>>).find((e) => /^image\//.test(e?.["@type"] ?? ""));
       const media = [
         ...(enclosure ? [{ kind: "image" as const, url: enclosure["@url"]! }] : []),
-        ...(bodyHtmlRaw ? imagesFrom(bodyHtmlRaw, link) : []),
+        ...(bodyHtml ? imagesFrom(bodyHtml, link) : []),
       ];
       out.push({
         url: link,
@@ -193,7 +193,7 @@ export async function fetchRss(source: SourceRow, opts: { force?: boolean } = {}
       if (!entryUrl || !title) continue;
       const content = text(e.content);
       const summary = text(e.summary);
-      const bodyHtml = content ? sanitizeBody(content, entryUrl) : null;
+      const bodyHtml = content ? trimTrailingChrome(sanitizeBody(content, entryUrl)) : null;
       out.push({
         url: entryUrl,
         ...identity(entryUrl),
@@ -202,7 +202,7 @@ export async function fetchRss(source: SourceRow, opts: { force?: boolean } = {}
         publishedAt: parseDate(text(e.published) || text(e.updated)),
         sourceUpdatedAt: parseDate(text(e.updated)),
         ...feedText(bodyHtml, summary, source),
-        media: content ? imagesFrom(content, entryUrl) : [],
+        media: bodyHtml ? imagesFrom(bodyHtml, entryUrl) : [],
         categories: arr(e.category).map((c: any) => c?.["@term"] ?? text(c)).filter(Boolean),
         raw: { id: text(e.id) || null },
       });

@@ -14,9 +14,10 @@ import { SELECTION } from "@aihot/industry/selection";
 import { PRIMARY_CATEGORY_TAG } from "@aihot/industry/taxonomy";
 import { sql } from "../db.ts";
 import { chatJson, MODELS, ModelOutputError, type ContentPart } from "../providers/llm.ts";
-import { completeReceipt, ProviderRejectedError, ReceiptUnknownError } from "../providers/receipts.ts";
+import { completeReceipt, rejectReceivedResponse, ProviderRejectedError, ReceiptUnknownError } from "../providers/receipts.ts";
 import { collapseWhitespace } from "../lib/text.ts";
 import { modelFor } from "./models.ts";
+import { copyEvidenceIssues } from "./evidence.ts";
 import { buildMaterial, firstImagePart, loadAnalyzeInput, type AnalyzeInputArticle } from "./input.ts";
 import { pageFetchable } from "../content/extract.ts";
 import { shutdownSignal } from "../jobs/queue.ts";
@@ -294,6 +295,14 @@ async function runStructure(a: AnalyzeInputArticle, opts: StepOpts, fallback = f
   return { model: res.model, category: res.data.category, categoryReason: res.data.categoryReason, tags: normalizeTags(res.data.tags), subjects, fact: res.data.fact, receiptId: res.receiptId, reused: res.reused };
 }
 
+
+async function validateCopyEvidence(input: { title: string; text: string }, copy: { titleZh: string; summaryZh: string }, receiptId: number) {
+  const issues = copyEvidenceIssues(input, copy.titleZh).concat(copyEvidenceIssues(input, copy.summaryZh));
+  if (!issues.length) return;
+  await rejectReceivedResponse(receiptId, `copy evidence: ${[...new Set(issues)].join(",")}`);
+  throw new ModelOutputError(`Copy held for evidence correction: ${[...new Set(issues)].join(",")}`, receiptId);
+}
+
 /** The content understanding; null when the model's content filter declines the material. */
 async function runUnderstand(a: AnalyzeInputArticle, opts: StepOpts): Promise<AnalysisRun["writing"]> {
   const model = opts.resolvedModels?.understand.key ?? await modelFor("understand");
@@ -323,7 +332,9 @@ async function runUnderstand(a: AnalyzeInputArticle, opts: StepOpts): Promise<An
     }
   }
   const d = res.data;
-  const copy = finalizeCopy(translateInputOf(a), { titleZh: d.titleZh, summaryZh: d.summaryZh });
+  const input = translateInputOf(a);
+  const copy = finalizeCopy(input, { titleZh: d.titleZh, summaryZh: d.summaryZh });
+  await validateCopyEvidence(input, copy, res.receiptId);
   return {
     kind: "understand", model: res.model, titleZh: copy.titleZh, summaryZh: copy.summaryZh, reasonZh: d.editorialJudgment.trim() || null,
     tags: normalizeTags(d.tags, { fallbackCategory: CATEGORY_BY_ITEM_TYPE[d.itemType] }), itemType: d.itemType, authorRole: d.authorRole,
@@ -364,6 +375,7 @@ async function runSummarize(a: AnalyzeInputArticle, opts: StepOpts, nonAi = fals
       ? { titleZh: p.titleZh, summaryZh: p.summaryZh || p.bodyZh }
       : { titleZh: p.titleZh || (looksZh(t.title) ? t.title : ""), summaryZh: p.summaryZh };
   const copy = finalizeCopy(t, draft);
+  await validateCopyEvidence(t, copy, res.receiptId);
   return { kind: "summarize", model: res.model, titleZh: copy.titleZh, summaryZh: copy.summaryZh, reasonZh: null, tags: null, identityGuard: copy.identityGuard, receiptIds: [res.receiptId], reused: res.reused };
 }
 

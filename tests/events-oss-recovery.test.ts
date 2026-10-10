@@ -143,12 +143,14 @@ for (const relationToRoot of ["SAME_OCCURRENCE", "SAME_STORY"] as const) {
 
 test("detaching a discussion post removes its signal even though it has no fact membership", async () => {
   const root = await storyWithRoot(randomText(), "signal-detach-root");
-  await sql`UPDATE articles SET identity_key = 'x:999000111' WHERE id = ${root.articleId}`;
+  const rootTweet = `9${Date.now()}001`;
+  const replyTweet = `9${Date.now()}002`;
+  await sql`UPDATE articles SET identity_key = ${`x:${rootTweet}`} WHERE id = ${root.articleId}`;
   const source = `${SOURCE}-discussion`;
   await sql`INSERT INTO sources (id,name,kind,tier,participation_mode) VALUES (${source},'Discussion','x_search','T2','hot_signal')`;
-  const { articleId } = await upsertMaterial({ sourceId: source, url: "https://x.com/example/status/999000112", title: "Reaction",
+  const { articleId } = await upsertMaterial({ sourceId: source, url: `https://x.com/example/status/${replyTweet}`, title: "Reaction",
     publishedAt: new Date(), bodyText: "Reaction", bodyStatus: "ok", via: "fetch",
-    xPost: { tweetId: "999000112", handle: "example", authorName: "Example", text: "Reaction", replyTo: "999000111" } });
+    xPost: { tweetId: replyTweet, handle: "example", authorName: "Example", text: "Reaction", replyTo: rootTweet } });
   assert.equal((await groupArticle(articleId, { signalOnly: true })).storyId, root.storyId);
   await detachFromFact(articleId, "unrelated reaction", "test-editor");
   assert.equal((await sql`SELECT 1 FROM story_signals WHERE article_id = ${articleId}`).length, 0);

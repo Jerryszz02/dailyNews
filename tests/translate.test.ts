@@ -44,10 +44,12 @@ const app = await buildApp();
 
 // Discovered "later" than anything else in the test database, so a one-item run takes this article. The
 // tag keeps the text unique: identical input would reuse an earlier run's paid answer.
+let latestDiscovery = Date.now();
+const nextDiscovery = (offset: number) => new Date(latestDiscovery = Math.max(Date.now() + offset, latestDiscovery + 1000));
 const material = (price: string) =>
   upsertMaterial({
     sourceId: SOURCE, url: URL_, title: `Price update ${T}`, language: "en", bodyText: `The price is ${price} dollars (${T}).`,
-    bodyHtml: `<p>The price is ${price} dollars (${T}).</p>`, bodyStatus: "ok", via: "fetch", publishedAt: new Date(), discoveredAt: new Date(Date.now() + 600_000),
+    bodyHtml: `<p>The price is ${price} dollars (${T}).</p>`, bodyStatus: "ok", via: "fetch", publishedAt: new Date(), discoveredAt: nextDiscovery(600_000),
   });
 
 async function detail(id: string) {
@@ -57,10 +59,15 @@ async function detail(id: string) {
 }
 
 before(async () => {
+  // Earlier shutdown tests deliberately leave future-dated selected material. Claim this file's
+  // one-item queue slot by ranking after the actual maximum, not an assumed ten-minute lead.
+  const [latest] = await sql<{ at: Date | null }[]>`SELECT max(discovered_at) AS at FROM publications`;
+  latestDiscovery = Math.max(Date.now(), latest?.at?.getTime() ?? 0);
   await sql`INSERT INTO sources (id, name, kind, tier, participation_mode, site_fulltext, syndicate_fulltext, next_fetch_at)
             VALUES (${SOURCE}, 'Test translate', 'rss', 'T1', 'editorial', true, false, '2100-01-01')`;
 });
 after(async () => {
+  hold?.open();
   await app.close();
   await provider.close();
   await stopBoss();
@@ -76,12 +83,15 @@ test("a text corrected while its translation was running is translated again, an
   // The model is asked about revision 1; the source corrects the price before it answers.
   hold = gate();
   const running = translatePending({ limit: 1 });
-  await Promise.race([asked.promise, running.then(() => assert.fail("the run ended without asking the model"))]);
-  const revised = await material("twenty");
-  assert.equal(revised.revised, true);
-  hold.open();
-  hold = null;
-  await running;
+  try {
+    await Promise.race([asked.promise, running.then(() => assert.fail("the run ended without asking the model"))]);
+    const revised = await material("twenty");
+    assert.equal(revised.revised, true);
+  } finally {
+    hold?.open();
+    hold = null;
+    await running;
+  }
 
   const [attempt] = await sql<{ revision: number; outcome: string }[]>`SELECT revision, outcome FROM translation_attempts WHERE article_id = ${id}`;
   assert.deepEqual({ ...attempt }, { revision: 1, outcome: "translated" }, "the attempt is booked on the revision translated");
@@ -107,7 +117,7 @@ test("links and images inside a paragraph survive the translation, or the paragr
     `<p>A paragraph the model <a href="https://example.com/kept">never keeps</a> whole ${T}.</p>`;
   const { articleId: id } = await upsertMaterial({
     sourceId: SOURCE, url: `${URL_}-links`, title: `Links ${T}`, language: "en", bodyText: `Explaining Neuroglancer. ${T}`, bodyHtml: html,
-    bodyStatus: "ok", via: "fetch", publishedAt: new Date(), discoveredAt: new Date(Date.now() + 1_200_000),
+    bodyStatus: "ok", via: "fetch", publishedAt: new Date(), discoveredAt: nextDiscovery(1_200_000),
   });
   await sql`INSERT INTO analyses (article_id, input_revision, origin, relevance, category, title_zh, summary_zh, reason_zh, score, selected)
             VALUES (${id}, 1, 'rule', 'pass', 'ai', ${`链接-${T}`}, '摘要', '理由', 90, true)`;
@@ -124,7 +134,7 @@ test("the post a selected X post quotes is translated once and shown with the it
   const tweetId = `7${Date.now()}`;
   const { articleId: id } = await upsertMaterial({
     sourceId: SOURCE, url: `https://x.com/bcherny/status/8${Date.now()}`, title: `Sonnet ${T}`, language: "en", bodyText: "Try it!", bodyStatus: "ok",
-    via: "fetch", publishedAt: new Date(), discoveredAt: new Date(Date.now() + 1_800_000),
+    via: "fetch", publishedAt: new Date(), discoveredAt: nextDiscovery(1_800_000),
     xPost: { tweetId: `8${Date.now()}`, authorName: "Boris", handle: "bcherny", text: "Try it!", quoted: { authorName: "Anthropic", handle: "AnthropicAI", text: `Introducing Claude Sonnet 5.5 ${T}`, url: `https://x.com/AnthropicAI/status/${tweetId}` } },
   });
   await sql`INSERT INTO analyses (article_id, input_revision, origin, relevance, category, title_zh, summary_zh, reason_zh, score, selected)

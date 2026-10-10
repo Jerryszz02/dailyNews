@@ -1,0 +1,1378 @@
+[
+  {
+    "legacy": "agencia-brasil",
+    "source": {
+      "id": "dn-agencia-brasil-d4da197d8e53",
+      "name": "巴西国家通讯社 · News",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "agencia-brasil",
+          "sectionId": "d4da197d8e53",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "News",
+          "sectionUrl": "https://agenciabrasil.ebc.com.br/",
+          "sourceCredibility": 76,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "international",
+          "publisherKey": "publisher:agencia-brasil",
+          "language": "en-US",
+          "allowedHosts": [
+            "agenciabrasil.ebc.com.br"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "Agencia Brasil latest",
+            "Brazil news latest"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://agenciabrasil.ebc.com.br/"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://agenciabrasil.ebc.com.br/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "a.link-noticia",
+      "titleSelector": ".titulo-noticia h1",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      },
+      "linkSelector": "a[href]"
+    },
+    "html": "<a class=\"link-noticia fullwidth\" href=\"https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/bets-mais-de-r-1-bilhao-foram-devolvidos-apostadores\">\n        <div class=\"titulo-noticia\">\n          <h1>Bets: mais de R$ 1 bilhão foram devolvidos a apostadores</h1>\n        </div>\n        <div class=\"resumo-noticia\">  Até 14 de outubro, empresas precisam reembolsar R$ 159 milhões</div>\n      </a><nav><a href=\"/about\">About us</a></nav><a class=\"link-noticia fullwidth\" href=\"https://example.com/foreign-story\">\n        <div class=\"titulo-noticia\">\n          <h1>Bets: mais de R$ 1 bilhão foram devolvidos a apostadores</h1>\n        </div>\n        <div class=\"resumo-noticia\">  Até 14 de outubro, empresas precisam reembolsar R$ 159 milhões</div>\n      </a>",
+    "expected": [
+      {
+        "url": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/bets-mais-de-r-1-bilhao-foram-devolvidos-apostadores",
+        "title": "Bets: mais de R$ 1 bilhão foram devolvidos a apostadores",
+        "publishedAt": null
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-10T14:47:00-03:00\">",
+    "readerPublishedAt": "2026-10-10T17:47:00.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "africanews",
+    "source": {
+      "id": "dn-africanews-e1769e1a236f",
+      "name": "非洲新闻台 Africanews · News",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "africanews",
+          "sectionId": "e1769e1a236f",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "News",
+          "sectionUrl": "https://www.africanews.com/",
+          "sourceCredibility": 72,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "international",
+          "publisherKey": "publisher:africanews",
+          "language": "en-US",
+          "allowedHosts": [
+            "africanews.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "Africanews latest",
+            "Africa news latest"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.africanews.com/"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://www.africanews.com/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "h3.just-in__title",
+      "linkSelector": "a[href]",
+      "titleSelector": "a[href]",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00",
+        "publishedAtRegex": "\"datePublished\"\\s*:\\s*\"([^\"<>]+)\"",
+        "publishedAtAuthoritative": true
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<h3 class=\"just-in__title\">\n                                                        <a href=\"/2026/10/10/unreliable-weather-creating-mental-health-issues-for-kenyan-farmers/\" title=\"Unreliable weather creating mental health issues for Kenyan farmers\" class=\"\">                                                                    Unreliable weather creating mental health issues for Kenyan farmers\n                                                                </a>                        </h3><h3 class=\"just-in__title\">\n                                                        <a href=\"/2026/10/10/kenyan-health-ministry-urges-churches-to-raise-awareness-about-ebola/\" title=\"Kenyan health ministry urges churches to raise awareness about Ebola\" class=\"\">                                                                    Kenyan health ministry urges churches to raise awareness about Ebola\n                                                                </a>                        </h3><h3 class=\"just-in__title\">\n                                                        <a href=\"/2026/10/10/former-dr-congo-president-says-the-country-is-in-peril/\" title=\"Former DR Congo president says the country is 'in peril'\" class=\"\">                                                                    Former DR Congo president says the country is 'in peril'\n                                                                </a>                        </h3><nav><a href=\"/about\">About us</a></nav><h3 class=\"just-in__title\">\n                                                        <a href=\"https://example.com/foreign-story\" title=\"Unreliable weather creating mental health issues for Kenyan farmers\" class=\"\">                                                                    Unreliable weather creating mental health issues for Kenyan farmers\n                                                                </a>                        </h3>",
+    "expected": [
+      {
+        "url": "https://www.africanews.com/2026/10/10/unreliable-weather-creating-mental-health-issues-for-kenyan-farmers/",
+        "title": "Unreliable weather creating mental health issues for Kenyan farmers",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.africanews.com/2026/10/10/kenyan-health-ministry-urges-churches-to-raise-awareness-about-ebola/",
+        "title": "Kenyan health ministry urges churches to raise awareness about Ebola",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.africanews.com/2026/10/10/former-dr-congo-president-says-the-country-is-in-peril/",
+        "title": "Former DR Congo president says the country is 'in peril'",
+        "publishedAt": null
+      }
+    ],
+    "dateHtml": "<script type=\"application/ld+json\">{\"datePublished\":\"2026-10-10T15:28:04+02:00\"}</script>",
+    "readerPublishedAt": "2026-10-10T13:28:04.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "aljazeera",
+    "source": {
+      "id": "dn-aljazeera-704843f21d8b",
+      "name": "Al Jazeera · News",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "aljazeera",
+          "sectionId": "704843f21d8b",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "News",
+          "sectionUrl": "https://www.aljazeera.com/news/",
+          "sourceCredibility": 78,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "international",
+          "publisherKey": "publisher:aljazeera",
+          "language": "en-US",
+          "allowedHosts": [
+            "aljazeera.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "Al Jazeera latest news",
+            "Al Jazeera world news"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.aljazeera.com/news/"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://www.aljazeera.com/news/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "article[class*=\"article-card\"]",
+      "linkSelector": "a.article-card__link",
+      "titleSelector": ".article-card__title",
+      "denyUrlPrefixes": [
+        "https://www.aljazeera.com/news/liveblog/"
+      ],
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<article class=\"article-card--reset desktop:article-card--stacked mobile:article-card--side-by-side\"><div class=\"article-card__content-wrap article-card__content-wrap--end-image\"><div class=\"u-clickable-card__exclude\"></div><a class=\"u-clickable-card__link article-card__link\" href=\"/news/2026/10/10/israeli-forces-kill-six-in-gaza-including-a-child\"><h2 class=\"article-card__title\"><span>Child among eight killed by Israel on Gaza ‘ceasefire’ anniversary</span></h2></a></div><footer class=\"article-card__footer u-clickable-card__exclude\"><div class=\"gc__date gc__date--published\"><div class=\"gc__date__date\"><div class=\"date-simple\"><span class=\"screen-reader-text\">Published On 10 Oct 2026</span><span aria-hidden=\"true\">10 Oct 2026</span></div></div></div></footer><div class=\"article-card__image-wrap article-card__featured-image\" data-testid=\"card-media-preview\"><div class=\"responsive-image\"></div></div></article><article class=\"article-card--reset desktop:article-card--stacked mobile:article-card--side-by-side\"><div class=\"article-card__content-wrap article-card__content-wrap--end-image\"><div class=\"u-clickable-card__exclude\"></div><a class=\"u-clickable-card__link article-card__link\" href=\"/news/2026/10/10/how-can-you-stop-these-kids-indian-capital-on-lockdown-before-protests\"><h2 class=\"article-card__title\"><span>‘How can you stop these kids?’ Indian capital on lockdown before protests</span></h2></a></div><footer class=\"article-card__footer u-clickable-card__exclude\"><div class=\"gc__date gc__date--published\"><div class=\"gc__date__date\"><div class=\"date-simple\"><span class=\"screen-reader-text\">Published On 10 Oct 2026</span><span aria-hidden=\"true\">10 Oct 2026</span></div></div></div></footer><div class=\"article-card__image-wrap article-card__featured-image\" data-testid=\"card-media-preview\"><div class=\"responsive-image\"></div></div></article><article class=\"article-card--reset article-card--side-by-side\"><div class=\"article-card__content-wrap article-card__content-wrap--end-image\"><div class=\"u-clickable-card__exclude\"></div><a class=\"u-clickable-card__link article-card__link\" href=\"/news/2026/10/10/suspect-killed-after-13-kindergarteners-taken-hostage-beaten-in-brazil\"><h2 class=\"article-card__title\"><span>Suspect killed after 13 kindergarteners taken hostage, beaten in Brazil</span></h2></a></div><footer class=\"article-card__footer u-clickable-card__exclude\"><div class=\"gc__date gc__date--published\"><div class=\"gc__date__date\"><div class=\"date-simple\"><span class=\"screen-reader-text\">Published On 10 Oct 2026</span><span aria-hidden=\"true\">10 Oct 2026</span></div></div></div></footer><div class=\"article-card__image-wrap article-card__featured-image\" data-testid=\"card-media-preview\"><div class=\"responsive-image\"></div></div></article><nav><a href=\"/about\">About us</a></nav><article class=\"article-card--reset desktop:article-card--stacked mobile:article-card--side-by-side\"><div class=\"article-card__content-wrap article-card__content-wrap--end-image\"><div class=\"u-clickable-card__exclude\"></div><a class=\"u-clickable-card__link article-card__link\" href=\"https://example.com/foreign-story\"><h2 class=\"article-card__title\"><span>Child among eight killed by Israel on Gaza ‘ceasefire’ anniversary</span></h2></a></div><footer class=\"article-card__footer u-clickable-card__exclude\"><div class=\"gc__date gc__date--published\"><div class=\"gc__date__date\"><div class=\"date-simple\"><span class=\"screen-reader-text\">Published On 10 Oct 2026</span><span aria-hidden=\"true\">10 Oct 2026</span></div></div></div></footer><div class=\"article-card__image-wrap article-card__featured-image\" data-testid=\"card-media-preview\"><div class=\"responsive-image\"></div></div></article>",
+    "expected": [
+      {
+        "url": "https://www.aljazeera.com/news/2026/10/10/israeli-forces-kill-six-in-gaza-including-a-child",
+        "title": "Child among eight killed by Israel on Gaza ‘ceasefire’ anniversary",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.aljazeera.com/news/2026/10/10/how-can-you-stop-these-kids-indian-capital-on-lockdown-before-protests",
+        "title": "‘How can you stop these kids?’ Indian capital on lockdown before protests",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.aljazeera.com/news/2026/10/10/suspect-killed-after-13-kindergarteners-taken-hostage-beaten-in-brazil",
+        "title": "Suspect killed after 13 kindergarteners taken hostage, beaten in Brazil",
+        "publishedAt": null
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-10T12:40:57Z\">",
+    "readerPublishedAt": "2026-10-10T12:40:57.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "eu-commission",
+    "source": {
+      "id": "dn-eu-commission-fe824504780e",
+      "name": "欧盟委员会 · Press",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "eu-commission",
+          "sectionId": "fe824504780e",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "Press",
+          "sectionUrl": "https://commission.europa.eu/news-and-media/news_en",
+          "sourceCredibility": 88,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "policy",
+          "publisherKey": "publisher:eu-commission",
+          "language": "en-US",
+          "allowedHosts": [
+            "commission.europa.eu"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "European Commission press release",
+            "EU Commission policy latest"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://commission.europa.eu/news-and-media/news_en"
+      },
+      "tier": "T2",
+      "first_party": true,
+      "owner_entity_id": "eu-commission",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://commission.europa.eu/news-and-media/news_en",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "article.ecl-card",
+      "linkSelector": "a[data-ecl-title-link]",
+      "titleSelector": "a[data-ecl-title-link]",
+      "publishedAtSelector": "time",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<article class=\"ecl-card\"><div class=\"ecl-card__body\"><div class=\"ecl-content-block ecl-card__content-block\" data-ecl-auto-init=\"ContentBlock\" data-ecl-content-block=\"\"><ul class=\"ecl-content-block__primary-meta-container\"><li class=\"ecl-content-block__primary-meta-item\">News article</li><li class=\"ecl-content-block__primary-meta-item\"><time datetime=\"2026-10-10T12:00:00Z\">10 October 2026</time></li></ul><div class=\"ecl-content-block__title\"><a href=\"/news-and-media/news/world-mental-health-day-lets-talk-and-listen-2026-10-10_en\" class=\"ecl-link ecl-link--standalone\" data-ecl-title-link=\"\">World Mental Health Day: let’s talk and listen </a></div><div class=\"ecl-content-block__secondary-meta-container\"><div class=\"ecl-content-block__secondary-meta-item\"><span class=\"wt-icon--clock ecl-icon ecl-icon--s ecl-content-block__secondary-meta-icon ecl-icon--clock\" aria-hidden=\"true\"></span><span class=\"ecl-content-block__secondary-meta-label\">2 min read</span></div></div><div class=\"ecl-content-block__list-container\"></div></div></div></article><article class=\"ecl-card\"><div class=\"ecl-card__body\"><div class=\"ecl-content-block ecl-card__content-block\" data-ecl-auto-init=\"ContentBlock\" data-ecl-content-block=\"\"><ul class=\"ecl-content-block__primary-meta-container\"><li class=\"ecl-content-block__primary-meta-item\">News article</li><li class=\"ecl-content-block__primary-meta-item\"><time datetime=\"2026-10-06T12:00:00Z\">6 October 2026</time></li></ul><div class=\"ecl-content-block__title\"><a href=\"/news-and-media/news/preparing-wider-european-union-2026-10-06_en\" class=\"ecl-link ecl-link--standalone\" data-ecl-title-link=\"\">Preparing for a wider European Union</a></div><div class=\"ecl-content-block__secondary-meta-container\"><div class=\"ecl-content-block__secondary-meta-item\"><span class=\"wt-icon--clock ecl-icon ecl-icon--s ecl-content-block__secondary-meta-icon ecl-icon--clock\" aria-hidden=\"true\"></span><span class=\"ecl-content-block__secondary-meta-label\">2 min read</span></div></div><div class=\"ecl-content-block__list-container\"></div></div></div></article><article class=\"ecl-card\"><div class=\"ecl-card__body\"><div class=\"ecl-content-block ecl-card__content-block\" data-ecl-auto-init=\"ContentBlock\" data-ecl-content-block=\"\"><ul class=\"ecl-content-block__primary-meta-container\"><li class=\"ecl-content-block__primary-meta-item\">News article</li><li class=\"ecl-content-block__primary-meta-item\"><time datetime=\"2026-09-28T12:00:00Z\">28 September 2026</time></li></ul><div class=\"ecl-content-block__title\"><a href=\"/news-and-media/news/eu-screening-week-know-your-vital-numbers-2026-09-28_en\" class=\"ecl-link ecl-link--standalone\" data-ecl-title-link=\"\">EU Screening Week: know your vital numbers </a></div><div class=\"ecl-content-block__secondary-meta-container\"><div class=\"ecl-content-block__secondary-meta-item\"><span class=\"wt-icon--clock ecl-icon ecl-icon--s ecl-content-block__secondary-meta-icon ecl-icon--clock\" aria-hidden=\"true\"></span><span class=\"ecl-content-block__secondary-meta-label\">1 min read</span></div></div><div class=\"ecl-content-block__list-container\"></div></div></div></article><nav><a href=\"/about\">About us</a></nav><article class=\"ecl-card\"><div class=\"ecl-card__body\"><div class=\"ecl-content-block ecl-card__content-block\" data-ecl-auto-init=\"ContentBlock\" data-ecl-content-block=\"\"><ul class=\"ecl-content-block__primary-meta-container\"><li class=\"ecl-content-block__primary-meta-item\">News article</li><li class=\"ecl-content-block__primary-meta-item\"><time datetime=\"2026-10-10T12:00:00Z\">10 October 2026</time></li></ul><div class=\"ecl-content-block__title\"><a href=\"https://example.com/foreign-story\" class=\"ecl-link ecl-link--standalone\" data-ecl-title-link=\"\">World Mental Health Day: let’s talk and listen </a></div><div class=\"ecl-content-block__secondary-meta-container\"><div class=\"ecl-content-block__secondary-meta-item\"><span class=\"wt-icon--clock ecl-icon ecl-icon--s ecl-content-block__secondary-meta-icon ecl-icon--clock\" aria-hidden=\"true\"></span><span class=\"ecl-content-block__secondary-meta-label\">2 min read</span></div></div><div class=\"ecl-content-block__list-container\"></div></div></div></article>",
+    "expected": [
+      {
+        "url": "https://commission.europa.eu/news-and-media/news/world-mental-health-day-lets-talk-and-listen-2026-10-10_en",
+        "title": "World Mental Health Day: let’s talk and listen",
+        "publishedAt": "2026-10-10T12:00:00.000Z"
+      },
+      {
+        "url": "https://commission.europa.eu/news-and-media/news/preparing-wider-european-union-2026-10-06_en",
+        "title": "Preparing for a wider European Union",
+        "publishedAt": "2026-10-06T12:00:00.000Z"
+      },
+      {
+        "url": "https://commission.europa.eu/news-and-media/news/eu-screening-week-know-your-vital-numbers-2026-09-28_en",
+        "title": "EU Screening Week: know your vital numbers",
+        "publishedAt": "2026-09-28T12:00:00.000Z"
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-10T09:10:13+02:00\">",
+    "readerPublishedAt": "2026-10-10T07:10:13.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "github-blog",
+    "source": {
+      "id": "dn-github-blog-fd7ad6745256",
+      "name": "GitHub 官方博客 · Blog",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "github-blog",
+          "sectionId": "fd7ad6745256",
+          "tierReason": "AIHOT baseline publisher rss-github-ai",
+          "sectionLabel": "Blog",
+          "sectionUrl": "https://github.blog/",
+          "sourceCredibility": 80,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "technology",
+          "publisherKey": "publisher:github-blog",
+          "language": "en-US",
+          "allowedHosts": [
+            "github.blog"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "GitHub Blog latest",
+            "GitHub developer news"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://github.blog/"
+      },
+      "tier": "T1",
+      "first_party": true,
+      "owner_entity_id": "github-blog",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://github.blog/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "article.post-card",
+      "linkSelector": "h2 a.post-card__link",
+      "titleSelector": "h2 a.post-card__link",
+      "publishedAtSelector": "time",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<article class=\"d-flex flex-column height-lg-full color-border-muted post-card\">\n\t<div class=\"d-block col-12 position-relative rounded-2 mb-3 mb-md-4 overflow-hidden tease-thumbnail\">\n\t\t\t\t\t\n\t\t\t\t\t\t\t\t</div>\n\t<div class=\"mb-1\"><a href=\"https://github.blog/developer-skills/career-growth/\" class=\"first-post-category f5-mktg text-gradient-purple-coral text-bold pb-1 position-relative z-2\">Career growth</a></div>\t<div class=\"\">\n\t\t<h2 class=\"h3-mktg mb-2\">\n\t\t\t<a href=\"https://github.blog/developer-skills/career-growth/hack-the-world-why-hackathons-are-still-the-best-place-to-learn-to-build/\" class=\"Link--primary post-card__link\">\n\t\t\t\tHack the World: Why hackathons are still the best place to learn to build\t\t\t</a>\n\t\t</h2>\n\n\t\t<div class=\"mb-2 f4-mktg color-fg-muted\">\n\t\t\t<p>The barriers to building software have collapsed. Today, anyone can build. Hackathons are a great place to start learning.</p>\n\t\t</div>\n\t</div>\n\n\t<footer>\n\t\t<div class=\"d-flex flex-items-center mb-6px\">\n\t\t\t<div class=\"d-flex flex-items-center mr-3\">\n\t\t\t\t\t\t\t<a href=\"https://github.blog/author/edsummersnc/\" class=\"d-block post-author-avatar position-relative z-2\">\n\t\t\t\t\t\t\t\t\t</a>\n\t\t\t\t\t</div>\n\t\t<span>\n\t\t\t\t\t<span class=\"text-bold\">\n\t\t\t\t<a href=\"https://github.blog/author/edsummersnc/\" title=\"Posts by Ed Summers\" class=\"author url fn Link--primary no-wrap position-relative z-2\" rel=\"author\">Ed Summers</a>\t\t\t</span>\n\t\t\t\t\t\t\t<span class=\"mx-1 color-fg-muted\">·</span>\n\t\t\t\t\t\t\t<time datetime=\"2026-10-09\" class=\"text-mono color-fg-muted no-wrap\">October 9, 2026</time>\n\t\t\t</span>\n</div>\n\t</footer>\n</article><article class=\"color-border-muted post-card\">\n\t<div class=\"d-flex flex-column flex-sm-row flex-sm-nowrap gutter-14px\">\n\t\t<div class=\"col-12 col-lg-5 square-thumb-wrap mb-3 mb-sm-0 position-relative\">\n\t\t\t<div class=\"d-block position-relative rounded-2 overflow-hidden tease-thumbnail\">\n\t\t\t\t\n\t\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"col-12 col-lg-8 \">\n\t\t\t<div class=\"mb-1\"><a href=\"https://github.blog/security/\" class=\"first-post-category f5-mktg text-gradient-purple-coral text-bold pb-1 position-relative z-2\">Security</a></div>\t\t\t<h2 class=\"h6-mktg mb-2\">\n\t\t\t\t<a href=\"https://github.blog/security/how-one-bug-bounty-researcher-chooses-the-features-they-investigate/\" class=\"Link--primary post-card__link\">\n\t\t\t\t\tHow one bug bounty researcher chooses the features they investigate\t\t\t\t</a>\n\t\t\t</h2>\n\t\t\t<div class=\"f4-mktg color-fg-muted\">\n\t\t\t\t<p>As we kick off Cybersecurity Awareness Month, the GitHub Bug Bounty team spotlights @vaib25vicky, exploring their methodology, techniques, and experiences hacking on GitHub.</p>\n\t\t\t</div>\n\t\t\t<footer>\n\t\t\t\t<div class=\"d-flex flex-items-center mb-6px\">\n\t\t<span>\n\t\t\t\t\t<span class=\"text-bold\">\n\t\t\t\t<a href=\"https://github.blog/author/shilpakum/\" title=\"Posts by Shilpa Kumari\" class=\"author url fn Link--primary no-wrap position-relative z-2\" rel=\"author\">Shilpa Kumari</a>\t\t\t</span>\n\t\t\t\t\t\t\t<span class=\"mx-1 color-fg-muted\">·</span>\n\t\t\t\t\t\t\t<time datetime=\"2026-10-08\" class=\"text-mono color-fg-muted no-wrap\">October 8, 2026</time>\n\t\t\t</span>\n</div>\n\t\t\t</footer>\n\t\t</div>\n\t</div>\n</article><article class=\"color-border-muted post-card\">\n\t<div class=\"d-flex flex-column flex-sm-row flex-sm-nowrap gutter-14px\">\n\t\t<div class=\"col-12 col-lg-5 square-thumb-wrap mb-3 mb-sm-0 position-relative\">\n\t\t\t<div class=\"d-block position-relative rounded-2 overflow-hidden tease-thumbnail\">\n\t\t\t\t\n\t\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t</div>\n\t\t<div class=\"col-12 col-lg-8 \">\n\t\t\t<div class=\"mb-1\"><a href=\"https://github.blog/ai-and-ml/\" class=\"first-post-category f5-mktg text-gradient-purple-coral text-bold pb-1 position-relative z-2\">AI &amp; ML</a></div>\t\t\t<h2 class=\"h6-mktg mb-2\">\n\t\t\t\t<a href=\"https://github.blog/ai-and-ml/github-copilot/secret-protection-must-scale-with-software/\" class=\"Link--primary post-card__link\">\n\t\t\t\t\tSecret protection must scale with software\t\t\t\t</a>\n\t\t\t</h2>\n\t\t\t<div class=\"f4-mktg color-fg-muted\">\n\t\t\t\t<p>Developers aren’t becoming more careless; they’re being outpaced. The tools that let developers create more software should also take on more of the work of protecting it.</p>\n\t\t\t</div>\n\t\t\t<footer>\n\t\t\t\t<div class=\"d-flex flex-items-center mb-6px\">\n\t\t<span>\n\t\t\t\t\t<span class=\"text-bold\">\n\t\t\t\t<a href=\"https://github.blog/author/erinhav/\" title=\"Posts by Erin Havens\" class=\"author url fn Link--primary no-wrap position-relative z-2\" rel=\"author\">Erin Havens</a>\t\t\t</span>\n\t\t\t\t\t\t\t<span class=\"mx-1 color-fg-muted\">·</span>\n\t\t\t\t\t\t\t<time datetime=\"2026-10-07\" class=\"text-mono color-fg-muted no-wrap\">October 7, 2026</time>\n\t\t\t</span>\n</div>\n\t\t\t</footer>\n\t\t</div>\n\t</div>\n</article><nav><a href=\"/about\">About us</a></nav><article class=\"d-flex flex-column height-lg-full color-border-muted post-card\">\n\t<div class=\"d-block col-12 position-relative rounded-2 mb-3 mb-md-4 overflow-hidden tease-thumbnail\">\n\t\t\t\t\t\n\t\t\t\t\t\t\t\t</div>\n\t<div class=\"mb-1\"><a href=\"https://example.com/foreign-story\" class=\"first-post-category f5-mktg text-gradient-purple-coral text-bold pb-1 position-relative z-2\">Career growth</a></div>\t<div class=\"\">\n\t\t<h2 class=\"h3-mktg mb-2\">\n\t\t\t<a href=\"https://example.com/foreign-story\" class=\"Link--primary post-card__link\">\n\t\t\t\tHack the World: Why hackathons are still the best place to learn to build\t\t\t</a>\n\t\t</h2>\n\n\t\t<div class=\"mb-2 f4-mktg color-fg-muted\">\n\t\t\t<p>The barriers to building software have collapsed. Today, anyone can build. Hackathons are a great place to start learning.</p>\n\t\t</div>\n\t</div>\n\n\t<footer>\n\t\t<div class=\"d-flex flex-items-center mb-6px\">\n\t\t\t<div class=\"d-flex flex-items-center mr-3\">\n\t\t\t\t\t\t\t<a href=\"https://example.com/foreign-story\" class=\"d-block post-author-avatar position-relative z-2\">\n\t\t\t\t\t\t\t\t\t</a>\n\t\t\t\t\t</div>\n\t\t<span>\n\t\t\t\t\t<span class=\"text-bold\">\n\t\t\t\t<a href=\"https://example.com/foreign-story\" title=\"Posts by Ed Summers\" class=\"author url fn Link--primary no-wrap position-relative z-2\" rel=\"author\">Ed Summers</a>\t\t\t</span>\n\t\t\t\t\t\t\t<span class=\"mx-1 color-fg-muted\">·</span>\n\t\t\t\t\t\t\t<time datetime=\"2026-10-09\" class=\"text-mono color-fg-muted no-wrap\">October 9, 2026</time>\n\t\t\t</span>\n</div>\n\t</footer>\n</article>",
+    "expected": [
+      {
+        "url": "https://github.blog/developer-skills/career-growth/hack-the-world-why-hackathons-are-still-the-best-place-to-learn-to-build/",
+        "title": "Hack the World: Why hackathons are still the best place to learn to build",
+        "publishedAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "url": "https://github.blog/security/how-one-bug-bounty-researcher-chooses-the-features-they-investigate/",
+        "title": "How one bug bounty researcher chooses the features they investigate",
+        "publishedAt": "2026-10-08T00:00:00.000Z"
+      },
+      {
+        "url": "https://github.blog/ai-and-ml/github-copilot/secret-protection-must-scale-with-software/",
+        "title": "Secret protection must scale with software",
+        "publishedAt": "2026-10-07T00:00:00.000Z"
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-09T16:00:00+00:00\">",
+    "readerPublishedAt": "2026-10-09T16:00:00.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "guardian",
+    "source": {
+      "id": "dn-guardian-601090a31fd7",
+      "name": "The Guardian · World",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "guardian",
+          "sectionId": "601090a31fd7",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "World",
+          "sectionUrl": "https://www.theguardian.com/world",
+          "sourceCredibility": 78,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "international",
+          "publisherKey": "publisher:guardian",
+          "language": "en-US",
+          "allowedHosts": [
+            "theguardian.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "The Guardian world news",
+            "Guardian latest international"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.theguardian.com/world"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://www.theguardian.com/world",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "a[data-link-name=\"article\"]:has(h3), a[data-link-name=\"article\"]:has(h4)",
+      "titleSelector": "h3,h4",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      },
+      "linkSelector": "a[href]"
+    },
+    "html": "<a href=\"/world/2026/oct/10/man-suffers-serious-injury-after-jumping-into-zoo-tiger-enclosure\" data-link-name=\"article\" class=\"dcr-1bqfwi0\"><span class=\"dcr-1nl3xei\"></span><div class=\"dcr-5hyjjd\"><div data-format-theme=\"0\" data-format-design=\"0\" data-format-display=\"0\" class=\"dcr-ldus9v\"><h4 class=\"dcr-4b50c7\"><span>Man dies after jumping into tiger enclosure at Yorkshire zoo</span></h4></div></div></a><a href=\"/world/2026/oct/10/ukraine-russia-strikes-war-trump-diesel-deal-zelenskyy\" data-link-name=\"article\" class=\"dcr-1bqfwi0\"><span class=\"dcr-1nl3xei\"></span><div class=\"dcr-5hyjjd\"><div data-format-theme=\"0\" data-format-design=\"0\" data-format-display=\"0\" class=\"dcr-ldus9v\"><h4 class=\"dcr-4b50c7\"><span>Ukraine hit by deadly Russian strikes as ‘thanks’ for Trump diesel deal, Zelenskyy says </span></h4></div></div></a><a href=\"/world/2026/oct/10/thousands-in-london-express-support-for-palestinians-after-three-years-genocide\" data-link-name=\"article\" class=\"dcr-1bqfwi0\"><span class=\"dcr-1nl3xei\"></span><div class=\"dcr-5hyjjd\"><div data-format-theme=\"0\" data-format-design=\"0\" data-format-display=\"0\" class=\"dcr-ldus9v\"><h4 class=\"dcr-4b50c7\"><span>Thousands gather in London to express support for Palestinians after three years of ‘genocide’</span></h4></div></div></a><nav><a href=\"/about\">About us</a></nav><a href=\"https://example.com/foreign-story\" data-link-name=\"article\" class=\"dcr-1bqfwi0\"><span class=\"dcr-1nl3xei\"></span><div class=\"dcr-5hyjjd\"><div data-format-theme=\"0\" data-format-design=\"0\" data-format-display=\"0\" class=\"dcr-ldus9v\"><h4 class=\"dcr-4b50c7\"><span>Man dies after jumping into tiger enclosure at Yorkshire zoo</span></h4></div></div></a>",
+    "expected": [
+      {
+        "url": "https://www.theguardian.com/world/2026/oct/10/man-suffers-serious-injury-after-jumping-into-zoo-tiger-enclosure",
+        "title": "Man dies after jumping into tiger enclosure at Yorkshire zoo",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.theguardian.com/world/2026/oct/10/ukraine-russia-strikes-war-trump-diesel-deal-zelenskyy",
+        "title": "Ukraine hit by deadly Russian strikes as ‘thanks’ for Trump diesel deal, Zelenskyy says",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.theguardian.com/world/2026/oct/10/thousands-in-london-express-support-for-palestinians-after-three-years-genocide",
+        "title": "Thousands gather in London to express support for Palestinians after three years of ‘genocide’",
+        "publishedAt": null
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-10T17:13:31.000Z\">",
+    "readerPublishedAt": "2026-10-10T17:13:31.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "ars-technica",
+    "source": {
+      "id": "dn-ars-technica-9d74c257c86f",
+      "name": "Ars Technica · Tech",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "ars-technica",
+          "sectionId": "9d74c257c86f",
+          "tierReason": "AIHOT baseline publisher rss-ars-technica-ai",
+          "sectionLabel": "Tech",
+          "sectionUrl": "https://arstechnica.com/",
+          "sourceCredibility": 76,
+          "mediaType": "technology",
+          "signalRole": "analysis",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "technology",
+          "publisherKey": "publisher:ars-technica",
+          "language": "en-US",
+          "allowedHosts": [
+            "arstechnica.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "Ars Technica tech AI",
+            "Ars Technica science technology"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://arstechnica.com/"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://arstechnica.com/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "article",
+      "linkSelector": "h2 a[href]",
+      "titleSelector": "h2 a[href]",
+      "publishedAtSelector": "time",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<article id=\"card-2174863\" data-id=\"2174863\" class=\"relative group card-grid-top post-2174863 post type-post status-publish format-standard has-post-thumbnail hentry category-features category-tech-policy tag-biden-administration tag-blanche-lincoln tag-commodity-futures-trading-commission tag-event-contracts tag-kalshi tag-polymarket tag-prediction-markets tag-sports-gambling tag-trump-administration\">\n\n  <div class=\"absolute right-5 top-5 z-10 h-[40px] sm:right-[-20px]\">\n  \n  <div class=\"font-impact relative flex h-[30px] flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-sm bg-green-400 px-[10px] text-sm font-semibold uppercase text-gray-700 sm:rounded-full\">\n    \n    Featured\n  </div>\n</div>\n\n<div class=\"dusk:bg-gray-700 overflow-hidden rounded-sm dark:bg-gray-700\">\n  <div class=\"relative block aspect-video w-full overflow-hidden\">\n    <a href=\"https://arstechnica.com/tech-policy/2026/10/a-senator-tried-to-ban-gambling-on-prediction-markets-now-shes-a-kalshi-lobbyist/\"></a>\n  </div>\n  <div class=\"flex flex-col justify-between px-5 pt-4 md:px-0\">\n    <div class=\"upper-deck font-impact text-green-450 dusk:text-green-400 inline-flex flex-row flex-nowrap items-center gap-2 text-left text-sm font-semibold uppercase leading-tight dark:text-green-400\">\n  <span class=\"upper-deck__icon\">\n    \n  </span>\n  <span class=\"upper-deck__text\">\n    The Lincoln lobbyist\n  </span>\n</div>\n    <div>\n      <h2 class=\"mb-2 mt-3 font-serif text-3xl font-bold leading-none md:text-4xl\">\n        <a class=\"dusk:text-gray-100 dusk:visited:text-gray-400 dusk:hover:text-orange-400 text-gray-700 visited:text-gray-400 hover:text-orange-400 dark:text-gray-100 dark:visited:text-gray-400 dark:hover:text-orange-400\" href=\"https://arstechnica.com/tech-policy/2026/10/a-senator-tried-to-ban-gambling-on-prediction-markets-now-shes-a-kalshi-lobbyist/\">A senator tried to ban gambling on prediction markets—now she’s a Kalshi lobbyist</a>\n      </h2>\n      <p class=\"text-gray-550 dark:text-gray-250 dusk:text-gray-250 mb-2 text-lg leading-tight\">\n        Sen. Blanche Lincoln wrote law that let US ban sports-event contracts. She lobbies for the other side now.\n      </p>\n      <div class=\"font-impact text-xs font-semibold uppercase text-gray-300\"><span>Jon Brodkin</span>\n  –\n  <span class=\"whitespace-nowrap\">\n    <time class=\"mr-[2px] inline-block cursor-default\" title=\"2026-10-08T07:00:14-04:00\" datetime=\"2026-10-08T07:00:14-04:00\" data-mode=\"compact\" data-time-separator=\" \" data-updated-timestamp=\"false\" x-data=\"arsTimestamp()\" x-text=\"format()\">\n  10/8/2026\n</time>\n    <span class=\"text-gray-550\">|</span> <a class=\"view-comments text-gray-300 hover:text-gray-500\" href=\"https://arstechnica.com/tech-policy/2026/10/a-senator-tried-to-ban-gambling-on-prediction-markets-now-shes-a-kalshi-lobbyist/#comments\" title=\"119 comments\">\n    \n    119\n  </a>\n  </span></div>\n    </div>\n  </div>\n</div>\n</article><article id=\"card-2176058\" data-id=\"2176058\" class=\"relative group card-grid-latest post-2176058 post type-post status-publish format-standard has-post-thumbnail hentry category-science tag-brain tag-neuroscience tag-psilocybin tag-psychedelics\">\n\n  <div class=\"dusk:bg-gray-700 flex flex-col flex-nowrap items-center justify-start gap-4 text-center dark:bg-gray-700 sm:flex-row sm:items-start sm:gap-0 sm:text-left\">\n  <div class=\"relative block aspect-square h-[75px] w-[75px] shrink-0 overflow-hidden rounded-full border-4 border-green-400 md:mt-2 md:self-start\">\n    <a href=\"https://arstechnica.com/science/2026/10/the-psychedelic-brain-looks-like-chaos-underneath-theres-order/\"></a>\n  </div>\n  <div class=\"grow px-5\">\n    <h2 class=\"my-0 font-serif text-2xl font-bold leading-none\">\n      <a class=\"dusk:text-gray-100 dusk:visited:text-gray-400 dusk:hover:text-orange-400 text-gray-700 visited:text-gray-400 hover:text-orange-400 dark:text-gray-100 dark:visited:text-gray-400 dark:hover:text-orange-400\" href=\"https://arstechnica.com/science/2026/10/the-psychedelic-brain-looks-like-chaos-underneath-theres-order/\">One with the world? A new look at brains transformed by psychedelics.</a>\n    </h2>\n    <p class=\"text-gray-250 mb-2 text-lg leading-tight lg:hidden\">\n      Participants meditated inside an MRI tube, with and without psilocybin.\n    </p>\n    <div class=\"font-impact my-2 text-xs font-semibold uppercase text-gray-300\"><span>Jacek Krywko</span>\n  –\n  <span class=\"whitespace-nowrap\">\n    <time class=\"mr-[2px] inline-block cursor-default\" title=\"2026-10-10T07:15:35-04:00\" datetime=\"2026-10-10T07:15:35-04:00\" data-mode=\"compact\" data-time-separator=\" \" data-updated-timestamp=\"false\" x-data=\"arsTimestamp()\" x-text=\"format()\">\n  10/10/2026\n</time>\n    <span class=\"text-gray-550\">|</span> <a class=\"view-comments text-gray-300 hover:text-gray-500\" href=\"https://arstechnica.com/science/2026/10/the-psychedelic-brain-looks-like-chaos-underneath-theres-order/#comments\" title=\"52 comments\">\n    \n    52\n  </a>\n  </span></div>\n  </div>\n</div>\n</article><article id=\"card-2176036\" data-id=\"2176036\" class=\"relative group card-grid-latest post-2176036 post type-post status-publish format-standard has-post-thumbnail hentry category-science tag-archeology tag-neanderthals tag-woodworking\">\n\n  <div class=\"dusk:bg-gray-700 flex flex-col flex-nowrap items-center justify-start gap-4 text-center dark:bg-gray-700 sm:flex-row sm:items-start sm:gap-0 sm:text-left\">\n  <div class=\"relative block aspect-square h-[75px] w-[75px] shrink-0 overflow-hidden rounded-full border-4 border-green-400 md:mt-2 md:self-start\">\n    <a href=\"https://arstechnica.com/science/2026/10/neanderthal-wooden-tools-from-spain-found-preserved-in-stone/\"></a>\n  </div>\n  <div class=\"grow px-5\">\n    <h2 class=\"my-0 font-serif text-2xl font-bold leading-none\">\n      <a class=\"dusk:text-gray-100 dusk:visited:text-gray-400 dusk:hover:text-orange-400 text-gray-700 visited:text-gray-400 hover:text-orange-400 dark:text-gray-100 dark:visited:text-gray-400 dark:hover:text-orange-400\" href=\"https://arstechnica.com/science/2026/10/neanderthal-wooden-tools-from-spain-found-preserved-in-stone/\">Neanderthal wooden tools from Spain found preserved in stone</a>\n    </h2>\n    <p class=\"text-gray-250 mb-2 text-lg leading-tight lg:hidden\">\n      Dissolved rock precipitated around the tools, which then decayed.\n    </p>\n    <div class=\"font-impact my-2 text-xs font-semibold uppercase text-gray-300\"><span>Jacek Krywko</span>\n  –\n  <span class=\"whitespace-nowrap\">\n    <time class=\"mr-[2px] inline-block cursor-default\" title=\"2026-10-09T18:34:03-04:00\" datetime=\"2026-10-09T18:34:03-04:00\" data-mode=\"compact\" data-time-separator=\" \" data-updated-timestamp=\"false\" x-data=\"arsTimestamp()\" x-text=\"format()\">\n  10/9/2026\n</time>\n    <span class=\"text-gray-550\">|</span> <a class=\"view-comments text-gray-300 hover:text-gray-500\" href=\"https://arstechnica.com/science/2026/10/neanderthal-wooden-tools-from-spain-found-preserved-in-stone/#comments\" title=\"46 comments\">\n    \n    46\n  </a>\n  </span></div>\n  </div>\n</div>\n</article><nav><a href=\"/about\">About us</a></nav><article id=\"card-2174863\" data-id=\"2174863\" class=\"relative group card-grid-top post-2174863 post type-post status-publish format-standard has-post-thumbnail hentry category-features category-tech-policy tag-biden-administration tag-blanche-lincoln tag-commodity-futures-trading-commission tag-event-contracts tag-kalshi tag-polymarket tag-prediction-markets tag-sports-gambling tag-trump-administration\">\n\n  <div class=\"absolute right-5 top-5 z-10 h-[40px] sm:right-[-20px]\">\n  \n  <div class=\"font-impact relative flex h-[30px] flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-sm bg-green-400 px-[10px] text-sm font-semibold uppercase text-gray-700 sm:rounded-full\">\n    \n    Featured\n  </div>\n</div>\n\n<div class=\"dusk:bg-gray-700 overflow-hidden rounded-sm dark:bg-gray-700\">\n  <div class=\"relative block aspect-video w-full overflow-hidden\">\n    <a href=\"https://example.com/foreign-story\"></a>\n  </div>\n  <div class=\"flex flex-col justify-between px-5 pt-4 md:px-0\">\n    <div class=\"upper-deck font-impact text-green-450 dusk:text-green-400 inline-flex flex-row flex-nowrap items-center gap-2 text-left text-sm font-semibold uppercase leading-tight dark:text-green-400\">\n  <span class=\"upper-deck__icon\">\n    \n  </span>\n  <span class=\"upper-deck__text\">\n    The Lincoln lobbyist\n  </span>\n</div>\n    <div>\n      <h2 class=\"mb-2 mt-3 font-serif text-3xl font-bold leading-none md:text-4xl\">\n        <a class=\"dusk:text-gray-100 dusk:visited:text-gray-400 dusk:hover:text-orange-400 text-gray-700 visited:text-gray-400 hover:text-orange-400 dark:text-gray-100 dark:visited:text-gray-400 dark:hover:text-orange-400\" href=\"https://example.com/foreign-story\">A senator tried to ban gambling on prediction markets—now she’s a Kalshi lobbyist</a>\n      </h2>\n      <p class=\"text-gray-550 dark:text-gray-250 dusk:text-gray-250 mb-2 text-lg leading-tight\">\n        Sen. Blanche Lincoln wrote law that let US ban sports-event contracts. She lobbies for the other side now.\n      </p>\n      <div class=\"font-impact text-xs font-semibold uppercase text-gray-300\"><span>Jon Brodkin</span>\n  –\n  <span class=\"whitespace-nowrap\">\n    <time class=\"mr-[2px] inline-block cursor-default\" title=\"2026-10-08T07:00:14-04:00\" datetime=\"2026-10-08T07:00:14-04:00\" data-mode=\"compact\" data-time-separator=\" \" data-updated-timestamp=\"false\" x-data=\"arsTimestamp()\" x-text=\"format()\">\n  10/8/2026\n</time>\n    <span class=\"text-gray-550\">|</span> <a class=\"view-comments text-gray-300 hover:text-gray-500\" href=\"https://example.com/foreign-story\" title=\"119 comments\">\n    \n    119\n  </a>\n  </span></div>\n    </div>\n  </div>\n</div>\n</article>",
+    "expected": [
+      {
+        "url": "https://arstechnica.com/tech-policy/2026/10/a-senator-tried-to-ban-gambling-on-prediction-markets-now-shes-a-kalshi-lobbyist/",
+        "title": "A senator tried to ban gambling on prediction markets—now she’s a Kalshi lobbyist",
+        "publishedAt": "2026-10-08T11:00:14.000Z"
+      },
+      {
+        "url": "https://arstechnica.com/science/2026/10/the-psychedelic-brain-looks-like-chaos-underneath-theres-order/",
+        "title": "One with the world? A new look at brains transformed by psychedelics.",
+        "publishedAt": "2026-10-10T11:15:35.000Z"
+      },
+      {
+        "url": "https://arstechnica.com/science/2026/10/neanderthal-wooden-tools-from-spain-found-preserved-in-stone/",
+        "title": "Neanderthal wooden tools from Spain found preserved in stone",
+        "publishedAt": "2026-10-09T22:34:03.000Z"
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-08T11:00:14+00:00\">",
+    "readerPublishedAt": "2026-10-08T11:00:14.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "france24",
+    "source": {
+      "id": "dn-france24-6b1bed250f9f",
+      "name": "法国24电视台 · News",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "france24",
+          "sectionId": "6b1bed250f9f",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "News",
+          "sectionUrl": "https://www.france24.com/en/",
+          "sourceCredibility": 80,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "international",
+          "publisherKey": "publisher:france24",
+          "language": "en-US",
+          "allowedHosts": [
+            "france24.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "France 24 latest news",
+            "France24 world news"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.france24.com/en/"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://www.france24.com/en/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": ".m-item-list-article",
+      "linkSelector": ".article__title a",
+      "titleSelector": ".article__title a",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<div class=\"m-item-list-article m-item-list-article--main-article\" data-article-list=\"\">\n                                                            \n                                        \n                                                                    \n                    \n                                                                                \n\n\n    \n    \n\n<a class=\"m-item-image m-item-image--16x9\" href=\"/en/asia-pacific/20261010-india-s-cockroach-movement-chief-detained-ahead-of-major-protest\" data-article-item-link=\"\" aria-hidden=\"true\" tabindex=\"-1\">\n            \n\n\n                            </a>\n                                        <div class=\"article__infos\">\n                                        <div class=\"article__title \">\n    <a href=\"/en/asia-pacific/20261010-india-s-cockroach-movement-chief-detained-ahead-of-major-protest\" data-article-item-link=\"\">\n                                                            <h1>Indian police crack down on 'cockroach' movement protest in New Delhi</h1>\n                                                    </a></div>                                                            <div class=\"article__chapo\">\n            India's \"cockroach\" youth movement said Saturday that police had detained the group's leaders as well as \"more than 15,000\" protesters attempting to stage a major demonstration in the capital against the country's election commissioner following allegations of misconduct during voter-roll revisions.&nbsp;\n        </div>\n                        \n            \n    \n                    \n                                                    <div class=\"m-content-typology\">\n                        \n    <div class=\"m-master-tag\">\n        \n                                <div class=\"a-tag-section\">\n                <span class=\"a-section-color\"></span>\n                                    Asia / Pacific\n                            </div>\n            </div>\n                                    </div>                                        \n    <div class=\"a-included-media\">\n                <span class=\"a-included-media__label\">Includes a video</span>\n                    <span class=\"a-included-media__separator\" aria-hidden=\"true\"></span>\n            <span class=\"a-included-media__duration\">5 min</span>\n            </div>\n\n            </div>\n            <div class=\"m-list-main-related\">\n        <div class=\"m-list-main-related__title\">On the same topic</div>\n                                    <a class=\"m-list-main-related__article\" href=\"/en/tv-shows/access-asia/20261009-india-protests-grow-over-election-commission-mistrust\">\n                        <h2>India protests grow over Election Commission mistrust</h2>\n        </a>\n                                    <a class=\"m-list-main-related__article\" href=\"/en/asia-pacific/20260728-india-cockroach-protesters-explain-toppled-modi-ministers\">\n                        <h2>India’s ‘cockroach’ protesters explain how they toppled one of Modi’s ministers</h2>\n        </a>\n    </div>\n    </div><div class=\"m-item-list-article m-item-list-article--content-visibility m-item-list-article--keep-it-horizontal\" data-article-list=\"\">\n                                                            \n                                        \n                                                                    \n                    \n                                                                                \n\n\n    \n    \n\n<a class=\"m-item-image m-item-image--16x9\" href=\"/en/europe/20261010-live-russian-strikes-on-ukraine-zaporizhzhia-kill-least-seven-including-children\" data-article-item-link=\"\" aria-hidden=\"true\" tabindex=\"-1\">\n            \n\n\n                            </a>\n                                        <div class=\"article__infos\">\n                                        <div class=\"article__title \">\n    <a href=\"/en/europe/20261010-live-russian-strikes-on-ukraine-zaporizhzhia-kill-least-seven-including-children\" data-article-item-link=\"\">\n                                                            <h2 aria-level=\"3\">Live: Trump lashes out at Zelensky, says Ukraine needs new president who will agree to end war</h2>\n                                                    </a></div>                                                                        \n            \n    \n                    \n                                                    <div class=\"m-content-typology\">\n                        \n    <div class=\"m-master-tag\">\n        \n                                <div class=\"a-tag-section a-tag-section--liveblog\">\n                <span class=\"a-section-color\"></span>\n                                    Europe\n                            </div>\n            </div>\n                                    </div>                                        \n\n            </div>\n            </div><div class=\"m-item-list-article m-item-list-article--content-visibility m-item-list-article--hor-to-ver\" data-article-list=\"\">\n                                                            \n                                        \n                                                                    \n                    \n                                                                                \n\n\n    \n    \n\n<a class=\"m-item-image m-item-image--16x9\" href=\"/en/europe/20261010-so-safe-you-could-drink-it-scientists-and-pesticide-victims-fear-an-eu-rollback\" data-article-item-link=\"\" aria-hidden=\"true\" tabindex=\"-1\">\n            \n\n\n                            </a>\n                                        <div class=\"article__infos\">\n                                        <div class=\"article__title \">\n    <a href=\"/en/europe/20261010-so-safe-you-could-drink-it-scientists-and-pesticide-victims-fear-an-eu-rollback\" data-article-item-link=\"\">\n                                                            <h2>‘So safe you could drink it’: Scientists and pesticide victims fear an EU rollback</h2>\n                                                    </a></div>                                                                                    \n            \n    \n                    \n                                                    <div class=\"m-content-typology\">\n                        \n    <div class=\"m-master-tag\">\n        <div class=\"a-tag-cartouche\">Long read</div>\n        \n                                <div class=\"a-tag-section\">\n                <span class=\"a-section-color\"></span>\n                                    Europe\n                            </div>\n            </div>\n                                    </div>                                        \n\n            </div>\n            </div><nav><a href=\"/about\">About us</a></nav><div class=\"m-item-list-article m-item-list-article--main-article\" data-article-list=\"\">\n                                                            \n                                        \n                                                                    \n                    \n                                                                                \n\n\n    \n    \n\n<a class=\"m-item-image m-item-image--16x9\" href=\"https://example.com/foreign-story\" data-article-item-link=\"\" aria-hidden=\"true\" tabindex=\"-1\">\n            \n\n\n                            </a>\n                                        <div class=\"article__infos\">\n                                        <div class=\"article__title \">\n    <a href=\"https://example.com/foreign-story\" data-article-item-link=\"\">\n                                                            <h1>Indian police crack down on 'cockroach' movement protest in New Delhi</h1>\n                                                    </a></div>                                                            <div class=\"article__chapo\">\n            India's \"cockroach\" youth movement said Saturday that police had detained the group's leaders as well as \"more than 15,000\" protesters attempting to stage a major demonstration in the capital against the country's election commissioner following allegations of misconduct during voter-roll revisions.&nbsp;\n        </div>\n                        \n            \n    \n                    \n                                                    <div class=\"m-content-typology\">\n                        \n    <div class=\"m-master-tag\">\n        \n                                <div class=\"a-tag-section\">\n                <span class=\"a-section-color\"></span>\n                                    Asia / Pacific\n                            </div>\n            </div>\n                                    </div>                                        \n    <div class=\"a-included-media\">\n                <span class=\"a-included-media__label\">Includes a video</span>\n                    <span class=\"a-included-media__separator\" aria-hidden=\"true\"></span>\n            <span class=\"a-included-media__duration\">5 min</span>\n            </div>\n\n            </div>\n            <div class=\"m-list-main-related\">\n        <div class=\"m-list-main-related__title\">On the same topic</div>\n                                    <a class=\"m-list-main-related__article\" href=\"https://example.com/foreign-story\">\n                        <h2>India protests grow over Election Commission mistrust</h2>\n        </a>\n                                    <a class=\"m-list-main-related__article\" href=\"https://example.com/foreign-story\">\n                        <h2>India’s ‘cockroach’ protesters explain how they toppled one of Modi’s ministers</h2>\n        </a>\n    </div>\n    </div>",
+    "expected": [
+      {
+        "url": "https://www.france24.com/en/asia-pacific/20261010-india-s-cockroach-movement-chief-detained-ahead-of-major-protest",
+        "title": "Indian police crack down on 'cockroach' movement protest in New Delhi",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.france24.com/en/europe/20261010-live-russian-strikes-on-ukraine-zaporizhzhia-kill-least-seven-including-children",
+        "title": "Live: Trump lashes out at Zelensky, says Ukraine needs new president who will agree to end war",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.france24.com/en/europe/20261010-so-safe-you-could-drink-it-scientists-and-pesticide-victims-fear-an-eu-rollback",
+        "title": "‘So safe you could drink it’: Scientists and pesticide victims fear an EU rollback",
+        "publishedAt": null
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-10T06:37:40+00:00\">",
+    "readerPublishedAt": "2026-10-10T06:37:40.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "techcrunch",
+    "source": {
+      "id": "dn-techcrunch-f02b9e03728c",
+      "name": "TechCrunch · Startups",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "techcrunch",
+          "sectionId": "f02b9e03728c",
+          "tierReason": "AIHOT baseline publisher rss-techcrunch-ai",
+          "sectionLabel": "Startups",
+          "sectionUrl": "https://techcrunch.com/",
+          "sourceCredibility": 74,
+          "mediaType": "technology",
+          "signalRole": "analysis",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "technology",
+          "publisherKey": "publisher:techcrunch",
+          "language": "en-US",
+          "allowedHosts": [
+            "techcrunch.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "TechCrunch AI startups latest",
+            "TechCrunch technology news"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://techcrunch.com/"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://techcrunch.com/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": ".loop-card--post-type-post",
+      "linkSelector": "a.loop-card__title-link",
+      "titleSelector": "a.loop-card__title-link",
+      "publishedAtSelector": "time",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<div class=\"loop-card loop-card--post-type-post loop-card--featured-bg loop-card--vertical loop-card--square\" data-custom-submodule=\"Item 1\">\n\n\t\t\t\n\t\n\t<div class=\"loop-card__content\">\n\n\t\t\n\t\t\t\t\t<div class=\"loop-card__cat-group\">\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<a href=\"https://techcrunch.com/category/startups/\" class=\"loop-card__cat\">Startups</a>\n\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\n\t\t\t\t\t<h3 class=\"loop-card__title\">\n\n\t\t\t\t\n\t\t\t\t<a href=\"https://techcrunch.com/2026/10/10/3-days-to-disrupt-2026-meet-the-startups-before-they-hit-mainstream/\" class=\"loop-card__title-link\">3 days until Disrupt: Get a ticket, catch startups before they go big</a>\n\t\t\t</h3>\n\t\t\n\t\t\n\t\t\t\t\t<div class=\"loop-card__meta\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<ul class=\"loop-card__meta-item loop-card__author-list\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<li><a class=\"loop-card__author\" href=\"https://techcrunch.com/author/techcrunch-events/\">TechCrunch Events</a></li>\n\t\t\t\t\t\t\t\t\t\t\t</ul>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<time datetime=\"2026-10-10T08:00:00-07:00\" class=\"loop-card__meta-item loop-card__time wp-block-tc23-post-time-ago\">\n\t4 hours ago</time>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\n\t\t\n\t\t\t</div>\n\n\t\t</div><div class=\"loop-card loop-card--post-type-post loop-card--featured-bg loop-card--vertical loop-card--square\" data-custom-submodule=\"Item 2\">\n\n\t\t\t\n\t\n\t<div class=\"loop-card__content\">\n\n\t\t\n\t\t\t\t\t<div class=\"loop-card__cat-group\">\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<a href=\"https://techcrunch.com/category/artificial-intelligence/\" class=\"loop-card__cat\">AI</a>\n\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\n\t\t\t\t\t<h3 class=\"loop-card__title\">\n\n\t\t\t\t\n\t\t\t\t<a href=\"https://techcrunch.com/2026/10/09/anthropic-cant-reliably-control-its-ai-agents-its-cutting-off-its-internal-evals-from-the-live-internet-instead/\" class=\"loop-card__title-link\">Anthropic can’t reliably control its AI agents. It’s cutting off its internal evals from the live internet instead</a>\n\t\t\t</h3>\n\t\t\n\t\t\n\t\t\t\t\t<div class=\"loop-card__meta\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<ul class=\"loop-card__meta-item loop-card__author-list\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<li><a class=\"loop-card__author\" href=\"https://techcrunch.com/author/tim-fernholz/\">Tim Fernholz</a></li>\n\t\t\t\t\t\t\t\t\t\t\t</ul>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<time datetime=\"2026-10-09T17:18:32-07:00\" class=\"loop-card__meta-item loop-card__time wp-block-tc23-post-time-ago\">\n\t18 hours ago</time>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\n\t\t\n\t\t\t</div>\n\n\t\t</div><div class=\"loop-card loop-card--post-type-post loop-card--featured-bg loop-card--vertical loop-card--square\" data-custom-submodule=\"Item 3\">\n\n\t\t\t\n\t\n\t<div class=\"loop-card__content\">\n\n\t\t\n\t\t\t\t\t<div class=\"loop-card__cat-group\">\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<a href=\"https://techcrunch.com/category/space/\" class=\"loop-card__cat\">Space</a>\n\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\n\t\t\t\t\t<h3 class=\"loop-card__title\">\n\n\t\t\t\t\n\t\t\t\t<a href=\"https://techcrunch.com/2026/10/09/elon-musk-intensifies-attack-on-ambani-over-starlink-india-launch-delay/\" class=\"loop-card__title-link\">Elon Musk intensifies attack on Ambani over Starlink India launch delay</a>\n\t\t\t</h3>\n\t\t\n\t\t\n\t\t\t\t\t<div class=\"loop-card__meta\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<ul class=\"loop-card__meta-item loop-card__author-list\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<li><a class=\"loop-card__author\" href=\"https://techcrunch.com/author/jagmeet-singh/\">Jagmeet Singh</a></li>\n\t\t\t\t\t\t\t\t\t\t\t</ul>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<time datetime=\"2026-10-09T20:10:06-07:00\" class=\"loop-card__meta-item loop-card__time wp-block-tc23-post-time-ago\">\n\t15 hours ago</time>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\n\t\t\n\t\t\t</div>\n\n\t\t</div><nav><a href=\"/about\">About us</a></nav><div class=\"loop-card loop-card--post-type-post loop-card--featured-bg loop-card--vertical loop-card--square\" data-custom-submodule=\"Item 1\">\n\n\t\t\t\n\t\n\t<div class=\"loop-card__content\">\n\n\t\t\n\t\t\t\t\t<div class=\"loop-card__cat-group\">\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<a href=\"https://example.com/foreign-story\" class=\"loop-card__cat\">Startups</a>\n\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\n\t\t\t\t\t<h3 class=\"loop-card__title\">\n\n\t\t\t\t\n\t\t\t\t<a href=\"https://example.com/foreign-story\" class=\"loop-card__title-link\">3 days until Disrupt: Get a ticket, catch startups before they go big</a>\n\t\t\t</h3>\n\t\t\n\t\t\n\t\t\t\t\t<div class=\"loop-card__meta\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<ul class=\"loop-card__meta-item loop-card__author-list\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<li><a class=\"loop-card__author\" href=\"https://example.com/foreign-story\">TechCrunch Events</a></li>\n\t\t\t\t\t\t\t\t\t\t\t</ul>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<time datetime=\"2026-10-10T08:00:00-07:00\" class=\"loop-card__meta-item loop-card__time wp-block-tc23-post-time-ago\">\n\t4 hours ago</time>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\n\t\t\n\t\t\t</div>\n\n\t\t</div>",
+    "expected": [
+      {
+        "url": "https://techcrunch.com/2026/10/10/3-days-to-disrupt-2026-meet-the-startups-before-they-hit-mainstream/",
+        "title": "3 days until Disrupt: Get a ticket, catch startups before they go big",
+        "publishedAt": "2026-10-10T15:00:00.000Z"
+      },
+      {
+        "url": "https://techcrunch.com/2026/10/09/anthropic-cant-reliably-control-its-ai-agents-its-cutting-off-its-internal-evals-from-the-live-internet-instead/",
+        "title": "Anthropic can’t reliably control its AI agents. It’s cutting off its internal evals from the live internet instead",
+        "publishedAt": "2026-10-10T00:18:32.000Z"
+      },
+      {
+        "url": "https://techcrunch.com/2026/10/09/elon-musk-intensifies-attack-on-ambani-over-starlink-india-launch-delay/",
+        "title": "Elon Musk intensifies attack on Ambani over Starlink India launch delay",
+        "publishedAt": "2026-10-10T03:10:06.000Z"
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-10T15:00:00+00:00\">",
+    "readerPublishedAt": "2026-10-10T15:00:00.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "nvidia-ai",
+    "source": {
+      "id": "dn-nvidia-ai-cc11e7fa00ca",
+      "name": "NVIDIA AI · Blog",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "nvidia-ai",
+          "sectionId": "cc11e7fa00ca",
+          "tierReason": "AIHOT baseline publisher rss-nvidia-blog",
+          "sectionLabel": "Blog",
+          "sectionUrl": "https://blogs.nvidia.com/blog/category/deep-learning/",
+          "sourceCredibility": 84,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "ai",
+          "publisherKey": "publisher:nvidia",
+          "language": "en-US",
+          "allowedHosts": [
+            "blogs.nvidia.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "NVIDIA AI blog latest",
+            "NVIDIA deep learning news"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://blogs.nvidia.com/blog/category/deep-learning/"
+      },
+      "tier": "T1",
+      "first_party": true,
+      "owner_entity_id": "nvidia",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://blogs.nvidia.com/blog/category/deep-learning/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "article",
+      "linkSelector": "a.entry-title-link",
+      "titleSelector": "a.entry-title-link",
+      "publishedAtSelector": "time",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<article class=\"featured-post-main post-96008 post type-post status-publish format-standard has-post-thumbnail hentry category-deep-learning tag-nemotron\" id=\"post-96008\" data-post-id=\"96008\" data-layout=\"main\">\n\t<div class=\"featured-post-main-inner nvidia-grid-asymmetric\">\n\t\t<!-- Featured Image -->\n\t\t<div class=\"featured-post-main-image\" style=\"--border-height: 100%\">\n\t\t\t<a href=\"https://blogs.nvidia.com/blog/nemotron-langchain-agents-open-stack/\" class=\"featured-post-main-image-link\">\n\t\t\t\t<div class=\"aspect-[16/9]\"></div>\t\t\t</a>\n\t\t</div>\n\n\t\t<!-- Post Content -->\n\t\t<div class=\"featured-post-main-content flex flex-col gap-10\">\n\t\t\t<!-- Post Title -->\n\t\t\t<div class=\"featured-post-main-title\">\n\t\t\t\t<h3 class=\"entry-title nvidia-heading-small\">\n\t\t\t\t\t<a href=\"https://blogs.nvidia.com/blog/nemotron-langchain-agents-open-stack/\" class=\"entry-title-link\">\n\t\t\t\t\t\tNVIDIA Nemotron Achieves Benchmark-Leading Performance With LangChain Deep Agents Harness\t\t\t\t\t</a>\n\t\t\t\t</h3>\n\t\t\t</div>\n\n\t\t\t<!-- Post Excerpt -->\n\t\t\t\t\t\t\t<div class=\"featured-post-main-excerpt\">\n\t\t\t\t\t<p>NVIDIA Nemotron 3 Ultra is offering leading performance at lower cost than top closed models with the largest and most widely adopted AI agent orchestration...</p>\n\t\t\t\t</div>\n\t\t\t\n\t\t\t<!-- Post Date -->\n\t\t\t<div class=\"featured-post-main-date nvidia-article-date\">\n\t\t\t\t<time datetime=\"2026-07-08T08:00:27-07:00\">\n\t\t\t\t\tJul 8, 2026\t\t\t\t</time>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</article><article class=\"featured-post-secondary post-88162 post type-post status-publish format-standard has-post-thumbnail hentry category-cloud-2 category-corporate category-deep-learning tag-ai-training\" id=\"post-88162\" data-post-id=\"88162\" data-layout=\"secondary\">\n\t\t\t<div class=\"featured-post-secondary-inner flex flex-col gap-30\">\n\t\t\t\t<!-- Featured Image -->\n\t\t\t\t<div class=\"featured-post-secondary-image\">\n\t\t\t\t\t<a href=\"https://blogs.nvidia.com/blog/leading-models-nvidia/\" class=\"featured-post-secondary-image-link\">\n\t\t\t\t\t\t<div class=\"aspect-[16/9]\"></div>\t\t\t\t\t</a>\n\t\t\t\t</div>\n\n\t\t\t\t<!-- Post Content -->\n\t\t\t\t<div class=\"featured-post-secondary-content flex flex-col gap-10\">\n\t\t\t\t\t<!-- Post Title -->\n\t\t\t\t\t<div class=\"featured-post-secondary-title\">\n\t\t\t\t\t\t<h3 class=\"entry-title nvidia-heading-smaller\">\n\t\t\t\t\t\t\t<a href=\"https://blogs.nvidia.com/blog/leading-models-nvidia/\" class=\"entry-title-link\">\n\t\t\t\t\t\t\t\tAs AI Grows More Complex, Model Builders Rely on NVIDIA\t\t\t\t\t\t\t</a>\n\t\t\t\t\t\t</h3>\n\t\t\t\t\t</div>\n\n\t\t\t\t\t<!-- Post Date -->\n\t\t\t\t\t<div class=\"featured-post-secondary-date nvidia-article-date\">\n\t\t\t\t\t\t<time datetime=\"2025-12-11T11:19:57-08:00\">\n\t\t\t\t\t\t\tDec 11, 2025\t\t\t\t\t\t</time>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t</article><article class=\"featured-post-secondary post-82950 post type-post status-publish format-standard has-post-thumbnail hentry category-deep-learning category-supercomputing tag-artificial-intelligence tag-customer-stories tag-events tag-hardware tag-high-performance-computing tag-machine-learning tag-nvidia-in-europe tag-supercomputing\" id=\"post-82950\" data-post-id=\"82950\" data-layout=\"secondary\">\n\t\t\t<div class=\"featured-post-secondary-inner flex flex-col gap-30\">\n\t\t\t\t<!-- Featured Image -->\n\t\t\t\t<div class=\"featured-post-secondary-image\">\n\t\t\t\t\t<a href=\"https://blogs.nvidia.com/blog/isambard-ai/\" class=\"featured-post-secondary-image-link\">\n\t\t\t\t\t\t<div class=\"aspect-[16/9]\"></div>\t\t\t\t\t</a>\n\t\t\t\t</div>\n\n\t\t\t\t<!-- Post Content -->\n\t\t\t\t<div class=\"featured-post-secondary-content flex flex-col gap-10\">\n\t\t\t\t\t<!-- Post Title -->\n\t\t\t\t\t<div class=\"featured-post-secondary-title\">\n\t\t\t\t\t\t<h3 class=\"entry-title nvidia-heading-smaller\">\n\t\t\t\t\t\t\t<a href=\"https://blogs.nvidia.com/blog/isambard-ai/\" class=\"entry-title-link\">\n\t\t\t\t\t\t\t\tIsambard-AI, the UK’s Most Powerful AI Supercomputer, Goes Live\t\t\t\t\t\t\t</a>\n\t\t\t\t\t\t</h3>\n\t\t\t\t\t</div>\n\n\t\t\t\t\t<!-- Post Date -->\n\t\t\t\t\t<div class=\"featured-post-secondary-date nvidia-article-date\">\n\t\t\t\t\t\t<time datetime=\"2025-07-17T10:00:50-07:00\">\n\t\t\t\t\t\t\tJul 17, 2025\t\t\t\t\t\t</time>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t</article><nav><a href=\"/about\">About us</a></nav><article class=\"featured-post-main post-96008 post type-post status-publish format-standard has-post-thumbnail hentry category-deep-learning tag-nemotron\" id=\"post-96008\" data-post-id=\"96008\" data-layout=\"main\">\n\t<div class=\"featured-post-main-inner nvidia-grid-asymmetric\">\n\t\t<!-- Featured Image -->\n\t\t<div class=\"featured-post-main-image\" style=\"--border-height: 100%\">\n\t\t\t<a href=\"https://example.com/foreign-story\" class=\"featured-post-main-image-link\">\n\t\t\t\t<div class=\"aspect-[16/9]\"></div>\t\t\t</a>\n\t\t</div>\n\n\t\t<!-- Post Content -->\n\t\t<div class=\"featured-post-main-content flex flex-col gap-10\">\n\t\t\t<!-- Post Title -->\n\t\t\t<div class=\"featured-post-main-title\">\n\t\t\t\t<h3 class=\"entry-title nvidia-heading-small\">\n\t\t\t\t\t<a href=\"https://example.com/foreign-story\" class=\"entry-title-link\">\n\t\t\t\t\t\tNVIDIA Nemotron Achieves Benchmark-Leading Performance With LangChain Deep Agents Harness\t\t\t\t\t</a>\n\t\t\t\t</h3>\n\t\t\t</div>\n\n\t\t\t<!-- Post Excerpt -->\n\t\t\t\t\t\t\t<div class=\"featured-post-main-excerpt\">\n\t\t\t\t\t<p>NVIDIA Nemotron 3 Ultra is offering leading performance at lower cost than top closed models with the largest and most widely adopted AI agent orchestration...</p>\n\t\t\t\t</div>\n\t\t\t\n\t\t\t<!-- Post Date -->\n\t\t\t<div class=\"featured-post-main-date nvidia-article-date\">\n\t\t\t\t<time datetime=\"2026-07-08T08:00:27-07:00\">\n\t\t\t\t\tJul 8, 2026\t\t\t\t</time>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</article>",
+    "expected": [
+      {
+        "url": "https://blogs.nvidia.com/blog/nemotron-langchain-agents-open-stack/",
+        "title": "NVIDIA Nemotron Achieves Benchmark-Leading Performance With LangChain Deep Agents Harness",
+        "publishedAt": "2026-07-08T15:00:27.000Z"
+      },
+      {
+        "url": "https://blogs.nvidia.com/blog/leading-models-nvidia/",
+        "title": "As AI Grows More Complex, Model Builders Rely on NVIDIA",
+        "publishedAt": "2025-12-11T19:19:57.000Z"
+      },
+      {
+        "url": "https://blogs.nvidia.com/blog/isambard-ai/",
+        "title": "Isambard-AI, the UK’s Most Powerful AI Supercomputer, Goes Live",
+        "publishedAt": "2025-07-17T17:00:50.000Z"
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2025-07-17T17:00:50+00:00\">",
+    "readerPublishedAt": "2025-07-17T17:00:50.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "the-verge",
+    "source": {
+      "id": "dn-the-verge-9a677dd9cd97",
+      "name": "The Verge · Tech",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "the-verge",
+          "sectionId": "9a677dd9cd97",
+          "tierReason": "AIHOT baseline publisher rss-the-verge-ai",
+          "sectionLabel": "Tech",
+          "sectionUrl": "https://www.theverge.com/tech",
+          "sourceCredibility": 72,
+          "mediaType": "technology",
+          "signalRole": "analysis",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "technology",
+          "publisherKey": "publisher:the-verge",
+          "language": "en-US",
+          "allowedHosts": [
+            "theverge.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "The Verge tech AI latest",
+            "The Verge technology news"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.theverge.com/tech"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://www.theverge.com/tech",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "a._7uluu50[href]",
+      "titleSelector": "a[href]",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      },
+      "linkSelector": "a[href]"
+    },
+    "html": "<a class=\"_7uluu50 _7uluu54\" href=\"/tech/1009294/ledger-wallet-tampering-suspected-after-reports-of-crypto-thefts\">Ledger wallet tampering suspected after reports of crypto thefts</a><a class=\"_7uluu50 _7uluu54\" href=\"/ai-artificial-intelligence/1009286/anthropic-is-cutting-off-its-internal-evaluations-from-the-internet\">Anthropic is cutting off its internal evaluations from the internet</a><a class=\"_7uluu50 _7uluu54\" href=\"/ai-artificial-intelligence/1009051/privacy-ai-agent-promises-openai-meta-muse-dots\">AI agent makers are promising privacy — will they deliver?</a><nav><a href=\"/about\">About us</a></nav><a class=\"_7uluu50 _7uluu54\" href=\"https://example.com/foreign-story\">Ledger wallet tampering suspected after reports of crypto thefts</a>",
+    "expected": [
+      {
+        "url": "https://www.theverge.com/tech/1009294/ledger-wallet-tampering-suspected-after-reports-of-crypto-thefts",
+        "title": "Ledger wallet tampering suspected after reports of crypto thefts",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.theverge.com/ai-artificial-intelligence/1009286/anthropic-is-cutting-off-its-internal-evaluations-from-the-internet",
+        "title": "Anthropic is cutting off its internal evaluations from the internet",
+        "publishedAt": null
+      },
+      {
+        "url": "https://www.theverge.com/ai-artificial-intelligence/1009051/privacy-ai-agent-promises-openai-meta-muse-dots",
+        "title": "AI agent makers are promising privacy — will they deliver?",
+        "publishedAt": null
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-10T16:36:44+00:00\">",
+    "readerPublishedAt": "2026-10-10T16:36:44.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "who",
+    "source": {
+      "id": "dn-who-8c8f4a455fc1",
+      "name": "世界卫生组织 WHO · News",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "who",
+          "sectionId": "8c8f4a455fc1",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "News",
+          "sectionUrl": "https://www.who.int/news",
+          "sourceCredibility": 90,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "society",
+          "publisherKey": "publisher:who",
+          "language": "en-US",
+          "allowedHosts": [
+            "who.int"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "WHO latest news",
+            "World Health Organization news"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.who.int/news"
+      },
+      "tier": "T2",
+      "first_party": true,
+      "owner_entity_id": "who",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://www.who.int/news-room",
+      "parseMode": "html",
+      "itemSelector": ".list-view--item:has(a[href*=\"/news/item/\"])",
+      "linkSelector": "a[href*=\"/news/item/\"]",
+      "titleSelector": ".heading",
+      "publishedAtSelector": ".timestamp",
+      "publishedAtUtcOffset": "+00:00",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<div class=\"list-view--item horizontal-list-item matching-height--item\">\n                <a href=\"/news/item/09-10-2026-who-youth-council-welcomes-2026-2028-members-in-berlin\" class=\"link-container\" aria-label=\"WHO Youth Council welcomes 2026–2028 members in Berlin\" role=\"link\">\n                    <div class=\"thumb\">\n                        <div class=\"background-image background-image--small\" data-image=\"https://cdn.who.int/media/images/default-source/headquarters/initiatives/youth-council/who-youth-council-meeting-in-berlin-in-2026.tmb-768v.jpg?sfvrsn=2b5d30b7_2\" style=\"background-image: url('https://cdn.who.int/media/images/default-source/headquarters/initiatives/youth-council/who-youth-council-meeting-in-berlin-in-2026.tmb-549v.jpg?sfvrsn=2b5d30b7_2')\"></div>\n                    </div>\n\n                    <div class=\"info\">\n                        <div class=\"date\">\n                                <span class=\"timestamp\">9 October 2026</span>\n\n                                <div class=\"sf-tags-list\">\n                                    <div class=\"sf-tags-list-item\">Departmental update</div>\n                                </div>\n                        </div>\n\n                        <p class=\"heading text-underline\">WHO Youth Council welcomes 2026–2028 members in Berlin</p>\n                    </div>\n                </a>\n        </div><div class=\"list-view--item horizontal-list-item matching-height--item\">\n                <a href=\"/news/item/09-10-2026-who-urges-shift-from-institutional-to-community-based-mental-health-care\" class=\"link-container\" aria-label=\"WHO urges shift from institutional to community-based mental health care\" role=\"link\">\n                    <div class=\"thumb\">\n                        <div class=\"background-image background-image--small\" data-image=\"https://cdn.who.int/media/images/default-source/headquarters/teams/uhc---communicable-noncommunicable-diseases-(ucn)/mental-health-and-substance-use-(msd)/mental-health-(mhe)/mental-health-day-2026.tmb-768v.jpg?sfvrsn=4c607866_2\" style=\"background-image: url('https://cdn.who.int/media/images/default-source/headquarters/teams/uhc---communicable-noncommunicable-diseases-(ucn)/mental-health-and-substance-use-(msd)/mental-health-(mhe)/mental-health-day-2026.tmb-549v.jpg?sfvrsn=4c607866_2')\"></div>\n                    </div>\n\n                    <div class=\"info\">\n                        <div class=\"date\">\n                                <span class=\"timestamp\">9 October 2026</span>\n\n                                <div class=\"sf-tags-list\">\n                                    <div class=\"sf-tags-list-item\">News release</div>\n                                </div>\n                        </div>\n\n                        <p class=\"heading text-underline\">WHO urges shift from institutional to community-based mental health care</p>\n                    </div>\n                </a>\n        </div><div class=\"list-view--item horizontal-list-item matching-height--item\">\n                <a href=\"/news/item/08-10-2026-new-global-roadmap-launched-to-tackle-hypertension-in-pregnancy-a-leading-cause-of-maternal-and-newborn-deaths\" class=\"link-container\" aria-label=\"New global roadmap launched to tackle hypertension in pregnancy, a leading cause of maternal and newborn deaths\" role=\"link\">\n                    <div class=\"thumb\">\n                        <div class=\"background-image background-image--small\" data-image=\"https://cdn.who.int/media/images/default-source/topics/womens-childrens-and-adolescent-health/maternal-health/srh-outreach-in-kenya.tmb-768v.jpg?sfvrsn=cf7002b_4\" style=\"background-image: url('https://cdn.who.int/media/images/default-source/topics/womens-childrens-and-adolescent-health/maternal-health/srh-outreach-in-kenya.tmb-549v.jpg?sfvrsn=cf7002b_4')\"></div>\n                    </div>\n\n                    <div class=\"info\">\n                        <div class=\"date\">\n                                <span class=\"timestamp\">8 October 2026</span>\n\n                                <div class=\"sf-tags-list\">\n                                    <div class=\"sf-tags-list-item\">News release</div>\n                                </div>\n                        </div>\n\n                        <p class=\"heading text-underline\">New global roadmap launched to tackle hypertension in pregnancy, a leading cause of maternal and newborn deaths</p>\n                    </div>\n                </a>\n        </div><nav><a href=\"/about\">About us</a></nav><div class=\"list-view--item horizontal-list-item matching-height--item\">\n                <a href=\"https://example.com/foreign-story\" class=\"link-container\" aria-label=\"WHO Youth Council welcomes 2026–2028 members in Berlin\" role=\"link\">\n                    <div class=\"thumb\">\n                        <div class=\"background-image background-image--small\" data-image=\"https://cdn.who.int/media/images/default-source/headquarters/initiatives/youth-council/who-youth-council-meeting-in-berlin-in-2026.tmb-768v.jpg?sfvrsn=2b5d30b7_2\" style=\"background-image: url('https://cdn.who.int/media/images/default-source/headquarters/initiatives/youth-council/who-youth-council-meeting-in-berlin-in-2026.tmb-549v.jpg?sfvrsn=2b5d30b7_2')\"></div>\n                    </div>\n\n                    <div class=\"info\">\n                        <div class=\"date\">\n                                <span class=\"timestamp\">9 October 2026</span>\n\n                                <div class=\"sf-tags-list\">\n                                    <div class=\"sf-tags-list-item\">Departmental update</div>\n                                </div>\n                        </div>\n\n                        <p class=\"heading text-underline\">WHO Youth Council welcomes 2026–2028 members in Berlin</p>\n                    </div>\n                </a>\n        </div>",
+    "expected": [
+      {
+        "url": "https://www.who.int/news/item/09-10-2026-who-youth-council-welcomes-2026-2028-members-in-berlin",
+        "title": "WHO Youth Council welcomes 2026–2028 members in Berlin",
+        "publishedAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "url": "https://www.who.int/news/item/09-10-2026-who-urges-shift-from-institutional-to-community-based-mental-health-care",
+        "title": "WHO urges shift from institutional to community-based mental health care",
+        "publishedAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "url": "https://www.who.int/news/item/08-10-2026-new-global-roadmap-launched-to-tackle-hypertension-in-pregnancy-a-leading-cause-of-maternal-and-newborn-deaths",
+        "title": "New global roadmap launched to tackle hypertension in pregnancy, a leading cause of maternal and newborn deaths",
+        "publishedAt": "2026-10-08T00:00:00.000Z"
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-09T12:30:33.0000000+00:00\">",
+    "readerPublishedAt": "2026-10-09T12:30:33.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "variety",
+    "source": {
+      "id": "dn-variety-8b0e06e28fd6",
+      "name": "综艺 Variety · Entertainment",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "variety",
+          "sectionId": "8b0e06e28fd6",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "Entertainment",
+          "sectionUrl": "https://variety.com/",
+          "sourceCredibility": 74,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "entertainment",
+          "publisherKey": "publisher:variety",
+          "language": "en-US",
+          "allowedHosts": [
+            "variety.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "Variety entertainment news",
+            "Variety film TV industry"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://variety.com/"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://variety.com/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "article.o-story",
+      "linkSelector": "h3.c-title a.c-title__link",
+      "titleSelector": "h3.c-title a.c-title__link",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<article class=\"o-story // o-story--primary lrv-u-flex lrv-u-flex-direction-column u-border-b-1@desktop u-border-color-medium-grey lrv-u-background-color-white u-margin-b-050@desktop lrv-u-padding-b-150 u-padding-b-2@desktop u-padding-lr-2@desktop lrv-u-text-align-center\">\n\t\t\n\t\t\t\t\t<div class=\"o-story__secondary lrv-a-glue-parent // lrv-u-margin-b-1\">\n\n\t\t\t\t\t\t\t\t\t\n<div class=\"c-lazy-image   lrv-u-height-100p lrv-u-overflow-hidden\">\n\t\t\t<a href=\"https://variety.com/2026/film/box-office/box-office-other-mommy-verity-social-reckoning-1236907499/\" class=\"c-lazy-image__link lrv-a-unstyle-link\">\n\t\n\t\t\t<div class=\"lrv-a-crop-3x2 lrv-u-height-100p\" style=\"\">\n\t\n\t\t\t\t\t\t\n\t\t\t\n\t\t\t</div>\n\t\n\t\t\t</a>\n\t</div>\n\n\t\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\t\t\n\t\t<div class=\"o-story__primary //  lrv-u-padding-lr-050 u-order-n1\">\n\t\t\t\t\t\t\t\n<span class=\"c-span  lrv-u-display-block lrv-a-font-primary-xxs lrv-u-margin-b-025 lrv-u-text-transform-uppercase u-color-green u-text-decoration-underline:hover u-color-green:hover\">\n\n\tTop Story\n</span>\n\t\t\t\n\t\t\t\t\t\t\t\n<h3 id=\"title-of-a-story\" class=\"c-title  u-letter-spacing-088-important lrv-a-font-secondary-xl u-letter-spacing-063@mobile-max lrv-u-margin-b-050 js-LatestNewsButton-WaypointStart\">\n\n\t\n\t\t\t<a href=\"https://variety.com/2026/film/box-office/box-office-other-mommy-verity-social-reckoning-1236907499/\" class=\"c-title__link  lrv-u-color-black u-color-brand-accent-80:hover lrv-u-display-block\">\n\t\n\t\t\n\t\t\t\t\tBox Office: 'Other Mommy' Spooks Up $12.6 Million\t\t\n\t\t\t</a>\n\t\n</h3>\n\t\t\t\n\t\t\t\t\t</div>\n\n\t\t<div class=\"o-story__tertiary //  lrv-u-padding-lr-050\">\n\t\t\t\t\t\t\t\n\t<p class=\"c-dek  lrv-u-color-black lrv-a-font-secondary-regular-m lrv-u-margin-t-00 lrv-u-margin-b-075 u-letter-spacing-104-important\">The Jessica Chastain-led horror easily claimed the top spot at the box office Friday. </p>\n\n\t\t\t\n\t\t\t<div class=\"o-story__meta // \">\n\t\t\t\t\t\t\t\t\t\n<a class=\"c-link  u-color-medium-grey lrv-a-font-accent-regular-xs lrv-u-text-transform-capitalize u-text-decoration-underline:hover u-color-medium-grey:hover\" href=\"https://variety.com/author/pturkeltaub/\">\n\tBy Payton Turkeltaub</a>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t</article><article class=\"o-story // o-story--prototype lrv-u-background-color-white lrv-u-padding-b-150 u-padding-b-00@desktop u-padding-r-2@desktop u-border-r-1@desktop u-border-color-medium-grey u-height-100p@desktop\">\n\t\t\n\t\t\t\t\t<div class=\"o-story__secondary lrv-a-glue-parent // lrv-u-margin-b-1\">\n\n\t\t\t\t\t\t\t\t\t\n<div class=\"c-lazy-image   lrv-u-height-100p lrv-u-overflow-hidden\">\n\t\t\t<a href=\"https://variety.com/2026/tv/news/netflix-mass-layoffs-1236906567/\" class=\"c-lazy-image__link lrv-a-unstyle-link\">\n\t\n\t\t\t<div class=\"lrv-a-crop-3x2 lrv-u-height-100p\" style=\"\">\n\t\n\t\t\t\t\t\t\n\t\t\t\n\t\t\t</div>\n\t\n\t\t\t</a>\n\t</div>\n\n\t\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\t\t\n\t\t<div class=\"o-story__primary // \">\n\t\t\t\t\t\t\t\n<span class=\"c-span  lrv-u-display-block lrv-a-font-primary-xxs lrv-u-margin-b-025 lrv-u-text-transform-capitalize u-color-green u-text-decoration-underline:hover u-color-green:hover\">\n\t<a href=\"https://variety.com/v/tv/\" class=\"c-span__link  lrv-a-unstyle-link\">\n\n\tTV\n\t</a>\n</span>\n\t\t\t\n\t\t\t\t\t\t\t\n<h3 id=\"title-of-a-story\" class=\"c-title  lrv-a-font-secondary-m lrv-u-margin-b-050\">\n\n\t\n\t\t\t<a href=\"https://variety.com/2026/tv/news/netflix-mass-layoffs-1236906567/\" class=\"c-title__link  lrv-u-color-black u-color-brand-accent-80:hover lrv-u-display-block\">\n\t\n\t\t\n\t\t\t\t\tNetflix Is Preparing for Layoffs\t\t\n\t\t\t</a>\n\t\n</h3>\n\t\t\t\n\t\t\t\t\t</div>\n\n\t\t<div class=\"o-story__tertiary // \">\n\t\t\t\t\t\t\t\n\t<p class=\"c-dek  lrv-u-color-black lrv-a-font-secondary-regular-s lrv-u-margin-t-00 lrv-u-margin-b-075\">The streaming giant is planning a significant restructuring.</p>\n\n\t\t\t\n\t\t\t<div class=\"o-story__meta // \">\n\t\t\t\t\t\t\t\t\t\n<a class=\"c-link  u-color-medium-grey lrv-a-font-accent-regular-xs lrv-u-text-transform-capitalize u-text-decoration-underline:hover u-color-medium-grey:hover\" href=\"https://variety.com/author/todd-spangler/\">\n\tBy Todd Spangler</a>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t</article><article class=\"o-story // o-story--secondary lrv-u-background-color-white lrv-u-padding-b-150 a-separator-before@desktop a-separator-before-margin-t-n150\">\n\t\t\n\t\t\t\t\t<div class=\"o-story__secondary lrv-a-glue-parent // lrv-u-margin-b-1 lrv-a-hidden@desktop\">\n\n\t\t\t\t\t\t\t\t\t\n<div class=\"c-lazy-image   lrv-u-height-100p lrv-u-overflow-hidden\">\n\t\t\t<a href=\"https://variety.com/2026/film/news/skydance-warner-bros-pictures-culture-transformation-1236906881/\" class=\"c-lazy-image__link lrv-a-unstyle-link\">\n\t\n\t\t\t<div class=\"lrv-a-crop-3x2 lrv-u-height-100p\" style=\"\">\n\t\n\t\t\t\t\t\t\n\t\t\t\n\t\t\t</div>\n\t\n\t\t\t</a>\n\t</div>\n\n\t\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\t\t\n\t\t<div class=\"o-story__primary // \">\n\t\t\t\t\t\t\t\n<span class=\"c-span  lrv-u-display-block lrv-a-font-primary-xxs lrv-u-margin-b-025 lrv-u-text-transform-capitalize u-color-green u-text-decoration-underline:hover u-color-green:hover\">\n\t<a href=\"https://variety.com/v/film/\" class=\"c-span__link  lrv-a-unstyle-link\">\n\n\tFilm\n\t</a>\n</span>\n\t\t\t\n\t\t\t\t\t\t\t\n<h3 id=\"title-of-a-story\" class=\"c-title   lrv-u-margin-b-050 u-letter-spacing-064-important lrv-a-font-secondary-s\">\n\n\t\n\t\t\t<a href=\"https://variety.com/2026/film/news/skydance-warner-bros-pictures-culture-transformation-1236906881/\" class=\"c-title__link  lrv-u-color-black u-color-brand-accent-80:hover lrv-u-display-block\">\n\t\n\t\t\n\t\t\t\t\tHow Skydance Will Remake the Warner Bros. Pictures Culture\t\t\n\t\t\t</a>\n\t\n</h3>\n\t\t\t\n\t\t\t\t\t</div>\n\n\t\t<div class=\"o-story__tertiary // \">\n\t\t\t\t\t\t\t\n\t<p class=\"c-dek  lrv-u-color-black lrv-a-font-secondary-regular-s lrv-u-margin-t-00 lrv-u-margin-b-075 lrv-a-hidden\">The Burbank studio is poised to undergo its most dramatic cultural transformation since the 1980s under the new leadership of Skydance CEO Ellison.</p>\n\n\t\t\t\n\t\t\t<div class=\"o-story__meta // \">\n\t\t\t\t\t\t\t\t\t\n<a class=\"c-link  u-color-medium-grey lrv-a-font-accent-regular-xs lrv-u-text-transform-capitalize u-text-decoration-underline:hover u-color-medium-grey:hover\" href=\"https://variety.com/author/matt-donnelly/\">\n\tBy Matt Donnelly</a>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t</article><nav><a href=\"/about\">About us</a></nav><article class=\"o-story // o-story--primary lrv-u-flex lrv-u-flex-direction-column u-border-b-1@desktop u-border-color-medium-grey lrv-u-background-color-white u-margin-b-050@desktop lrv-u-padding-b-150 u-padding-b-2@desktop u-padding-lr-2@desktop lrv-u-text-align-center\">\n\t\t\n\t\t\t\t\t<div class=\"o-story__secondary lrv-a-glue-parent // lrv-u-margin-b-1\">\n\n\t\t\t\t\t\t\t\t\t\n<div class=\"c-lazy-image   lrv-u-height-100p lrv-u-overflow-hidden\">\n\t\t\t<a href=\"https://example.com/foreign-story\" class=\"c-lazy-image__link lrv-a-unstyle-link\">\n\t\n\t\t\t<div class=\"lrv-a-crop-3x2 lrv-u-height-100p\" style=\"\">\n\t\n\t\t\t\t\t\t\n\t\t\t\n\t\t\t</div>\n\t\n\t\t\t</a>\n\t</div>\n\n\t\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\t\t\n\t\t<div class=\"o-story__primary //  lrv-u-padding-lr-050 u-order-n1\">\n\t\t\t\t\t\t\t\n<span class=\"c-span  lrv-u-display-block lrv-a-font-primary-xxs lrv-u-margin-b-025 lrv-u-text-transform-uppercase u-color-green u-text-decoration-underline:hover u-color-green:hover\">\n\n\tTop Story\n</span>\n\t\t\t\n\t\t\t\t\t\t\t\n<h3 id=\"title-of-a-story\" class=\"c-title  u-letter-spacing-088-important lrv-a-font-secondary-xl u-letter-spacing-063@mobile-max lrv-u-margin-b-050 js-LatestNewsButton-WaypointStart\">\n\n\t\n\t\t\t<a href=\"https://example.com/foreign-story\" class=\"c-title__link  lrv-u-color-black u-color-brand-accent-80:hover lrv-u-display-block\">\n\t\n\t\t\n\t\t\t\t\tBox Office: 'Other Mommy' Spooks Up $12.6 Million\t\t\n\t\t\t</a>\n\t\n</h3>\n\t\t\t\n\t\t\t\t\t</div>\n\n\t\t<div class=\"o-story__tertiary //  lrv-u-padding-lr-050\">\n\t\t\t\t\t\t\t\n\t<p class=\"c-dek  lrv-u-color-black lrv-a-font-secondary-regular-m lrv-u-margin-t-00 lrv-u-margin-b-075 u-letter-spacing-104-important\">The Jessica Chastain-led horror easily claimed the top spot at the box office Friday. </p>\n\n\t\t\t\n\t\t\t<div class=\"o-story__meta // \">\n\t\t\t\t\t\t\t\t\t\n<a class=\"c-link  u-color-medium-grey lrv-a-font-accent-regular-xs lrv-u-text-transform-capitalize u-text-decoration-underline:hover u-color-medium-grey:hover\" href=\"https://example.com/foreign-story\">\n\tBy Payton Turkeltaub</a>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t</article>",
+    "expected": [
+      {
+        "url": "https://variety.com/2026/film/box-office/box-office-other-mommy-verity-social-reckoning-1236907499/",
+        "title": "Box Office: 'Other Mommy' Spooks Up $12.6 Million",
+        "publishedAt": null
+      },
+      {
+        "url": "https://variety.com/2026/tv/news/netflix-mass-layoffs-1236906567/",
+        "title": "Netflix Is Preparing for Layoffs",
+        "publishedAt": null
+      },
+      {
+        "url": "https://variety.com/2026/film/news/skydance-warner-bros-pictures-culture-transformation-1236906881/",
+        "title": "How Skydance Will Remake the Warner Bros. Pictures Culture",
+        "publishedAt": null
+      }
+    ],
+    "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-10T15:45:34+00:00\">",
+    "readerPublishedAt": "2026-10-10T15:45:34.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "meta-ai",
+    "source": {
+      "id": "dn-meta-ai-7936e5a59ad1",
+      "name": "Meta AI · Blog",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "meta-ai",
+          "sectionId": "7936e5a59ad1",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "Blog",
+          "sectionUrl": "https://ai.meta.com/blog/",
+          "sourceCredibility": 84,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "ai",
+          "publisherKey": "publisher:meta-ai",
+          "language": "en-US",
+          "allowedHosts": [
+            "ai.meta.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "Meta AI blog latest",
+            "Meta artificial intelligence research"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://ai.meta.com/blog/"
+      },
+      "tier": "T2",
+      "first_party": true,
+      "owner_entity_id": "meta-ai",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://ai.meta.com/blog/",
+      "parseMode": "html",
+      "publishedAtUtcOffset": "+00:00",
+      "itemSelector": "a._amcw._amd2[href*=\"/blog/\"],a._amcw._amdf[href*=\"/blog/\"]",
+      "titleSelector": "a[href]",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtUtcOffset": "+00:00",
+        "publishedAtSelector": "span._amum",
+        "publishedAtAuthoritative": true
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      },
+      "linkSelector": "a[href]"
+    },
+    "html": "<a class=\"_amcw _amd2\" href=\"https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/\" data-ms-clickable=\"true\" data-ms=\"{&quot;creative&quot;:&quot;link&quot;}\" target=\"_self\" data-lnfb-mode=\"ie\" id=\"u_0_4_wD\">Introducing Muse Spark 1.1 </a><a class=\"_amcw _amdf\" aria-label=\"Read Reimagining Independence: How Meta’s AI Models Are Helping the University of Pittsburgh Transform Assistive Robotics\" href=\"https://ai.meta.com/blog/assistive-robotics-university-of-pittsburgh-sam-dino/\" data-ms-clickable=\"true\" data-ms=\"{&quot;creative&quot;:&quot;click_internal-link&quot;,&quot;creative_detail&quot;:&quot;latest-news-card-1&quot;}\" target=\"_self\" data-lnfb-mode=\"ie\" id=\"u_0_6_7N\">Reimagining Independence: How Meta’s AI Models Are Helping the University of Pittsburgh Transform Assistive Robotics</a><a class=\"_amcw _amdf\" aria-label=\"Read How Meta’s AI Models Are Powering the First Wave of Genesis Mission Projects\" href=\"https://ai.meta.com/blog/genesis-mission-lawrence-berkeley-national-laboratory-segment-anything-dino/\" data-ms-clickable=\"true\" data-ms=\"{&quot;creative&quot;:&quot;click_internal-link&quot;,&quot;creative_detail&quot;:&quot;latest-news-card-2&quot;}\" target=\"_self\" data-lnfb-mode=\"ie\" id=\"u_0_8_in\">How Meta’s AI Models Are Powering the First Wave of Genesis Mission Projects</a><nav><a href=\"/about\">About us</a></nav><a class=\"_amcw _amd2\" href=\"https://example.com/foreign-story\" data-ms-clickable=\"true\" data-ms=\"{&quot;creative&quot;:&quot;link&quot;}\" target=\"_self\" data-lnfb-mode=\"ie\" id=\"u_0_4_wD\">Introducing Muse Spark 1.1 </a>",
+    "expected": [
+      {
+        "url": "https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/",
+        "title": "Introducing Muse Spark 1.1",
+        "publishedAt": null
+      },
+      {
+        "url": "https://ai.meta.com/blog/assistive-robotics-university-of-pittsburgh-sam-dino/",
+        "title": "Reimagining Independence: How Meta’s AI Models Are Helping the University of Pittsburgh Transform Assistive Robotics",
+        "publishedAt": null
+      },
+      {
+        "url": "https://ai.meta.com/blog/genesis-mission-lawrence-berkeley-national-laboratory-segment-anything-dino/",
+        "title": "How Meta’s AI Models Are Powering the First Wave of Genesis Mission Projects",
+        "publishedAt": null
+      }
+    ],
+    "dateHtml": "<span class=\"_amum\">July 9, 2026</span>",
+    "readerPublishedAt": "2026-07-09T00:00:00.000Z",
+    "checkedAt": "2026-10-10T18:53:07.542Z"
+  },
+  {
+    "legacy": "yahoo-sports-nba",
+    "source": {
+      "id": "dn-yahoo-sports-nba-1dde5c41fd3a",
+      "name": "雅虎体育 NBA · NBA",
+      "kind": "web_list",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "yahoo-sports-nba",
+          "sectionId": "1dde5c41fd3a",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "NBA",
+          "sectionUrl": "https://sports.yahoo.com/nba/",
+          "sourceCredibility": 72,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:yahoo-sports-nba",
+          "language": "en-US",
+          "allowedHosts": [
+            "sports.yahoo.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "Yahoo Sports NBA latest news",
+            "Yahoo Sports NBA trades"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://sports.yahoo.com/nba/"
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    "configOverrides": {
+      "url": "https://sports.yahoo.com/nba/",
+      "parseMode": "html",
+      "itemSelector": "a[data-ylk*=\"ct:story;\"][data-ylk*=\"elm:hdln;\"][href*=\"/nba/article/\"]",
+      "linkSelector": "a[href]",
+      "titleSelector": "a[href]",
+      "detail": {
+        "titleSelector": "h1",
+        "maxFetches": 5,
+        "publishedAtRegex": "\"datePublished\"\\s*:\\s*\"([^\"<>]+)\"",
+        "publishedAtAuthoritative": true,
+        "publishedAtUtcOffset": "+00:00"
+      },
+      "dailyNews": {
+        "adapter": "web_list"
+      }
+    },
+    "html": "<a data-ylk=\"cpos:3;ct:story;elm:hdln;elmt:ct;g:036bf231-6ab3-486a-8e68-89a049a65061;itc:0;pos:3;slk:76ers' Joel Embiid also denies tardiness report, questions why it happened;\" data-yga=\"{&quot;yLinkPosition&quot;:3,&quot;yContentType&quot;:&quot;story&quot;,&quot;yLinkElement&quot;:&quot;hdln&quot;,&quot;yLinkElementType&quot;:&quot;ct&quot;,&quot;yDestinationContentUUID&quot;:&quot;036bf231-6ab3-486a-8e68-89a049a65061&quot;,&quot;yPosition&quot;:3,&quot;yLinkText&quot;:&quot;76ers' Joel Embiid also denies tardiness report, questions why it happened&quot;,&quot;yHasCommerce&quot;:false}\" href=\"/nba/article/76ers-joel-embiid-denies-tardiness-report-questions-why-it-happened-it-feels-like-im-an-easy-target-191017824.html\" class=\"_ys_1aqsz4n _ys_1hxm84 _ys_1vxcfte\"><div class=\"_ys_cigo1j\"><div class=\"_ys_4kfcss _ys_1sicxo9\"><h3 class=\"_ys_146eh2o _ys_1scea5i\"><div class=\"_ys_126lltl _ys_1lg0ykq _ys_iru395\">76ers' Joel Embiid also denies tardiness report, questions why it happened</div></h3></div></div></a><a data-ylk=\"cpos:4;ct:story;elm:hdln;elmt:ct;g:a4aef356-2987-406f-bbc2-07df235b81d1;itc:0;pos:4;slk:Russell Westbrook wants to be a torchbearer for the Los Angeles 2028 Olympics;\" data-yga=\"{&quot;yLinkPosition&quot;:4,&quot;yContentType&quot;:&quot;story&quot;,&quot;yLinkElement&quot;:&quot;hdln&quot;,&quot;yLinkElementType&quot;:&quot;ct&quot;,&quot;yDestinationContentUUID&quot;:&quot;a4aef356-2987-406f-bbc2-07df235b81d1&quot;,&quot;yPosition&quot;:4,&quot;yLinkText&quot;:&quot;Russell Westbrook wants to be a torchbearer for the Los Angeles 2028 Olympics&quot;,&quot;yHasCommerce&quot;:false}\" href=\"/nba/article/russell-westbrook-wants-to-be-a-torchbearer-for-the-los-angeles-2028-olympics-215043233.html\" class=\"_ys_1aqsz4n _ys_1hxm84 _ys_1vxcfte\"><div class=\"_ys_cigo1j\"><div class=\"_ys_4kfcss _ys_1sicxo9\"><h3 class=\"_ys_146eh2o _ys_1scea5i\"><div class=\"_ys_126lltl _ys_1lg0ykq _ys_iru395\">Russell Westbrook wants to be a torchbearer for the Los Angeles 2028 Olympics</div></h3></div></div></a><a data-ylk=\"cpos:5;ct:story;elm:hdln;elmt:ct;g:1020d8a4-53c5-403c-a0a8-5be40a66ef53;itc:0;pos:5;slk:Sengun registers triple-double as Rockets best Flagg-led Mavs in NBA China Game;\" data-yga=\"{&quot;yLinkPosition&quot;:5,&quot;yContentType&quot;:&quot;story&quot;,&quot;yLinkElement&quot;:&quot;hdln&quot;,&quot;yLinkElementType&quot;:&quot;ct&quot;,&quot;yDestinationContentUUID&quot;:&quot;1020d8a4-53c5-403c-a0a8-5be40a66ef53&quot;,&quot;yPosition&quot;:5,&quot;yLinkText&quot;:&quot;Sengun registers triple-double as Rockets best Flagg-led Mavs in NBA China Game&quot;,&quot;yHasCommerce&quot;:false}\" href=\"/nba/article/alperen-sengun-registers-triple-double-as-rockets-best-cooper-flagg-led-mavericks-in-nba-china-game-143317843.html\" class=\"_ys_1aqsz4n _ys_1hxm84 _ys_1vxcfte\"><div class=\"_ys_cigo1j\"><div class=\"_ys_4kfcss _ys_1sicxo9\"><h3 class=\"_ys_146eh2o _ys_1scea5i\"><div class=\"_ys_126lltl _ys_1lg0ykq _ys_iru395\">Sengun registers triple-double as Rockets best Flagg-led Mavs in NBA China Game</div></h3></div></div></a><nav><a href=\"/nba/\">NBA navigation</a></nav><a data-ylk=\"cpos:3;ct:story;elm:hdln;elmt:ct;g:036bf231-6ab3-486a-8e68-89a049a65061;itc:0;pos:3;slk:76ers' Joel Embiid also denies tardiness report, questions why it happened;\" data-yga=\"{&quot;yLinkPosition&quot;:3,&quot;yContentType&quot;:&quot;story&quot;,&quot;yLinkElement&quot;:&quot;hdln&quot;,&quot;yLinkElementType&quot;:&quot;ct&quot;,&quot;yDestinationContentUUID&quot;:&quot;036bf231-6ab3-486a-8e68-89a049a65061&quot;,&quot;yPosition&quot;:3,&quot;yLinkText&quot;:&quot;76ers' Joel Embiid also denies tardiness report, questions why it happened&quot;,&quot;yHasCommerce&quot;:false}\" href=\"https://example.com/foreign-story\" class=\"_ys_1aqsz4n _ys_1hxm84 _ys_1vxcfte\"><div class=\"_ys_cigo1j\"><div class=\"_ys_4kfcss _ys_1sicxo9\"><h3 class=\"_ys_146eh2o _ys_1scea5i\"><div class=\"_ys_126lltl _ys_1lg0ykq _ys_iru395\">76ers' Joel Embiid also denies tardiness report, questions why it happened</div></h3></div></div></a>",
+    "expected": [
+      {
+        "url": "https://sports.yahoo.com/nba/article/76ers-joel-embiid-denies-tardiness-report-questions-why-it-happened-it-feels-like-im-an-easy-target-191017824.html",
+        "title": "76ers' Joel Embiid also denies tardiness report, questions why it happened",
+        "publishedAt": null
+      },
+      {
+        "url": "https://sports.yahoo.com/nba/article/russell-westbrook-wants-to-be-a-torchbearer-for-the-los-angeles-2028-olympics-215043233.html",
+        "title": "Russell Westbrook wants to be a torchbearer for the Los Angeles 2028 Olympics",
+        "publishedAt": null
+      },
+      {
+        "url": "https://sports.yahoo.com/nba/article/alperen-sengun-registers-triple-double-as-rockets-best-cooper-flagg-led-mavericks-in-nba-china-game-143317843.html",
+        "title": "Sengun registers triple-double as Rockets best Flagg-led Mavs in NBA China Game",
+        "publishedAt": null
+      }
+    ],
+    "dateHtml": "<script type=\"application/ld+json\">{\"datePublished\":\"2026-10-09T18:53:50Z\"}</script>",
+    "readerPublishedAt": "2026-10-09T18:53:50.000Z"
+  }
+]

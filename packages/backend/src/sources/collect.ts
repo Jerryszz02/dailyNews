@@ -19,7 +19,7 @@ import { fetchXSearch, planXShards, readXSearch, shardHandle, shardQuery, SHARDA
 import { FetchError, type Candidate, type SourceRow } from "./types.ts";
 import { collectionDomain } from "../lib/collection-domain.ts";
 import { withRequestDeadline, currentRequestSignal } from "../lib/request-scope.ts";
-import { receiveCollection, type IntakeCandidate } from "./intake.ts";
+import { receiveCollection, initializedBaseline, publishedAfterInitialization, skipBeforeInitialization, type IntakeCandidate } from "./intake.ts";
 
 export interface CollectResult {
   sourceId: string;
@@ -88,8 +88,8 @@ export function boundedIncrementalCandidates(candidates: Candidate[], baseline: 
 /** A listing title that is no headline: a label that swallowed its summary, or a call to action. */
 const needsTitle = (title: string) => title.length > 100 || /^(read more|learn more|continue reading|more|阅读全文|阅读更多|查看详情|了解更多)$/i.test(title.trim());
 
-async function store(sourceId: string, candidates: Candidate[], backfill: string | null, trialId: string | null, runId?:number): Promise<{
-  created: number; revised: number; admittedNormal: number; admittedBackfill: number; notAdmitted: number; unchanged: number;
+async function store(sourceId: string, candidates: Candidate[], backfill: string | null, trialId: string | null, runId?:number, cursor?:Record<string,unknown> | null, baselineGate=false): Promise<{
+  created: number; revised: number; admittedNormal: number; admittedBackfill: number; notAdmitted: number; unchanged: number; baselineSkipped: number;
 }> {
   let created = 0;
   let revised = 0;
@@ -97,17 +97,19 @@ async function store(sourceId: string, candidates: Candidate[], backfill: string
   let admittedBackfill = 0;
   let notAdmitted = 0;
   let unchanged = 0;
+  let baselineSkipped = 0;
   for (const c of candidates) {
     const material = { ...c, sourceId, via: "fetch" as const, backfill };
     // In a bounded trial, an interrupted admission must not leave a committed article that
     // the next fetch treats as unchanged and therefore never admits. Keep the material and
     // its immutable ledger entry in the same transaction; queueing can resume from that ledger.
-    const {res,admission,lane}=await sql.begin(async tx=>{
+    const storedResult=await sql.begin(async tx=>{
       if(runId){
         await tx`SELECT pg_advisory_xact_lock(hashtext('collection-source'),hashtext(${sourceId}))`;
         const [owner]=await tx`SELECT collection_run_id FROM sources WHERE id=${sourceId}`;
         if(Number(owner?.collection_run_id)!==Number(runId))throw new Error("collection run superseded");
       }
+      if (baselineGate && await skipBeforeInitialization(tx,c,sourceId,cursor ?? null,backfill)) return null;
       const res=await upsertMaterial(material,tx);
       const lane=res.backfill?"backfill":"normal";
       const admission=trialId&&(res.created||res.revised)?await admitArticle(res.articleId,{lane},tx):null;
@@ -115,6 +117,8 @@ async function store(sourceId: string, candidates: Candidate[], backfill: string
       if((res.created||res.revised)&&(!admission||admission.admitted))await queueProcessing(res.articleId,{db:tx});
       return {res,admission,lane};
     });
+    if (!storedResult) { baselineSkipped++; continue; }
+    const {res,admission,lane}=storedResult;
     if (res.created) created += 1;
     if (res.revised) revised += 1;
     if (!res.created && !res.revised) { unchanged += 1; continue; }
@@ -128,7 +132,7 @@ async function store(sourceId: string, candidates: Candidate[], backfill: string
     // Extraction first when the source wants full text and none came with the listing, else analysis.
 
   }
-  return { created, revised, admittedNormal, admittedBackfill, notAdmitted, unchanged };
+  return { created, revised, admittedNormal, admittedBackfill, notAdmitted, unchanged, baselineSkipped };
 }
 
 export function collectSource(sourceId: string, opts: { force?: boolean; trialId?: string; deferred?: boolean } = {}): Promise<CollectResult> {
@@ -176,7 +180,11 @@ async function collectSourceRun(sourceId:string,opts:{force?:boolean;trialId?:st
   });
   if(!run)return {sourceId,status:"skipped",found:0,created:0,revised:0,error:"collection pending"};
   const fetchStarted=performance.now();
-  const firstImport = !source.cursor?.initializedAt;
+  const baselineGate = source.config.dailyNews !== undefined;
+  const baseline = initializedBaseline(source.cursor);
+  const firstImport = baseline === null;
+  const initializedAt = new Date().toISOString();
+  let baselineSkipped = 0;
   let created = 0;
   let revised = 0;
   let found = 0;
@@ -253,6 +261,8 @@ async function collectSourceRun(sourceId:string,opts:{force?:boolean;trialId?:st
       if (!unique.has(identityKey)) unique.set(identityKey, { ...c, identityKey });
     }
     candidates = [...unique.values()];
+    // Identity checks precede history filtering, so already stored pages can still be corrected.
+    const known = await storedTitles(candidates.map((c) => c.identityKey!));
     // First import of a new source: bounded, and archived by source time (never "today", never pushed).
     const backfillLimit = Number(source.config._aihot?.initialBackfillLimit ?? 30);
     const backfillMonths = Number(source.config._aihot?.initialBackfillMonths ?? 12);
@@ -263,13 +273,20 @@ async function collectSourceRun(sourceId:string,opts:{force?:boolean;trialId?:st
       // A source's initial import is history regardless of timestamp. Later listings can be huge
       // (OpenAI's feed has >1,000 entries); old published material is never a trial "new" item.
       // When the feed's date is not authoritative, the detail rule checks the article page below.
-      candidates = boundedIncrementalCandidates(candidates, trialBaseline, source.config.detail?.publishedAtAuthoritative === true);
+      candidates = [...candidates.filter(c=>known.has(c.identityKey!)), ...boundedIncrementalCandidates(candidates.filter(c=>!known.has(c.identityKey!)), trialBaseline, source.config.detail?.publishedAtAuthoritative === true)];
     }
-    // Process all candidates already returned before advancing the success cursor.
+    if (baselineGate && !firstImport && baseline) {
+      const before = candidates.length;
+      candidates = candidates.filter((c) => known.has(c.identityKey!) ||
+        (source.config.detail?.publishedAtAuthoritative !== true && publishedAfterInitialization(c,baseline)) ||
+        (!!source.config.detail && Number(source.config.detail.maxFetches ?? 0) > 0 &&
+          (source.config.detail.publishedAtAuthoritative === true || !c.publishedAt)));
+      baselineSkipped += before - candidates.length;
+    }
+    // Process all admitted listing records before advancing the success cursor.
 
     // Detail pages only for material we have not seen (bounded per run), and only for what the listing lacks.
     const d = source.config.detail;
-    const known = d ? await storedTitles(candidates.map((c) => c.identityKey!)) : new Map<string, StoredListing>();
     const detailBudget = Number(d?.maxFetches ?? 0);
     let detailUsed = 0;
     const intake: IntakeCandidate[] = [];
@@ -325,18 +342,20 @@ async function collectSourceRun(sourceId:string,opts:{force?:boolean;trialId?:st
     currentRequestSignal()?.throwIfAborted();
     if(opts.deferred) {
       delete nextCursor.jinaListingRound;
-      if(firstImport)nextCursor.initializedAt=new Date().toISOString();
+      if(firstImport)nextCursor.initializedAt=initializedAt;
       nextCursor.lastOkAt=new Date().toISOString();
       const stages={fetchMs:Math.round(performance.now()-fetchStarted),received:candidates.length,detailQueued:intake.filter(i=>i.need).length};
       await sql`UPDATE fetch_runs SET found_count=${found},detail=${sql.json({...detail,stages} as never)} WHERE id=${run.id}`;
-      await receiveCollection(run.id,sourceId,intake,{trialId,backfill:firstImport?"first-import":null,cursor:nextCursor,receiptIds:paidReceiptIds,detail:{...detail,stages}});
+      await receiveCollection(run.id,sourceId,intake,{trialId,backfill:firstImport?"first-import":null,cursor:nextCursor,receiptIds:paidReceiptIds,detail:{...detail,stages,baselineSkipped,baselineGate}});
       return {sourceId,status:"ok",found,created:0,revised:0,pending:candidates.length>0};
     }
-    ({ created, revised, ...trialCounts } = await store(sourceId, candidates, firstImport ? "first-import" : null, trialId ?? null, run.id));
+    const stored = await store(sourceId, candidates, firstImport ? "first-import" : null, trialId ?? null, run.id, source.cursor, baselineGate);
+    ({created,revised,...trialCounts} = {created:stored.created,revised:stored.revised,admittedNormal:stored.admittedNormal,admittedBackfill:stored.admittedBackfill,notAdmitted:stored.notAdmitted,unchanged:stored.unchanged});
+    baselineSkipped += stored.baselineSkipped;
 
     // A Jina listing round that was pending when this run started has been received by now.
     delete nextCursor.jinaListingRound;
-    if (firstImport) nextCursor.initializedAt = new Date().toISOString();
+    if (firstImport) nextCursor.initializedAt = initializedAt;
     nextCursor.lastOkAt = new Date().toISOString();
     await sql.begin(async (tx) => {
       await tx`
@@ -344,7 +363,7 @@ async function collectSourceRun(sourceId:string,opts:{force?:boolean;trialId?:st
           health = 'ok', cursor = ${tx.json(nextCursor as never)}, updated_at = now(),
           next_fetch_at = now() + make_interval(mins => interval_minutes)
         WHERE id = ${sourceId} AND collection_run_id=${run.id}`;
-      const runDetail = trialId ? { ...(detail ?? {}), boundedTrial: { id: trialId, revised, ...trialCounts } } : detail;
+      const runDetail = trialId ? { ...(detail ?? {}), baselineSkipped, boundedTrial: { id: trialId, revised, ...trialCounts } } : baselineGate ? { ...(detail ?? {}), baselineSkipped } : detail;
       await tx`UPDATE fetch_runs SET status = 'ok', finished_at = now(), found_count = ${found}, new_count = ${created},
                   detail = ${runDetail ? tx.json(runDetail as never) : null} WHERE id = ${run!.id}`;
       for (const receiptId of paidReceiptIds) await completeReceipt(tx, receiptId);
@@ -352,7 +371,23 @@ async function collectSourceRun(sourceId:string,opts:{force?:boolean;trialId?:st
     return { sourceId, status: "ok", found, created, revised,
       ...(trialId ? { trial: { id: trialId, ...trialCounts } } : {}) };
   } catch (error) {
-    if (shutdownSignal.signal.aborted) throw error;
+    if (shutdownSignal.signal.aborted) {
+      // A received listing belongs to durable intake recovery. Before that checkpoint, a
+      // stopped worker has nothing to resume: release its lease without blaming the source.
+      await sql.begin(async (tx) => {
+        await tx`SELECT pg_advisory_xact_lock(hashtext('collection-source'),hashtext(${sourceId}))`;
+        await tx`SELECT id FROM sources WHERE id=${sourceId} FOR UPDATE`;
+        const [interrupted] = await tx`
+          UPDATE fetch_runs SET status='failed', finished_at=now(), error='collection interrupted by shutdown',
+            found_count=${found}, new_count=${created}
+          WHERE id=${run.id} AND status='running' AND NOT EXISTS (
+            SELECT 1 FROM collection_intakes WHERE run_id=${run.id}
+          ) RETURNING id`;
+        if (interrupted) await tx`UPDATE sources SET collection_run_id=NULL
+          WHERE id=${sourceId} AND collection_run_id=${run.id}`;
+      });
+      throw error;
+    }
     const message = String(error instanceof Error ? error.message : error).slice(0, 1000);
     const budget = error instanceof BudgetExceededError;
     await sql`

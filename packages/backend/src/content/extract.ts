@@ -23,8 +23,124 @@ export interface ExtractedBody {
 
 const MIN_BODY_CHARS = 200;
 
-export function readable(html: string, url: string): ExtractedBody | null {
+/** Video landing pages are not transcripts: Readability often selects recommended clips. */
+export function videoTranscript(html: string, url: string): { video: boolean; transcript: string | null } {
   const { document } = parseHTML(html);
+  const objects: Record<string, unknown>[] = [];
+  const visit = (value: unknown) => {
+    if (Array.isArray(value)) value.forEach(visit);
+    else if (value && typeof value === "object") {
+      const row = value as Record<string, unknown>;
+      objects.push(row);
+      Object.values(row).forEach(visit);
+    }
+  };
+  for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
+    try { visit(JSON.parse(script.textContent ?? "")); } catch { /* malformed metadata */ }
+  }
+  const videos = objects.filter(row => [row["@type"]].flat().includes("VideoObject"));
+  const articlePage = objects.some(row => [row["@type"]].flat().some(type => /^(?:NewsArticle|Article|BlogPosting)$/i.test(String(type))));
+  const video = /\/(?:videos?|video)\//i.test(new URL(url).pathname) ||
+    /video/i.test(document.querySelector('meta[property="og:type"]')?.getAttribute("content") ?? "") || (videos.length > 0 && !articlePage);
+  // A related clip's transcript must never stand in for this page's clip.
+  const normalized = (value: unknown) => {
+    try { const u = new URL(String(value), url); return `${u.origin}${u.pathname.replace(/\/$/, "")}`; } catch { return ""; }
+  };
+  const own = videos.find(row => [row.url, row.mainEntityOfPage, row["@id"]].some(value =>
+    normalized(value && typeof value === "object" ? (value as Record<string, unknown>)["@id"] : value) === normalized(url)));
+  const transcript = typeof own?.transcript === "string" ? stripTags(sanitizeBody(own.transcript, url)).trim() : null;
+  return { video, transcript: transcript && transcript.length >= MIN_BODY_CHARS ? transcript : null };
+}
+
+// The backend has no browser DOM globals; these are the parsed HTML operations used below.
+type StaticElement = {
+  tagName: string; textContent: string | null; children: ArrayLike<StaticElement>; parentElement: StaticElement | null;
+  getAttribute(name: string): string | null; removeAttribute(name: string): void;
+  querySelector(selector: string): StaticElement | null; querySelectorAll(selector: string): ArrayLike<StaticElement>;
+  closest(selector: string): StaticElement | null; replaceWith(node: StaticElement): void; remove(): void;
+};
+
+/** Yahoo's public React stream contains the article body as HTML, waiting for one $RC insertion.
+ * Restore only that exact static association; never evaluate the script or expose arbitrary hidden nodes.
+ */
+function restoreYahooArticleStream(document: ReturnType<typeof parseHTML>["document"], url: string): boolean {
+  const page = new URL(url);
+  if (page.protocol !== "https:" || page.hostname !== "sports.yahoo.com" || !/^\/nba\/article\/[^/]+\.html$/.test(page.pathname)) return true;
+  const bodies = Array.from(document.querySelectorAll('div[hidden][id^="S:"] > .content-body')) as StaticElement[];
+  if (!bodies.length) return true;
+  if (bodies.length !== 1) return false;
+  const identity = (value: unknown): string => {
+    try { const u = new URL(String(value), url); return `${u.origin}${u.pathname}`; } catch { return ""; }
+  };
+  if (identity(document.querySelector('link[rel="canonical"]')?.getAttribute("href")) !== identity(url)) return false;
+  const articles = (Array.from(document.querySelectorAll('article.story-container[id^="article-"]')) as StaticElement[]).filter(article =>
+    (Array.from(article.querySelectorAll('script[type="application/ld+json"]')) as StaticElement[]).some(script => {
+      try {
+        const row = JSON.parse(script.textContent ?? "") as Record<string, unknown>;
+        const own = row.mainEntityOfPage && typeof row.mainEntityOfPage === "object" ? (row.mainEntityOfPage as Record<string, unknown>)["@id"] : row.mainEntityOfPage;
+        return row["@type"] === "NewsArticle" && identity(own) === identity(url) && ![false, "false"].includes(row.isAccessibleForFree as boolean | string);
+      } catch { return false; }
+    }));
+  if (articles.length !== 1) return false;
+  const holder = bodies[0]!.parentElement!;
+  const streamId = holder.getAttribute("id") ?? "";
+  if (!/^S:\d+$/.test(streamId) || holder.children.length !== 1 || document.querySelectorAll(`[id="${streamId}"]`).length !== 1) return false;
+  const pairs: Array<{ boundary: string; stream: string }> = [];
+  for (const script of document.querySelectorAll("script")) {
+    const match = /^\s*\$RC\("(B:\d+)","(S:\d+)"\)\s*;?\s*$/.exec(script.textContent ?? "");
+    if (match) pairs.push({ boundary: match[1]!, stream: match[2]! });
+  }
+  const matches = pairs.filter(pair => pair.stream === streamId);
+  if (matches.length !== 1 || pairs.filter(pair => pair.boundary === matches[0]!.boundary).length !== 1) return false;
+  const placeholders = Array.from(document.querySelectorAll(`[id="${matches[0]!.boundary}"]`)) as StaticElement[];
+  if (placeholders.length !== 1 || placeholders[0]!.tagName !== "TEMPLATE" || placeholders[0]!.closest("article") !== articles[0]) return false;
+  placeholders[0]!.replaceWith(bodies[0]!);
+  holder.remove();
+  return true;
+}
+
+/** This public Red Star template hides its article only while images load. The observed
+ * base-hongxing.js always shows .wrapper after 500 ms; no scripts are executed here.
+ */
+function restoreRedStarArticle(document: ReturnType<typeof parseHTML>["document"], url: string): boolean {
+  const page = new URL(url);
+  if (page.protocol !== "https:" || page.hostname !== "static.cdsb.com" || !/^\/micropub\/Articles\/20\d{4}\/[a-f0-9]{32}\.html$/.test(page.pathname)) return true;
+  const wrappers = Array.from(document.querySelectorAll('div.wrapper[style]')) as StaticElement[];
+  const hidden = wrappers.filter(node => /display\s*:\s*none/i.test(node.getAttribute("style") ?? ""));
+  if (!hidden.length) return true;
+  if (hidden.length !== 1 || wrappers.length !== 1 || !/^\s*display\s*:\s*none\s*;?\s*$/i.test(hidden[0]!.getAttribute("style") ?? "")) return false;
+  const bodies = Array.from(document.querySelectorAll('div.wrapper > section.cd-article > article.cd-article_content')) as StaticElement[];
+  if (bodies.length !== 1 || document.querySelectorAll('article.cd-article_content').length !== 1 || bodies[0]!.closest('div.wrapper') !== hidden[0]) return false;
+  const section = bodies[0]!.parentElement!;
+  const title = section.querySelector('h1.title')?.textContent?.trim();
+  const date = section.querySelector('#article-time')?.textContent?.trim() ?? "";
+  if (!title || title !== document.querySelector('title')?.textContent?.trim() || !/^20\d{2}-\d{2}-\d{2} \d{2}:\d{2}$/.test(date) || !section.querySelector('.subtitle .source')?.textContent?.trim()) return false;
+  const loadingScript = (Array.from(document.querySelectorAll('script[src]')) as StaticElement[]).some(script => {
+    try { const u = new URL(script.getAttribute('src') ?? '', url); return u.protocol === 'https:' && u.hostname === 'staticfilecdn.cdsb.com' && u.pathname === '/staticfile/js/base-hongxing.js'; } catch { return false; }
+  });
+  if (!loadingScript) return false;
+  hidden[0]!.removeAttribute('style');
+  return true;
+}
+
+export function readable(html: string, url: string): ExtractedBody | null {
+  const video = videoTranscript(html, url);
+  if (video.video) {
+    if (!video.transcript) return null;
+    const clean = sanitizeBody(`<p>${video.transcript.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`, url);
+    return { html: clean, text: video.transcript, images: [], via: "readability" };
+  }
+  const { document } = parseHTML(html);
+  if (!restoreYahooArticleStream(document, url) || !restoreRedStarArticle(document, url)) return null;
+  for (const node of document.querySelectorAll('aside, nav, footer, [role="navigation"], [class*="related"], [class*="recommend"]')) node.remove();
+  for (const node of document.querySelectorAll('[class*="sidebar"]')) {
+    // These observed layout classes describe the article beside a sidebar, or its absence.
+    // Removing their ancestor would remove the entire story (including body.no-sidebar).
+    const classes: string[] = String(node.getAttribute("class") ?? "").split(/\s+/);
+    if (["BODY", "HTML", "MAIN"].includes(node.tagName) || classes.some(name =>
+      /^(?:no-sidebars?|article-with-sidebar|t-content__(?:with|beside)-sidebar)$/.test(name))) continue;
+    node.remove();
+  }
   try {
     const base = document.createElement("base");
     base.setAttribute("href", url);
@@ -52,13 +168,16 @@ export async function extractFromUrl(url: string, opts: { allowJina: boolean; su
     const res = await guardedFetch(url, { timeoutMs: 20_000, maxBytes: 6 * 1024 * 1024 });
     const type = res.headers.get("content-type") ?? "";
     if (res.status === 200 && /html/.test(type)) {
-      const got = readable(res.text(), res.url);
+      const html = res.text();
+      // Jina would flatten the same recommendations; a transcript-less video stays unconfirmed.
+      if (videoTranscript(html, res.url).video) return readable(html, res.url);
+      const got = readable(html, res.url);
       if (got) return got;
     }
   } catch {
     // fall through to Jina
   }
-  if (!opts.allowJina) return null;
+  if (!opts.allowJina || /\/(?:videos?|video)\//i.test(new URL(url).pathname)) return null;
   try {
     const page = await jinaRead(url, { purpose: "body_fallback", subject: opts.subject });
     const html = markdownBody(page.markdown, url);

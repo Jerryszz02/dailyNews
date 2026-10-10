@@ -95,7 +95,7 @@ test("history waits behind live work and founds no event; a new source's post fr
 
   const fresh = await report("fresh", { title: `新闻 ${T}`, backfill: "first-import", publishedAt: new Date(Date.now() - 3_600_000) });
   await queueProcessing(fresh, { step: "analyze" });
-  assert.equal((await job(fresh))?.priority, 0);
+  assert.equal((await job(fresh))?.priority, -2, "recent first-import waits behind genuine incremental news without changing event eligibility");
   assert.notEqual((await groupArticle(fresh)).verdict, "historical");
   assert.equal((await sql`SELECT 1 FROM fact_articles WHERE article_id = ${fresh}`).length, 1);
 });

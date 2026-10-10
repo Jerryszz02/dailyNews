@@ -5,6 +5,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { actorOf } from "@aihot/backend/admin/auth";
 
 import { importSelectBenchRun, listSelectBenchRuns, selectBenchRun } from "@aihot/backend/admin/selectbench";
+import { createReviewBatch, exportReview, reviewBatch, reviewOverview, saveReviewAnswer } from "@aihot/backend/admin/review";
 import { modelsOverview, switchModel } from "@aihot/backend/admin/models";
 
 import { contentChain, overrideFields, rerun, searchContent, setSeoIndexed, setVisibility } from "@aihot/backend/admin/content";
@@ -122,6 +123,16 @@ export function registerAdmin(app: FastifyInstance) {
   app.post("/api/admin/models/:capability", adminHandler(async (req, _reply, admin) => {
     const b = body<{ model: string | null; reason: string }>(req);
     return switchModel(param(req, "capability"), b.model ?? null, String(b.reason ?? ""), actorOf(admin));
+  }));
+
+  // Local human review: reads/export require admin; writes additionally require CSRF.
+  app.get("/api/admin/review", adminHandler(async () => reviewOverview()));
+  app.post("/api/admin/review/batches", adminHandler(async (req, _reply, admin) => createReviewBatch(body(req) as never, actorOf(admin))));
+  app.get("/api/admin/review/batches/:id", adminHandler(async (req, reply) => orNotFound(req, reply, await reviewBatch(param(req, "id")))));
+  app.post("/api/admin/review/tasks/:id/answer", adminHandler(async (req, reply, admin) => orNotFound(req, reply, await saveReviewAnswer(param(req, "id"), body(req) as never, actorOf(admin)))));
+  app.get("/api/admin/review/export", adminHandler(async (req, reply) => {
+    const exported = await exportReview(q(req).format ?? "json", q(req).batchId);
+    return reply.type(exported.type).header("Content-Disposition", `attachment; filename="news-review.${exported.extension}"`).send(exported.content);
   }));
 
   // SelectBench

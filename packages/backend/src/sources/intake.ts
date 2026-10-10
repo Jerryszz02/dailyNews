@@ -2,7 +2,7 @@
 import { sql, type Db } from "../db.ts";
 import { collectionDomain } from "../lib/collection-domain.ts";
 import { withRequestDeadline } from "../lib/request-scope.ts";
-import { upsertMaterial, contentHash } from "../content/materials.ts";
+import { upsertMaterial, contentHash, decideTimeline, identityKeyFor } from "../content/materials.ts";
 import { admitArticle, assertTrialRuntime } from "../dailynews/trial.ts";
 import { queueProcessing } from "../jobs/content.ts";
 import { enqueue, QUEUES, shutdownSignal } from "../jobs/queue.ts";
@@ -15,6 +15,25 @@ import {
 import { lockEditorialProjection } from "../publication/reprocess.ts";
 import { fetchDetail, type DetailNeed } from "./web-list.ts";
 import { FetchError, type Candidate, type SourceRow } from "./types.ts";
+
+/** A committed source initialization is the boundary between its history and actual new posts. */
+export function initializedBaseline(cursor: Record<string, unknown> | null | undefined): Date | null {
+  const at = new Date(String(cursor?.initializedAt ?? ""));
+  return Number.isFinite(at.getTime()) ? at : null;
+}
+export function publishedAfterInitialization(candidate: Candidate, baseline: Date): boolean {
+  const trusted = decideTimeline(candidate.publishedAt, new Date()).publishedAt;
+  return trusted !== null && trusted.getTime() > baseline.getTime();
+}
+export async function skipBeforeInitialization(db: Db, c: Candidate, sourceId: string, cursor: Record<string, unknown> | null, backfill: string | null): Promise<boolean> {
+  if (backfill) return false;
+  const baseline = initializedBaseline(cursor);
+  if (!baseline || publishedAfterInitialization(c, baseline)) return false;
+  // Existing materials always reach upsert: source corrections/retractions remain observable.
+  const identity = identityKeyFor({...c, sourceId, via: "fetch"});
+  const [known] = await db`SELECT 1 FROM articles WHERE identity_key=${identity}`;
+  return !known;
+}
 
 export interface IntakeCandidate {
   candidate: Candidate;
@@ -82,6 +101,7 @@ async function finishCollection(tx: Db, runId: number) {
     count(*) FILTER (WHERE (i.result->>'created')::boolean)::int AS created,
     count(*) FILTER (WHERE (i.result->>'revised')::boolean)::int AS revised,
     count(*) FILTER (WHERE i.result->>'unchanged'='true')::int AS unchanged,
+    count(*) FILTER (WHERE i.result->>'baselineSkipped'='true')::int AS baseline_skipped,
     coalesce(sum((i.result->>'admittedNormal')::int),0)::int AS normal,
     coalesce(sum((i.result->>'admittedBackfill')::int),0)::int AS backfill,
     coalesce(sum((i.result->>'notAdmitted')::int),0)::int AS refused,
@@ -90,6 +110,7 @@ async function finishCollection(tx: Db, runId: number) {
     FROM collection_items i JOIN collection_batches b ON b.id=i.batch_id WHERE b.run_id=${runId}`;
   const detail = {
     ...run.detail,
+    baselineSkipped: Number(run.detail.baselineSkipped ?? 0) + Number(counts!.baseline_skipped),
     stages: {
       ...run.detail.stages,
       saved: counts!.saved,
@@ -131,6 +152,12 @@ async function saveInput(
 ) {
   const started = performance.now();
   const c = enriched ?? restore(input.candidate);
+  if (input.intake_detail?.baselineGate === true && await skipBeforeInitialization(tx, c, input.source_id, input.cursor, input.backfill)) {
+    const result = { created: false, revised: false, unchanged: true, baselineSkipped: true,
+      skipReason: c.publishedAt ? "pre-initialization" : "date-unconfirmed", detailMs, storeMs: Math.round(performance.now() - started) };
+    await tx`UPDATE collection_items SET completed_at=now(),result=${tx.json(result)} WHERE id=${input.id}`;
+    return { state: "saved", ...result };
+  }
   const res = await upsertMaterial(
     { ...c, sourceId: input.source_id, via: "fetch", backfill: input.backfill },
     tx,
@@ -189,7 +216,7 @@ async function ownRun(
 async function saveItem(itemId: number, enriched?: Candidate, detailMs = 0) {
   return sql.begin(async (tx) => {
     const [input] =
-      await tx`SELECT i.*,b.run_id,r.source_id,r.trial_id,r.backfill FROM collection_items i
+      await tx`SELECT i.*,b.run_id,r.source_id,r.trial_id,r.backfill,r.cursor,r.detail AS intake_detail FROM collection_items i
       JOIN collection_batches b ON b.id=i.batch_id JOIN collection_intakes r ON r.run_id=b.run_id WHERE i.id=${itemId}`;
     if (!input || input.completed_at) return { state: "complete" };
     await ownRun(tx, input.source_id, Number(input.run_id), input.trial_id);
@@ -205,7 +232,7 @@ async function saveItem(itemId: number, enriched?: Candidate, detailMs = 0) {
 export async function storeCollectionBatch(batchId: number) {
   return sql.begin(async (tx) => {
     const [batch] =
-      await tx`SELECT b.*,r.source_id,r.trial_id,r.backfill FROM collection_batches b JOIN collection_intakes r ON r.run_id=b.run_id WHERE b.id=${batchId}`;
+      await tx`SELECT b.*,r.source_id,r.trial_id,r.backfill,r.cursor,r.detail AS intake_detail FROM collection_batches b JOIN collection_intakes r ON r.run_id=b.run_id WHERE b.id=${batchId}`;
     if (!batch) return { items: 0 };
     await ownRun(tx, batch.source_id, Number(batch.run_id), batch.trial_id);
     const items =

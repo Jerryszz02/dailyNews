@@ -131,3 +131,18 @@ test("same URL keeps its deterministic fact without a model call", async () => {
   assert.equal(result.storyId, target.storyId);
   assert.equal(provider.hits(), hits);
 });
+
+
+test("derived fact and story titles retain published prediction and attribution instead of structure's unsafe title", async () => {
+  const title = `据交通部门预计出行量超过3亿人次${tag()}`;
+  const id = await article(title, `https://example.com/${SOURCE}/modality-${tag()}`);
+  await sql`UPDATE analyses SET output=${sql.json({ fact: { title: "出行量突破3亿人次", subject: "出行量", action: "突破" } })} WHERE article_id=${id}`;
+  batchConfidence = 0;
+  const result = await groupArticle(id);
+  const [fact] = await sql`SELECT title,subject,action FROM facts WHERE id=${result.factId!}`;
+  const [story] = await sql`SELECT title FROM stories WHERE id=${result.storyId!}`;
+  assert.equal(fact!.title, title);
+  assert.equal(fact!.subject, null);
+  assert.equal(fact!.action, null);
+  assert.equal(story!.title, title);
+});

@@ -1,0 +1,1388 @@
+{
+  "checkedAt": "2026-10-10T18:56:18.857Z",
+  "fixtures": [
+    {
+      "id": "dn-21jingji-2da9280bfa25",
+      "baseUrl": "https://www.21jingji.com/",
+      "config": {
+        "itemSelector": ".top-news a[href*=\"/article/\"][href*=\"/herald/\"]",
+        "titleSelector": "h2",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "maxFetches": 10
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "21jingji",
+          "sectionId": "2da9280bfa25",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "财经",
+          "sectionUrl": "https://www.21jingji.com/",
+          "sourceCredibility": 70,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "finance",
+          "publisherKey": "publisher:21jingji",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "21jingji.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "21世纪经济报道 财经",
+            "21世纪经济报道 金融 市场"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.21jingji.com/"
+      },
+      "listingHtml": "<div class=\"top-news\">\n                                        <a href=\"https://m.21jingji.com/article/20261010/herald/bbfe198732ded510ac4f4fd8cb661888.html\" title=\"吴清座谈会释放重要信号！涉储备增量政策工具等\"><label>焦点</label><h2>吴清座谈会释放重要信号！涉储备增量政策工具等</h2>\n                        <p>证券 5小时前</p>\n                    </a>\n                                        <a href=\"https://m.21jingji.com/article/20261010/herald/69518d61324da03313c216369bfb9c69.html\" title=\"国家发改委：及时谋划更多带动性强的政策工具、工作抓手，推动经济持续向好发展\"><label>焦点</label><h2>国家发改委：及时谋划更多带动性强的政策工具、工作抓手，推动经济持续向好发展</h2>\n                        <p>宏观 6小时前</p>\n                    </a>\n                                    </div>",
+      "expectedUrls": [
+        "https://m.21jingji.com/article/20261010/herald/bbfe198732ded510ac4f4fd8cb661888.html",
+        "https://m.21jingji.com/article/20261010/herald/69518d61324da03313c216369bfb9c69.html"
+      ],
+      "date": {
+        "html": "<script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"NewsArticle\",\"headline\":\"吴清座谈会释放重要信号！涉储备增量政策工具等\",\"description\":\"21世纪经济报道 记者 崔文静 &nbsp;10月10日，证监会党委书记、主席吴清在北京主持召开座谈会，与部分上市公司负责人、证券基金机构专家深入交流，就当前资本市场和金融形势充分听取意见建议。会上，...\",\"datePublished\":\"2026-10-10T20:47:00+08:00\",\"dateModified\":\"2026-10-10T20:47:53+08:00\",\"author\":[{\"@type\":\"Person\",\"name\":\"崔文静\"}],\"publisher\":{\"@type\":\"Organization\",\"name\":\"21世纪经济报道\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://static.21jingji.com/images/m/icon_logo.png\",\"width\":80,\"height\":80}},\"image\":[\"https://ocmsmedia.sfccn.com/vod-4310da/image/default/90242601F7F641588286FC0F0577A8A6-6-2.jpg\"],\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://m.21jingji.com/article/20261010/herald/bbfe198732ded510ac4f4fd8cb661888.html\"}}</script>",
+        "expected": "2026-10-10T12:47:00.000Z",
+        "readerUrl": "https://m.21jingji.com/article/20261010/herald/bbfe198732ded510ac4f4fd8cb661888.html"
+      }
+    },
+    {
+      "id": "dn-bjnews-16e6e253e20e",
+      "baseUrl": "https://www.bjnews.com.cn/",
+      "config": {
+        "itemSelector": ".pin_tips a[href*=\"/detail/\"], .pin_demo a[href*=\"/detail/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".timer",
+          "summarySelector": "article.clearfix > .fl.article > .articleCenter #contentStr > .content-name, article.clearfix > .fl.article > .articleCenter #contentStr > .introduction-video"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "bjnews",
+          "sectionId": "16e6e253e20e",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "社会",
+          "sectionUrl": "https://www.bjnews.com.cn/",
+          "sourceCredibility": 72,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "society",
+          "publisherKey": "publisher:bjnews",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "bjnews.com.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "新京报 社会",
+            "新京报 热点"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.bjnews.com.cn/"
+      },
+      "listingHtml": "<div class=\"pin_demo\">\n                                    <a href=\"https://www.bjnews.com.cn/detail/1791634966129251.html\">\n                                        <div class=\"pin_tit\">\n                                                                                        外交部：暂无中国公民在巴拿马地震中伤亡报告                                        </div>\n                                    </a>\n                                    <!-- 无图稿件判断 start-->\n                                                                                                            <div class=\"imgBor\">\n                                                                                                                                                                <a href=\"https://www.bjnews.com.cn/detail/1791634966129251.html\">\n                                            \n                                                                                                                                </a>\n                                    </div>\n                                                                                <!--无图稿件判断 end-->\n                                                                                                            <div class=\"bom\">\n                                        <span class=\"source\">\n                                                                                        第一看点                                        </span>\n                                        <!-- 如果tag或者数量没有则不显示竖线 -->\n                                                                                <!-- 有什么数显示什么数，只显示一个 -->\n                                                                                <!-- 如果有时间显示时间 -->\n                                        \n                                        <!-- 分享 -->\n                                        <div class=\"share-to\">\n                                            <!-- 专题 h5不显示点赞祈福按钮-->\n                                                                                        <!-- 点赞 -->\n                                                <input class=\"pubu_dianzan\">\n                                            <span class=\"dianzan-move2\"><i></i>+1</span>\n                                            <span id=\"qwlike\"></span> \n                                            \n                                            <!-- 微博分享 -->\n                                            <span class=\"sina\" id=\"v4_s\">\n                                                <a href=\"http://service.weibo.com/share/share.php?url=https://www.bjnews.com.cn/detail/1791634966129251.html&amp;title=外交部：暂无中国公民在巴拿马地震中伤亡报告&amp;pic=\">\n                                                    <span class=\"weibo yunafen\"></span>\n                                                </a>\n                                            </span>\n                                            <!-- 微信分享 -->\n                                            <span class=\"weixin\">\n                                                <div class=\"weixin-code\">\n                                                    <p class=\"wx-t\">分享到微信朋友圈</p>\n                                                    <div class=\"er\"></div>\n                                                    <!-- <span class=\"closeWx\"></span> -->\n                                                    <p class=\"wx-t2\">打开微信，点击底部的“发现”，使用“扫<br>一扫”即可将网页分享到我的朋友圈。</p>\n                                                </div>\n                                            </span>\n                                        </div>\n                                    </div>\n                                    <div class=\"pin_line\"></div>\n                                </div>",
+      "expectedUrls": [
+        "https://www.bjnews.com.cn/detail/1791634966129251.html"
+      ],
+      "date": {
+        "html": "<span class=\"timer\">2026-10-10 22:14</span>",
+        "expected": "2026-10-10T14:14:00.000Z",
+        "readerUrl": "https://www.bjnews.com.cn/detail/1791634966129251.html"
+      },
+      "summary": {
+        "html": "<article class=\"clearfix\"><div class=\"fl article\"><div class=\"articleCenter\"><div id=\"contentStr\"><div class=\"content-name\">\n                            <p>新京报讯 据外交部网站消息，外交部发言人就巴拿马发生7.6级地震答记者问。</p><p><br></p><p><strong>问：据报道，巴拿马10日发生7.6级地震，已发生100余次余震。中方对此有何评论？</strong></p><p><br></p><p>答：中方向巴拿马政府和灾区人民致以慰问。截至目前，暂无中国公民在地震中伤亡报告。中国外交部和驻巴拿马使馆将继续密切关注相关情况，及时向有需要的中国公民提供必要协助。我们提醒在巴中国公民注意防范地震次生灾害。</p><p><br></p><p></p><p><br></p><p>编辑 辛婧</p>                        </div></div></div></div><div class=\"fr aside detailsAside\">直播 登录 热点推荐</div></article>",
+        "expected": "新京报讯 据外交部网站消息，外交部发言人就巴拿马发生7.6级地震答记者问。问：据报道，巴拿马10日发生7.6级地震，已发生100余次余震。中方对此有何评论？答：中方向巴拿马政府和灾区人民致以慰问。截至目前，暂无中国公民在地震中伤亡报告。中国外交部和驻巴拿马使馆将继续密切关注相关情况，及时向有需要的中国公民提供必要协助。我们提醒在巴中国公民注意防范地震次生灾害。编辑 辛婧",
+        "readerUrl": "https://www.bjnews.com.cn/detail/1791634966129251.html"
+      }
+    },
+    {
+      "id": "dn-bjnews-e8d88f7e013a",
+      "baseUrl": "https://www.bjnews.com.cn/",
+      "config": {
+        "itemSelector": ".pin_tips a[href*=\"/detail/\"], .pin_demo a[href*=\"/detail/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".timer",
+          "summarySelector": "article.clearfix > .fl.article > .articleCenter #contentStr > .content-name, article.clearfix > .fl.article > .articleCenter #contentStr > .introduction-video"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "bjnews",
+          "sectionId": "e8d88f7e013a",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "要闻",
+          "sectionUrl": "https://www.bjnews.com.cn/",
+          "sourceCredibility": 72,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "china",
+          "publisherKey": "publisher:bjnews",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "bjnews.com.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "新京报 要闻",
+            "新京报 时政 社会"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.bjnews.com.cn/"
+      },
+      "listingHtml": "<div class=\"pin_demo\">\n                                    <a href=\"https://www.bjnews.com.cn/detail/1791634966129251.html\">\n                                        <div class=\"pin_tit\">\n                                                                                        外交部：暂无中国公民在巴拿马地震中伤亡报告                                        </div>\n                                    </a>\n                                    <!-- 无图稿件判断 start-->\n                                                                                                            <div class=\"imgBor\">\n                                                                                                                                                                <a href=\"https://www.bjnews.com.cn/detail/1791634966129251.html\">\n                                            \n                                                                                                                                </a>\n                                    </div>\n                                                                                <!--无图稿件判断 end-->\n                                                                                                            <div class=\"bom\">\n                                        <span class=\"source\">\n                                                                                        第一看点                                        </span>\n                                        <!-- 如果tag或者数量没有则不显示竖线 -->\n                                                                                <!-- 有什么数显示什么数，只显示一个 -->\n                                                                                <!-- 如果有时间显示时间 -->\n                                        \n                                        <!-- 分享 -->\n                                        <div class=\"share-to\">\n                                            <!-- 专题 h5不显示点赞祈福按钮-->\n                                                                                        <!-- 点赞 -->\n                                                <input class=\"pubu_dianzan\">\n                                            <span class=\"dianzan-move2\"><i></i>+1</span>\n                                            <span id=\"qwlike\"></span> \n                                            \n                                            <!-- 微博分享 -->\n                                            <span class=\"sina\" id=\"v4_s\">\n                                                <a href=\"http://service.weibo.com/share/share.php?url=https://www.bjnews.com.cn/detail/1791634966129251.html&amp;title=外交部：暂无中国公民在巴拿马地震中伤亡报告&amp;pic=\">\n                                                    <span class=\"weibo yunafen\"></span>\n                                                </a>\n                                            </span>\n                                            <!-- 微信分享 -->\n                                            <span class=\"weixin\">\n                                                <div class=\"weixin-code\">\n                                                    <p class=\"wx-t\">分享到微信朋友圈</p>\n                                                    <div class=\"er\"></div>\n                                                    <!-- <span class=\"closeWx\"></span> -->\n                                                    <p class=\"wx-t2\">打开微信，点击底部的“发现”，使用“扫<br>一扫”即可将网页分享到我的朋友圈。</p>\n                                                </div>\n                                            </span>\n                                        </div>\n                                    </div>\n                                    <div class=\"pin_line\"></div>\n                                </div>",
+      "expectedUrls": [
+        "https://www.bjnews.com.cn/detail/1791634966129251.html"
+      ],
+      "date": {
+        "html": "<span class=\"timer\">2026-10-10 22:14</span>",
+        "expected": "2026-10-10T14:14:00.000Z",
+        "readerUrl": "https://www.bjnews.com.cn/detail/1791634966129251.html"
+      },
+      "summary": {
+        "html": "<article class=\"clearfix\"><div class=\"fl article\"><div class=\"articleCenter\"><div id=\"contentStr\"><div class=\"content-name\">\n                            <p>新京报讯 据外交部网站消息，外交部发言人就巴拿马发生7.6级地震答记者问。</p><p><br></p><p><strong>问：据报道，巴拿马10日发生7.6级地震，已发生100余次余震。中方对此有何评论？</strong></p><p><br></p><p>答：中方向巴拿马政府和灾区人民致以慰问。截至目前，暂无中国公民在地震中伤亡报告。中国外交部和驻巴拿马使馆将继续密切关注相关情况，及时向有需要的中国公民提供必要协助。我们提醒在巴中国公民注意防范地震次生灾害。</p><p><br></p><p></p><p><br></p><p>编辑 辛婧</p>                        </div></div></div></div><div class=\"fr aside detailsAside\">直播 登录 热点推荐</div></article>",
+        "expected": "新京报讯 据外交部网站消息，外交部发言人就巴拿马发生7.6级地震答记者问。问：据报道，巴拿马10日发生7.6级地震，已发生100余次余震。中方对此有何评论？答：中方向巴拿马政府和灾区人民致以慰问。截至目前，暂无中国公民在地震中伤亡报告。中国外交部和驻巴拿马使馆将继续密切关注相关情况，及时向有需要的中国公民提供必要协助。我们提醒在巴中国公民注意防范地震次生灾害。编辑 辛婧",
+        "readerUrl": "https://www.bjnews.com.cn/detail/1791634966129251.html"
+      }
+    },
+    {
+      "id": "dn-cctv-6f9501b3e5b9",
+      "baseUrl": "https://sports.cctv.com/",
+      "config": {
+        "itemSelector": "h2 a[href*=\"/ARTI\"][href$=\".shtml\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "#title_area .info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "cctv",
+          "sectionId": "6f9501b3e5b9",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "体育",
+          "sectionUrl": "https://sports.cctv.com/",
+          "sourceCredibility": 84,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:cctv",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "news.cctv.com",
+            "sports.cctv.com",
+            "ent.cctv.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "央视网 体育",
+            "央视网 足球 篮球"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://sports.cctv.com/"
+      },
+      "listingHtml": "<h2><a href=\"https://sports.cctv.com/2026/10/10/ARTIa68KvWqbHJvCfdhdkyTY261010.shtml\">王曼昱/蒯曼夺中国大满贯女双冠军</a></h2>",
+      "expectedUrls": [
+        "https://sports.cctv.com/2026/10/10/ARTIa68KvWqbHJvCfdhdkyTY261010.shtml"
+      ],
+      "date": {
+        "html": "<div class=\"title_area\" id=\"title_area\">\n                            \n                        <h1>王曼昱/蒯曼3-1获胜 夺得WTT中国大满贯女双冠军</h1>\n                        <h2 id=\"subtitle\"><i></i>副标题：</h2>\n                        <div class=\"info\">来源：央视网&nbsp;&nbsp;|&nbsp;&nbsp;2026-10-10 13:05:17</div>\n                        <div class=\"info1\">央视网 | 2026-10-10 13:05:17</div>\n                        \n                                <script type=\"text/javascript\">\n                        var subtitle = '';\n                        if (subtitle==\"\"){\n                            document.getElementById('subtitle').style.display='none';\n                        }\n                    </script>\n                \n                            \n                        <h6 id=\"sourcetitle\">原标题：</h6>\n                          <script type=\"text/javascript\">\n                            var sourcetitle = '';\n                            if (sourcetitle==\"\"){\n                                document.getElementById('sourcetitle').style.display='none';\n                            }\n                        </script>\n                        \n                    </div>",
+        "expected": "2026-10-10T05:05:17.000Z",
+        "readerUrl": "https://sports.cctv.com/2026/10/10/ARTIa68KvWqbHJvCfdhdkyTY261010.shtml"
+      }
+    },
+    {
+      "id": "dn-cctv-f085fa6f18a0",
+      "baseUrl": "https://news.cctv.com/",
+      "config": {
+        "itemSelector": "h3 a[href*=\"/ARTI\"][href$=\".shtml\"], h4 a[href*=\"/ARTI\"][href$=\".shtml\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "#title_area .info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "cctv",
+          "sectionId": "f085fa6f18a0",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "新闻",
+          "sectionUrl": "https://news.cctv.com/",
+          "sourceCredibility": 84,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "china",
+          "publisherKey": "publisher:cctv",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "news.cctv.com",
+            "sports.cctv.com",
+            "ent.cctv.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "央视网 新闻",
+            "央视网 国内 国际"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://news.cctv.com/"
+      },
+      "listingHtml": "<h3><a href=\"https://news.cctv.com/2026/10/10/ARTIbs0MplDSVFSWKiSnblg3261010.shtml\">财政部：将实施更加积极的财政政策 加力扩大内需</a>\n</h3>",
+      "expectedUrls": [
+        "https://news.cctv.com/2026/10/10/ARTIbs0MplDSVFSWKiSnblg3261010.shtml"
+      ],
+      "date": {
+        "html": "<div class=\"title_area\" id=\"title_area\">\n                            \n                        <h1>财政部：将实施更加积极的财政政策 加力扩大内需</h1>\n                        <h2 id=\"subtitle\"><i></i></h2>\n                        <div class=\"info\">来源：<a data-spm-protocol=\"i\" href=\"http://ysxw.cctv.cn/article.html?toc_style_id=feeds_default&amp;item_id=15639286769038318421&amp;channelId=1119\" target=\"_blank\">央视新闻</a>  |  2026年10月10日 00:07:14</div>\n                        <div class=\"info1\">央视新闻 | 2026年10月10日 00:07:14</div>\n                            <script type=\"text/javascript\">\n                        var subtitle = '';\n                        if (subtitle==\"\"){\n                            document.getElementById('subtitle').style.display='none';\n                        }\n                    </script>\n                        \n                            \n                        <h6 id=\"sourcetitle\">原标题：</h6>\n                           <script type=\"text/javascript\">\n                            var sourcetitle = '';\n                            if (sourcetitle==\"\"){\n                                document.getElementById('sourcetitle').style.display='none';\n                            }\n                           </script>\n                        \n                    </div>",
+        "expected": "2026-10-09T16:07:14.000Z",
+        "readerUrl": "https://news.cctv.com/2026/10/10/ARTIbs0MplDSVFSWKiSnblg3261010.shtml"
+      }
+    },
+    {
+      "id": "dn-china-daily-96c3ce64ccff",
+      "baseUrl": "https://cn.chinadaily.com.cn/",
+      "config": {
+        "itemSelector": "h1 a[href*=\"/a/\"][href*=\"/WS\"], h2 a[href*=\"/a/\"][href*=\"/WS\"], h3 a[href*=\"/a/\"][href*=\"/WS\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "maxFetches": 10
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "china-daily",
+          "sectionId": "96c3ce64ccff",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "新闻",
+          "sectionUrl": "https://cn.chinadaily.com.cn/",
+          "sourceCredibility": 78,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "china",
+          "publisherKey": "publisher:china-daily",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "cn.chinadaily.com.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "中国日报网 新闻",
+            "China Daily 中文 中国 国际"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://cn.chinadaily.com.cn/"
+      },
+      "listingHtml": "<h1><a href=\"//cn.chinadaily.com.cn/a/202610/08/WS6ac6e87de4b09a165c78e11b.html\">研习路：闽韵长存</a></h1>",
+      "expectedUrls": [
+        "https://cn.chinadaily.com.cn/a/202610/08/WS6ac6e87de4b09a165c78e11b.html"
+      ],
+      "date": {
+        "html": "<script type=\"application/ld+json\">\n\n{\n    \"@context\": \"https://schema.org\",\n    \"@type\":\"NewsArticle\",\n    \"headline\":\"田野忙三秋 收种两相映\",\n    \"url\":\"https://cn.chinadaily.com.cn/a/202610/10/WS6aca330ce4b09a165c78eab7.html\",\n\n  \"image\":\"https://img3.chinadaily.com.cn/images/202610/10/6aca330ce4b09a1672869d30.jpeg\",\n    \n\n\n    \"datePublished\": \"2026-10-10T20:39:13+08:00\",\n    \"dateModified\": \"2026-10-10T20:39:13+08:00\",\n    \n\n    \n    \"publisher\":{\n        \"@type\":\"Organization\",\n        \"name\":\"新华网\"\n    },\n    \n   \n    \"mainEntityOfPage\": {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://cn.chinadaily.com.cn/a/202610/10/WS6aca330ce4b09a165c78eab7.html\"\n    }\n}\n\n      </script>",
+        "expected": "2026-10-10T12:39:13.000Z",
+        "readerUrl": "https://cn.chinadaily.com.cn/a/202610/10/WS6aca330ce4b09a165c78eab7.html"
+      }
+    },
+    {
+      "id": "dn-chinanews-2cfdc1b8582c",
+      "baseUrl": "https://www.chinanews.com.cn/",
+      "config": {
+        "itemSelector": "a[href*=\"/ty/202\"][href$=\".shtml\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "<!--\\[[^\\]]*,\\d{6,}\\] published at (\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        },
+        "url": "https://www.chinanews.com.cn/"
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "chinanews",
+          "sectionId": "2cfdc1b8582c",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "体育",
+          "sectionUrl": "https://www.chinanews.com.cn/ty/",
+          "sourceCredibility": 80,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:chinanews",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "chinanews.com.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "中国新闻网 体育",
+            "中新网 体育 足球 篮球"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.chinanews.com.cn/ty/"
+      },
+      "listingHtml": "<li id=\"10243737\"><a href=\"//www.chinanews.com.cn/ty/2026/10-10/10710790.shtml\" title=\"海峡两岸（平潭）青少年棒球冠军赛落幕\">海峡两岸（平潭）青少年棒球冠军赛落幕</a> <span>21:27</span></li>",
+      "expectedUrls": [
+        "https://www.chinanews.com.cn/ty/2026/10-10/10710790.shtml"
+      ],
+      "date": {
+        "html": "<!--[4,8,10710790] published at 2026-10-10 21:27:47",
+        "expected": "2026-10-10T13:27:47.000Z",
+        "readerUrl": "https://www.chinanews.com.cn/ty/2026/10-10/10710790.shtml"
+      }
+    },
+    {
+      "id": "dn-chinanews-3c0f866729aa",
+      "baseUrl": "https://www.chinanews.com.cn/",
+      "config": {
+        "itemSelector": "a[href*=\"/gj/202\"][href$=\".shtml\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "<!--\\[[^\\]]*,\\d{6,}\\] published at (\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        },
+        "url": "https://www.chinanews.com.cn/"
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "chinanews",
+          "sectionId": "3c0f866729aa",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "国际",
+          "sectionUrl": "https://www.chinanews.com.cn/gj/",
+          "sourceCredibility": 80,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "international",
+          "publisherKey": "publisher:chinanews",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "chinanews.com.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "中国新闻网 国际",
+            "中新网 国际 世界"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.chinanews.com.cn/gj/"
+      },
+      "listingHtml": "<div class=\"\"><a href=\"https://www.chinanews.com.cn/gj/2026/10-10/10709976.shtml\" class=\"zw\" data-doctype=\"zw\" data-did=\"10709976\">中方：乌克兰危机不能继续走向升级失控</a></div>",
+      "expectedUrls": [
+        "https://www.chinanews.com.cn/gj/2026/10-10/10709976.shtml"
+      ],
+      "date": {
+        "html": "<!--[4,8,10709976] published at 2026-10-10 07:11:10",
+        "expected": "2026-10-09T23:11:10.000Z",
+        "readerUrl": "https://www.chinanews.com.cn/gj/2026/10-10/10709976.shtml"
+      }
+    },
+    {
+      "id": "dn-chinanews-c3e2a8830e6c",
+      "baseUrl": "https://www.chinanews.com.cn/",
+      "config": {
+        "itemSelector": "a.zw[data-doctype=\"zw\"][data-did][href*=\"/202\"][href$=\".shtml\"]:not([href*=\"/shipin/\"]):not([href*=\"/chuangyi/\"])",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "<!--\\[[^\\]]*,\\d{6,}\\] published at (\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "chinanews",
+          "sectionId": "c3e2a8830e6c",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "即时",
+          "sectionUrl": "https://www.chinanews.com.cn/",
+          "sourceCredibility": 80,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "china",
+          "publisherKey": "publisher:chinanews",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "chinanews.com.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "中国新闻网 即时新闻",
+            "中新网 中国 国际 社会"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.chinanews.com.cn/"
+      },
+      "listingHtml": "<div class=\"\"><a href=\"https://www.chinanews.com.cn/gn/2026/10-10/10710706.shtml\" class=\"zw\" data-doctype=\"zw\" data-did=\"10710706\">食品安全法修订草案公开征求意见 涉及AI监管等</a></div>",
+      "expectedUrls": [
+        "https://www.chinanews.com.cn/gn/2026/10-10/10710706.shtml"
+      ],
+      "date": {
+        "html": "<!--[4,8,10710706] published at 2026-10-10 20:00:53",
+        "expected": "2026-10-10T12:00:53.000Z",
+        "readerUrl": "https://www.chinanews.com.cn/gn/2026/10-10/10710706.shtml"
+      }
+    },
+    {
+      "id": "dn-cyol-bd2d419c522e",
+      "baseUrl": "https://news.cyol.com/",
+      "config": {
+        "itemSelector": "h1 a[href*=\"/news/articles/\"], .news a[href*=\"/news/articles/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "<date>([^<]+)</date>"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "cyol",
+          "sectionId": "bd2d419c522e",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "新闻",
+          "sectionUrl": "https://news.cyol.com/",
+          "sourceCredibility": 74,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "china",
+          "publisherKey": "publisher:cyol",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "news.cyol.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "中国青年报 新闻",
+            "中国青年报 社会 青年"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://news.cyol.com/"
+      },
+      "listingHtml": "<h1><a href=\"http://news.cyol.com/gb/news/articles/2026-10/10/content_X5g3Xphp2Q.html\">从湘江古渡到“长征绿道”</a></h1>",
+      "expectedUrls": [
+        "https://news.cyol.com/gb/news/articles/2026-10/10/content_X5g3Xphp2Q.html"
+      ],
+      "date": {
+        "html": "<date>2026-10-10 21:05:26</date>",
+        "expected": "2026-10-10T13:05:26.000Z",
+        "readerUrl": "https://news.cyol.com/gb/news/articles/2026-10/10/content_X5g3Xphp2Q.html"
+      }
+    },
+    {
+      "id": "dn-ifanr-b77ecc7ad564",
+      "baseUrl": "https://www.ifanr.com/",
+      "config": {
+        "itemSelector": "h3 a[href^=\"https://www.ifanr.com/1\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "maxFetches": 10
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "ifanr",
+          "sectionId": "b77ecc7ad564",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "科技",
+          "sectionUrl": "https://www.ifanr.com/",
+          "sourceCredibility": 66,
+          "mediaType": "technology",
+          "signalRole": "analysis",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "technology",
+          "publisherKey": "publisher:ifanr",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "ifanr.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "爱范儿 科技",
+            "爱范儿 数码 产品"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.ifanr.com/"
+      },
+      "listingHtml": "<h3><a href=\"https://www.ifanr.com/1683809\">17.98 万元起，银河战舰 700 上市，三电机千匹马力，装进家用方盒子</a></h3>",
+      "expectedUrls": [
+        "https://www.ifanr.com/1683809"
+      ],
+      "date": {
+        "html": "<meta property=\"article:published_time\" content=\"2026-10-10T21:46:25+08:00\">",
+        "expected": "2026-10-10T13:46:25.000Z",
+        "readerUrl": "https://www.ifanr.com/1683809"
+      }
+    },
+    {
+      "id": "dn-jiemian-be9c481f85ca",
+      "baseUrl": "https://www.jiemian.com/",
+      "config": {
+        "itemSelector": ".news-item .content-node > a[href^=\"/article/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": ".title",
+        "detail": {
+          "publishedAtRegex": "data-article-publish-time=\"(\\d+)\"",
+          "publishedAtUnit": "epoch_s",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "jiemian",
+          "sectionId": "be9c481f85ca",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "快讯",
+          "sectionUrl": "https://www.jiemian.com/",
+          "sourceCredibility": 72,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "finance",
+          "publisherKey": "publisher:jiemian",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "jiemian.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "界面新闻 快讯",
+            "界面新闻 财经 科技"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.jiemian.com/"
+      },
+      "listingHtml": "<div class=\"news-item\"><div class=\"news-date-node\">22:53</div><div class=\"news-bullet red\"></div><div class=\"content-node\"><!-- 标题根据后台配置的的权重标红，添加  weight-marked-red 类--><a href=\"/article/15176297.html\" class=\"statistical_link\"><div class=\"title \">葡萄牙足协对C罗启动纪律处分程序</div></a><div class=\"content\"><a href=\"/article/15176297.html\" class=\"statistical_link\">据葡萄牙媒体10月10日报道，葡萄牙足球协会已对C罗启动纪律处分程序，并对其处以“预防性停赛”。葡足协在公告中表示：“葡萄牙足协对C罗启动纪律程序，调查其在相关事件中的行为是否应承担纪律责任。当前将对C罗采取预防性停赛。该程序已移交葡足协纪律调查委员会处理，调查结束前，结果不予公开。”</a></div></div></div>",
+      "expectedUrls": [
+        "https://www.jiemian.com/article/15176297.html"
+      ],
+      "date": {
+        "html": "data-article-publish-time=\"1791644010\"",
+        "expected": "2026-10-10T14:53:30.000Z",
+        "readerUrl": "https://www.jiemian.com/article/15176297.html"
+      }
+    },
+    {
+      "id": "dn-leiphone-b51224306af1",
+      "baseUrl": "https://www.leiphone.com/",
+      "config": {
+        "itemSelector": "h3 a[href*=\"/category/\"][href$=\".html\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "td.time"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "leiphone",
+          "sectionId": "b51224306af1",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "科技",
+          "sectionUrl": "https://www.leiphone.com/",
+          "sourceCredibility": 68,
+          "mediaType": "technology",
+          "signalRole": "analysis",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "technology",
+          "publisherKey": "publisher:leiphone",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "leiphone.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "雷峰网 科技",
+            "雷峰网 AI 智能"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.leiphone.com/"
+      },
+      "listingHtml": "<h3>\n\t\t\t<a href=\"https://www.leiphone.com/category/yanxishe/zm33Zeu88CNbEPMx.html\" title=\"字节发现 DeepSeek 隐藏 Bug，加点空格，模型翻车\" class=\"headTit\">\n\t\t\t\t字节发现 DeepSeek 隐藏 Bug，加点空格，模型翻车                \t\t\t</a>\n\t\t\t</h3>",
+      "expectedUrls": [
+        "https://www.leiphone.com/category/yanxishe/zm33Zeu88CNbEPMx.html"
+      ],
+      "date": {
+        "html": "<table>\n                        <tbody><tr>\n                            <td class=\"aut\">\n                                本文作者：\n                                                                                                            <a href=\"https://www.leiphone.com/author/gaoyunyi473\" target=\"_blank\" rel=\"nofollow\">高允毅</a>&nbsp;&nbsp;\n                                                                                                </td>\n                                                        <td class=\"time\">\n                                2026-10-10 19:40                            </td>\n                                                                                    <!-- <td class=\"tags\">\n                                <em></em> -->\n                                                                                                                            <!-- </td> -->\n                                                    <!--   <td class='cmtNum'>\n                                <a href=\"https://www.leiphone.com/category/yanxishe/zm33Zeu88CNbEPMx.html#lph-comment-213138\">0条评论</a>\n                            </td> -->\n                        </tr>\n                    </tbody></table>",
+        "expected": "2026-10-10T11:40:00.000Z",
+        "readerUrl": "https://www.leiphone.com/category/yanxishe/zm33Zeu88CNbEPMx.html"
+      }
+    },
+    {
+      "id": "dn-mtime-4a3f764c5d47",
+      "baseUrl": "https://news.mtime.com/",
+      "config": {
+        "itemSelector": "h4 a[href*=\"content.mtime.com/article/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".headline .userCreateTime"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "mtime",
+          "sectionId": "4a3f764c5d47",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "影视",
+          "sectionUrl": "https://news.mtime.com/",
+          "sourceCredibility": 66,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "entertainment",
+          "publisherKey": "publisher:mtime",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "news.mtime.com",
+            "content.mtime.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [
+            "https://content.mtime.com/"
+          ],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "时光网 影视 新闻",
+            "时光网 电影 电视"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://news.mtime.com/"
+      },
+      "listingHtml": "<h4><a href=\"https://content.mtime.com/article/229527725\">笑赴南北多城相会 电影《什么意思夫妇》全国路演圆满收官</a></h4>",
+      "expectedUrls": [
+        "https://content.mtime.com/article/229527725"
+      ],
+      "date": {
+        "html": "<div class=\"headline\" data-v-247fd70e=\"\"><div class=\"info\" data-v-247fd70e=\"\"><div class=\"title\" data-v-247fd70e=\"\"><!----> <!---->\n            笑赴南北多城相会 电影《什么意思夫妇》全国路演圆满收官\n          </div></div> <div class=\"supplement\" data-v-247fd70e=\"\"><div class=\"left\" data-v-247fd70e=\"\"><span data-v-247fd70e=\"\"><a href=\"https://my.mtime.com/18059890\" target=\"_blank\" rel=\"\" data-v-247fd70e=\"\"><img src=\"https://img5.mtime.cn/up/2017/05/31/163840.61835564_128X128.jpg\" alt=\"\" class=\"avatar\" data-v-247fd70e=\"\"></a> <a href=\"https://my.mtime.com/18059890\" target=\"_blank\" rel=\"\" class=\"nikeName\" data-v-247fd70e=\"\">时光快讯Mtime</a></span> <!----> <span class=\"userCreateTime\" data-v-247fd70e=\"\">\n              2026-10-10 14:26:03\n            </span> <span class=\"source\" style=\"display:;\" data-v-247fd70e=\"\">来源：Mtime时光网</span></div> <div data-v-247fd70e=\"\"><span class=\"tool\" data-v-247fd70e=\"\"><span class=\"top\" style=\"display:none;\" data-v-247fd70e=\"\">置顶 </span> <span class=\"essence\" style=\"display:none;\" data-v-247fd70e=\"\">加精</span> <span class=\"icon-edit\" style=\"display:none;\" data-v-247fd70e=\"\"><a href=\"https://creation.mtime.com/sendarticle?contentId=229527725\" class=\"edit\" data-v-247fd70e=\"\">编辑 </a></span> <span class=\"icon-delete\" style=\"display:none;\" data-v-247fd70e=\"\">删除</span></span></div></div></div>",
+        "expected": "2026-10-10T06:26:03.000Z",
+        "readerUrl": "https://content.mtime.com/article/229527725"
+      }
+    },
+    {
+      "id": "dn-redstar-a7a028814042",
+      "baseUrl": "https://www.cdsb.com/",
+      "config": {
+        "itemSelector": ".news_img a[href*=\"/micropub/Articles/\"][href$=\".html\"]",
+        "titleSelector": ".news_title_buttom",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "#article-time"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "redstar",
+          "sectionId": "a7a028814042",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "新闻",
+          "sectionUrl": "https://www.cdsb.com/",
+          "sourceCredibility": 70,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "china",
+          "publisherKey": "publisher:redstar",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "cdsb.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "红星新闻 新闻",
+            "红星新闻 社会 热点"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.cdsb.com/"
+      },
+      "listingHtml": "<div class=\"news_img\" style=\"height: 587px;\">\n                            <a href=\"https://static.cdsb.com/micropub/Articles/202609/3d301341409e100ebe0b4aac9db9fedf.html\">\n                                <div class=\"news_title_buttom\"><span>“天眼深度游”调查：付费可自驾到核心区，有住酒店游客竟带电子设备上“锅圈”拍照</span></div>\n                                \n                            </a>\n                        </div>",
+      "expectedUrls": [
+        "https://static.cdsb.com/micropub/Articles/202609/3d301341409e100ebe0b4aac9db9fedf.html"
+      ],
+      "date": {
+        "html": "<span class=\"time\" id=\"article-time\">2026-10-10 21:31</span>",
+        "expected": "2026-10-10T13:31:00.000Z",
+        "readerUrl": "https://static.cdsb.com/micropub/Articles/202609/3d301341409e100ebe0b4aac9db9fedf.html"
+      }
+    },
+    {
+      "id": "dn-sciencenet-2dfffbf8b647",
+      "baseUrl": "https://news.sciencenet.cn/",
+      "config": {
+        "itemSelector": ".Black a[href*=\"/htmlnews/\"][href$=\".shtm\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "发布时间[：:]\\s*(\\d{4}/\\d{1,2}/\\d{1,2}\\s+\\d{1,2}:\\d{2}:\\d{2})"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "sciencenet",
+          "sectionId": "2dfffbf8b647",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "科学",
+          "sectionUrl": "https://news.sciencenet.cn/",
+          "sourceCredibility": 74,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "science",
+          "publisherKey": "publisher:sciencenet",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "news.sciencenet.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "科学网 新闻",
+            "科学网 科研 论文"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://news.sciencenet.cn/"
+      },
+      "listingHtml": "<div class=\"Black\"><a href=\"https://news.sciencenet.cn/htmlnews/2026/10/572661.shtm\">李庆忠：毕业志愿书是“为祖国找石油”的序曲</a></div>",
+      "expectedUrls": [
+        "https://news.sciencenet.cn/htmlnews/2026/10/572661.shtm"
+      ],
+      "date": {
+        "html": "发布时间：2026/10/10 8:36:50",
+        "expected": "2026-10-10T00:36:50.000Z",
+        "readerUrl": "https://news.sciencenet.cn/htmlnews/2026/10/572661.shtm"
+      }
+    },
+    {
+      "id": "dn-tmtpost-6573fce41442",
+      "baseUrl": "https://www.tmtpost.com/",
+      "config": {
+        "itemSelector": "a.item.type-post[href$=\".html\"]",
+        "titleSelector": "p._tit",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".post_author > .time"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "tmtpost",
+          "sectionId": "6573fce41442",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "科技",
+          "sectionUrl": "https://www.tmtpost.com/",
+          "sourceCredibility": 68,
+          "mediaType": "technology",
+          "signalRole": "analysis",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "technology",
+          "publisherKey": "publisher:tmtpost",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "tmtpost.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "钛媒体 科技 AI",
+            "钛媒体 人工智能"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.tmtpost.com/"
+      },
+      "listingHtml": "<div class=\"carousel_placeholder\" data-v-6953655a=\"\"><!--[--><a class=\"item type-post\" href=\"https://www.tmtpost.com/8163363.html\"><div class=\"_top\"></div><div class=\"_bottom\"><p class=\"_tit\">00后“戒断”AI短剧：一个月卸载了5次</p></div></a><!----><!--]--></div>",
+      "expectedUrls": [
+        "https://www.tmtpost.com/8163363.html"
+      ],
+      "date": {
+        "html": "<div class=\"post_author\" data-v-cac32427=\"\"><!--[--><div class=\"author_box\" data-v-cac32427=\"\"><a href=\"/user/4187461\" target=\"_blank\" data-v-cac32427=\"\"><img src=\"https://images.tmtpost.com/uploads/avatar/4187461_1573629956.jpeg?imageMogr2/auto-orient/strip/interlace/1/quality/85/thumbnail/1400x1400&amp;ext=.jpeg\" alt=\"表外表里\" data-v-cac32427=\"\"></a><div class=\"tmt_actor_box\" data-v-cac32427=\"\"><div class=\"tmt_actor_lancertification\" data-v-cac32427=\"\"></div><!----></div><a href=\"/user/4187461\" target=\"blank\" data-v-cac32427=\"\"><p class=\"name\" data-v-cac32427=\"\">表外表里</p></a></div><!--]--><p class=\"time\" data-v-cac32427=\"\">2026.10.10 09:13</p><p class=\"ip\" data-v-cac32427=\"\"> &nbsp;·&nbsp;来自湖北</p><!----><div class=\"post_type\" data-v-cac32427=\"\"><div class=\"_read\" data-v-cac32427=\"\"><p class=\"txt\" data-v-cac32427=\"\">全文3981字</p><!--[--><div class=\"read_post_btn\" data-v-cac32427=\"\">00:00 / 11:45</div><audio id=\"post_audio\" data-v-cac32427=\"\"><source src=\"https://images.tmtpost.com/uploads/article_audio/mp3/6/641742eb859b5818.mp3\" data-v-cac32427=\"\"></audio><!--]--></div></div></div>",
+        "expected": "2026-10-10T01:13:00.000Z",
+        "readerUrl": "https://www.tmtpost.com/8163363.html"
+      }
+    },
+    {
+      "id": "dn-xinhua-0bd773b290aa",
+      "baseUrl": "https://www.news.cn/world/",
+      "config": {
+        "itemSelector": "h3 a[href$=\"/c.html\"], .tit a[href$=\"/c.html\"], .bttx a[href$=\"/c.html\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "xinhua",
+          "sectionId": "0bd773b290aa",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "国际",
+          "sectionUrl": "https://www.news.cn/world/",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "international",
+          "publisherKey": "publisher:xinhua",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "news.cn",
+            "sports.news.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "新华网 国际",
+            "新华社 国际 世界"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.news.cn/world/"
+      },
+      "listingHtml": "<h3><a href=\"https://www.news.cn/20260919/a639e2b71d60451f8f3b548bcc74ae2f/c.html\">全球连线丨AI真的会让普通人创业更容易吗？</a></h3>",
+      "expectedUrls": [
+        "https://www.news.cn/20260919/a639e2b71d60451f8f3b548bcc74ae2f/c.html"
+      ],
+      "date": {
+        "html": "<div class=\"info\">\n                2026-09-19 19:02:18\n                <span>\n                    来源：新华社\n                </span></div>",
+        "expected": "2026-09-19T11:02:18.000Z",
+        "readerUrl": "https://www.news.cn/20260919/a639e2b71d60451f8f3b548bcc74ae2f/c.html"
+      }
+    },
+    {
+      "id": "dn-xinhua-b3451a86d549",
+      "baseUrl": "https://www.news.cn/tech/",
+      "config": {
+        "itemSelector": "h3 a[href$=\"/c.html\"], .tit a[href$=\"/c.html\"], .bttx a[href$=\"/c.html\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "xinhua",
+          "sectionId": "b3451a86d549",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "科技",
+          "sectionUrl": "https://www.news.cn/tech/",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "science",
+          "publisherKey": "publisher:xinhua",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "news.cn",
+            "sports.news.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "新华网 科技",
+            "新华社 科学 技术"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.news.cn/tech/"
+      },
+      "listingHtml": "<div class=\"tit\"><a href=\"/tech/20261008/0f4fdc197ff2442a88e9db79ad587919/c.html\">国庆假期 科技赋能假日文旅新体验（组图）</a></div>",
+      "expectedUrls": [
+        "https://www.news.cn/tech/20261008/0f4fdc197ff2442a88e9db79ad587919/c.html"
+      ],
+      "date": {
+        "html": "<div class=\"info\">\n                2026-10-08 08:59:33\n                <span>\n                    来源：新华网\n                </span></div>",
+        "expected": "2026-10-08T00:59:33.000Z",
+        "readerUrl": "https://www.news.cn/tech/20261008/0f4fdc197ff2442a88e9db79ad587919/c.html"
+      }
+    },
+    {
+      "id": "dn-xinhua-ffb98927d061",
+      "baseUrl": "https://sports.news.cn/",
+      "config": {
+        "itemSelector": "h3 a[href$=\"/c.html\"], .tit a[href$=\"/c.html\"], .bttx a[href$=\"/c.html\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "xinhua",
+          "sectionId": "ffb98927d061",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "体育",
+          "sectionUrl": "https://sports.news.cn/",
+          "sourceCredibility": 88,
+          "mediaType": "wire",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:xinhua",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "news.cn",
+            "sports.news.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "新华网 体育",
+            "新华社 体育 足球 篮球"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://sports.news.cn/"
+      },
+      "listingHtml": "<div class=\"bttx\"><a href=\"https://www.news.cn/sports/20261009/3827d75b35ba43c282ec5876c6188fae/c.html\">国家体育总局：圆满完成练兵任务 全面转入奥运备战</a></div>",
+      "expectedUrls": [
+        "https://www.news.cn/sports/20261009/3827d75b35ba43c282ec5876c6188fae/c.html"
+      ],
+      "date": {
+        "html": "<div class=\"info\">\n            2026-10-09 20:54:41\n            <span>\n                来源：新华网\n            </span></div>",
+        "expected": "2026-10-09T12:54:41.000Z",
+        "readerUrl": "https://www.news.cn/sports/20261009/3827d75b35ba43c282ec5876c6188fae/c.html"
+      }
+    },
+    {
+      "id": "dn-yicai-ab7a5c4ddf07",
+      "baseUrl": "https://www.yicai.com/",
+      "config": {
+        "itemSelector": ".swiper-slide.item a[href^=\"/news/\"]",
+        "titleSelector": "h2",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "h1 + p em.f-fl"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "legacyConfig": {
+        "dailyNews": {
+          "legacySourceId": "yicai",
+          "sectionId": "ab7a5c4ddf07",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "财经",
+          "sectionUrl": "https://www.yicai.com/",
+          "sourceCredibility": 76,
+          "mediaType": "business",
+          "signalRole": "analysis",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "finance",
+          "publisherKey": "publisher:yicai",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "yicai.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "第一财经 财经",
+            "第一财经 市场 公司"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.yicai.com/"
+      },
+      "listingHtml": "<div class=\"swiper-slide item\"><a class=\"f-db\" href=\"/news/103388325.html\"><div class=\"m-mask\"><h2 class=\"m-tips1 \">人民币汇率被低估了吗？央行最新政策立场给出答案</h2></div></a></div>",
+      "expectedUrls": [
+        "https://www.yicai.com/news/103388325.html"
+      ],
+      "date": {
+        "html": "<div class=\"title f-pr\"><h1>人民币汇率被低估了吗？央行最新政策立场给出答案</h1><p class=\"f-cb\"> <span class=\"f-fl\">第一财经</span> <em class=\"f-fl\">2026-10-09 22:09:33</em><a class=\"hashot f-fr\"><img src=\"data:image/png;base64,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\"><sup id=\"newshotnum\" style=\"display: none;\"></sup></a>   <i id=\"audioPlayerbox\" style=\"display: none;\"></i> <a class=\"hasspeech f-fr\" onclick=\"listenAudio('https://audiocdn.yicai.com/audio/1cd6a165-9ef9-43c3-8457-5a32176e6a72_tencentivh.mp3')\">听新闻</a>  </p><p class=\"names\">作者：杜川&nbsp;&nbsp;&nbsp;&nbsp;责编：林洁琛</p><div class=\"m-smallshare\"></div></div>",
+        "expected": "2026-10-09T14:09:33.000Z",
+        "readerUrl": "https://www.yicai.com/news/103388325.html"
+      }
+    }
+  ]
+}
