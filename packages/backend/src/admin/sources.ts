@@ -1,6 +1,7 @@
 // Source administration (F18): list, detail, preview (fetch without storing), edit, create with
 // duplicate checks, pause/resume and manual collection. Every change is audited.
 import { z } from "zod";
+import { collectionDomain } from "../lib/collection-domain.ts";
 import type { AdminSource, AdminSourceCreated, AdminSourceDetail, AdminSourcePreview, AdminSourceRow, AdminSources, BeforeJson } from "@aihot/contracts/admin";
 import { audit, auditHistory, Conflict } from "../audit.ts";
 import { sql, type Db } from "../db.ts";
@@ -166,7 +167,8 @@ export async function updateSource(id: string, input: { patch: unknown; version:
 }
 
 /** Source fields the public projection reads (publication/rules.ts and the v1 payload). */
-const PUBLICATION_FIELDS: string[] = ["participation_mode", "site_fulltext", "syndicate_fulltext", "tier", "name", "first_party", "owner_entity_id"];
+// Source config includes deterministic publication/evidence inputs, not just fetch settings.
+const PUBLICATION_FIELDS: string[] = ["config", "participation_mode", "site_fulltext", "syndicate_fulltext", "tier", "name", "first_party", "owner_entity_id"];
 
 const CreateSchema = z
   .object({
@@ -230,12 +232,12 @@ export async function createSource(input: unknown, actor: string): Promise<Befor
 }
 
 export async function fetchNow(id: string, actor: string) {
-  const [s] = await sql<{ id: string; kind: string }[]>`SELECT id, kind FROM sources WHERE id = ${id}`;
+  const [s] = await sql<{ id: string; kind: string; config: Record<string,any> }[]>`SELECT id, kind, config FROM sources WHERE id = ${id}`;
   if (!s) return null;
   const jobId =
     s.kind === "mp_account"
       ? await enqueue(QUEUES.mpCheck, { sourceId: id, reason: "manual" }, { singletonKey: `mp:${id}` })
-      : await enqueue(QUEUES.fetchSource, { sourceId: id, force: true }, { singletonKey: `manual:${id}` });
+      : await enqueue(QUEUES.fetchSource, { sourceId: id, force: true }, { singletonKey: `manual:${id}`, group: { id: collectionDomain(s.config.feedUrl ?? s.config.url) } });
   await audit(actor, "source.fetch", `source:${id}`, null, null, { jobId });
   return { jobId };
 }

@@ -1,12 +1,13 @@
 // Collection run for one source: fetch listing → filter → store material → enqueue processing.
 // A failed fetch never advances the success cursor; the source's health reflects consecutive failures.
 import { sql } from "../db.ts";
-import { identityKeyFor, upsertMaterial } from "../content/materials.ts";
+import { sha256 } from "../lib/ids.ts";
+import { contentHash, identityKeyFor, upsertMaterial } from "../content/materials.ts";
 import { identityKeyForUrl } from "../lib/url.ts";
-import { enqueue, QUEUES, shutdownSignal } from "../jobs/queue.ts";
+import { enqueue, getBoss, QUEUES, shutdownSignal } from "../jobs/queue.ts";
 import { queueProcessing } from "../jobs/content.ts";
 import { admitArticle, assertTrialRuntime, beginTrialSource } from "../dailynews/trial.ts";
-import { BudgetExceededError, completeReceipt } from "../providers/receipts.ts";
+import { BudgetExceededError, ReceiptUnknownError, completeReceipt } from "../providers/receipts.ts";
 import { fetchRss } from "./rss.ts";
 import { allowed, fetchDetail, fetchWebList, type DetailNeed } from "./web-list.ts";
 import { unsupportedConfig } from "./config-keys.ts";
@@ -16,6 +17,9 @@ import { fetchOfficialX } from "./x-official.ts";
 import { fetchFirecrawlFallback, firecrawlFallbackEnabled } from "./firecrawl-fallback.ts";
 import { fetchXSearch, planXShards, readXSearch, shardHandle, shardQuery, SHARDABLE_SQL, tweetToCandidate, type XBacklog } from "./x.ts";
 import { FetchError, type Candidate, type SourceRow } from "./types.ts";
+import { collectionDomain } from "../lib/collection-domain.ts";
+import { withRequestDeadline, currentRequestSignal } from "../lib/request-scope.ts";
+import { receiveCollection, type IntakeCandidate } from "./intake.ts";
 
 export interface CollectResult {
   sourceId: string;
@@ -24,6 +28,7 @@ export interface CollectResult {
   created: number;
   revised: number;
   error?: string;
+  pending?: boolean;
   trial?: { id: string; admittedNormal: number; admittedBackfill: number; notAdmitted: number; unchanged: number };
 }
 
@@ -55,10 +60,20 @@ async function loadSource(id: string): Promise<SourceRow | null> {
   return s ?? null;
 }
 
-async function storedTitles(identities: string[]): Promise<Map<string, string>> {
+interface StoredListing {
+  title: string; source_id: string; source_updated_at: Date | null;
+  source_detail_checked_at: Date | null; source_listing_signature: string | null; discovered_at: Date;
+}
+async function storedTitles(identities: string[]): Promise<Map<string, StoredListing>> {
   if (identities.length === 0) return new Map();
-  const rows = await sql<{ identity_key: string; title: string }[]>`SELECT identity_key, title FROM articles WHERE identity_key = ANY(${identities}::text[])`;
-  return new Map(rows.map((r) => [r.identity_key, r.title]));
+  const rows = await sql<(StoredListing & { identity_key: string })[]>`
+    SELECT identity_key, title, source_id, source_updated_at, source_detail_checked_at,
+      source_listing_signature, discovered_at FROM articles WHERE identity_key = ANY(${identities}::text[])`;
+  return new Map(rows.map((r) => [r.identity_key, r]));
+}
+function listingSignature(candidate: Candidate): string {
+  const updated = candidate.sourceUpdatedAt;
+  return sha256(contentHash(candidate) + "\u0001" + (updated && Number.isFinite(updated.getTime()) ? updated.toISOString() : ""));
 }
 
 const DAY_MS = 86_400_000;
@@ -73,7 +88,7 @@ export function boundedIncrementalCandidates(candidates: Candidate[], baseline: 
 /** A listing title that is no headline: a label that swallowed its summary, or a call to action. */
 const needsTitle = (title: string) => title.length > 100 || /^(read more|learn more|continue reading|more|阅读全文|阅读更多|查看详情|了解更多)$/i.test(title.trim());
 
-async function store(sourceId: string, candidates: Candidate[], backfill: string | null, trialId: string | null): Promise<{
+async function store(sourceId: string, candidates: Candidate[], backfill: string | null, trialId: string | null, runId?:number): Promise<{
   created: number; revised: number; admittedNormal: number; admittedBackfill: number; notAdmitted: number; unchanged: number;
 }> {
   let created = 0;
@@ -87,17 +102,19 @@ async function store(sourceId: string, candidates: Candidate[], backfill: string
     // In a bounded trial, an interrupted admission must not leave a committed article that
     // the next fetch treats as unchanged and therefore never admits. Keep the material and
     // its immutable ledger entry in the same transaction; queueing can resume from that ledger.
-    const { res, admission, lane } = trialId ? await sql.begin(async (tx) => {
-      const res = await upsertMaterial(material, tx);
-      if (!res.created && !res.revised) return { res, admission: null, lane: null };
-      const lane = res.backfill ? "backfill" : "normal";
-      const admission = await admitArticle(res.articleId, { lane }, tx);
-      // A quota or old source timestamp intentionally archives the material without paid work.
-      // Every other refusal means this run lost its boundary and must leave no partial write.
-      if (!admission.admitted && admission.reason !== "quota" && admission.reason !== "not-new")
-        throw new Error(`bounded trial admission failed: ${admission.reason}`);
-      return { res, admission, lane };
-    }) : { res: await upsertMaterial(material), admission: null, lane: null };
+    const {res,admission,lane}=await sql.begin(async tx=>{
+      if(runId){
+        await tx`SELECT pg_advisory_xact_lock(hashtext('collection-source'),hashtext(${sourceId}))`;
+        const [owner]=await tx`SELECT collection_run_id FROM sources WHERE id=${sourceId}`;
+        if(Number(owner?.collection_run_id)!==Number(runId))throw new Error("collection run superseded");
+      }
+      const res=await upsertMaterial(material,tx);
+      const lane=res.backfill?"backfill":"normal";
+      const admission=trialId&&(res.created||res.revised)?await admitArticle(res.articleId,{lane},tx):null;
+      if(admission&&!admission.admitted&&admission.reason!=="quota"&&admission.reason!=="not-new")throw new Error(`bounded trial admission failed: ${admission.reason}`);
+      if((res.created||res.revised)&&(!admission||admission.admitted))await queueProcessing(res.articleId,{db:tx});
+      return {res,admission,lane};
+    });
     if (res.created) created += 1;
     if (res.revised) revised += 1;
     if (!res.created && !res.revised) { unchanged += 1; continue; }
@@ -109,12 +126,15 @@ async function store(sourceId: string, candidates: Candidate[], backfill: string
       }
     }
     // Extraction first when the source wants full text and none came with the listing, else analysis.
-    await queueProcessing(res.articleId);
+
   }
   return { created, revised, admittedNormal, admittedBackfill, notAdmitted, unchanged };
 }
 
-export async function collectSource(sourceId: string, opts: { force?: boolean; trialId?: string } = {}): Promise<CollectResult> {
+export function collectSource(sourceId: string, opts: { force?: boolean; trialId?: string; deferred?: boolean } = {}): Promise<CollectResult> {
+  return withRequestDeadline(480_000,shutdownSignal.signal,()=>collectSourceRun(sourceId,opts));
+}
+async function collectSourceRun(sourceId:string,opts:{force?:boolean;trialId?:string;deferred?:boolean}):Promise<CollectResult> {
   // Query the persisted boundary even when env was omitted: an existing trial DB may never
   // become an unrestricted collector by starting this entrypoint without its runtime flags.
   const trial = await assertTrialRuntime(sql);
@@ -141,7 +161,21 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; t
   const trialBaseline = trialId ? await beginTrialSource(sourceId, sql) : null;
   if (trialId && !trialBaseline) throw new Error("bounded trial source has no baseline");
 
-  const [run] = await sql<{ id: number }[]>`INSERT INTO fetch_runs (source_id) VALUES (${sourceId}) RETURNING id`;
+  const run = await sql.begin(async tx => {
+    await tx`SELECT pg_advisory_xact_lock(hashtext('collection-source'),hashtext(${sourceId}))`;
+    const [locked]=await tx<SourceRow[]>`SELECT * FROM sources WHERE id=${sourceId} FOR UPDATE`;
+    if(!locked)return null;
+    Object.assign(source,locked);
+    const [active] = await tx`SELECT f.id FROM sources s JOIN fetch_runs f ON f.id=s.collection_run_id
+      WHERE s.id=${sourceId} AND f.status='running' AND
+      (f.started_at>now()-interval '10 minutes' OR EXISTS(SELECT 1 FROM collection_intakes i WHERE i.run_id=f.id AND i.finished_at IS NULL))`;
+    if(active)return null;
+    const [created]=await tx<{id:number}[]>`INSERT INTO fetch_runs(source_id) VALUES (${sourceId}) RETURNING id`;
+    await tx`UPDATE sources SET collection_run_id=${created!.id} WHERE id=${sourceId}`;
+    return created!;
+  });
+  if(!run)return {sourceId,status:"skipped",found:0,created:0,revised:0,error:"collection pending"};
+  const fetchStarted=performance.now();
   const firstImport = !source.cursor?.initializedAt;
   let created = 0;
   let revised = 0;
@@ -174,7 +208,15 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; t
       let notModified = false;
       try {
         if (source.kind === "rss") {
-          const rss = await fetchRss(source, opts);
+          // Feed validators say nothing about independent edits on article pages. Sources with a
+          // detail budget occasionally reread the full listing so the existing bounded 72h recheck
+          // can see its URLs. Commit this clock only with the source's normal success cursor.
+          const detailRecheck = !!source.config.detail && Number(source.config.detail.maxFetches ?? 0) > 0;
+          const lastFullRead = Date.parse(String(source.cursor?.rssFullReadAt ?? ""));
+          const fullReadDue = !firstImport && detailRecheck &&
+            (!Number.isFinite(lastFullRead) || Date.now() - lastFullRead >= 6 * 3600_000);
+          const rss = await fetchRss(source, { force: opts.force || fullReadDue });
+          if (detailRecheck && !rss.notModified) nextCursor.rssFullReadAt = new Date().toISOString();
           candidates = rss.candidates;
           if (!firstImport) nextCursor.rss = rss.validator;
           else delete nextCursor.rss;
@@ -227,29 +269,41 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; t
 
     // Detail pages only for material we have not seen (bounded per run), and only for what the listing lacks.
     const d = source.config.detail;
-    const known = d ? await storedTitles(candidates.map((c) => c.identityKey!)) : new Map<string, string>();
+    const known = d ? await storedTitles(candidates.map((c) => c.identityKey!)) : new Map<string, StoredListing>();
     const detailBudget = Number(d?.maxFetches ?? 0);
     let detailUsed = 0;
+    const intake: IntakeCandidate[] = [];
     for (const c of candidates) {
+      currentRequestSignal()?.throwIfAborted();
+      intake.push({candidate:c,need:null});
       // Listing dates the source marks unreliable are dropped; the detail page's rule decides.
       if (d?.publishedAtAuthoritative === true) c.publishedAt = null;
       const stored = known.get(c.identityKey!);
+      // Hash the original listing before restoring a title obtained from the authoritative page.
+      c.listingSignature = listingSignature(c);
+      const now = Date.now();
+      const recent = stored && now - stored.discovered_at.getTime() <= 72 * 3600_000;
+      const recheck = stored && stored.source_id === sourceId && (
+        stored.source_listing_signature !== c.listingSignature ||
+        recent && now - (stored.source_detail_checked_at ?? stored.discovered_at).getTime() >= 6 * 3600_000);
       if (stored !== undefined) {
-        // The title came from the detail page: the listing's own rendering must not revise it back.
-        if (d?.titleSelector || d?.titleRegex) c.title = stored;
-        continue;
+        // Failed/budget-deferred checks keep the authoritative title until detail confirms a change.
+        if (d?.titleSelector || d?.titleRegex) c.title = stored.title;
+        if (!recheck) continue;
       }
       if (!d || detailUsed >= detailBudget) continue;
       const need: DetailNeed = {
         date: !c.publishedAt || d.upgradeDatePrecision === true,
-        title: !!(d.titleSelector || d.titleRegex) && (d.titleAuthoritative === true || needsTitle(c.title)),
-        summary: !!d.summarySelector && !c.excerpt,
-        body: source.participation_mode === "editorial" && !c.bodyText && (!c.bodyStatus || c.bodyStatus === "pending"),
+        title: !!(d.titleSelector || d.titleRegex) && (!!recheck || d.titleAuthoritative === true || needsTitle(c.title)),
+        summary: !!d.summarySelector && (!!recheck || !c.excerpt),
+        body: source.participation_mode === "editorial" && !c.bodyText && (!!recheck || !c.bodyStatus || c.bodyStatus === "pending"),
       };
-      if (!need.date && !need.title && !need.summary) continue;
+      if (!need.date && !need.title && !need.summary && !need.body) continue;
       detailUsed += 1;
+      if(opts.deferred){intake[intake.length-1]!.need=need;continue;}
       try {
-        const got = await fetchDetail(c.url, source, need);
+        const got = await fetchDetail(c.url, source, need, { strictHttp: true });
+        c.detailCheckedAt = new Date();
         if (got.title) c.title = got.title;
         if (got.summary) c.excerpt = got.summary;
         // The same Readability path as extraction, using bytes already fetched for the detail rules.
@@ -262,12 +316,23 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; t
         }
         // A date-only listing value gives way to the detail page's time on the same day.
         if (got.publishedAt && (!c.publishedAt || Math.abs(got.publishedAt.getTime() - c.publishedAt.getTime()) < DAY_MS)) c.publishedAt = got.publishedAt;
-      } catch {
+      } catch(error) {
+        if(error instanceof BudgetExceededError || error instanceof ReceiptUnknownError)throw error;
         // detail is best effort
       }
     }
 
-    ({ created, revised, ...trialCounts } = await store(sourceId, candidates, firstImport ? "first-import" : null, trialId ?? null));
+    currentRequestSignal()?.throwIfAborted();
+    if(opts.deferred) {
+      delete nextCursor.jinaListingRound;
+      if(firstImport)nextCursor.initializedAt=new Date().toISOString();
+      nextCursor.lastOkAt=new Date().toISOString();
+      const stages={fetchMs:Math.round(performance.now()-fetchStarted),received:candidates.length,detailQueued:intake.filter(i=>i.need).length};
+      await sql`UPDATE fetch_runs SET found_count=${found},detail=${sql.json({...detail,stages} as never)} WHERE id=${run.id}`;
+      await receiveCollection(run.id,sourceId,intake,{trialId,backfill:firstImport?"first-import":null,cursor:nextCursor,receiptIds:paidReceiptIds,detail:{...detail,stages}});
+      return {sourceId,status:"ok",found,created:0,revised:0,pending:candidates.length>0};
+    }
+    ({ created, revised, ...trialCounts } = await store(sourceId, candidates, firstImport ? "first-import" : null, trialId ?? null, run.id));
 
     // A Jina listing round that was pending when this run started has been received by now.
     delete nextCursor.jinaListingRound;
@@ -278,7 +343,7 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; t
         UPDATE sources SET last_fetch_at = now(), last_ok_at = now(), fail_count = 0, last_error = NULL,
           health = 'ok', cursor = ${tx.json(nextCursor as never)}, updated_at = now(),
           next_fetch_at = now() + make_interval(mins => interval_minutes)
-        WHERE id = ${sourceId}`;
+        WHERE id = ${sourceId} AND collection_run_id=${run.id}`;
       const runDetail = trialId ? { ...(detail ?? {}), boundedTrial: { id: trialId, revised, ...trialCounts } } : detail;
       await tx`UPDATE fetch_runs SET status = 'ok', finished_at = now(), found_count = ${found}, new_count = ${created},
                   detail = ${runDetail ? tx.json(runDetail as never) : null} WHERE id = ${run!.id}`;
@@ -297,7 +362,7 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; t
         health = CASE WHEN ${budget} THEN health WHEN fail_count + 1 >= 5 THEN 'failing' ELSE 'degraded' END,
         next_fetch_at = now() + make_interval(mins => CASE WHEN ${budget} THEN 15 ELSE LEAST(interval_minutes * (fail_count + 2), 360) END),
         updated_at = now()
-      WHERE id = ${sourceId}`;
+      WHERE id = ${sourceId} AND collection_run_id=${run.id}`;
     await sql`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${found}, new_count = ${created}, error = ${message},
       detail = ${trialId ? sql.json({ boundedTrial: { id: trialId, revised, ...trialCounts } } as never) : null} WHERE id = ${run!.id}`;
     return { sourceId, status: "failed", found, created, revised, error: message,
@@ -428,16 +493,34 @@ async function scheduleXShards(): Promise<number> {
 
 /** Every minute: enqueue due sources (enabled, not WeChat/external), oldest due first; X accounts by shard. */
 export async function scheduleDueSources(limit = Number(process.env.FETCH_SCHEDULE_BATCH || 40)): Promise<{ enqueued: number; shards: number }> {
+  await getBoss();
+  const high=Number(process.env.COLLECTION_BACKLOG_HIGH || 2000);
+  const low=Math.min(high,Number(process.env.COLLECTION_BACKLOG_LOW || 1000));
+  const blocked=await sql.begin(async tx=>{
+    await tx`INSERT INTO collection_flow_control(id) VALUES (1) ON CONFLICT DO NOTHING`;
+    const [state]=await tx`SELECT blocked FROM collection_flow_control WHERE id=1 FOR UPDATE`;
+    const [load]=await tx`SELECT (SELECT count(*) FROM collection_items WHERE completed_at IS NULL)+
+      (SELECT count(*) FROM pgboss.job WHERE name IN ('content.extract-body','content.analyze') AND state IN ('created','retry','active')) AS pending`;
+    const paused=state!.blocked ? Number(load!.pending)>low : Number(load!.pending)>=high;
+    await tx`UPDATE collection_flow_control SET blocked=${paused},pending=${Number(load!.pending)},updated_at=now() WHERE id=1`;
+    return paused;
+  });
+  if(blocked)return {enqueued:0,shards:0};
   const kinds: string[] = (process.env.COLLECT_KINDS || "rss,web_list,json_list,x_search").split(",");
   // Listings fetched through Jina Reader are paid; development can leave them out.
   const skipJina = process.env.COLLECT_SKIP_JINA === "true";
-  const rows = await sql<{ id: string }[]>`
-    SELECT id FROM sources
-    WHERE enabled AND kind IN ${sql(kinds)} AND (next_fetch_at IS NULL OR next_fetch_at <= now()) AND NOT (${sharded()})
-      ${skipJina ? sql`AND config::text NOT LIKE '%r.jina.ai%'` : sql``}
-    ORDER BY next_fetch_at NULLS FIRST LIMIT ${limit}`;
+  const rows = await sql<{ id: string; config: Record<string,any> }[]>`
+    WITH due AS (
+      SELECT id,config,next_fetch_at,row_number() OVER (PARTITION BY
+        lower(substring(coalesce(config->>'feedUrl',config->>'url',id) from '^(?:https?://)?([^/]+)'))
+        ORDER BY next_fetch_at NULLS FIRST,id) AS domain_position
+      FROM sources
+      WHERE enabled AND kind IN ${sql(kinds)} AND (next_fetch_at IS NULL OR next_fetch_at <= now()) AND NOT (${sharded()})
+        AND NOT EXISTS(SELECT 1 FROM collection_intakes i WHERE i.source_id=sources.id AND i.finished_at IS NULL)
+        ${skipJina ? sql`AND config::text NOT LIKE '%r.jina.ai%'` : sql``}
+    ) SELECT id,config FROM due WHERE domain_position<=2 ORDER BY domain_position,next_fetch_at NULLS FIRST,id LIMIT ${limit}`;
   for (const r of rows) {
-    await enqueue(QUEUES.fetchSource, { sourceId: r.id }, { singletonKey: r.id });
+    await enqueue(QUEUES.fetchSource, { sourceId: r.id }, { singletonKey: r.id, group: { id: collectionDomain(r.config.feedUrl ?? r.config.url) } });
     await sql`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id = ${r.id}`;
   }
   const shards = kinds.includes("x_search") ? await scheduleXShards() : 0;

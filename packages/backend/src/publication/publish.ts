@@ -14,6 +14,7 @@ import { enqueue, QUEUES, shutdownSignal } from "../jobs/queue.ts";
 import { isCategoryKey } from "@aihot/contracts/taxonomy";
 import { CLASSIFICATION_CONFIG_VERSION, AI_POLICY_VERSION, NON_AI_POLICY_VERSION, currentAnalysisSignature } from "../editorial/policy.ts";
 import { reconcileEditorialPoliciesTx } from "./editorial.ts";
+import { markEditorialDirtyTx } from "./batching.ts";
 import {
   bodyModeOf, channelOf, displayTags, isIndexable, isPoolEligible, isSelectable, mayRedistribute, type SourceFacts,
 } from "./rules.ts";
@@ -120,6 +121,8 @@ export interface PublishOptions {
   releasedAt?: Date | null;
   /** Internal: a fact-wide reconcile is already in progress under the global lock. */
   skipEditorialReconcile?: boolean;
+  /** Normal worker publication: combine global selection; safety/admin paths stay synchronous. */
+  batchEditorial?: boolean;
   /** Batch source/admin mutation: republish members, then reconcile once in the same transaction. */
   reconcileFacts?: boolean;
   /** A signature sweep owns its own enqueue, so it disables the publication fallback. */
@@ -431,7 +434,13 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
       (previous.visibility !== visibility || previous.eligible !== eligible || previous.title !== next.title || previous.summary !== summary)) {
     await invalidateStoryInputs(tx, [articleId], now);
   }
-  if (!options.skipEditorialReconcile && options.reconcileFacts !== false) await reconcileEditorialPoliciesTx(tx, now);
+  if (!options.skipEditorialReconcile && options.reconcileFacts !== false) {
+    // Existing public content revisions and any reduced access require immediate reconciliation.
+    const revisionChanged = previous && previous.input_revision !== article.revision;
+    const categoryChanged = previous && previous.category !== category;
+    if (options.batchEditorial && !reduced && !revisionChanged && !categoryChanged && !override) await markEditorialDirtyTx(tx, now);
+    else await reconcileEditorialPoliciesTx(tx, now);
+  }
   const [final] = await tx<{ selected: boolean; visibility: string }[]>`SELECT selected, visibility FROM publications WHERE article_id = ${articleId}`;
   return { articleId, changed, selected: final?.selected ?? selected, visibility: final?.visibility ?? visibility, ledger, reduced };
 }

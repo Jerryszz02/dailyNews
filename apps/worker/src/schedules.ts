@@ -6,6 +6,7 @@ import { ensureQueue, recordRun } from "@aihot/backend/jobs/queue";
 import { sweepUnprocessed } from "@aihot/backend/jobs/content";
 import { translatePending } from "@aihot/backend/editorial/translate";
 import { adaptIntervals, scheduleDueSources } from "@aihot/backend/sources/collect";
+import { recoverCollections } from "@aihot/backend/sources/intake";
 import { scheduleMpReconcile } from "@aihot/backend/sources/mp";
 import { refreshSourceIcons } from "@aihot/backend/sources/icons";
 import { computeHotRanking, snapshotHeat } from "@aihot/backend/events/hot";
@@ -23,7 +24,7 @@ import { forwardPendingFeedback } from "@aihot/backend/operations/feedback";
 import { backupConfigured, runBackup } from "@aihot/backend/operations/backup";
 import { sourceHealthWeekly } from "@aihot/backend/operations/reports";
 import { reprocessActiveAnalyses } from "@aihot/backend/publication/reprocess";
-import { reconcileEditorialPolicies } from "@aihot/backend/publication/editorial";
+import { reconcileDueEditorialPolicies } from "@aihot/backend/publication/editorial";
 import { boundedTrialEnabled } from "@aihot/backend/dailynews/trial";
 
 interface Scheduled {
@@ -37,7 +38,8 @@ const collecting = process.env.COLLECT_ENABLED === "true";
 
 export const SCHEDULES: Scheduled[] = [
   { name: "editorial.reclassify", cron: "*/5 * * * *", run: () => reprocessActiveAnalyses() },
-  { name: "editorial.reevaluate", cron: "* * * * *", run: () => reconcileEditorialPolicies() },
+  { name: "editorial.reevaluate", cron: "* * * * *", run: () => reconcileDueEditorialPolicies() },
+  { name: "collection.recover", cron: "* * * * *", run: recoverCollections },
   { name: "content.sweep", cron: "*/5 * * * *", run: sweepUnprocessed },
   // Full-text translations of newly selected items (model calls; off with MODEL_CALLS_ENABLED=false).
   { name: "content.translate", cron: "*/5 * * * *", run: () => translatePending() },

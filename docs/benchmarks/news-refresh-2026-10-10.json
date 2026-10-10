@@ -1,0 +1,602 @@
+{
+  "date": "2026-10-10",
+  "environment": {
+    "cpu": "Apple M5 Max",
+    "memoryBytes": 137438953472,
+    "node": "v24.19.0",
+    "postgres": "17.11",
+    "warmup": 1,
+    "measuredRuns": 5,
+    "execution": "serial; no web or worker processes running",
+    "baselineRef": "7234523ca164b49a0fd3495548adf877ee2b834a",
+    "implementationBase": "3af1848803bb4e034521e7c1c54fd4e21232c5e4"
+  },
+  "summary": {
+    "materials_before": {
+      "durationMs": {
+        "median": 319.27104199999985,
+        "min": 316.4583339999999,
+        "max": 324.616084
+      },
+      "clientCpuMs": {
+        "median": 225.732,
+        "min": 218.781,
+        "max": 233.5
+      },
+      "queries": {
+        "median": 6050,
+        "min": 6050,
+        "max": 6050
+      }
+    },
+    "materials_after": {
+      "durationMs": {
+        "median": 216.8553750000001,
+        "min": 214.23279200000025,
+        "max": 229.61633299999994
+      },
+      "clientCpuMs": {
+        "median": 183.937,
+        "min": 174.02,
+        "max": 196.369
+      },
+      "queries": {
+        "median": 3110,
+        "min": 3110,
+        "max": 3110
+      }
+    },
+    "new_before": {
+      "durationMs": {
+        "median": 304.8929160000001,
+        "min": 297.415166,
+        "max": 314.91366600000003
+      },
+      "clientCpuMs": {
+        "median": 216.986,
+        "min": 198.489,
+        "max": 229.668
+      },
+      "queries": {
+        "median": 5000,
+        "min": 5000,
+        "max": 5000
+      }
+    },
+    "new_after": {
+      "durationMs": {
+        "median": 311.15704099999994,
+        "min": 307.179208,
+        "max": 326.354
+      },
+      "clientCpuMs": {
+        "median": 208.256,
+        "min": 199.968,
+        "max": 239.997
+      },
+      "queries": {
+        "median": 5000,
+        "min": 5000,
+        "max": 5000
+      }
+    },
+    "editorial_before": {
+      "elapsedMs": {
+        "median": 1697.086875,
+        "min": 1657.617084,
+        "max": 1712.95375
+      },
+      "cpuMs": {
+        "median": 1227.66,
+        "min": 1212.556,
+        "max": 1230.491
+      },
+      "queries": {
+        "median": 33249,
+        "min": 33249,
+        "max": 33249
+      },
+      "reconciliations": {
+        "median": 100,
+        "min": 100,
+        "max": 100
+      },
+      "selected": {
+        "median": 40,
+        "min": 40,
+        "max": 40
+      }
+    },
+    "editorial_after": {
+      "elapsedMs": {
+        "median": 187.385583,
+        "min": 185.622375,
+        "max": 188.083875
+      },
+      "cpuMs": {
+        "median": 120.983,
+        "min": 120.075,
+        "max": 123.361
+      },
+      "queries": {
+        "median": 2572,
+        "min": 2572,
+        "max": 2572
+      },
+      "reconciliations": {
+        "median": 1,
+        "min": 1,
+        "max": 1
+      },
+      "selected": {
+        "median": 40,
+        "min": 40,
+        "max": 40
+      }
+    }
+  },
+  "measurements": {
+    "editorial_after": [
+      {
+        "kind": "after100",
+        "publications": 100,
+        "queries": 2572,
+        "reconciliations": 1,
+        "elapsedMs": 204.983917,
+        "cpuMs": 123.541,
+        "selected": 40,
+        "run": 0,
+        "warmup": true
+      },
+      {
+        "kind": "after100",
+        "publications": 100,
+        "queries": 2572,
+        "reconciliations": 1,
+        "elapsedMs": 185.622375,
+        "cpuMs": 120.075,
+        "selected": 40,
+        "run": 1,
+        "warmup": false
+      },
+      {
+        "kind": "after100",
+        "publications": 100,
+        "queries": 2572,
+        "reconciliations": 1,
+        "elapsedMs": 186.75741600000003,
+        "cpuMs": 120.63,
+        "selected": 40,
+        "run": 2,
+        "warmup": false
+      },
+      {
+        "kind": "after100",
+        "publications": 100,
+        "queries": 2572,
+        "reconciliations": 1,
+        "elapsedMs": 187.599833,
+        "cpuMs": 120.983,
+        "selected": 40,
+        "run": 3,
+        "warmup": false
+      },
+      {
+        "kind": "after100",
+        "publications": 100,
+        "queries": 2572,
+        "reconciliations": 1,
+        "elapsedMs": 187.385583,
+        "cpuMs": 121.415,
+        "selected": 40,
+        "run": 4,
+        "warmup": false
+      },
+      {
+        "kind": "after100",
+        "publications": 100,
+        "queries": 2572,
+        "reconciliations": 1,
+        "elapsedMs": 188.083875,
+        "cpuMs": 123.361,
+        "selected": 40,
+        "run": 5,
+        "warmup": false
+      }
+    ],
+    "editorial_before": [
+      {
+        "kind": "before100",
+        "publications": 100,
+        "queries": 33249,
+        "reconciliations": 100,
+        "elapsedMs": 1715.701667,
+        "cpuMs": 1233.187,
+        "selected": 40,
+        "run": 0,
+        "warmup": true
+      },
+      {
+        "kind": "before100",
+        "publications": 100,
+        "queries": 33249,
+        "reconciliations": 100,
+        "elapsedMs": 1657.617084,
+        "cpuMs": 1212.556,
+        "selected": 40,
+        "run": 1,
+        "warmup": false
+      },
+      {
+        "kind": "before100",
+        "publications": 100,
+        "queries": 33249,
+        "reconciliations": 100,
+        "elapsedMs": 1690.494083,
+        "cpuMs": 1228.545,
+        "selected": 40,
+        "run": 2,
+        "warmup": false
+      },
+      {
+        "kind": "before100",
+        "publications": 100,
+        "queries": 33249,
+        "reconciliations": 100,
+        "elapsedMs": 1703.6205,
+        "cpuMs": 1227.66,
+        "selected": 40,
+        "run": 3,
+        "warmup": false
+      },
+      {
+        "kind": "before100",
+        "publications": 100,
+        "queries": 33249,
+        "reconciliations": 100,
+        "elapsedMs": 1697.086875,
+        "cpuMs": 1223.324,
+        "selected": 40,
+        "run": 4,
+        "warmup": false
+      },
+      {
+        "kind": "before100",
+        "publications": 100,
+        "queries": 33249,
+        "reconciliations": 100,
+        "elapsedMs": 1712.95375,
+        "cpuMs": 1230.491,
+        "selected": 40,
+        "run": 5,
+        "warmup": false
+      }
+    ],
+    "materials_after": {
+      "baseline": false,
+      "baselineRef": null,
+      "node": "v24.19.0",
+      "fixture": "980 unchanged / 10 new / 10 modified",
+      "results": [
+        {
+          "run": 0,
+          "warmup": true,
+          "durationMs": 238.328375,
+          "clientCpuMs": 212.712,
+          "queries": 3110,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 1,
+          "warmup": false,
+          "durationMs": 229.61633299999994,
+          "clientCpuMs": 196.369,
+          "queries": 3110,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 2,
+          "warmup": false,
+          "durationMs": 217.95849999999996,
+          "clientCpuMs": 184.383,
+          "queries": 3110,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 3,
+          "warmup": false,
+          "durationMs": 216.8553750000001,
+          "clientCpuMs": 178.308,
+          "queries": 3110,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 4,
+          "warmup": false,
+          "durationMs": 214.23279200000025,
+          "clientCpuMs": 174.02,
+          "queries": 3110,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 5,
+          "warmup": false,
+          "durationMs": 215.1685419999999,
+          "clientCpuMs": 183.937,
+          "queries": 3110,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        }
+      ]
+    },
+    "materials_before": {
+      "baseline": true,
+      "baselineRef": "7234523ca164b49a0fd3495548adf877ee2b834a",
+      "node": "v24.19.0",
+      "fixture": "980 unchanged / 10 new / 10 modified",
+      "results": [
+        {
+          "run": 0,
+          "warmup": true,
+          "durationMs": 340.51895800000005,
+          "clientCpuMs": 273.267,
+          "queries": 6050,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 1,
+          "warmup": false,
+          "durationMs": 324.616084,
+          "clientCpuMs": 233.5,
+          "queries": 6050,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 2,
+          "warmup": false,
+          "durationMs": 319.27104199999985,
+          "clientCpuMs": 225.732,
+          "queries": 6050,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 3,
+          "warmup": false,
+          "durationMs": 317.97016699999995,
+          "clientCpuMs": 222.196,
+          "queries": 6050,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 4,
+          "warmup": false,
+          "durationMs": 316.4583339999999,
+          "clientCpuMs": 218.781,
+          "queries": 6050,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        },
+        {
+          "run": 5,
+          "warmup": false,
+          "durationMs": 322.97345799999994,
+          "clientCpuMs": 229.723,
+          "queries": 6050,
+          "counts": {
+            "unchanged": 980,
+            "created": 10,
+            "revised": 10
+          }
+        }
+      ]
+    },
+    "new_after": {
+      "baseline": false,
+      "baselineRef": null,
+      "node": "v24.19.0",
+      "fixture": "1000 new",
+      "results": [
+        {
+          "run": 0,
+          "warmup": true,
+          "durationMs": 352.85733300000004,
+          "clientCpuMs": 286.101,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 1,
+          "warmup": false,
+          "durationMs": 326.354,
+          "clientCpuMs": 234.67,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 2,
+          "warmup": false,
+          "durationMs": 318.4834579999999,
+          "clientCpuMs": 239.997,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 3,
+          "warmup": false,
+          "durationMs": 311.15704099999994,
+          "clientCpuMs": 208.256,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 4,
+          "warmup": false,
+          "durationMs": 307.563625,
+          "clientCpuMs": 199.968,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 5,
+          "warmup": false,
+          "durationMs": 307.179208,
+          "clientCpuMs": 201.587,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        }
+      ]
+    },
+    "new_before": {
+      "baseline": true,
+      "baselineRef": "7234523ca164b49a0fd3495548adf877ee2b834a",
+      "node": "v24.19.0",
+      "fixture": "1000 new",
+      "results": [
+        {
+          "run": 0,
+          "warmup": true,
+          "durationMs": 338.029042,
+          "clientCpuMs": 280.924,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 1,
+          "warmup": false,
+          "durationMs": 314.91366600000003,
+          "clientCpuMs": 229.668,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 2,
+          "warmup": false,
+          "durationMs": 304.8929160000001,
+          "clientCpuMs": 225.666,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 3,
+          "warmup": false,
+          "durationMs": 304.9859160000001,
+          "clientCpuMs": 216.986,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 4,
+          "warmup": false,
+          "durationMs": 299.6043750000001,
+          "clientCpuMs": 202.093,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        },
+        {
+          "run": 5,
+          "warmup": false,
+          "durationMs": 297.415166,
+          "clientCpuMs": 198.489,
+          "queries": 5000,
+          "counts": {
+            "unchanged": 0,
+            "created": 1000,
+            "revised": 0
+          }
+        }
+      ]
+    }
+  },
+  "limits": [
+    "Client CPU excludes PostgreSQL CPU.",
+    "These are whole-fixture timings; no per-article end-to-end P95 was measured.",
+    "Model/network requests are absent in the two microbenchmarks.",
+    "New code measured in the working tree of this artifact commit; before code loaded from pinned Git blobs."
+  ]
+}

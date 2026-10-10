@@ -13,6 +13,7 @@ import { registerSchedules } from "./schedules.ts";
 import { ensureContentTargets } from "@aihot/backend/notify/deliver";
 import { startHeartbeat } from "@aihot/backend/operations/heartbeat";
 import { reprocessActiveAnalyses } from "@aihot/backend/publication/reprocess";
+import { recoverEditorialBatch } from "@aihot/backend/publication/batching";
 
 assertProductionSecrets([["auth", "IMG_PROXY_SIGN_SECRET"]]);
 
@@ -37,6 +38,15 @@ if (!trial && FEATURES.leaderboard) {
   if (!published) await boss.send("cron.leaderboard.round", {}, { singletonKey: "first-round" });
 }
 const heartbeat = startHeartbeat("worker");
+// Durable dirty state survives a dropped/duplicate queue wake-up. Never overlap recovery polls.
+let recoveringBatch = false;
+const batchRecovery = trial ? null : setInterval(() => {
+  if (recoveringBatch || stopping) return;
+  recoveringBatch = true;
+  void recoverEditorialBatch().catch(() => console.error("editorial batch recovery failed"))
+    .finally(() => { recoveringBatch = false; });
+}, 2_000);
+batchRecovery?.unref();
 console.log(JSON.stringify({ level: "info", msg: "worker started", pid: process.pid }));
 
 let stopping = false;
@@ -45,6 +55,7 @@ const shutdown = async () => {
   stopping = true;
   console.log(JSON.stringify({ level: "info", msg: "worker stopping" }));
   clearInterval(heartbeat);
+  if (batchRecovery) clearInterval(batchRecovery);
   await stopBoss();
   await closeDb();
   process.exit(0);

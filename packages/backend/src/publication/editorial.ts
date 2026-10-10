@@ -6,13 +6,23 @@ import path from "node:path";
 import { isCategoryKey } from "@aihot/contracts/taxonomy";
 import { REPO_ROOT } from "../config.ts";
 import { sql, type Tx } from "../db.ts";
-import { chooseFactCategory, evaluateNonAiFacts, type NonAiEvidenceInput, type NonAiFactInput } from "../dailynews/non-ai.ts";
+import { chooseFactCategory, evaluateNonAiFacts, prepareNonAiFactFeatures, nextReevaluationAt, nonAiPolicyVersion, type NonAiEvidenceInput, type NonAiFactInput } from "../dailynews/non-ai.ts";
+import type { LegacyStory } from "../dailynews/legacy/curation.ts";
 import { CLASSIFICATION_CONFIG_VERSION, NON_AI_POLICY_VERSION, currentAnalysisSignature } from "../editorial/policy.ts";
 import { enqueue, QUEUES } from "../jobs/queue.ts";
 import { sha256, stableJson } from "../lib/ids.ts";
 import { applyFactSelectionTx, invalidatePolicyProjectionTx } from "./publish.ts";
 
 const MAX_REANALYSIS_ENQUEUES = 100;
+const FEATURE_POLICY_VERSION = `${nonAiPolicyVersion}:${CLASSIFICATION_CONFIG_VERSION}`;
+interface FeatureCacheRow {
+  fact_id: number;
+  input_signature: string;
+  policy_version: string;
+  features: LegacyStory;
+  evaluated_at: Date;
+  next_reevaluation_at: Date | null;
+}
 type LegacySource = { source_id: string; credibility: number; mediaType: string; signalRole?: string; mayHavePaywall?: boolean };
 const legacySources = new Map<string, LegacySource>((JSON.parse(readFileSync(path.join(REPO_ROOT, "reference/baselines/legacy-sources.json"), "utf8")) as { sources: LegacySource[] }).sources.map((s) => [s.source_id, s]));
 
@@ -191,7 +201,39 @@ export async function reconcileEditorialPoliciesTx(tx: Tx, now: Date): Promise<{
     }));
     if (evidence.length) candidates.push({ factId: String(factId), primaryCategory: category as NonAiFactInput["primaryCategory"], evidence });
   }
-  const result = evaluateNonAiFacts(candidates, now);
+  // Keep the complete candidate set for global quotas/diversity. Expensive deterministic
+  // evidence/text features are reused only for identical inputs before their time boundary.
+  const cache = new Map((await tx<FeatureCacheRow[]>`
+    SELECT fact_id, input_signature, policy_version, features, evaluated_at, next_reevaluation_at FROM fact_feature_cache
+  `).map((row) => [String(row.fact_id), row]));
+  const prepared = new Map<string, LegacyStory>();
+  const changedFeatures: FeatureCacheRow[] = [];
+  for (const input of candidates) {
+    const signature = sha256(stableJson({ input, policy: FEATURE_POLICY_VERSION }));
+    const prior = cache.get(input.factId);
+    if (prior?.input_signature === signature && prior.policy_version === FEATURE_POLICY_VERSION && prior.evaluated_at <= now &&
+      (!prior.next_reevaluation_at || prior.next_reevaluation_at > now)) {
+      prepared.set(input.factId, prior.features);
+    } else {
+      const features = prepareNonAiFactFeatures(input, now);
+      prepared.set(input.factId, features);
+      const due = nextReevaluationAt(input, now);
+      changedFeatures.push({ fact_id: Number(input.factId), input_signature: signature, policy_version: FEATURE_POLICY_VERSION,
+        features, evaluated_at: now, next_reevaluation_at: due ? new Date(due) : null });
+    }
+  }
+  if (changedFeatures.length) {
+    await tx`INSERT INTO fact_feature_cache (fact_id, input_signature, policy_version, features, evaluated_at, next_reevaluation_at)
+      SELECT fact_id, input_signature, policy_version, features, evaluated_at, next_reevaluation_at FROM jsonb_to_recordset(${tx.json(changedFeatures as never)})
+        AS x(fact_id bigint, input_signature text, policy_version text, features jsonb, evaluated_at timestamptz, next_reevaluation_at timestamptz)
+      ON CONFLICT (fact_id) DO UPDATE SET input_signature=excluded.input_signature, policy_version=excluded.policy_version,
+        features=excluded.features, evaluated_at=excluded.evaluated_at, next_reevaluation_at=excluded.next_reevaluation_at`;
+  }
+  // Facts that lost all eligible evidence or moved to AI no longer own non-AI features.
+  // Removing their cache also prevents obsolete source/policy versions waking every minute.
+  const obsoleteFeatures = [...cache.keys()].filter((id) => !prepared.has(id)).map(Number);
+  if (obsoleteFeatures.length) await tx`DELETE FROM fact_feature_cache WHERE fact_id=ANY(${obsoleteFeatures}::bigint[])`;
+  const result = evaluateNonAiFacts(candidates, now, prepared);
   const decisions = new Map(result.facts.map((decision) => [Number(decision.factId), decision]));
   const selectedByArticle = new Map<string, { factId: number; decisionId: number; score: number; reason: string; category: string; tier: string; status: string; signature: string }>();
   const touchedNonAi = new Set<string>();
@@ -252,4 +294,19 @@ export async function reconcileEditorialPoliciesTx(tx: Tx, now: Date): Promise<{
       { singletonKey: `${articleId}:${attemptTag}`, priority: 0 }, tx);
   }
   return { facts: byFact.size, selected: selectedByArticle.size, requeued: requeue.length };
+}
+
+/** Time-only wake-up avoids a global pass when no fact is due. Admin/full rebuild remains explicit. */
+export async function reconcileDueEditorialPolicies(now: Date = new Date()) {
+  return sql.begin(async (tx) => {
+    await tx`SELECT pg_advisory_xact_lock(hashtext('dailynews-editorial-projection'))`;
+    await tx`SELECT pg_advisory_xact_lock_shared(hashtext('report_candidates'))`;
+    const [due] = await tx<{ due: boolean }[]>`SELECT EXISTS(
+      SELECT 1 FROM fact_editorial_state WHERE next_reevaluation_at <= ${now}
+    ) OR EXISTS (
+      SELECT 1 FROM fact_feature_cache WHERE policy_version <> ${FEATURE_POLICY_VERSION}
+    ) AS due`;
+    if (!due?.due) return { facts: 0, selected: 0, requeued: 0 };
+    return reconcileEditorialPoliciesTx(tx, now);
+  });
 }

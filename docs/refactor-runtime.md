@@ -2,6 +2,8 @@
 
 更新时间：2026-10-03（Asia/Shanghai）。适用于当前实施分支；生产仍是独立旧系统，未切换。需求和阶段出口以 [已批准计划](planning/aihot-v2-refactor-plan.md) 为准。
 
+2026-10-10 补充：[更新提速运行记录](news-refresh-performance.md) 记录本轮新增迁移、队列、回归与离线前后对照；下方 P1–P5 仍保留为当时证据，不表示当前生产状态。
+
 ## P1 基准与运行
 
 固定 AIHOT `3343fe2b20db4be7269113752d82d3992fc52b6b` 已导入 `apps/{web,api,worker}`、`packages/{backend,contracts}`、`industry` 和 `database`。来源文件校验清单、MIT/NOTICE、旧规则提交与锁文件均保留在 [基准目录](../reference/baselines/README.md)。旧 `src`、`api`、`supabase`、新闻脚本和 fallback 数据保留，不用于新底座启动。
