@@ -18,6 +18,7 @@ import { completeReceipt, rejectReceivedResponse, ProviderRejectedError, Receipt
 import { collapseWhitespace } from "../lib/text.ts";
 import { modelFor } from "./models.ts";
 import { copyEvidenceIssues } from "./evidence.ts";
+import { predictCalibration, sameCalibrationFamily } from "./calibration.ts";
 import { buildMaterial, firstImagePart, loadAnalyzeInput, type AnalyzeInputArticle } from "./input.ts";
 import { pageFetchable } from "../content/extract.ts";
 import { shutdownSignal } from "../jobs/queue.ts";
@@ -394,8 +395,11 @@ export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts & { sta
     return { prefilter, scores, writing: null, structure: null, classification: { ...emptyClassification } };
   }
   const structure = await runStructure(a, opts);
-  const override = isCategoryKey(a.editorialCategory) ? "fact" : isCategoryKey(a.manualCategory) ? "manual" : null;
+  const override = isCategoryKey(a.manualCategory) ? "manual" : isCategoryKey(a.editorialCategory) ? "fact" : null;
   let category = override === "fact" ? a.editorialCategory! : override === "manual" ? a.manualCategory! : structure.category;
+  if (!override) category = predictCalibration(a.calibrationPolicy ?? null, {
+    title: a.title, body: String(a.xPost?.text ?? a.bodyText ?? a.excerpt ?? ""), category, selected: null,
+  }).category;
   const fallback: AnalysisRun["classification"]["fallback"] = { attempted: false, category: null, reason: null, receiptId: null };
   if (!category) {
     return { prefilter: null, scores: null, writing: null, structure, classification: { originalCategory: structure.category, effectiveCategory: null, override, fallback, pending: true } };
@@ -532,6 +536,17 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
   const inputSignature = analysisSignature(input, models);
   const run = await runAnalysis(input, { ...opts, resolvedModels: models });
   const out = normalizeAnalysis(run);
+  const baselineSelected = out.selected;
+  const calibration = predictCalibration(input.calibrationPolicy ?? null, {
+    title: input.title, body: String(input.xPost?.text ?? input.bodyText ?? input.excerpt ?? ""),
+    category: run.classification.originalCategory, selected: out.selected,
+  });
+  const categoryRuleIds = !run.classification.override && calibration.category === out.category
+    ? calibration.ruleIds.filter(id => input.calibrationPolicy?.rules.find(rule => rule.id === id)?.dimension === "category") : [];
+  // Calibration can only veto an AI item that has already passed the original hard gates.
+  const selectionFamilyMatches = sameCalibrationFamily(run.classification.originalCategory, out.category);
+  if (selectionFamilyMatches && out.selected && calibration.selected === false) out.selected = false;
+  const appliedRuleIds = [...categoryRuleIds, ...calibration.ruleIds.filter(id => selectionFamilyMatches && input.calibrationPolicy?.rules.find(rule => rule.id === id)?.dimension === "selection")];
   const receiptIds = [
     ...(run.prefilter ? [run.prefilter.receiptId] : []), ...(run.scores?.receiptIds ?? []), ...(run.writing?.receiptIds ?? []),
     ...(run.structure ? [run.structure.receiptId] : []), ...(run.classification.fallback.receiptId ? [run.classification.fallback.receiptId] : []),
@@ -543,6 +558,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
     ...(w ? { writer: w.kind, writerModel: w.model, itemType: w.itemType ?? null, authorRole: w.authorRole ?? null } : {}),
     ...(w?.identityGuard?.outcome === "fallback" ? { identityGuard: w.identityGuard } : {}),
     fact: out.fact,
+    calibration: { policy: input.calibrationPolicy ?? null, ruleIds: appliedRuleIds, categoryRuleIds, baselineSelected },
     classification: { ...run.classification, reason: run.structure?.categoryReason ?? "", version: CLASSIFICATION_CONFIG_VERSION },
     actualModels: Object.fromEntries(Object.entries(models).map(([role, model]) => [role,
       { key: model.key, service: model.service, model: model.model, baseUrl: model.baseUrl }])),

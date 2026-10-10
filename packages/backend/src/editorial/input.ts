@@ -4,6 +4,8 @@ import { sql, type Db } from "../db.ts";
 import { collapseWhitespace, truncate } from "../lib/text.ts";
 import { produceImage } from "../media/images.ts";
 import type { ContentPart } from "../providers/llm.ts";
+import type { CalibrationPolicy } from "@aihot/contracts/calibration";
+import { loadActiveCalibration } from "./calibration.ts";
 
 export interface AnalyzeInputArticle {
   id: string;
@@ -39,6 +41,8 @@ export interface AnalyzeInputArticle {
   classificationFallbackCategory?: string | null;
   classificationFallbackConfigVersion?: string | null;
   classificationRetryCount?: number;
+  /** Frozen at the first analysis of this material revision. Existing analyses freeze null. */
+  calibrationPolicy?: CalibrationPolicy | null;
 }
 
 /**
@@ -71,6 +75,10 @@ export async function loadAnalyzeInput(articleId: string, db: Db = sql): Promise
     LEFT JOIN editorial_overrides o ON o.article_id = a.id
     WHERE a.id = ${articleId}`;
   if (!row) return null;
+  const [prior] = await db<{ output: { calibration?: { policy?: CalibrationPolicy | null } } }[]>`
+    SELECT output FROM analyses WHERE article_id = ${articleId} AND input_revision = ${row.revision}
+    ORDER BY id ASC LIMIT 1`;
+  const calibrationPolicy = prior ? prior.output?.calibration?.policy ?? null : await loadActiveCalibration(db);
   return {
     id: row.id, revision: row.revision, title: row.title, url: row.url, author: row.author, publishedAt: row.published_at, discoveredAt: row.discovered_at,
     bodyText: row.body_text, excerpt: row.excerpt, bodyStatus: row.body_status, xPost: withXArticle(row.x_post, row.x_article), media: row.media,
@@ -86,6 +94,7 @@ export async function loadAnalyzeInput(articleId: string, db: Db = sql): Promise
     classificationFallbackCategory: row.classification_fallback_revision === row.revision ? row.classification_fallback_category : null,
     classificationFallbackConfigVersion: row.classification_fallback_revision === row.revision ? row.classification_fallback_config_version : null,
     classificationRetryCount: row.classification_retry_revision === row.revision ? row.classification_retry_count : 0,
+    calibrationPolicy,
   };
 }
 

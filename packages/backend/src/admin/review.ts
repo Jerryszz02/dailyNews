@@ -33,12 +33,23 @@ export function stratifiedMaterials(rows: ReviewMaterial[], count: number): Revi
 const identity = (m: ReviewMaterial) => `${m.articleId}:${m.inputRevision}:${m.analysisId}`;
 const keyFor = (a: ReviewMaterial, b?: ReviewMaterial) => b ? `relation:${[identity(a),identity(b)].sort().join('|')}:${a.factId}:${a.storyId}:${b.factId}:${b.storyId}` : `article:${identity(a)}`;
 const taskColumns = sql`id, batch_id AS "batchId", position, kind, mode, stratum, snapshot, version, status, answer, updated_at AS "updatedAt", created_at AS "createdAt"`;
+/** Baseline decisions and strata never cross the API boundary for a blind task. */
+export function publicReviewTask(task: ReviewTask): ReviewTask {
+  if (task.mode !== 'blind') return task;
+  const hide = (m: ReviewMaterial): ReviewMaterial => ({...m,category:null,selected:null,score:null,model:null,
+    policyId:null,policyVersion:null,inputSignature:null,aiRelevanceDecision:null,storyTitle:null,factId:null,storyId:null});
+  return {...task,stratum:'blind',snapshot:{...task.snapshot,article:hide(task.snapshot.article),
+    ...(task.snapshot.related ? {related:hide(task.snapshot.related)} : {})}};
+}
+export async function rawReviewTasks(batchId: string, db: Db = sql): Promise<ReviewTask[]> {
+  return db<ReviewTask[]>`SELECT ${taskColumns} FROM review_tasks WHERE batch_id=${batchId} ORDER BY position`;
+}
 async function taskById(id: string, db: Db = sql): Promise<ReviewTask | null> {
   const [row] = await db<ReviewTask[]>`SELECT ${taskColumns} FROM review_tasks WHERE id=${id}`;
   return row ?? null;
 }
 function progress(tasks: ReviewTask[]): ReviewProgress {
-  // All supported tasks are assisted. Completion counts cannot satisfy independent acceptance.
+  // Completion alone is not formal acceptance; calibration has its own smaller holdout report.
   const p: ReviewProgress = {total:tasks.length,completed:0,pending:0,skipped:0,later:0,byCategory:[],dimensions:{},
     acceptance:{status:'not_ready',reason:'blind_holdout_required',classificationAccuracy:null,aiFalseBlockRate:null,minimumBlindArticles:200,minimumAiRelevant:50}};
   const cats = new Map<string,{category:string;total:number;completed:number}>();
@@ -54,12 +65,12 @@ function progress(tasks: ReviewTask[]): ReviewProgress {
 export async function reviewOverview(): Promise<ReviewOverview> {
   const batches = await sql<ReviewBatch[]>`SELECT b.id,b.label,b.mode,b.created_at AS "createdAt",count(t.id)::int AS count FROM review_batches b LEFT JOIN review_tasks t ON t.batch_id=b.id GROUP BY b.id ORDER BY b.created_at DESC LIMIT 100`;
   const tasks = await sql<ReviewTask[]>`SELECT ${taskColumns} FROM review_tasks ORDER BY created_at`;
-  return {batches,progress:progress(tasks)};
+  return {batches,progress:progress(tasks.map(publicReviewTask))};
 }
 export async function reviewBatch(id: string): Promise<ReviewBatchDetail | null> {
   const [batch] = await sql<ReviewBatch[]>`SELECT b.id,b.label,b.mode,b.created_at AS "createdAt",count(t.id)::int AS count FROM review_batches b LEFT JOIN review_tasks t ON t.batch_id=b.id WHERE b.id=${id} GROUP BY b.id`;
   if (!batch) return null;
-  const tasks = await sql<ReviewTask[]>`SELECT ${taskColumns} FROM review_tasks WHERE batch_id=${id} ORDER BY position`;
+  const tasks = (await rawReviewTasks(id)).map(publicReviewTask);
   return {batch,tasks,progress:progress(tasks)};
 }
 export async function createReviewBatch(input: ReviewCreate, actor: string) {
@@ -115,7 +126,12 @@ export async function saveReviewAnswer(id: string, input: ReviewSave, actor: str
   return sql.begin(async tx => {
     await tx`SELECT pg_advisory_xact_lock(hashtext(${`manual-review-request:${b.requestId}`}))`;
     const [prior]=await tx`SELECT task_id,request_hash FROM review_revisions WHERE request_id=${b.requestId}`;
-    if (prior) { if (prior.task_id!==id || prior.request_hash!==hash) throw new Conflict('同一请求编号的内容不同'); return {task:(await taskById(id,tx))!}; }
+    if (prior) { if (prior.task_id!==id || prior.request_hash!==hash) throw new Conflict('同一请求编号的内容不同'); return {task:publicReviewTask((await taskById(id,tx))!)}; }
+    const initial = await taskById(id,tx);
+    if (initial?.mode === 'blind') {
+      const [state] = await tx`SELECT frozen FROM review_calibration_state WHERE batch_id=${initial.batchId} FOR UPDATE`;
+      if (state?.frozen) throw new Conflict('这轮标注已冻结用于验证，可以回看；原答案不会被覆盖');
+    }
     await tx`SELECT id FROM review_tasks WHERE id=${id} FOR UPDATE`;
     const t=await taskById(id,tx); if (!t) return null;
     if(t.version!==b.version) throw new Conflict('标注已被修改，请刷新后再保存；当前选择尚未写入');
@@ -123,7 +139,7 @@ export async function saveReviewAnswer(id: string, input: ReviewSave, actor: str
     await tx`INSERT INTO review_revisions(task_id,version,request_id,request_hash,status,answer,actor) VALUES(${id},${t.version+1},${b.requestId},${hash},${b.status},${tx.json(b.answer as never)},${actor})`;
     await tx`UPDATE review_tasks SET version=version+1,status=${b.status},answer=${tx.json(b.answer as never)},updated_at=now() WHERE id=${id}`;
     await audit(actor,'review.answer',`review-task:${id}`,null,{version:t.version,status:t.status},{version:t.version+1,status:b.status},{db:tx,requestId:b.requestId});
-    return {task:(await taskById(id,tx))!};
+    return {task:publicReviewTask((await taskById(id,tx))!)};
   });
 }
 /** Remove dependent choices when a reviewer changes their parent judgment. */
@@ -142,13 +158,14 @@ export function validateAnswer(kind: string,status: string,a: ReviewAnswer,annot
     return;
   }
   if(a.relation) bad('文章任务不填写关系判断');
+  if(annotationVersion>=3 && a.classification==='ok') bad('盲标请直接选择分类，不能确认未展示的系统分类');
   if (!a.classification || !a.quality || !a.selection) bad('请分别判断分类、标题摘要和精选');
   if(a.classification==='change'&&!a.category) bad('请选择修改后的分类');
   if(a.quality==='problem'&&!a.qualityReasons?.length) bad('请选择至少一种问题');
   if(annotationVersion>=2&&!a.aiRelevance) bad('请单独判断是否与人工智能相关；这不同于是否值得精选');
 }
 export function selectionGold(tasks: ReviewTask[]) {
-  return tasks.filter(t=>t.kind==='article'&&t.status==='completed'&&t.answer?.classification!=='uncertain'&&(t.answer?.classification==='change'?t.answer.category:t.snapshot.article.category)==='ai'&&t.answer?.selection).map(t=>{
+  return tasks.filter(t=>t.mode==='assisted'&&t.kind==='article'&&t.status==='completed'&&t.answer?.classification!=='uncertain'&&(t.answer?.classification==='change'?t.answer.category:t.snapshot.article.category)==='ai'&&t.answer?.selection).map(t=>{
     const m=t.snapshot.article;
     return {caseId:t.id,material:{title:m.title,originalTitle:m.originalTitle,publishedAt:m.publishedAt,sourceName:m.sourceName,bodyZh:m.bodyZh,bodyOriginal:m.bodyOriginal},sourceFacts:{sourceKind:m.sourceKind,sourceTier:m.sourceTier,firstParty:m.firstParty,language:m.language},samplingContext:{benchmarkSplit:'assisted-development',samplingStratum:t.stratum,annotationMode:t.mode,eventGroup:m.storyId ?? m.factId ?? m.articleId},gold:{decision:t.answer!.selection==='uncertain'?'either':t.answer!.selection}};
   });
@@ -160,9 +177,10 @@ export function reviewCsv(tasks: ReviewTask[], revisions: Array<Record<string, u
 }
 export async function exportReview(format: string,batchId?:string) {
   if(!['json','csv','gold'].includes(format))bad('导出格式应为 json/csv/gold');
-  const tasks=await sql<ReviewTask[]>`SELECT ${taskColumns} FROM review_tasks WHERE (${batchId ?? null}::text IS NULL OR batch_id=${batchId ?? null}) ORDER BY batch_id,position`;
+  const tasks=(await sql<ReviewTask[]>`SELECT ${taskColumns} FROM review_tasks WHERE (${batchId ?? null}::text IS NULL OR batch_id=${batchId ?? null}) ORDER BY batch_id,position`).map(publicReviewTask);
   if(format==='gold')return {content:selectionGold(tasks).map(r=>JSON.stringify(r)).join('\n'),type:'application/x-ndjson; charset=utf-8',extension:'jsonl'};
   const revisions=await sql`SELECT r.* FROM review_revisions r JOIN review_tasks t ON t.id=r.task_id WHERE (${batchId ?? null}::text IS NULL OR t.batch_id=${batchId ?? null}) ORDER BY r.task_id,r.version`;
   if(format==='csv')return {content:reviewCsv(tasks,revisions),type:'text/csv; charset=utf-8',extension:'csv'};
-  return {content:JSON.stringify({schemaVersion:2,exportedAt:new Date().toISOString(),mode:'assisted',progress:progress(tasks),tasks,revisions},null,2),type:'application/json; charset=utf-8',extension:'json'};
+  const modes=new Set(tasks.map(t=>t.mode));
+  return {content:JSON.stringify({schemaVersion:2,exportedAt:new Date().toISOString(),mode:modes.size>1?'mixed':tasks[0]?.mode??'assisted',progress:progress(tasks),tasks,revisions},null,2),type:'application/json; charset=utf-8',extension:'json'};
 }

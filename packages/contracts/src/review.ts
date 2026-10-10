@@ -21,7 +21,7 @@ export interface ReviewMaterial {
   backfill: boolean; bodyStatus: string; storyTitle: string | null; factId: number | null; storyId: number | null;
 }
 export interface ReviewTask {
-  id: string; batchId: string; position: number; kind: 'article' | 'relation'; mode: 'assisted'; stratum: string;
+  id: string; batchId: string; position: number; kind: 'article' | 'relation'; mode: 'assisted' | 'blind'; stratum: string;
   snapshot: { article: ReviewMaterial; related?: ReviewMaterial; relationship?: 'merged' | 'unmerged'; annotationVersion?: number };
   version: number; status: ReviewStatus; answer: ReviewAnswer | null; updatedAt: string; createdAt: string;
 }
@@ -37,7 +37,7 @@ export interface ReviewProgress {
     minimumBlindArticles: 200; minimumAiRelevant: 50;
   };
 }
-export interface ReviewBatch { id: string; label: string; mode: 'assisted'; createdAt: string; count: number }
+export interface ReviewBatch { id: string; label: string; mode: 'assisted' | 'blind'; createdAt: string; count: number }
 export interface ReviewOverview { batches: ReviewBatch[]; progress: ReviewProgress }
 export interface ReviewBatchDetail { batch: ReviewBatch; tasks: ReviewTask[]; progress: ReviewProgress }
 export interface ReviewCreate { requestId: string; count?: number; label?: string }

@@ -106,6 +106,8 @@ export function analysisSignature(input: AnalyzeInputArticle, models: AnalysisMo
     nonAiPolicy: NON_AI_POLICY_VERSION,
     nonAiRules: RULES_VERSION,
     models,
+    // Do not alter historical uncalibrated signatures when an experiment is activated.
+    ...(input.calibrationPolicy ? { calibration: input.calibrationPolicy.id } : {}),
   }));
 }
 
