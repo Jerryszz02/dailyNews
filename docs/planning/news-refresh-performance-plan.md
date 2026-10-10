@@ -105,11 +105,11 @@ flowchart LR
 - 列表发现先持久化；需要详情补日期/标题/正文的文章进入正文/详情阶段。每篇按自己的材料完成后分析，同来源的快文章不再等待全部慢详情。缺少权威日期/必要正文时仍须按现有公开门槛处理，不能提前发布不合格稿。
 - 优先服务新增新闻，历史回填和周期复查低优先级；为来源/域名限制并发并轮转派发，防止一个大来源或大量慢域名占满抓取/正文槽位。存储、正文、分析积压达到高水位时减缓上游，恢复到低水位再放行；不得通过丢尾部减轻积压。
 - 来源总截止时间与单请求超时都使用可取消信号；未完成分页/批次留可恢复状态。区分暂时网络错误、429/5xx、永久配置/权限错误、预算等待；暂时失败有限退避加抖动，尊重 Retry-After。HTTP 与业务重试共享有界尝试次数和截止预算；pg-boss 过期只是最后的看门狗，处理器仍须用 AbortSignal 取消请求，外部请求期限须早于任务期限。
-- 抓取成功但进程在入库前重启：从持久批次续跑；批次未保存：允许重新抓取；文章已提交但消费者重启：按相同版本恢复并复用已确认的调用回执。供应商已处理但本地尚未保存结果时，进入 unknown，按既有受限、有审计的 receipt release 流程核验后恢复，不盲目重发；数据库事务不能保证供应商在所有故障点都只计费一次。两次来源任务并发时必须有来源级租约/运行序号，旧任务不得覆盖较新的 cursor。
+- 抓取成功但进程在入库前重启：从持久批次续跑；批次未保存：允许重新抓取；文章已提交但消费者重启：按相同版本恢复并复用已确认的调用回执。供应商已处理但本地尚未保存结果时，进入 unknown。本计划保留当前的有界重复调用策略：`autoReleaseUnknownReceipts` 在 unknown 超过 30 分钟后允许自动放行一次，**该次放行不核对供应商是否计费，可能产生重复费用**；同一回执再次 unknown 时等待管理员核对账单、记录 billed/note 并放行。自动放行也须留审计记录并受现有调用预算约束，不将其描述为已经核验或只计费一次。两次来源任务并发时必须有来源级租约/运行序号，旧任务不得覆盖较新的 cursor。
 
 初始实验参数：抓取沿用当前 8、分析沿用 2、正文沿用 4；存储先 1–2 个消费者，每批最多 50 条。它们是待 S0 实测调整的配置，不是吞吐承诺；有界试运行继续服从自己的固定并发/预算。优先复用现有队列和恢复器。
 
-出口：快来源能在慢来源结束前公开；同来源的快文章也能先进入分析；中断可恢复，重复重试不重复建稿或生成通知任务，已确认回执不重复调用，未知回执不盲目重发。
+出口：快来源能在慢来源结束前公开；同来源的快文章也能先进入分析；中断可恢复，重复重试不重复建稿或生成通知任务，已确认回执不重复调用。同一未知回执最多自动放行一次；再次未知等待人工核验，自动重调次数与可能重复费用单独统计。
 
 ### S3：批次提交精选，增量计算受影响事件
 
@@ -140,14 +140,14 @@ flowchart LR
 | 少量新增/修改 | 1,000 条输入，含 980 条未变化、10 条新增、10 条修改；只对应版本进入分析，未变化 980 条没有昂贵重算；相同 URL 正文修订、来源回退纠错分别测 |
 | 多来源及慢站 | 10/50/200 个模拟来源，含快速、超时、429、5xx；断言快源完成先于慢源结束。慢来源排在最前、大来源占满列表等顺序也要测，防止假隔离 |
 | 同来源慢详情 | 一个来源中快详情与慢详情混排；快稿先下行，必要材料未满足的稿不提前公开 |
-| 失败与重启 | 在批次写入前后、文章事务、任务交接、精选提交处故障注入；重试不丢尾部、不跳 cursor、不重复创建通知任务；确认回执复用，未知供应商结果进入受控恢复 |
+| 失败与重启 | 在批次写入前后、文章事务、任务交接、精选提交处故障注入；重试不丢尾部、不跳 cursor、不重复创建通知任务；确认回执复用；unknown 未满 30 分钟不放行，超时只自动放行一次，再次 unknown 等待人工 billed/note 核验，审计与预算完整 |
 | 批次与竞争 | 少于一批的尾部强制刷新；跨批更新/任务重复投递；旧分析晚到、同 URL 并发发现；处理中新增待重算标记不丢失 |
 | 内容与规则变化 | 标题/摘要/正文更新、手工分类、来源许可/参与模式变化、时间边界；代表稿替换、全局名额挤出、出版者多样性和 ledger 完整等价 |
 | 长列表及条件请求 | 第 61 条/尾部新稿、65,536 项大量重复列表、RSS 304/ETag、部分写入失败；不因分页、限额或提前游标丢资料 |
 | 积压与预算 | 有界队列背压/恢复、历史低优先级、模型预算耗尽；只暂停相关阶段，公开的有效内容继续可读，不扩大 trial 准入 |
 | 页面可见性 | Chrome 对比全部动态、精选、分类、API/RSS；分别记录后端可见、HTTP 缓存与页面刷新耗时，核对精选门槛与冻结日报 |
 
-性能实验统一硬件、Node/PostgreSQL 版本、数据副本、来源/模型模拟延迟、规则签名、缓存状态和并发。至少一次预热、5 次计量；报告样本量、重复间离散度及每条新闻 P50/P95，不从 5 个整轮样本推断稳定的尾延迟。记录首次可见、全批完成、吞吐、CPU 时间、峰值内存、SQL 数/锁等待、网络/模型次数及费用口径。墙钟耗时作为专门基准记录，CI 主要断言次数、顺序和幂等，避免易抖动的秒数测试。
+性能实验统一硬件、Node/PostgreSQL 版本、数据副本、来源/模型模拟延迟、规则签名、缓存状态和并发。至少一次预热、5 次计量；报告样本量、重复间离散度及每条新闻 P50/P95，不从 5 个整轮样本推断稳定的尾延迟。记录首次可见、全批完成、吞吐、CPU 时间、峰值内存、SQL 数/锁等待、网络/模型次数及费用口径；unknown 恢复引起的自动重调和已知/未知费用单列，不能归为普通去重失败，也不能从总费用中隐去。墙钟耗时作为专门基准记录，CI 主要断言次数、顺序和幂等，避免易抖动的秒数测试。
 
 验收门：
 
@@ -187,4 +187,5 @@ flowchart LR
 - 当前来源处理：[collect](../../packages/backend/src/sources/collect.ts) 76–114、204–284、289–304、429–470；当前版本与锁：[materials](../../packages/backend/src/content/materials.ts) 130–224。
 - 当前全局计算：[publish](../../packages/backend/src/publication/publish.ts) 186–198、434；[editorial](../../packages/backend/src/publication/editorial.ts) 91–254；[非 AI 规则适配](../../packages/backend/src/dailynews/non-ai.ts) 80–110；[全局选择规则](../../packages/backend/src/dailynews/legacy/curation.ts) 138–192。
 - 当前运行与消费者：[worker](../../apps/worker/src/main.ts)、[schedules](../../apps/worker/src/schedules.ts)、[queue](../../packages/backend/src/jobs/queue.ts)、[content](../../packages/backend/src/jobs/content.ts)、[events](../../packages/backend/src/jobs/events.ts)、[HTTP 缓存](../../packages/contracts/src/http-policy.ts)。
+- 未知回执恢复：[recover](../../packages/backend/src/operations/recover.ts) 13–58、[回执释放](../../packages/backend/src/providers/receipts.ts) 313–319；现有边界回归见 [receipts.test.ts](../../tests/receipts.test.ts) 113–136。本轮保留有界重复调用，不新增供应商核验接口。
 - AIHOT 原生：[worker](https://github.com/KKKKhazix/AIHOT/blob/3343fe2b20db4be7269113752d82d3992fc52b6b/apps/worker/src/main.ts#L17-L24)、[队列](https://github.com/KKKKhazix/AIHOT/blob/3343fe2b20db4be7269113752d82d3992fc52b6b/packages/backend/src/jobs/queue.ts#L27-L53)、[采集](https://github.com/KKKKhazix/AIHOT/blob/3343fe2b20db4be7269113752d82d3992fc52b6b/packages/backend/src/sources/collect.ts#L63-L74)、[版本](https://github.com/KKKKhazix/AIHOT/blob/3343fe2b20db4be7269113752d82d3992fc52b6b/packages/backend/src/content/materials.ts#L143-L208)、[单篇发布](https://github.com/KKKKhazix/AIHOT/blob/3343fe2b20db4be7269113752d82d3992fc52b6b/packages/backend/src/jobs/content.ts#L139-L153)。
