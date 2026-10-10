@@ -2,7 +2,11 @@
 // the server runs in (Docker runs in UTC; run this file with TZ=UTC and TZ=Asia/Shanghai to see both).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseLooseDate } from "@aihot/backend/sources/web-list";
+import http from 'node:http';
+import { config } from '@aihot/backend/config';
+import { parseLooseDate, fetchDetail } from "@aihot/backend/sources/web-list";
+import { assertSupportedConfig } from "@aihot/backend/sources/config-keys";
+import type { SourceRow } from '@aihot/backend/sources/types';
 
 const iso = (v: string, offset?: string) => parseLooseDate(v, offset)?.toISOString() ?? null;
 
@@ -32,4 +36,35 @@ test("a date that carries its zone keeps it", () => {
 test("no date at all is null", () => {
   assert.equal(iso(""), null);
   assert.equal(iso("yesterday"), null);
+});
+
+test("epoch publication values require an explicit unit and do not inherit the server or source timezone", () => {
+  const expected = '2026-10-10T14:53:30.000Z';
+  assert.equal(parseLooseDate('1791644010', '+08:00', 'epoch_s')?.toISOString(), expected);
+  assert.equal(parseLooseDate('1791644010000', '-07:00', 'epoch_ms')?.toISOString(), expected);
+  assert.equal(parseLooseDate('1791644010'), null);
+  assert.equal(parseLooseDate('2026-10-10', '+08:00', 'epoch_s'), null);
+  assert.equal(parseLooseDate('999999999999999999999', '+08:00', 'epoch_s'), null);
+  assert.doesNotThrow(() => assertSupportedConfig('web_list', {detail:{publishedAtUnit:'epoch_s'}}));
+  assert.throws(() => assertSupportedConfig('web_list', {detail:{publishedAtUnit:'auto'}}), /detail.publishedAtUnit/);
+});
+
+test('authoritative epoch detail dates reach collection without falling back to an unrelated page timestamp', async () => {
+  const server = http.createServer((req,res) => {
+    res.writeHead(200,{'content-type':'text/html'});
+    res.end(`<meta property="article:published_time" content="2020-01-01T00:00:00Z"><article${req.url==='/dated'?' data-article-publish-time="1791644010"':''}><p>News text</p></article>`);
+  });
+  await new Promise<void>(resolve => server.listen(0,'127.0.0.1',resolve));
+  const previous = config.allowPrivateNetworkFetch;
+  config.allowPrivateNetworkFetch = true;
+  try {
+    const source = {config:{detail:{publishedAtRegex:'data-article-publish-time="([0-9]+)"',publishedAtUnit:'epoch_s',publishedAtAuthoritative:true}}} as SourceRow;
+    const base = `http://127.0.0.1:${(server.address() as {port:number}).port}`;
+    const need = {date:true,title:false,summary:false,body:false};
+    assert.equal((await fetchDetail(`${base}/dated`,source,need,{strictHttp:true})).publishedAt?.toISOString(),'2026-10-10T14:53:30.000Z');
+    assert.equal((await fetchDetail(`${base}/missing`,source,need,{strictHttp:true})).publishedAt,null);
+  } finally {
+    config.allowPrivateNetworkFetch = previous;
+    await new Promise<void>(resolve => server.close(()=>resolve()));
+  }
 });

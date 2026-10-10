@@ -60,7 +60,15 @@ export function readable(html: string, url: string): ExtractedBody | null {
     return { html: clean, text: video.transcript, images: [], via: "readability" };
   }
   const { document } = parseHTML(html);
-  for (const node of document.querySelectorAll('aside, nav, footer, [role="navigation"], [class*="related"], [class*="recommend"], [class*="sidebar"]')) node.remove();
+  for (const node of document.querySelectorAll('aside, nav, footer, [role="navigation"], [class*="related"], [class*="recommend"]')) node.remove();
+  for (const node of document.querySelectorAll('[class*="sidebar"]')) {
+    // These observed layout classes describe the article beside a sidebar, or its absence.
+    // Removing their ancestor would remove the entire story (including body.no-sidebar).
+    const classes: string[] = String(node.getAttribute("class") ?? "").split(/\s+/);
+    if (["BODY", "HTML", "MAIN"].includes(node.tagName) || classes.some(name =>
+      /^(?:no-sidebars?|t-content__(?:with|beside)-sidebar)$/.test(name))) continue;
+    node.remove();
+  }
   try {
     const base = document.createElement("base");
     base.setAttribute("href", url);

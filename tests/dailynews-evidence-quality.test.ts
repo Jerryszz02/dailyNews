@@ -71,3 +71,14 @@ test("recommendation trimming preserves real prose, ordinary citation lists and 
     '<p>Related Stories</p><p>This is a substantive section, not a navigation list.</p>',
   ]) assert.equal(trimTrailingChrome(html), html);
 });
+
+test('article layout classes mentioning a sidebar retain the main text but remove real sidebars', () => {
+  const text = 'The original article reports new research and explains the results in detail. '.repeat(8);
+  for (const bodyClass of ['no-sidebar', 'no-sidebars', '']) {
+    const html = `<html><head><title>Research article</title></head><body class="${bodyClass}"><main><h1>Research article</h1><div class="t-content__with-sidebar"><div class="t-content__beside-sidebar"><p>${text}</p></div><div class="o-sidebar"><p>Unrelated recommendations ${'sidebar junk '.repeat(40)}</p></div></div><aside class="post__sidebar">More unrelated links</aside></main></body></html>`;
+    const got = readable(html, 'https://example.com/news/research');
+    assert.ok(got?.text.includes('original article reports new research'));
+    assert.ok(!got?.text.includes('Unrelated recommendations'));
+    assert.ok(!got?.text.includes('sidebar junk'));
+  }
+});

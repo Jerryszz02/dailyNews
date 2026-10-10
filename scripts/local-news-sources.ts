@@ -7,9 +7,10 @@ import { sql, closeDb } from "@aihot/backend/db";
 import { audit } from "@aihot/backend/audit";
 import { fetchRss } from "@aihot/backend/sources/rss";
 import { fetchSitemap } from "@aihot/backend/sources/sitemap";
+import { fetchJsonList } from "@aihot/backend/sources/json-list";
 import { allowed, fetchDetail, fetchWebList } from "@aihot/backend/sources/web-list";
 import type { SourceRow } from "@aihot/backend/sources/types";
-import { assertSupportedConfig } from "@aihot/backend/sources/config-keys";
+import { localSourceCandidate, verifiedReaderEvidence, type LocalSourceAdapter } from "./local-source-config.ts";
 
 const apply = process.argv.includes("--apply");
 const pilotOnly = process.argv.includes("--pilot");
@@ -19,14 +20,14 @@ if (config.environmentName !== "local" || !["127.0.0.1", "localhost", "[::1]"].i
   throw new Error("This source verification command requires an explicitly local environment/database");
 }
 const seeds = JSON.parse(readFileSync(path.join(REPO_ROOT, "industry/sources.json"), "utf8")).sources as SourceRow[];
-const pilot = JSON.parse(readFileSync(path.join(REPO_ROOT, "reference/trials/p5-2026-10-03-sources.json"), "utf8")).sources as Array<{ id: string; configOverrides: SourceRow["config"] }>;
-const overrides = new Map(pilot.map(s => [s.id, s.configOverrides]));
-const currentAdapters = JSON.parse(readFileSync(path.join(REPO_ROOT, "reference/local/source-adapter-overrides.json"), "utf8")).sources as Array<{ id: string; configOverrides: SourceRow["config"] }>;
-for (const source of currentAdapters) overrides.set(source.id, source.configOverrides);
+const pilot = JSON.parse(readFileSync(path.join(REPO_ROOT, "reference/trials/p5-2026-10-03-sources.json"), "utf8")).sources as LocalSourceAdapter[];
+const overrides = new Map(pilot.map(s => [s.id, s]));
+const currentAdapters = JSON.parse(readFileSync(path.join(REPO_ROOT, "reference/local/source-adapter-overrides.json"), "utf8")).sources as LocalSourceAdapter[];
+for (const source of currentAdapters) overrides.set(source.id, source);
 const sources = await sql<SourceRow[]>`SELECT * FROM sources ORDER BY id`;
 const seedIds = new Set(seeds.map(s => s.id));
 if (seeds.some(s => !sources.some(row => row.id === s.id))) throw new Error("Preserved source inventory is incomplete; seed it first");
-type Result = { id: string; name: string; status: string; reason?: string; checkedAt: string; count?: number; readerUrl?: string; bodyChars?: number; config?: SourceRow["config"] };
+type Result = { id: string; name: string; status: string; reason?: string; checkedAt: string; count?: number; readerUrl?: string; bodyChars?: number; summaryChars?: number; materialScope?: string; publishedAt?: string | null; kind?: SourceRow['kind']; config?: SourceRow["config"]; beforeConfig?: SourceRow['config']; beforeKind?: SourceRow['kind'] };
 const results: Result[] = [];
 const pending = sources.filter(s => seedIds.has(s.id));
 async function verify(source: SourceRow): Promise<Result> {
@@ -36,22 +37,15 @@ async function verify(source: SourceRow): Promise<Result> {
   if (onlyIds && !onlyIds.includes(source.id)) return { ...base, status: "not_selected" };
   if (pilotOnly && !overrides.has(source.id)) return { ...base, status: "not_in_pilot" };
   if (source.kind === "x_search") return { ...base, status: "needs_credentials", reason: "保留原 X 账号；本轮未接入或购买 X 采集服务" };
-  const historic = overrides.get(source.id) ?? {};
-  const candidate: SourceRow = { ...source, cursor: null, config: {
-    ...source.config, ...historic,
-    _aihot: source.config._aihot,
-    detail: { maxFetches: 10, ...(source.config.detail ?? {}), ...(historic.detail ?? {}) },
-    dailyNews: { ...dn, ...(historic.dailyNews ?? {}), allowedHosts: dn.allowedHosts, allowedPathPrefixes: dn.allowedPathPrefixes },
-  } };
-  // Repair metadata written by the first local probe; only supported config reaches collection.
-  delete candidate.config.dailyNews.verifiedAt;
-  if (candidate.kind === "web_list" && candidate.config.dailyNews.adapter !== "sitemap" && !candidate.config.itemSelector) {
+  const adapter = overrides.get(source.id);
+  const intendedKind = adapter?.kind ?? source.kind;
+  if (intendedKind === "web_list" && (adapter?.configOverrides.dailyNews?.adapter ?? dn.adapter) !== "sitemap" && !(adapter?.configOverrides.itemSelector ?? source.config.itemSelector)) {
     return { ...base, status: "needs_adapter", reason: "原入口已保留；尚缺该网页的已验证列表选择器" };
   }
   try {
-    candidate.config.dailyNews = { ...candidate.config.dailyNews, migrationStatus: "verified", disabledReason: null, reviewedAt: base.checkedAt };
-    assertSupportedConfig(candidate.kind, candidate.config);
+    const candidate = localSourceCandidate(source, adapter, base.checkedAt);
     const rows = candidate.kind === "rss" ? (await fetchRss(candidate, { force: true })).candidates
+      : candidate.kind === "json_list" ? await fetchJsonList(candidate)
       : candidate.config.dailyNews.adapter === "sitemap" ? (await fetchSitemap(candidate)).candidates : await fetchWebList(candidate);
     const permitted = rows.filter(c => allowed(c.url, candidate) && c.title.trim().length >= 4);
     if (!permitted.length) return { ...base, status: "empty", reason: "没有匹配原来源边界的新闻", count: rows.length };
@@ -60,8 +54,9 @@ async function verify(source: SourceRow): Promise<Result> {
     for (const item of permitted.slice(0, 3)) {
       try {
         const detail = await fetchDetail(item.url, candidate, { date: true, title: true, summary: !!candidate.config.detail?.summarySelector, body: true }, { strictHttp: true });
-        if (!detail.body && (item.excerpt?.length ?? 0) < 50) throw new Error("正文与来源简介均不足，保留配置等待适配");
-        return { ...base, status: "verified", count: permitted.length, readerUrl: item.url, bodyChars: detail.body?.text.length ?? 0, config: candidate.config };
+        const evidence = verifiedReaderEvidence(item, detail);
+        if (!evidence.usable) throw new Error("正文与来源简介均不足，保留配置等待适配");
+        return { ...base, status: "verified", count: permitted.length, readerUrl: item.url, ...evidence, kind: candidate.kind, config: candidate.config, beforeConfig: source.config, beforeKind: source.kind };
       } catch (error) { lastError = String(error instanceof Error ? error.message : error).slice(0, 250); }
     }
     return { ...base, status: "reader_failed", reason: lastError, count: permitted.length };
@@ -78,9 +73,15 @@ await Promise.all(Array.from({ length: 4 }, async () => {
 }));
 if (apply) {
   for (const result of results.filter(r => r.status === "verified")) {
-    const [before] = await sql`SELECT enabled, config FROM sources WHERE id=${result.id}`;
-    await sql`UPDATE sources SET config=${sql.json(result.config! as never)}, enabled=true, next_fetch_at=now(), updated_at=now() WHERE id=${result.id} AND config->'dailyNews'->>'legacyEnabled'='true'`;
-    await audit("local-operator", "source.local-verify", `source:${result.id}`, before ?? null, { enabled: true }, { readerUrl: result.readerUrl, checkedAt: result.checkedAt });
+    await sql.begin(async tx => {
+      const [before] = await tx`SELECT enabled, kind, config FROM sources WHERE id=${result.id} FOR UPDATE`;
+      if (!before || before.config.dailyNews?.legacyEnabled !== true || before.kind !== result.beforeKind || JSON.stringify(before.config) !== JSON.stringify(result.beforeConfig)) {
+        result.status = 'config_changed'; result.reason = '验证期间配置发生变化，未覆盖；需要重新核验'; return;
+      }
+      await tx`UPDATE sources SET kind=${result.kind!}, config=${tx.json(result.config! as never)}, enabled=true, next_fetch_at=now(), updated_at=now() WHERE id=${result.id}`;
+      await audit("local-operator", "source.local-verify", `source:${result.id}`, null, before,
+        { enabled: true, kind: result.kind, config: result.config, readerUrl: result.readerUrl, materialScope: result.materialScope, checkedAt: result.checkedAt }, { db: tx });
+    });
   }
 }
 const directory = path.join(config.dataDir, "local-quality");

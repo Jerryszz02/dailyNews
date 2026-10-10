@@ -37,7 +37,7 @@ const NESTED: Record<string, string[]> = {
   requireBoolean: ["path", "equals"],
   minNumeric: ["path", "min"],
   detail: [
-    "maxFetches", "publishedAtSelector", "publishedAtRegex", "publishedAtUtcOffset", "publishedAtAuthoritative", "upgradeDatePrecision",
+    "maxFetches", "publishedAtSelector", "publishedAtRegex", "publishedAtUtcOffset", "publishedAtUnit", "publishedAtAuthoritative", "upgradeDatePrecision",
     "titleSelector", "titleRegex", "titleAuthoritative", "summarySelector",
   ],
 };
@@ -58,6 +58,9 @@ export function unsupportedConfig(kind: SourceRow["kind"], config: Record<string
       for (const sub of Object.keys(value)) if (!NESTED[key]!.includes(sub)) out.push(`${key}.${sub}`);
     }
   }
+  const detail = config.detail as Record<string, unknown> | undefined;
+  if (detail?.publishedAtUnit !== undefined && !["epoch_s", "epoch_ms"].includes(String(detail.publishedAtUnit)))
+    out.push(`detail.publishedAtUnit=${String(detail.publishedAtUnit)}`);
   const dn = config.dailyNews;
   if (dn !== undefined && (!dn || typeof dn !== "object" || Array.isArray(dn))) out.push("dailyNews");
   if (dn && typeof dn === "object" && !Array.isArray(dn)) {
