@@ -53,7 +53,7 @@ async function drain(id:string){
 for(const deferred of [false,true])test(`${deferred?'持久':'同步'}采集初导限制不会被第二轮历史绕过，保留旧稿修订并接受真实新稿和304`,async()=>{
  const old=Array.from({length:12},(_,i)=>({id:`${T}-${deferred}-old-${i}`,title:`旧稿${i}`,date:firstTime}));
  const {id,list}=await source(`rss-${deferred}`,old);
- const first=await collectSource(id,{deferred});if(deferred)await drain(id);assert.equal(first.status,'ok',first.error);
+ const first=await collectSource(id,{deferred});if(deferred)await drain(id);assert.equal(first.status,'ok',first.error ?? 'collection failed');
  let rows=await sql`SELECT * FROM articles WHERE source_id=${id}`;assert.equal(rows.length,2);assert.ok(rows.every(a=>a.backfill_reason==='first-import'));
  const initialized=(await sql`SELECT cursor->>'initializedAt' AS initialized_at FROM sources WHERE id=${id}`)[0]!.initialized_at;
  old[0]!.title='旧稿更正';list.items=[...old,{id:`${T}-${deferred}-unknown`,title:'时间未知',date:null},{id:`${T}-${deferred}-future`,title:'未来错误',date:new Date(Date.now()+2*86400000).toISOString()},{id:`${T}-${deferred}-live`,title:'真实新稿',date:new Date(Date.now()+2000).toISOString()}];list.version++;
@@ -67,7 +67,7 @@ for(const deferred of [false,true])test(`${deferred?'持久':'同步'}采集初�
 });
 for(const deferred of [false,true])test(`${deferred?'持久':'同步'}权威详情覆盖伪新列表时间，详情缺日期不会猜成正常新增`,async()=>{
  const seed={id:`${T}-${deferred}-seed`,title:'初始稿',date:firstTime,detailDate:firstTime};
- const {id,list}=await source(`detail-${deferred}`,[seed],true);const initial=await collectSource(id,{deferred});assert.equal(initial.status,'ok',initial.error);if(deferred)await drain(id);
+ const {id,list}=await source(`detail-${deferred}`,[seed],true);const initial=await collectSource(id,{deferred});assert.equal(initial.status,'ok',initial.error ?? 'collection failed');if(deferred)await drain(id);
  const newTime=new Date(Date.now()+2000).toISOString();
  list.items=[seed,{id:`${T}-${deferred}-real`,title:'详情真实新增',date:firstTime,detailDate:newTime},{id:`${T}-${deferred}-fake`,title:'列表伪新',date:newTime,detailDate:firstTime},{id:`${T}-${deferred}-nodate`,title:'详情无时间',date:newTime,detailDate:null}];
  await collectSource(id,{deferred});if(deferred)await drain(id);
