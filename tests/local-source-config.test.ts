@@ -48,3 +48,15 @@ test('reader evidence distinguishes source summaries from extracted bodies and r
   assert.equal(verifiedReaderEvidence({}, {body:null,summary:'新闻导航',publishedAt:null}).usable,false);
   assert.equal(verifiedReaderEvidence({}, {body:{text:'article body'},summary:null,publishedAt}).materialScope,'extracted_body');
 });
+
+test('source verification requires the same trustworthy date evidence as collection', () => {
+  const body = { text: 'Published article material. '.repeat(20) };
+  const publishedAt = new Date('2026-10-10T10:30:00Z');
+  assert.equal(verifiedReaderEvidence({}, {body,summary:null,publishedAt:null}).usable,false);
+  assert.equal(verifiedReaderEvidence({}, {body,summary:null,publishedAt:new Date('invalid')}).usable,false);
+  const authoritative = verifiedReaderEvidence({publishedAt}, {body,summary:null,publishedAt:null}, {authoritativeDate:true});
+  assert.equal(authoritative.usable,false);
+  assert.equal(authoritative.publishedAt,null,'authoritative detail dates cannot borrow the listing timestamp');
+  assert.equal(verifiedReaderEvidence({publishedAt}, {body,summary:null,publishedAt:null}).usable,true);
+  assert.equal(verifiedReaderEvidence({}, {body,summary:null,publishedAt}, {authoritativeDate:true}).usable,true);
+});

@@ -54,7 +54,8 @@ async function verify(source: SourceRow): Promise<Result> {
     for (const item of permitted.slice(0, 3)) {
       try {
         const detail = await fetchDetail(item.url, candidate, { date: true, title: true, summary: !!candidate.config.detail?.summarySelector, body: true }, { strictHttp: true });
-        const evidence = verifiedReaderEvidence(item, detail);
+        const evidence = verifiedReaderEvidence(item, detail, { authoritativeDate: candidate.config.detail?.publishedAtAuthoritative === true });
+        if (!evidence.publishedAt) throw new Error("缺少可信的来源发布时间，保留配置等待适配");
         if (!evidence.usable) throw new Error("正文与来源简介均不足，保留配置等待适配");
         return { ...base, status: "verified", count: permitted.length, readerUrl: item.url, ...evidence, kind: candidate.kind, config: candidate.config, beforeConfig: source.config, beforeKind: source.kind };
       } catch (error) { lastError = String(error instanceof Error ? error.message : error).slice(0, 250); }

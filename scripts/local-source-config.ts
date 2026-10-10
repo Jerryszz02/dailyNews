@@ -34,11 +34,13 @@ export function localSourceCandidate(source: SourceRow, adapter: LocalSourceAdap
 }
 
 export function verifiedReaderEvidence(item: { excerpt?: string | null; publishedAt?: Date | null },
-  detail: { body: { text: string } | null; summary: string | null; publishedAt: Date | null }) {
+  detail: { body: { text: string } | null; summary: string | null; publishedAt: Date | null },
+  options: { authoritativeDate?: boolean } = {}) {
   const summary = detail.summary || item.excerpt || null;
-  const publishedAt = detail.publishedAt ?? item.publishedAt ?? null;
+  const rawDate = options.authoritativeDate ? detail.publishedAt : detail.publishedAt ?? item.publishedAt;
+  const publishedAt = rawDate && Number.isFinite(rawDate.getTime()) ? rawDate : null;
   return {
-    usable: !!detail.body || (summary?.trim().length ?? 0) >= 50,
+    usable: !!publishedAt && (!!detail.body || (summary?.trim().length ?? 0) >= 50),
     materialScope: detail.body ? 'extracted_body' : summary ? 'source_summary' : 'missing',
     bodyChars: detail.body?.text.length ?? 0,
     summaryChars: summary?.trim().length ?? 0,
