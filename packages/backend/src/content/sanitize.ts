@@ -138,6 +138,20 @@ export function trimTrailingChrome(html: string): string {
   let removed = false;
   while (blocks.length > 1) {
     const last = $(blocks[blocks.length - 1]!);
+    const previous = $(blocks[blocks.length - 2]!);
+    // Some full-text RSS feeds end in a plain heading plus a list of other articles. Only a
+    // standalone recommendation heading followed by a link-only list at the end is chrome;
+    // prose mentioning related stories, or a substantive list, remains part of the article.
+    const recommendation = /^(?:related (?:stories|articles|posts)|recommended (?:stories|articles)|相关阅读|相关推荐|推荐阅读)$/i;
+    const items = last.is("ul,ol") ? last.children("li").toArray() : [];
+    const linksOnly = items.length > 0 && items.every(item => {
+      const li = $(item);
+      const links = li.find("a[href]");
+      return links.length > 0 && collapse(li.text()) === collapse(links.toArray().map(a => $(a).text()).join(" "));
+    });
+    if (linksOnly && previous.is("p,h2,h3,h4,h5,h6") && recommendation.test(collapse(previous.text()))) {
+      last.remove(); previous.remove(); blocks = blocks.slice(0, -2); removed = true; continue;
+    }
     const text = collapse(last.text());
     if (last.find("img, video, picture").length || /[.。!！?？:：]$/.test(text) || !TRAILING_CHROME.some((re) => re.test(text))) break;
     last.remove();

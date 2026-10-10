@@ -4,12 +4,14 @@ import { after, test } from 'node:test';
 import Fastify from 'fastify';
 import { closeDb,sql } from '@aihot/backend/db';
 import { config } from '@aihot/backend/config';
-import { createReviewBatch,exportReview,reviewBatch,reviewCsv,reviewOverview,saveReviewAnswer,selectionGold,normalizeReviewAnswer,validateAnswer } from '@aihot/backend/admin/review';
+import { createReviewBatch,exportReview,reviewBatch,reviewCsv,reviewOverview,saveReviewAnswer,selectionGold,normalizeReviewAnswer,validateAnswer,stratifiedMaterials } from '@aihot/backend/admin/review';
 import { registerAdmin } from '../apps/api/src/routes/admin.ts';
 import { registerAdminAuth } from '../apps/api/src/routes/admin-auth.ts';
 import { passwordLogin,SESSION_COOKIE,sessionPrincipal } from '@aihot/backend/admin/auth';
 
 const T=tag();const source=`review-src-${T}`;const actor=`review-actor-${T}`;const ids=Array.from({length:12},(_,i)=>`review-${T}-${i}`);
+const foreignId=`review-${T}-foreign`;
+const allIds=[...ids,foreignId];
 const old={dev:config.devAdmin,password:config.adminPassword};
 const app=Fastify({logger:false}); registerAdminAuth(app);registerAdmin(app);
 after(async()=>{
@@ -17,7 +19,7 @@ after(async()=>{
  await app.close();
  await sql`DELETE FROM review_batches WHERE created_by=${actor}`;
  await sql`DELETE FROM audit_log WHERE actor=${actor}`;
- await sql`DELETE FROM articles WHERE id IN ${sql(ids)}`;
+ await sql`DELETE FROM articles WHERE id IN ${sql(allIds)}`;
  await sql`DELETE FROM sources WHERE id=${source}`;
  await closeDb();
 });
@@ -31,12 +33,22 @@ test('generates a category-stratified batch from current analyzed material, snap
   const [n]=await sql`INSERT INTO analyses(article_id,input_revision,origin,category,title_zh,summary_zh,selected,score,policy_id,policy_version,input_signature) VALUES(${id},1,'rule',${category},${`标题${i}`},'摘要',false,60,'test','v1','test-signature') RETURNING id`;
   await sql`INSERT INTO publications(article_id,source_id,title,summary,category,channel,url,discovered_at,timeline_at,sort_at,input_revision,analysis_id,story_id) VALUES(${id},${source},${`标题${i}`},'摘要',${category},'news',${`https://example.test/${id}`},now(),now(),now(),1,${n!.id},${i===0||i===3?story!.id:null})`;
  }
+ // Shared-suite databases contain other categories. A later unrelated item must not make
+ // this test mistake global sampling for a filter restricted to its own three categories.
+ await sql`INSERT INTO articles(id,source_id,identity_key,url,title,discovered_at,timeline_at,body_text,body_status,published_at,language) VALUES(${foreignId},${source},${foreignId},${`https://example.test/${foreignId}`},'外来分类原文','2200-01-01','2200-01-01','Original evidence','ok',now(),'en')`;
+ await sql`INSERT INTO analyses(article_id,input_revision,origin,category,title_zh,summary_zh) VALUES(${foreignId},1,'rule','science','外来分类新闻','摘要')`;
  const b={requestId:`batch-${T}`,count:10,label:'标注验证'};
  const first=await createReviewBatch(b,actor);batchId=first.batchId;
  assert.equal(first.created,true);
  const detail=await reviewBatch(batchId);assert.ok(detail);
  assert.equal(detail.tasks.length,10);
- assert.deepEqual(new Set(detail.tasks.filter(t=>t.kind==='article').slice(0,3).map(t=>t.stratum)),new Set(['ai','finance','sports']));
+ const articleTasks=detail.tasks.filter(t=>t.kind==='article');
+ assert.equal(new Set(articleTasks.slice(0,3).map(t=>t.stratum)).size,3,'category sampling must rotate before taking another item from a category');
+ const material=articleTasks[0]!.snapshot.article;
+ const isolated=Array.from({length:12},(_,i)=>({...material,articleId:`pure-${i}`,category:['ai','finance','sports'][i%3]!}));
+ const stratified=stratifiedMaterials(isolated,8);
+ assert.deepEqual(stratified.map(m=>m.category),['ai','finance','sports','ai','finance','sports','ai','finance']);
+ assert.equal(articleTasks[0]!.snapshot.article.articleId,foreignId,'a real global pool includes unrelated categories before this test seed');
  assert.ok(detail.tasks.some(t=>t.snapshot.relationship==='merged'));
  assert.ok(detail.tasks.some(t=>t.snapshot.relationship==='unmerged'));
  assert.ok(detail.tasks.every(t=>t.mode==='assisted'&&t.version===0&&t.answer===null));

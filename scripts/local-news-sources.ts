@@ -9,6 +9,7 @@ import { fetchRss } from "@aihot/backend/sources/rss";
 import { fetchSitemap } from "@aihot/backend/sources/sitemap";
 import { allowed, fetchDetail, fetchWebList } from "@aihot/backend/sources/web-list";
 import type { SourceRow } from "@aihot/backend/sources/types";
+import { assertSupportedConfig } from "@aihot/backend/sources/config-keys";
 
 const apply = process.argv.includes("--apply");
 const pilotOnly = process.argv.includes("--pilot");
@@ -42,10 +43,14 @@ async function verify(source: SourceRow): Promise<Result> {
     detail: { maxFetches: 10, ...(source.config.detail ?? {}), ...(historic.detail ?? {}) },
     dailyNews: { ...dn, ...(historic.dailyNews ?? {}), allowedHosts: dn.allowedHosts, allowedPathPrefixes: dn.allowedPathPrefixes },
   } };
+  // Repair metadata written by the first local probe; only supported config reaches collection.
+  delete candidate.config.dailyNews.verifiedAt;
   if (candidate.kind === "web_list" && candidate.config.dailyNews.adapter !== "sitemap" && !candidate.config.itemSelector) {
     return { ...base, status: "needs_adapter", reason: "原入口已保留；尚缺该网页的已验证列表选择器" };
   }
   try {
+    candidate.config.dailyNews = { ...candidate.config.dailyNews, migrationStatus: "verified", disabledReason: null, reviewedAt: base.checkedAt };
+    assertSupportedConfig(candidate.kind, candidate.config);
     const rows = candidate.kind === "rss" ? (await fetchRss(candidate, { force: true })).candidates
       : candidate.config.dailyNews.adapter === "sitemap" ? (await fetchSitemap(candidate)).candidates : await fetchWebList(candidate);
     const permitted = rows.filter(c => allowed(c.url, candidate) && c.title.trim().length >= 4);
@@ -56,7 +61,6 @@ async function verify(source: SourceRow): Promise<Result> {
       try {
         const detail = await fetchDetail(item.url, candidate, { date: true, title: true, summary: !!candidate.config.detail?.summarySelector, body: true }, { strictHttp: true });
         if (!detail.body && (item.excerpt?.length ?? 0) < 50) throw new Error("正文与来源简介均不足，保留配置等待适配");
-        candidate.config.dailyNews = { ...candidate.config.dailyNews, migrationStatus: "verified", disabledReason: null, verifiedAt: base.checkedAt };
         return { ...base, status: "verified", count: permitted.length, readerUrl: item.url, bodyChars: detail.body?.text.length ?? 0, config: candidate.config };
       } catch (error) { lastError = String(error instanceof Error ? error.message : error).slice(0, 250); }
     }

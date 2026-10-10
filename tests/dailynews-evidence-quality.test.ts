@@ -2,6 +2,7 @@ import "./setup.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readable, videoTranscript } from "@aihot/backend/content/extract";
+import { trimTrailingChrome } from "@aihot/backend/content/sanitize";
 import { copyEvidenceIssues } from "@aihot/backend/editorial/evidence";
 
 const url = "https://edition.cnn.com/2026/10/03/world/video/main-clip";
@@ -59,4 +60,14 @@ test("an ordinary news article with an embedded video still extracts its own art
   const html = `<html><head><title>Written article</title><script type="application/ld+json">${JSON.stringify([{ "@type": "NewsArticle", url: articleUrl }, { "@type": "VideoObject", url: articleUrl }])}</script></head><body><article><p>${text}</p></article></body></html>`;
   assert.equal(videoTranscript(html, articleUrl).video, false);
   assert.ok(readable(html, articleUrl)?.text.includes("written article"));
+});
+
+
+test("recommendation trimming preserves real prose, ordinary citation lists and substantive lists", () => {
+  for (const html of [
+    '<p>The article discusses Related Stories as an editorial technique.</p>',
+    '<p>References</p><ul><li><a href="https://example.org/ref">Source paper</a></li></ul>',
+    '<p>Related Stories</p><ul><li>This item explains why <a href="https://example.org/ref">the cited paper</a> is relevant.</li></ul>',
+    '<p>Related Stories</p><p>This is a substantive section, not a navigation list.</p>',
+  ]) assert.equal(trimTrailingChrome(html), html);
 });

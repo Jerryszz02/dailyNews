@@ -11,7 +11,8 @@
         "publishedAtUtcOffset": "+00:00",
         "dailyNews": {
           "adapter": "web_list"
-        }
+        },
+        "linkSelector": "a[href]"
       },
       "checkedAt": "2026-10-10T17:36:01.484Z",
       "evidence": {
@@ -34,7 +35,9 @@
           "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
           "publishedAtUtcOffset": "+08:00",
           "publishedAtAuthoritative": true
-        }
+        },
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]"
       },
       "checkedAt": "2026-10-10T17:36:01.484Z",
       "evidence": {
@@ -57,7 +60,9 @@
           "publishedAtRegex": "<div[^>]+style=\"display:none\">(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2})",
           "publishedAtUtcOffset": "+08:00",
           "publishedAtAuthoritative": true
-        }
+        },
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]"
       },
       "checkedAt": "2026-10-10T17:36:01.484Z",
       "evidence": {

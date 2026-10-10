@@ -8,7 +8,9 @@ import { escapeXml } from "@aihot/backend/lib/text";
 
 const body = `<p>Before <strong>bold</strong>, between <em>italic</em>, after.</p><p>${"A complete research article with enough text for the feed body. ".repeat(8)}</p>`;
 const xhtml = (html: string) => `<div xmlns="http://www.w3.org/1999/xhtml">${html}</div>`;
+const related = '<p><strong>Related Stories</strong></p><ul><li><a href="https://example.org/other">He asked an AI to design viruses … and it worked.</a></li><li><a href="https://example.org/third">AI-designed viruses are here and already killing bacteria</a></li></ul>';
 const pages: Record<string, string> = {
+  "/related": `<title>Own roundtable</title><content type="html"><![CDATA[${body}${related}]]></content><summary type="html"><![CDATA[${body}${related}]]></summary>`,
   "/title": `<title type="xhtml">${xhtml("New <em>research</em> result")}</title><summary type="xhtml">${xhtml("First <b>important</b> result, then another.")}</summary>`,
   "/body": `<title>New result</title><content type="xhtml">${xhtml(body)}</content>`,
   "/html": `<title>New result</title><content type="html">${escapeXml(body)}</content>`,
@@ -55,4 +57,14 @@ test("Atom XHTML still passes through HTML sanitization without decoding escaped
   assert.equal(item!.bodyStatus, "ok");
   assert.doesNotMatch(item!.bodyHtml!, /<script|<img|javascript:|onclick=/);
   assert.ok(item!.bodyHtml!.includes("&lt;img"), "escaped markup remains text");
+});
+
+
+test("a full feed body and excerpt discard a trailing Related Stories link list", async () => {
+  const [item] = await read("/related");
+  assert.equal(item!.bodyStatus, "ok");
+  assert.ok(item!.bodyText?.includes("complete research article"));
+  assert.ok(!item!.bodyText?.includes("Related Stories"));
+  assert.ok(!item!.bodyText?.includes("already killing bacteria"));
+  assert.ok(!item!.excerpt?.includes("already killing bacteria"));
 });
