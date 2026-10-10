@@ -165,7 +165,8 @@ async function fetchListingText(source: SourceRow): Promise<{ text: string; viaJ
     const page = await jinaRead(target, { purpose: "source_listing", subject: `source:${source.id}`, cacheToleranceSeconds: source.config.cacheToleranceSeconds, round, format });
     return { text: page.markdown, viaJina: true, base: source.config.baseUrl ?? target, round };
   }
-  const res = await guardedFetch(url, { headers: { accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8" }, timeoutMs: 25_000 });
+  // This adapter parses pages. Some publishers return a JSON-encoded HTML string when JSON is offered.
+  const res = await guardedFetch(url, { headers: { accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8" }, timeoutMs: 25_000 });
   if (res.status !== 200) throw new FetchError(`HTTP ${res.status}`, res.status);
   return { text: res.text(), viaJina: false, base: source.config.baseUrl ?? url };
 }

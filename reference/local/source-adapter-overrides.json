@@ -1,6 +1,150 @@
 {
-  "checkedAt": "2026-10-10T17:36:01.484Z",
+  "checkedAt": "2026-10-10",
   "sources": [
+    {
+      "id": "dn-21jingji-2da9280bfa25",
+      "configOverrides": {
+        "itemSelector": ".top-news a[href*=\"/article/\"][href*=\"/herald/\"]",
+        "titleSelector": "h2",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "maxFetches": 10
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.21jingji.com/",
+        "listingStatus": 200,
+        "candidateCount": 2,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://m.21jingji.com/article/20261010/herald/bbfe198732ded510ac4f4fd8cb661888.html",
+            "title": "吴清座谈会释放重要信号！涉储备增量政策工具等",
+            "status": 200,
+            "bodyChars": 354,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T12:47:00.000Z",
+            "cacheFile": "reader-dn-21jingji-2da9280bfa25-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://m.21jingji.com/article/20261010/herald/69518d61324da03313c216369bfb9c69.html",
+            "title": "国家发改委：及时谋划更多带动性强的政策工具、工作抓手，推动经济持续向好发展",
+            "status": 200,
+            "bodyChars": 1051,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T11:07:00.000Z",
+            "cacheFile": "reader-dn-21jingji-2da9280bfa25-1.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-africanews-e1769e1a236f",
+      "configOverrides": {
+        "url": "https://www.africanews.com/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "h3.just-in__title",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00",
+          "publishedAtRegex": "\"datePublished\"\\s*:\\s*\"([^\"<>]+)\"",
+          "publishedAtAuthoritative": true
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://www.africanews.com/",
+        "listingStatus": 200,
+        "candidateCount": 13,
+        "readerUrl": "https://www.africanews.com/2026/10/10/unreliable-weather-creating-mental-health-issues-for-kenyan-farmers/",
+        "readerStatus": 200,
+        "bodyChars": 3219,
+        "readerPublishedAt": "2026-10-10T13:28:04.000Z",
+        "publishedAt": "2026-10-10T13:28:04.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-agencia-brasil-d4da197d8e53",
+      "configOverrides": {
+        "url": "https://agenciabrasil.ebc.com.br/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "a.link-noticia",
+        "titleSelector": ".titulo-noticia h1",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        },
+        "linkSelector": "a[href]"
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://agenciabrasil.ebc.com.br/",
+        "listingStatus": 200,
+        "candidateCount": 1,
+        "readerUrl": "https://agenciabrasil.ebc.com.br/economia/noticia/2026-10/bets-mais-de-r-1-bilhao-foram-devolvidos-apostadores",
+        "readerStatus": 200,
+        "bodyChars": 1766,
+        "readerPublishedAt": "2026-10-10T17:47:00.000Z",
+        "publishedAt": "2026-10-10T17:47:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-aljazeera-704843f21d8b",
+      "configOverrides": {
+        "url": "https://www.aljazeera.com/news/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "article[class*=\"article-card\"]",
+        "linkSelector": "a.article-card__link",
+        "titleSelector": ".article-card__title",
+        "denyUrlPrefixes": [
+          "https://www.aljazeera.com/news/liveblog/"
+        ],
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://www.aljazeera.com/news/",
+        "listingStatus": 200,
+        "candidateCount": 17,
+        "readerUrl": "https://www.aljazeera.com/news/2026/10/10/israeli-forces-kill-six-in-gaza-including-a-child",
+        "readerStatus": 200,
+        "bodyChars": 3756,
+        "readerPublishedAt": "2026-10-10T12:40:57.000Z",
+        "publishedAt": "2026-10-10T12:40:57.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
     {
       "id": "dn-anthropic-46ed46f2e57d",
       "configOverrides": {
@@ -23,6 +167,286 @@
         "readerStatus": 200,
         "bodyChars": 7823,
         "publishedAt": "2026-10-08T17:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-ars-technica-9d74c257c86f",
+      "configOverrides": {
+        "url": "https://arstechnica.com/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "article",
+        "linkSelector": "h2 a[href]",
+        "titleSelector": "h2 a[href]",
+        "publishedAtSelector": "time",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://arstechnica.com/",
+        "listingStatus": 200,
+        "candidateCount": 36,
+        "readerUrl": "https://arstechnica.com/tech-policy/2026/10/a-senator-tried-to-ban-gambling-on-prediction-markets-now-shes-a-kalshi-lobbyist/",
+        "readerStatus": 200,
+        "bodyChars": 49882,
+        "readerPublishedAt": "2026-10-08T11:00:14.000Z",
+        "publishedAt": "2026-10-08T11:00:14.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-bbc-sport-8865a371aa01",
+      "configOverrides": {
+        "url": "https://www.bbc.com/sport",
+        "itemSelector": "a[class*=\"PromoLink\"][href^=\"/sport/\"][href*=\"/articles/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.bbc.com/sport",
+        "listingStatus": 200,
+        "candidateCount": 39,
+        "readerUrl": "https://www.bbc.com/sport/articles/cw3dj5yx4ej2o",
+        "readerStatus": 200,
+        "bodyChars": 4697,
+        "publishedAt": "2026-10-10T18:09:37.233Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.bbc.com/sport/articles/cw3dj5yx4ej2o",
+            "finalUrl": "https://www.bbc.com/sport/articles/cw3dj5yx4ej2o",
+            "status": 200,
+            "error": null,
+            "title": "The rock behind Chelsea's entertainers: Midfield duo key for Blues",
+            "bodyChars": 4697,
+            "bodyPreview": "Moises Caicedo and Jordan Henderson were paired in midfield for the first time as Chelsea produced their most complete performance of the season. In a 5-1 victory over Bournemouth ",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T18:09:37.233Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.bbc.com/sport/formula1/articles/cmn4ezn5ep3jo",
+            "finalUrl": "https://www.bbc.com/sport/formula1/articles/cmn4ezn5ep3jo",
+            "status": 200,
+            "error": null,
+            "title": "Verstappen building major momentum as 'no-one very happy' at McLaren",
+            "bodyChars": 7897,
+            "bodyPreview": "Max Verstappen is too far behind, and Kimi Antonelli too far ahead, to consider that Red Bull's revival might create any real jeopardy in the championship fight - but the Dutchman ",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T17:46:36.420Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.bbc.com/sport/football/articles/c63r5w20ez3do",
+            "finalUrl": "https://www.bbc.com/sport/football/articles/c63r5w20ez3do",
+            "status": 200,
+            "error": null,
+            "title": "Hincapie injury adds to Arsenal issues after Guimaraes rescue act",
+            "bodyChars": 6306,
+            "bodyPreview": "Hincapie injury adds to Arsenal issues after Guimaraes rescue act Image source, Getty Images Image caption, Bruno Guimaraes scored his second Premier League goal of the season agai",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T15:44:14.185Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-billboard-6d8b657e4db2",
+      "configOverrides": {
+        "url": "https://www.billboard.com/",
+        "itemSelector": "a.c-title__link[href*=\"billboard.com/music/\"][href*=\"123\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.billboard.com/",
+        "listingStatus": 200,
+        "candidateCount": 31,
+        "readerUrl": "https://www.billboard.com/music/music-news/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582/",
+        "readerStatus": 200,
+        "bodyChars": 9514,
+        "publishedAt": "2026-10-09T05:54:17.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.billboard.com/music/music-news/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582/",
+            "finalUrl": "https://www.billboard.com/music/music-news/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582/",
+            "status": 200,
+            "error": null,
+            "title": "Troye Sivan, Remi Wolf, Slayyyter & Pitbull: New Music Friday Guide",
+            "bodyChars": 9514,
+            "bodyPreview": "Billboard’s Friday Music Guide serves as a handy guide to New Music Friday’s most essential releases each week — the key music that everyone will be talking about today, and that w",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-09T05:54:17.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.billboard.com/music/music-news/charli-xcx-tinashe-2026-austin-city-limits-festival-1236358595/",
+            "finalUrl": "https://www.billboard.com/music/music-news/charli-xcx-tinashe-2026-austin-city-limits-festival-1236358595/",
+            "status": 200,
+            "error": null,
+            "title": "Charli XCX Welcomes Tinashe for Surprise Performance at 2026 Austin City Limits Festival",
+            "bodyChars": 2205,
+            "bodyPreview": "10/10/2026 The duo performed two tracks from Tinashe's Popstar album during the Oct. 9 set. Charli xcx performs at Outside Lands on Aug. 7, 2026, in San Francisco. Florence Shen/Sa",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T18:37:26.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.billboard.com/music/features/for-world-mental-health-day-2026-1236358584/",
+            "finalUrl": "https://www.billboard.com/music/features/for-world-mental-health-day-2026-1236358584/",
+            "status": 200,
+            "error": null,
+            "title": "For World Mental Health Day, a check-up on the music industry",
+            "bodyChars": 5773,
+            "bodyPreview": "10/10/2026 Consider it a musical manifesto devoted to mental health vasabii/Getty Images When Olivia Rodrigo dropped her third studio album You Seem Pretty Sad for a Girl So in Lov",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T15:08:44.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-bjnews-16e6e253e20e",
+      "configOverrides": {
+        "itemSelector": ".pin_tips a[href*=\"/detail/\"], .pin_demo a[href*=\"/detail/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".timer",
+          "summarySelector": "article.clearfix > .fl.article > .articleCenter #contentStr > .content-name, article.clearfix > .fl.article > .articleCenter #contentStr > .introduction-video"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.bjnews.com.cn/",
+        "listingStatus": 200,
+        "candidateCount": 27,
+        "readers": [
+          {
+            "summaryChars": 186,
+            "materialScope": "source_summary",
+            "url": "https://www.bjnews.com.cn/detail/1791634966129251.html",
+            "title": "外交部：暂无中国公民在巴拿马地震中伤亡报告",
+            "status": 200,
+            "bodyChars": 0,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-10T14:14:00.000Z",
+            "cacheFile": "reader-dn-bjnews-16e6e253e20e-0.html"
+          },
+          {
+            "summaryChars": 156,
+            "materialScope": "source_summary",
+            "url": "https://www.bjnews.com.cn/detail/1791642556129324.html",
+            "title": "国际丨回看近15年全球五场强震：震级之外，伤亡变量是什么？",
+            "status": 200,
+            "bodyChars": 0,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-10T14:29:00.000Z",
+            "cacheFile": "reader-dn-bjnews-16e6e253e20e-1.html"
+          },
+          {
+            "summaryChars": 194,
+            "materialScope": "source_summary",
+            "url": "https://www.bjnews.com.cn/detail/1791628387129197.html",
+            "title": "新车未交付，4S店代上牌撞损！车主要换新，商家：暂无法满足",
+            "status": 200,
+            "bodyChars": 0,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-10T10:33:00.000Z",
+            "cacheFile": "reader-dn-bjnews-16e6e253e20e-2.html"
+          }
+        ],
+        "materialScope": "source_summary",
+        "productionDetails": "bjnews-production-check.json",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-bjnews-e8d88f7e013a",
+      "configOverrides": {
+        "itemSelector": ".pin_tips a[href*=\"/detail/\"], .pin_demo a[href*=\"/detail/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".timer",
+          "summarySelector": "article.clearfix > .fl.article > .articleCenter #contentStr > .content-name, article.clearfix > .fl.article > .articleCenter #contentStr > .introduction-video"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.bjnews.com.cn/",
+        "listingStatus": 200,
+        "candidateCount": 27,
+        "readers": [
+          {
+            "summaryChars": 186,
+            "materialScope": "source_summary",
+            "url": "https://www.bjnews.com.cn/detail/1791634966129251.html",
+            "title": "外交部：暂无中国公民在巴拿马地震中伤亡报告",
+            "status": 200,
+            "bodyChars": 0,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-10T14:14:00.000Z",
+            "cacheFile": "reader-dn-bjnews-e8d88f7e013a-0.html"
+          },
+          {
+            "summaryChars": 156,
+            "materialScope": "source_summary",
+            "url": "https://www.bjnews.com.cn/detail/1791642556129324.html",
+            "title": "国际丨回看近15年全球五场强震：震级之外，伤亡变量是什么？",
+            "status": 200,
+            "bodyChars": 0,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-10T14:29:00.000Z",
+            "cacheFile": "reader-dn-bjnews-e8d88f7e013a-1.html"
+          },
+          {
+            "summaryChars": 194,
+            "materialScope": "source_summary",
+            "url": "https://www.bjnews.com.cn/detail/1791628387129197.html",
+            "title": "新车未交付，4S店代上牌撞损！车主要换新，商家：暂无法满足",
+            "status": 200,
+            "bodyChars": 0,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-10T10:33:00.000Z",
+            "cacheFile": "reader-dn-bjnews-e8d88f7e013a-2.html"
+          }
+        ],
+        "materialScope": "source_summary",
+        "productionDetails": "bjnews-production-check.json",
         "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
       }
     },
@@ -52,6 +476,774 @@
       }
     },
     {
+      "id": "dn-cbs-sports-nba-b0696340bd6f",
+      "configOverrides": {
+        "url": "https://www.cbssports.com/nba/",
+        "itemSelector": "a.EightPack-link[href^=\"/nba/news/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.cbssports.com/nba/",
+        "listingStatus": 200,
+        "candidateCount": 39,
+        "readerUrl": "https://www.cbssports.com/nba/news/brandin-podziemski-contract-extension-warriors-steph-curry/",
+        "readerStatus": 200,
+        "bodyChars": 3219,
+        "publishedAt": "2026-10-10T17:44:05.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.cbssports.com/nba/news/brandin-podziemski-contract-extension-warriors-steph-curry/",
+            "finalUrl": "https://www.cbssports.com/nba/news/brandin-podziemski-contract-extension-warriors-steph-curry/",
+            "status": 200,
+            "error": null,
+            "title": "Why Brandin Podziemski's extension won't impact Warriors' 2027 plans",
+            "bodyChars": 3219,
+            "bodyPreview": "Podziemski's new $110 million deal only eats into $2 million of the cap space the Warriors created for next summer Oct 10, 2026 at 1:44 pm ET • 2 min read The Golden State Warriors",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T17:44:05.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.cbssports.com/nba/news/knicks-pause-contract-extension-talks-karl-anthony-towns-josh-hart-deuce-mcbride/",
+            "finalUrl": "https://www.cbssports.com/nba/news/knicks-pause-contract-extension-talks-karl-anthony-towns-josh-hart-deuce-mcbride/",
+            "status": 200,
+            "error": null,
+            "title": "Three takeaways from Knicks pausing contract extension talks",
+            "bodyChars": 8933,
+            "bodyPreview": "Coming off a title, four Knicks players are eligible for contract extensions, including starters Karl-Anthony Towns and Josh Hart Oct 9, 2026 at 3:22 pm ET • 7 min read Only the Ne",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-09T19:22:19.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.cbssports.com/nba/news/ranking-every-nba-defense-2026-27-season-thunder-spurs/",
+            "finalUrl": "https://www.cbssports.com/nba/news/ranking-every-nba-defense-2026-27-season-thunder-spurs/",
+            "status": 406,
+            "error": null,
+            "title": "Ranking every NBA team's defense entering the 2026-27 season",
+            "bodyChars": 0,
+            "bodyPreview": null,
+            "bodyVerified": false,
+            "readerPublishedAt": null,
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-cctv-6f9501b3e5b9",
+      "configOverrides": {
+        "itemSelector": "h2 a[href*=\"/ARTI\"][href$=\".shtml\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "#title_area .info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://sports.cctv.com/",
+        "listingStatus": 200,
+        "candidateCount": 3,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://sports.cctv.com/2026/10/10/ARTIa68KvWqbHJvCfdhdkyTY261010.shtml",
+            "title": "王曼昱/蒯曼夺中国大满贯女双冠军",
+            "status": 200,
+            "bodyChars": 456,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T05:05:17.000Z",
+            "cacheFile": "refine-dn-cctv-6f9501b3e5b9-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://sports.cctv.com/2026/10/10/ARTIJEl6Y6ISbFdGVYSalSxc261010.shtml",
+            "title": "杜兰特15分申京三双 火箭NBA中国赛力克独行侠",
+            "status": 200,
+            "bodyChars": 293,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T00:35:23.000Z",
+            "cacheFile": "refine-dn-cctv-6f9501b3e5b9-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "missing",
+            "url": "https://sports.cctv.com/2026/10/10/ARTIdK7y9S5NUKh5NEHsG3PT261010.shtml",
+            "title": "基莱斯补时绝杀 成都蓉城0-1津门虎未能提前夺冠",
+            "status": 200,
+            "bodyChars": 0,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-10T13:40:49.000Z",
+            "cacheFile": "refine-dn-cctv-6f9501b3e5b9-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-cctv-f085fa6f18a0",
+      "configOverrides": {
+        "itemSelector": "h3 a[href*=\"/ARTI\"][href$=\".shtml\"], h4 a[href*=\"/ARTI\"][href$=\".shtml\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "#title_area .info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://news.cctv.com/",
+        "listingStatus": 200,
+        "candidateCount": 3,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://news.cctv.com/2026/10/10/ARTIbs0MplDSVFSWKiSnblg3261010.shtml",
+            "title": "财政部：将实施更加积极的财政政策 加力扩大内需",
+            "status": 200,
+            "bodyChars": 231,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T16:07:14.000Z",
+            "cacheFile": "reader-dn-cctv-f085fa6f18a0-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://news.cctv.com/2026/10/10/ARTImCj0gf0HHAPJecFnTTmp261010.shtml",
+            "title": "创新主导 改革为要 因地制宜发展新质生产力",
+            "status": 200,
+            "bodyChars": 224,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T23:00:39.000Z",
+            "cacheFile": "reader-dn-cctv-f085fa6f18a0-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://news.cctv.com/2026/10/10/ARTIokTTvThGEFh6J1i1wLcz261009.shtml",
+            "title": "错峰赏秋 节后文旅消费持续火热",
+            "status": 200,
+            "bodyChars": 228,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T18:59:01.000Z",
+            "cacheFile": "reader-dn-cctv-f085fa6f18a0-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-china-daily-96c3ce64ccff",
+      "configOverrides": {
+        "itemSelector": "h1 a[href*=\"/a/\"][href*=\"/WS\"], h2 a[href*=\"/a/\"][href*=\"/WS\"], h3 a[href*=\"/a/\"][href*=\"/WS\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "maxFetches": 10
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://cn.chinadaily.com.cn/",
+        "listingStatus": 200,
+        "candidateCount": 34,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "missing",
+            "url": "https://cn.chinadaily.com.cn/a/202610/08/WS6ac6e87de4b09a165c78e11b.html",
+            "title": "研习路：闽韵长存",
+            "status": 200,
+            "bodyChars": 0,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-08T00:49:00.000Z",
+            "cacheFile": "reader-dn-china-daily-96c3ce64ccff-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "missing",
+            "url": "https://cn.chinadaily.com.cn/a/202610/10/WS6ac9a754e4b09a165c78e890.html",
+            "title": "腊子口：一线天险，如何突破？",
+            "status": 200,
+            "bodyChars": 291,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-10T02:47:48.000Z",
+            "cacheFile": "reader-dn-china-daily-96c3ce64ccff-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://cn.chinadaily.com.cn/a/202610/10/WS6aca330ce4b09a165c78eab7.html",
+            "title": "田野忙三秋 收种两相映",
+            "status": 200,
+            "bodyChars": 4583,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T12:39:13.000Z",
+            "cacheFile": "reader-dn-china-daily-96c3ce64ccff-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-chinanews-2cfdc1b8582c",
+      "configOverrides": {
+        "itemSelector": "a[href*=\"/ty/202\"][href$=\".shtml\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "<!--\\[[^\\]]*,\\d{6,}\\] published at (\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        },
+        "url": "https://www.chinanews.com.cn/"
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.chinanews.com.cn/",
+        "listingStatus": 200,
+        "candidateCount": 10,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.chinanews.com.cn/ty/2026/10-10/10710790.shtml",
+            "title": "海峡两岸（平潭）青少年棒球冠军赛落幕",
+            "status": 200,
+            "bodyChars": 635,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T13:27:47.000Z",
+            "cacheFile": "refine-dn-chinanews-2cfdc1b8582c-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.chinanews.com.cn/ty/2026/10-10/10710804.shtml",
+            "title": "郑钦文首进中网女单决赛 将与米拉·安德列...",
+            "status": 200,
+            "bodyChars": 296,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T13:26:29.000Z",
+            "cacheFile": "refine-dn-chinanews-2cfdc1b8582c-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.chinanews.com.cn/ty/2026/10-10/10710656.shtml",
+            "title": "国际乒联主席：愿持续倾听运动员、球迷的...",
+            "status": 200,
+            "bodyChars": 974,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T11:27:54.000Z",
+            "cacheFile": "refine-dn-chinanews-2cfdc1b8582c-2.html"
+          }
+        ],
+        "discovery": {
+          "originalStatus": 403,
+          "observedIn": "Original publisher homepage",
+          "articlePrefix": "a[href*=\"/ty/202\"][href$=\".shtml\"]",
+          "scope": "Same original allowed host; category-specific article links observed in homepage HTML"
+        },
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-chinanews-3c0f866729aa",
+      "configOverrides": {
+        "itemSelector": "a[href*=\"/gj/202\"][href$=\".shtml\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "<!--\\[[^\\]]*,\\d{6,}\\] published at (\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        },
+        "url": "https://www.chinanews.com.cn/"
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.chinanews.com.cn/",
+        "listingStatus": 200,
+        "candidateCount": 16,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.chinanews.com.cn/gj/2026/10-10/10709976.shtml",
+            "title": "中方：乌克兰危机不能继续走向升级失控",
+            "status": 200,
+            "bodyChars": 768,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T23:11:10.000Z",
+            "cacheFile": "refine-dn-chinanews-3c0f866729aa-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.chinanews.com.cn/gj/2026/10-10/10709968.shtml",
+            "title": "俄美总统通话：俄将向美及全球市场供应石油和石油产品",
+            "status": 200,
+            "bodyChars": 292,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T01:46:03.000Z",
+            "cacheFile": "refine-dn-chinanews-3c0f866729aa-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.chinanews.com.cn/gj/2026/05-09/10618338.shtml",
+            "title": "拉美专家：拉美拒绝“选边站”",
+            "status": 200,
+            "bodyChars": 1483,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-09-03T05:08:12.000Z",
+            "cacheFile": "refine-dn-chinanews-3c0f866729aa-2.html"
+          }
+        ],
+        "discovery": {
+          "originalStatus": 403,
+          "observedIn": "Original publisher homepage",
+          "articlePrefix": "a[href*=\"/gj/202\"][href$=\".shtml\"]",
+          "scope": "Same original allowed host; category-specific article links observed in homepage HTML"
+        },
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-chinanews-c3e2a8830e6c",
+      "configOverrides": {
+        "itemSelector": "a.zw[data-doctype=\"zw\"][data-did][href*=\"/202\"][href$=\".shtml\"]:not([href*=\"/shipin/\"]):not([href*=\"/chuangyi/\"])",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "<!--\\[[^\\]]*,\\d{6,}\\] published at (\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.chinanews.com.cn/",
+        "listingStatus": 200,
+        "candidateCount": 10,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.chinanews.com.cn/gn/2026/10-10/10710706.shtml",
+            "title": "食品安全法修订草案公开征求意见 涉及AI监管等",
+            "status": 200,
+            "bodyChars": 835,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T12:00:53.000Z",
+            "cacheFile": "refine-dn-chinanews-c3e2a8830e6c-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.chinanews.com.cn/gn/2026/10-10/10710090.shtml",
+            "title": "人社部：今年1至9月我国城镇新增就业1052万人",
+            "status": 200,
+            "bodyChars": 908,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T06:17:04.000Z",
+            "cacheFile": "refine-dn-chinanews-c3e2a8830e6c-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.chinanews.com.cn/cj/2026/10-10/10710625.shtml",
+            "title": "在机制化对话中管控分歧 中欧经贸形成多项成果共识",
+            "status": 200,
+            "bodyChars": 1380,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T11:35:26.000Z",
+            "cacheFile": "refine-dn-chinanews-c3e2a8830e6c-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-cyol-bd2d419c522e",
+      "configOverrides": {
+        "itemSelector": "h1 a[href*=\"/news/articles/\"], .news a[href*=\"/news/articles/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "<date>([^<]+)</date>"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://news.cyol.com/",
+        "listingStatus": 200,
+        "candidateCount": 4,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://news.cyol.com/gb/news/articles/2026-10/10/content_X5g3Xphp2Q.html",
+            "title": "从湘江古渡到“长征绿道”",
+            "status": 200,
+            "bodyChars": 229,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T13:05:26.000Z",
+            "cacheFile": "reader-dn-cyol-bd2d419c522e-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://news.cyol.com/gb/news/articles/2026-10/10/content_4w9yqVSWlN.html",
+            "title": "[总书记深情讲述的长征故事与伟大长征精神]",
+            "status": 200,
+            "bodyChars": 310,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T13:27:25.000Z",
+            "cacheFile": "reader-dn-cyol-bd2d419c522e-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://news.cyol.com/gb/news/articles/2026-10/10/content_77pnEoueEm.html",
+            "title": "[桑榆正好 霞满人间]",
+            "status": 200,
+            "bodyChars": 3346,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T13:04:46.000Z",
+            "cacheFile": "reader-dn-cyol-bd2d419c522e-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-espn-3794a4d18732",
+      "configOverrides": {
+        "url": "https://www.espn.com/nba/",
+        "itemSelector": "a[href^=\"/nba/story/_/id/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.espn.com/nba/",
+        "listingStatus": 200,
+        "candidateCount": 20,
+        "readerUrl": "https://www.espn.com/nba/story/_/id/50111204/nba-preseason-roster-holes-30-teams",
+        "readerStatus": 200,
+        "bodyChars": 35117,
+        "publishedAt": "2026-10-08T11:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.espn.com/nba/story/_/id/50111204/nba-preseason-roster-holes-30-teams",
+            "finalUrl": "https://www.espn.com/nba/story/_/id/50111204/nba-preseason-roster-holes-30-teams",
+            "status": 200,
+            "error": null,
+            "title": "What does your NBA team need? The biggest hole on all 30 rostersEvery team is missing something, even the leading title contenders.2dBen GolliverPetre Thomas-Imagn Images",
+            "bodyChars": 35117,
+            "bodyPreview": "Ben Golliver Oct 8, 2026, 07:00 AM ET Close Ben Golliver is a senior NBA writer who joined ESPN in May 2026. Prior to joining ESPN, Golliver covered the NBA on a national level sin",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-08T11:00:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.espn.com/nba/story/_/id/50118254/detroit-pistons-jalen-duren-new-contract",
+            "finalUrl": "https://www.espn.com/nba/story/_/id/50118254/detroit-pistons-jalen-duren-new-contract",
+            "status": 200,
+            "error": null,
+            "title": "The Pistons need Jalen Duren, and Duren needs the Pistons. Now? The pressure is onAfter agreeing to a five-year, $200 million deal, how will Duren and Detroit move forward?1dVincent Goodwill",
+            "bodyChars": 8839,
+            "bodyPreview": "Vincent Goodwill Oct 9, 2026, 07:00 AM ET Deciding whether to bring back Jalen Duren was only the second biggest question for the Detroit Pistons this offseason, as they size up a ",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-09T11:00:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.espn.com/nba/story/_/id/50028196/2026-27-nba-buzz-latest-live-updates-news-intel-trades-deals",
+            "finalUrl": "https://www.espn.com/nba/story/_/id/50028196/2026-27-nba-buzz-latest-live-updates-news-intel-trades-deals",
+            "status": 200,
+            "error": null,
+            "title": "🐝 Buzz: All of the latest intel, news and updates",
+            "bodyChars": 47718,
+            "bodyPreview": "ESPN staff Oct 10, 2026, 12:55 PM ET With preseason games already underway, the 2026-27 NBA season is only a few weeks away from tipping off. How will LeBron James and Jaylen Brown",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T16:55:00.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-eu-commission-fe824504780e",
+      "configOverrides": {
+        "url": "https://commission.europa.eu/news-and-media/news_en",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "article.ecl-card",
+        "linkSelector": "a[data-ecl-title-link]",
+        "titleSelector": "a[data-ecl-title-link]",
+        "publishedAtSelector": "time",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://commission.europa.eu/news-and-media/news_en",
+        "listingStatus": 200,
+        "candidateCount": 3,
+        "readerUrl": "https://commission.europa.eu/news-and-media/news/world-mental-health-day-lets-talk-and-listen-2026-10-10_en",
+        "readerStatus": 200,
+        "bodyChars": 2206,
+        "readerPublishedAt": "2026-10-10T07:10:13.000Z",
+        "publishedAt": "2026-10-10T07:10:13.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-f1-7750ee74725b",
+      "configOverrides": {
+        "url": "https://www.formula1.com/en/latest",
+        "itemSelector": "a[class*=\"ArticleListCard-module_title\"][href^=\"/en/latest/article/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.formula1.com/en/latest",
+        "listingStatus": 200,
+        "candidateCount": 16,
+        "readerUrl": "https://www.formula1.com/en/latest/article/it-is-serious-stella-disappointed-by-norris-and-piastris-clash-in-singapore-sprint.7hW2cxQgohHZfu4wgvtfRQ",
+        "readerStatus": 200,
+        "bodyChars": 6182,
+        "publishedAt": "2026-10-10T18:18:01.967Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.formula1.com/en/latest/article/why-f1-fans-should-keep-emotions-out-of-their-bets-during-the-singapore-grand-prix.6A2tjupHGD063ttuHg3OLM",
+            "finalUrl": "https://www.formula1.com/en/latest/article/why-f1-fans-should-keep-emotions-out-of-their-bets-during-the-singapore-grand-prix.6A2tjupHGD063ttuHg3OLM",
+            "status": 200,
+            "error": null,
+            "title": "Why F1 fans should keep emotions out of Singapore GP",
+            "bodyChars": 236,
+            "bodyPreview": "Skip to content Authentics (opens in a new tab) Store (opens in a new tab) Tickets (opens in a new tab) Hospitality (opens in a new tab) Experiences (opens in a new tab) Arcade (op",
+            "bodyVerified": false,
+            "readerPublishedAt": "2026-10-10T18:19:57.100Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.formula1.com/en/latest/article/it-is-serious-stella-disappointed-by-norris-and-piastris-clash-in-singapore-sprint.7hW2cxQgohHZfu4wgvtfRQ",
+            "finalUrl": "https://www.formula1.com/en/latest/article/it-is-serious-stella-disappointed-by-norris-and-piastris-clash-in-singapore-sprint.7hW2cxQgohHZfu4wgvtfRQ",
+            "status": 200,
+            "error": null,
+            "title": "'It is serious' – Stella addresses Norris and Piastri's clash",
+            "bodyChars": 6182,
+            "bodyPreview": "Andrea Stella has conceded his disappointment over the collision between McLaren drivers Lando Norris and Oscar Piastri in the Singapore Grand Prix Sprint, acknowledging \"it is ser",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T18:18:01.967Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.formula1.com/en/latest/article/what-to-watch-for-in-the-singapore-grand-prix.3sJXqpx3NdOWrrjnXZ7h0d",
+            "finalUrl": "https://www.formula1.com/en/latest/article/what-to-watch-for-in-the-singapore-grand-prix.3sJXqpx3NdOWrrjnXZ7h0d",
+            "status": 200,
+            "error": null,
+            "title": "What To Watch For in the Singapore Grand Prix",
+            "bodyChars": 566,
+            "bodyPreview": "From Max Verstappen chasing a first Singapore Grand Prix win to the threat from Ferrari behind, and from George Russell starting at the back of the grid to the chances of more rain",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T17:25:50.559Z",
+            "boundary": true
+          }
+        ],
+        "limitation": "其中1篇Readability误取导航，未计为验证正文；另外2篇正文可读。"
+      }
+    },
+    {
+      "id": "dn-fiba-df168038d131",
+      "configOverrides": {
+        "url": "https://www.fiba.basketball/en/news",
+        "itemSelector": "a[href*=\"fiba.basketball/en/news/\"]:has(h3)",
+        "titleSelector": "h3",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.fiba.basketball/en/news",
+        "listingStatus": 200,
+        "candidateCount": 20,
+        "readerUrl": "https://www.fiba.basketball/en/news/fenerbahce-tarfin-seal-a-third-supercup-women-title",
+        "readerStatus": 200,
+        "bodyChars": 2607,
+        "publishedAt": "2026-10-07T19:24:42.191Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.fiba.basketball/en/news/fenerbahce-tarfin-seal-a-third-supercup-women-title",
+            "finalUrl": "https://www.fiba.basketball/en/news/fenerbahce-tarfin-seal-a-third-supercup-women-title",
+            "status": 200,
+            "error": null,
+            "title": "Fenerbahce Tarfin seal third SuperCup Women title",
+            "bodyChars": 2607,
+            "bodyPreview": "EuroLeague Women Final Six 2027 Ready for the Final Six? MERSIN (Türkiye) - Fenerbahce Tarfin landed SuperCup Women silverware for a third time, although they had to survive a late",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-07T19:24:42.191Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.fiba.basketball/en/news/gabby-beats-wemby-to-french-player-of-the-year-award",
+            "finalUrl": "https://www.fiba.basketball/en/news/gabby-beats-wemby-to-french-player-of-the-year-award",
+            "status": 200,
+            "error": null,
+            "title": "Gabby beats Wemby",
+            "bodyChars": 2081,
+            "bodyPreview": "PARIS (France) - The profile and prestige of the FIBA Women's Basketball World Cup 2026 has been further underlined after Gabby Williams was handed the coveted Alain-Gilles Trophy.",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-07T06:40:57.221Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.fiba.basketball/en/news/where-to-watch-season-11-of-the-bcl",
+            "finalUrl": "https://www.fiba.basketball/en/news/where-to-watch-season-11-of-the-bcl",
+            "status": 200,
+            "error": null,
+            "title": "Where to watch Season 11 of the BCL?",
+            "bodyChars": 808,
+            "bodyPreview": "The 11th season of the Basketball Champions League, powered by Ameresco SUNEL has reached its starting point. Find out where you can follow all the action! MIES (Switzerland) - Wil",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-05T21:09:11.939Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-france24-6b1bed250f9f",
+      "configOverrides": {
+        "url": "https://www.france24.com/en/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": ".m-item-list-article",
+        "linkSelector": ".article__title a",
+        "titleSelector": ".article__title a",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://www.france24.com/en/",
+        "listingStatus": 200,
+        "candidateCount": 65,
+        "readerUrl": "https://www.france24.com/en/asia-pacific/20261010-india-s-cockroach-movement-chief-detained-ahead-of-major-protest",
+        "readerStatus": 200,
+        "bodyChars": 5599,
+        "readerPublishedAt": "2026-10-10T06:37:40.000Z",
+        "publishedAt": "2026-10-10T06:37:40.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-github-blog-fd7ad6745256",
+      "configOverrides": {
+        "url": "https://github.blog/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "article.post-card",
+        "linkSelector": "h2 a.post-card__link",
+        "titleSelector": "h2 a.post-card__link",
+        "publishedAtSelector": "time",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://github.blog/",
+        "listingStatus": 200,
+        "candidateCount": 15,
+        "readerUrl": "https://github.blog/developer-skills/career-growth/hack-the-world-why-hackathons-are-still-the-best-place-to-learn-to-build/",
+        "readerStatus": 200,
+        "bodyChars": 4936,
+        "readerPublishedAt": "2026-10-09T16:00:00.000Z",
+        "publishedAt": "2026-10-09T16:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
       "id": "dn-gov-cn-57fefc2bc972",
       "configOverrides": {
         "url": "https://www.gov.cn/",
@@ -77,6 +1269,709 @@
       }
     },
     {
+      "id": "dn-guardian-601090a31fd7",
+      "configOverrides": {
+        "url": "https://www.theguardian.com/world",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "a[data-link-name=\"article\"]:has(h3), a[data-link-name=\"article\"]:has(h4)",
+        "titleSelector": "h3,h4",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        },
+        "linkSelector": "a[href]"
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://www.theguardian.com/world",
+        "listingStatus": 200,
+        "candidateCount": 19,
+        "readerUrl": "https://www.theguardian.com/world/2026/oct/10/man-suffers-serious-injury-after-jumping-into-zoo-tiger-enclosure",
+        "readerStatus": 200,
+        "bodyChars": 1779,
+        "readerPublishedAt": "2026-10-10T17:13:31.000Z",
+        "publishedAt": "2026-10-10T17:13:31.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-ifanr-b77ecc7ad564",
+      "configOverrides": {
+        "itemSelector": "h3 a[href^=\"https://www.ifanr.com/1\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "maxFetches": 10
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.ifanr.com/",
+        "listingStatus": 200,
+        "candidateCount": 20,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.ifanr.com/1683809",
+            "title": "17.98 万元起，银河战舰 700 上市，三电机千匹马力，装进家用方盒子",
+            "status": 200,
+            "bodyChars": 3291,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T13:46:25.000Z",
+            "cacheFile": "refine-dn-ifanr-b77ecc7ad564-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.ifanr.com/1683673",
+            "title": "华为 Mate 90 Pro Max 深度体验：Mate 系列新高峰",
+            "status": 200,
+            "bodyChars": 4109,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T10:30:03.000Z",
+            "cacheFile": "refine-dn-ifanr-b77ecc7ad564-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.ifanr.com/1683674",
+            "title": "24 天估值暴涨 37 倍，这就是 AI 圈年度爽文",
+            "status": 200,
+            "bodyChars": 3406,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T09:11:54.000Z",
+            "cacheFile": "refine-dn-ifanr-b77ecc7ad564-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-jiemian-be9c481f85ca",
+      "configOverrides": {
+        "itemSelector": ".news-item .content-node > a[href^=\"/article/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": ".title",
+        "detail": {
+          "publishedAtRegex": "data-article-publish-time=\"(\\d+)\"",
+          "publishedAtUnit": "epoch_s",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.jiemian.com/",
+        "listingStatus": 200,
+        "candidateCount": 5,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.jiemian.com/article/15176297.html",
+            "title": "葡萄牙足协对C罗启动纪律处分程序",
+            "status": 200,
+            "bodyChars": 287,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T14:53:30.000Z",
+            "cacheFile": "refine-dn-jiemian-be9c481f85ca-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.jiemian.com/article/15176294.html",
+            "title": "农业农村部：加快农业科技创新条件平台建设，谋划布局一批农业重大科技基础设施、中试和概念验证平台",
+            "status": 200,
+            "bodyChars": 232,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T14:45:30.000Z",
+            "cacheFile": "refine-dn-jiemian-be9c481f85ca-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "missing",
+            "url": "https://www.jiemian.com/article/15176289.html",
+            "title": "张雪机车葡萄牙站第一回合德比斯获第6名",
+            "status": 200,
+            "bodyChars": 0,
+            "meaningfulBody": false,
+            "readerPublishedAt": "2026-10-10T14:13:41.000Z",
+            "cacheFile": "refine-dn-jiemian-be9c481f85ca-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-leiphone-b51224306af1",
+      "configOverrides": {
+        "itemSelector": "h3 a[href*=\"/category/\"][href$=\".html\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "td.time"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.leiphone.com/",
+        "listingStatus": 200,
+        "candidateCount": 20,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.leiphone.com/category/yanxishe/zm33Zeu88CNbEPMx.html",
+            "title": "字节发现 DeepSeek 隐藏 Bug，加点空格，模型翻车",
+            "status": 200,
+            "bodyChars": 4141,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T11:40:00.000Z",
+            "cacheFile": "reader-dn-leiphone-b51224306af1-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.leiphone.com/category/transportation/glDqTmPAjocSjhzo.html",
+            "title": "解读丨全系上自研电池，理想要干什么？",
+            "status": 200,
+            "bodyChars": 4689,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T08:28:00.000Z",
+            "cacheFile": "reader-dn-leiphone-b51224306af1-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.leiphone.com/category/transportation/ZbUAuIZ3oSpuD906.html",
+            "title": "45分钟小定8000台，智己LS6这次成了？",
+            "status": 200,
+            "bodyChars": 4681,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T08:26:00.000Z",
+            "cacheFile": "reader-dn-leiphone-b51224306af1-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-meta-ai-7936e5a59ad1",
+      "configOverrides": {
+        "url": "https://ai.meta.com/blog/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "a._amcw._amd2[href*=\"/blog/\"],a._amcw._amdf[href*=\"/blog/\"]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00",
+          "publishedAtSelector": "span._amum",
+          "publishedAtAuthoritative": true
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        },
+        "linkSelector": "a[href]"
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://ai.meta.com/blog/",
+        "listingStatus": 200,
+        "candidateCount": 5,
+        "readerUrl": "https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/",
+        "readerStatus": 200,
+        "bodyChars": 7449,
+        "readerPublishedAt": "2026-07-09T00:00:00.000Z",
+        "publishedAt": "2026-07-09T00:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-miit-e7095178568c",
+      "configOverrides": {
+        "url": "https://www.miit.gov.cn/",
+        "itemSelector": "a[href*=\"/xwfb/\"][href*=\"/art/\"][href$=\".html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
+          "publishedAtAuthoritative": true,
+          "titleSelector": "#con_title"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.miit.gov.cn/",
+        "listingStatus": 200,
+        "candidateCount": 47,
+        "readerUrl": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_a580a8e97473409a9cdf779f1aa09c74.html",
+        "readerStatus": 200,
+        "bodyChars": 6740,
+        "publishedAt": "2026-10-10T09:57:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_a580a8e97473409a9cdf779f1aa09c74.html",
+            "finalUrl": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_a580a8e97473409a9cdf779f1aa09c74.html",
+            "status": 200,
+            "error": null,
+            "title": "以创新赢未来——习近平经济思想引领中国加快发展新质生产力",
+            "bodyChars": 6740,
+            "bodyPreview": "新华社北京10月9日电 题：以创新赢未来——习近平经济思想引领中国加快发展新质生产力 新华社记者 10月9日，《中共中央 国务院关于发展新质生产力的意见》公开发布。意见阐明了中国发展新质生产力的总体要求和重点任务，对加强组织实施作出安排。 党的十八大以来，习近平总书记不断深化对生产力发展规律的认识，创造性提出新质生产力这个重要概念和发展新质生产力这个重大任务",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T09:57:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_e28d611d2ad9441eab88698db2dc89dd.html",
+            "finalUrl": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_e28d611d2ad9441eab88698db2dc89dd.html",
+            "status": 200,
+            "error": null,
+            "title": "中共中央、国务院印发《关于发展新质生产力的意见》",
+            "bodyChars": 910,
+            "bodyPreview": "新华社北京10月9日电 中共中央、国务院印发《关于发展新质生产力的意见》（以下简称《意见》）。 《意见》坚持以习近平新时代中国特色社会主义思想为指导，深入贯彻党的二十大和二十届历次全会精神，认真落实四中全会部署，完整准确全面贯彻新发展理念，坚持创新主导、改革为要、因地制宜、先立后破，坚持高技术、高效能、高质量，统筹处理好政府和市场、质态和业态、改革和发展、自",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T09:57:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_bb063b402f814c2d829cb53688ee84c0.html",
+            "finalUrl": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_bb063b402f814c2d829cb53688ee84c0.html",
+            "status": 200,
+            "error": null,
+            "title": "文件全文",
+            "bodyChars": 4684,
+            "bodyPreview": "新华社北京10月9日电 中共中央 国务院关于发展新质生产力的意见 发展新质生产力是推动高质量发展的内在要求和重要着力点。为加快发展新质生产力，现提出如下意见。 一、总体要求 坚持以习近平新时代中国特色社会主义思想为指导，深入贯彻党的二十大和二十届历次全会精神，认真落实四中全会部署，完整准确全面贯彻新发展理念，坚持创新主导、改革为要、因地制宜、先立后破，坚持高",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T09:57:00.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-mof-1730fbf08c22",
+      "configOverrides": {
+        "url": "https://www.mof.gov.cn/index.htm",
+        "itemSelector": "a[href*=\"/zhengwuxinxi/caizhengxinwen/\"][href*=\"t20\"][href$=\".htm\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.mof.gov.cn/index.htm",
+        "listingStatus": 200,
+        "candidateCount": 2,
+        "readerUrl": "https://www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/202610/t20261009_4002434.htm",
+        "readerStatus": 200,
+        "bodyChars": 19430,
+        "publishedAt": "2026-10-09T07:12:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/202610/t20261010_4002540.htm",
+            "finalUrl": "https://www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/202610/t20261010_4002540.htm",
+            "status": 200,
+            "error": null,
+            "title": "廖岷会见高盛集团总裁温泽恩",
+            "bodyChars": 0,
+            "bodyPreview": null,
+            "bodyVerified": false,
+            "readerPublishedAt": "2026-10-10T08:10:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/202610/t20261009_4002434.htm",
+            "finalUrl": "https://www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/202610/t20261009_4002434.htm",
+            "status": 200,
+            "error": null,
+            "title": "2026年上半年中国财政政策执行情况报告",
+            "bodyChars": 19430,
+            "bodyPreview": "2026年10月9日 来源：财政部调研小组 综 述 2026年是“十五五”开局之年。面对国内外复杂环境带来的风险挑战，以习近平同志为核心的党中央加强对经济工作的全面领导，各地区各部门坚持以习近平新时代中国特色社会主义思想为指导，全面贯彻党的二十大和二十届历次全会精神，认真落实中央经济工作会议和《政府工作报告》部署，完整准确全面贯彻新发展理念，深入开展树立和践",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-09T07:12:00.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": "原页JS明确跳转/index.htm；该页在原域名边界内，有两条财政新闻，其中一篇长正文可读。"
+      }
+    },
+    {
+      "id": "dn-mtime-4a3f764c5d47",
+      "configOverrides": {
+        "itemSelector": "h4 a[href*=\"content.mtime.com/article/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".headline .userCreateTime"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://news.mtime.com/",
+        "listingStatus": 200,
+        "candidateCount": 160,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://content.mtime.com/article/229527725",
+            "title": "笑赴南北多城相会 电影《什么意思夫妇》全国路演圆满收官",
+            "status": 200,
+            "bodyChars": 1560,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T06:26:03.000Z",
+            "cacheFile": "reader-dn-mtime-4a3f764c5d47-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://content.mtime.com/article/229527618",
+            "title": "纪录电影《我是001号》在京举办专场放映 10月10日世界精神卫生日全网上线",
+            "status": 200,
+            "bodyChars": 1533,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T07:45:57.000Z",
+            "cacheFile": "reader-dn-mtime-4a3f764c5d47-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://content.mtime.com/article/229527497",
+            "title": "《什么意思夫妇》“首映在广州”路演活动圆满结束 主创齐聚送欢乐",
+            "status": 200,
+            "bodyChars": 1577,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T07:11:56.000Z",
+            "cacheFile": "reader-dn-mtime-4a3f764c5d47-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-nbs-318ba075a489",
+      "configOverrides": {
+        "url": "https://www.stats.gov.cn/",
+        "itemSelector": "a[href*=\"/sj/zxfb/\"][href*=\"t20\"][href$=\".html\"],a[href*=\"/xw/tjxw/tjdt/\"][href*=\"t20\"][href$=\".html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.stats.gov.cn/",
+        "listingStatus": 200,
+        "candidateCount": 9,
+        "readerUrl": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260922_1965399.html",
+        "readerStatus": 200,
+        "bodyChars": 1881,
+        "publishedAt": "2026-09-23T02:53:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260922_1965399.html",
+            "finalUrl": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260922_1965399.html",
+            "status": 200,
+            "error": null,
+            "title": "康义赴黑龙江出席第十七届中国统计开放日活动并调研",
+            "bodyChars": 1881,
+            "bodyPreview": "9 月 21 日，国家统计局以“壮阔‘十五五’ 统计启新篇”为主题，在黑龙江佳木斯举办第十七届中国统计开放日现场活动。国家统计局党组书记、局长康义，黑龙江省委副书记、省长梁惠玲出席并致辞。黑龙江省委常委、常务副省长陈少波，国家统计局总经济师付凌晖出席。 康义表示，“十五五”时期，国家统计局将认真贯彻落实党中央、国务院重大决策部署，以《统计改革发展“十五五”规",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-23T02:53:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260910_1965286.html",
+            "finalUrl": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260910_1965286.html",
+            "status": 200,
+            "error": null,
+            "title": "康义会见国际能源署署长并签署谅解备忘录",
+            "bodyChars": 1001,
+            "bodyPreview": "2026/09/10 17:50 | Aa 字体： 小 中 大 | 9 月 10 日上午，中国国家统计局局长康义会见国际能源署署长法提赫 · 比罗尔一行。双方签署《中国国家统计局和国际能源署秘书处谅解备忘录》，并就深化能源统计合作交换意见。 康义局长对比罗尔署长一行来访表示欢迎。他指出，中国国家统计局与国际能源署长期以来在能源统计方法、技术研讨、能力建设、数",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-10T09:50:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260907_1965231.html",
+            "finalUrl": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260907_1965231.html",
+            "status": 200,
+            "error": null,
+            "title": "康义会见联合国统计司代理司长",
+            "bodyChars": 913,
+            "bodyPreview": "2026/09/07 17:51 | Aa 字体： 小 中 大 | 9 月 7 日上午，中国国家统计局局长康义会见来访的联合国统计司代理司长尚塔努·穆克吉一行，就中国—联合国统计能力开发信托基金项目、联合国统计大数据和数据科学全球中心未来发展等事宜交换意见。 康义局长对联合国统计司长期以来给予中国统计事业发展的支持表示感谢。他指出，近年来双方携手并进，推动多",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-07T09:51:00.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-ndrc-ec9c232a74a6",
+      "configOverrides": {
+        "url": "https://www.ndrc.gov.cn/",
+        "itemSelector": "a[href*=\"/xwdt/xwfb/\"][href*=\"t20\"][href$=\".html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
+          "publishedAtAuthoritative": true,
+          "titleSelector": "h2.article_title"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.ndrc.gov.cn/",
+        "listingStatus": 200,
+        "candidateCount": 8,
+        "readerUrl": "https://www.ndrc.gov.cn/xwdt/xwfb/202610/t20261010_1408066.html",
+        "readerStatus": 200,
+        "bodyChars": 1040,
+        "publishedAt": "2026-10-10T11:09:24.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.ndrc.gov.cn/xwdt/xwfb/202610/t20261010_1408066.html",
+            "finalUrl": "https://www.ndrc.gov.cn/xwdt/xwfb/202610/t20261010_1408066.html",
+            "status": 200,
+            "error": null,
+            "title": "郑栅洁主任主持召开民营企业座谈会 围绕准确把握三季度经济形势、积极应对国际供需情况变化听...",
+            "bodyChars": 1040,
+            "bodyPreview": "10月10日，国家发展改革委主任郑栅洁主持召开民营企业座谈会，围绕准确把握三季度经济形势、积极应对国际供需情况变化，与来自石油化工、天然气供应、农业机械、人工智能应用等领域的盛虹控股、东明石化、新奥集团、吉峰三农、晶泰科技等企业负责人深入交流，听取意见建议。 会上，企业负责人分别介绍了前三季度生产经营情况，并结合国际形势变化和国内外市场情况，提出促进行业发展",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T11:09:24.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.ndrc.gov.cn/xwdt/xwfb/202610/t20261009_1408037.html",
+            "finalUrl": "https://www.ndrc.gov.cn/xwdt/xwfb/202610/t20261009_1408037.html",
+            "status": 200,
+            "error": null,
+            "title": "国家发展改革委有关负责同志就《关于发展新质生产力的意见》答记者问",
+            "bodyChars": 8786,
+            "bodyPreview": "近日，中共中央、国务院印发《关于发展新质生产力的意见》（以下简称《意见》）。国家发展改革委有关负责同志就《意见》接受采访，回答记者提问。 问：习近平总书记提出发展新质生产力已有3年。在这个时间点，党中央和国务院印发《意见》有什么考虑？ 答： 过去3年，全国上下认真学习领会、坚决贯彻落实习近平总书记重要论述和重要指示批示精神，对新质生产力丰富内涵认识更加深刻，",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-09T12:19:48.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.ndrc.gov.cn/xwdt/xwfb/202609/t20260930_1407977.html",
+            "finalUrl": "https://www.ndrc.gov.cn/xwdt/xwfb/202609/t20260930_1407977.html",
+            "status": 200,
+            "error": null,
+            "title": "国家发展改革委举行升国旗仪式庆祝中华人民共和国成立77周年",
+            "bodyChars": 678,
+            "bodyPreview": "9月30日上午，国家发展改革委举行升国旗仪式，庆祝中华人民共和国成立77周年。委党组书记、主任郑栅洁，委党组成员，秘书长、副秘书长出席仪式。 上午8时15分，升国旗仪式正式开始。驻委武警中队国旗护卫队步履铿锵，护卫着五星红旗走向升旗台。雄壮激昂的《义勇军进行曲》响起，五星红旗迎着晨光冉冉升起、高高飘扬，全体人员庄严肃立，向国旗行注目礼，齐声高唱国歌，对伟大的",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-30T08:43:37.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-nvidia-ai-cc11e7fa00ca",
+      "configOverrides": {
+        "url": "https://blogs.nvidia.com/blog/category/deep-learning/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "article",
+        "linkSelector": "a.entry-title-link",
+        "titleSelector": "a.entry-title-link",
+        "publishedAtSelector": "time",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://blogs.nvidia.com/blog/category/deep-learning/",
+        "listingStatus": 200,
+        "candidateCount": 4,
+        "readerUrl": "https://blogs.nvidia.com/blog/isambard-ai/",
+        "readerStatus": 200,
+        "bodyChars": 6015,
+        "readerPublishedAt": "2025-07-17T17:00:50.000Z",
+        "publishedAt": "2025-07-17T17:00:50.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-pboc-538caa3a0cd0",
+      "configOverrides": {
+        "url": "https://www.pbc.gov.cn/",
+        "itemSelector": "a[href^=\"/goutongjiaoliu/113456/113469/20\"][href$=\"/index.html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": "td.hui12[align=\"right\"]",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.pbc.gov.cn/",
+        "listingStatus": 200,
+        "candidateCount": 11,
+        "readerUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+        "readerStatus": 200,
+        "bodyChars": 6078,
+        "publishedAt": "2026-10-08T09:48:39.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+            "finalUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+            "status": 200,
+            "error": null,
+            "title": "中国人民银行关于人民币汇率的政策立场",
+            "bodyChars": 6078,
+            "bodyPreview": "人民币汇率作为金融市场的一个重要价格，长期以来一直备受各界关注，近期讨论有所增多。现将中国人民银行关于人民币汇率的政策立场阐明如下。 ● 中国实施以市场供求为基础、参考一篮子货币进行调节、有管理的浮动汇率制度，坚持让市场在汇率形成中发挥决定性作用。 ● 过去二十多年，人民币汇率双向浮动；2010年以来，人民币汇率经历了多轮升贬值周期，双向浮动特征更加明显，弹",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-08T09:48:39.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026092917153548424/index.html",
+            "finalUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026092917153548424/index.html",
+            "status": 200,
+            "error": null,
+            "title": "财政部、中国人民银行、金融监管总局有关负责人就实施居民购房贷款贴息政策答记者问",
+            "bodyChars": 1911,
+            "bodyPreview": "财政部、中国人民银行、金融监管总局有关负责人就实施居民购房贷款贴息政策答记者问 字号 大 中 小 文章来源： 2026-09-29 18:03:03 9月29日，财政部会同中国人民银行、金融监管总局印发《关于实施居民购房贷款贴息政策的通知》（财金〔2026〕95号）。财政部、中国人民银行、金融监管总局有关负责人回答了记者的提问。 一、请介绍政策出台的背景及意",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-29T10:03:03.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026092917051440583/index.html",
+            "finalUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026092917051440583/index.html",
+            "status": 200,
+            "error": null,
+            "title": "财政部 中国人民银行 金融监管总局关于实施居民购房贷款贴息政策的通知",
+            "bodyChars": 1472,
+            "bodyPreview": "各省、自治区、直辖市、计划单列市财政厅（局），新疆生产建设兵团财政局，中国人民银行上海总部及各省、自治区、直辖市、计划单列市分行，各金融监管局，有关金融机构： 为深入贯彻落实党中央、国务院有关决策部署，通过强化财政金融政策协同，支持城乡居民刚性住房需求，决定在全国范围内实施居民购房贷款贴息政策，减轻新购买首套住房家庭的商业性个人住房贷款利息负担。现就有关事项",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-29T10:00:32.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-pboc-5e98b22ee40c",
+      "configOverrides": {
+        "url": "https://www.pbc.gov.cn/",
+        "itemSelector": "a[href^=\"/goutongjiaoliu/113456/113469/20\"][href$=\"/index.html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": "td.hui12[align=\"right\"]",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.pbc.gov.cn/",
+        "listingStatus": 200,
+        "candidateCount": 11,
+        "readerUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+        "readerStatus": 200,
+        "bodyChars": 6078,
+        "publishedAt": "2026-10-08T09:48:39.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+            "finalUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+            "status": 200,
+            "error": null,
+            "title": "中国人民银行关于人民币汇率的政策立场",
+            "bodyChars": 6078,
+            "bodyPreview": "人民币汇率作为金融市场的一个重要价格，长期以来一直备受各界关注，近期讨论有所增多。现将中国人民银行关于人民币汇率的政策立场阐明如下。 ● 中国实施以市场供求为基础、参考一篮子货币进行调节、有管理的浮动汇率制度，坚持让市场在汇率形成中发挥决定性作用。 ● 过去二十多年，人民币汇率双向浮动；2010年以来，人民币汇率经历了多轮升贬值周期，双向浮动特征更加明显，弹",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-08T09:48:39.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026092917153548424/index.html",
+            "finalUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026092917153548424/index.html",
+            "status": 200,
+            "error": null,
+            "title": "财政部、中国人民银行、金融监管总局有关负责人就实施居民购房贷款贴息政策答记者问",
+            "bodyChars": 1911,
+            "bodyPreview": "财政部、中国人民银行、金融监管总局有关负责人就实施居民购房贷款贴息政策答记者问 字号 大 中 小 文章来源： 2026-09-29 18:03:03 9月29日，财政部会同中国人民银行、金融监管总局印发《关于实施居民购房贷款贴息政策的通知》（财金〔2026〕95号）。财政部、中国人民银行、金融监管总局有关负责人回答了记者的提问。 一、请介绍政策出台的背景及意",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-29T10:03:03.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026092917051440583/index.html",
+            "finalUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026092917051440583/index.html",
+            "status": 200,
+            "error": null,
+            "title": "财政部 中国人民银行 金融监管总局关于实施居民购房贷款贴息政策的通知",
+            "bodyChars": 1472,
+            "bodyPreview": "各省、自治区、直辖市、计划单列市财政厅（局），新疆生产建设兵团财政局，中国人民银行上海总部及各省、自治区、直辖市、计划单列市分行，各金融监管局，有关金融机构： 为深入贯彻落实党中央、国务院有关决策部署，通过强化财政金融政策协同，支持城乡居民刚性住房需求，决定在全国范围内实施居民购房贷款贴息政策，减轻新购买首套住房家庭的商业性个人住房贷款利息负担。现就有关事项",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-29T10:00:32.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
       "id": "dn-qwen-3bd13fab628b",
       "configOverrides": {
         "url": "https://qwenlm.github.io/",
@@ -97,6 +1992,836 @@
         "publishedAt": "2025-09-22T20:00:00.000Z",
         "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
         "limitation": "Original host is archived; latest listing item is 2025-09-23. Official homepage points to qwen.ai/research, which is outside preserved allowedHosts and is not enabled here."
+      }
+    },
+    {
+      "id": "dn-redstar-a7a028814042",
+      "configOverrides": {
+        "itemSelector": ".news_img a[href*=\"/micropub/Articles/\"][href$=\".html\"]",
+        "titleSelector": ".news_title_buttom",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "#article-time"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.cdsb.com/",
+        "listingStatus": 200,
+        "candidateCount": 3,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://static.cdsb.com/micropub/Articles/202609/3d301341409e100ebe0b4aac9db9fedf.html",
+            "title": "“天眼深度游”调查：付费可自驾到核心区，有住酒店游客竟带电子设备上“锅圈”拍照",
+            "status": 200,
+            "bodyChars": 4081,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T13:31:00.000Z",
+            "cacheFile": "reader-dn-redstar-a7a028814042-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://static.cdsb.com/micropub/Articles/202610/136d10d291cab01071e6c7a1d1378ee7.html",
+            "title": "2天市值蒸发106亿：断裂的踏板支架，戳破了江淮的“华为溢价”？",
+            "status": 200,
+            "bodyChars": 2239,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T11:33:00.000Z",
+            "cacheFile": "reader-dn-redstar-a7a028814042-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://static.cdsb.com/micropub/Articles/202610/76d1b907acf505819ad10e225f500948.html",
+            "title": "用AI省时间，省下来的时间去“反AI消费”！钢笔、黑胶唱片、胶片、刺绣火了",
+            "status": 200,
+            "bodyChars": 1672,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T10:41:00.000Z",
+            "cacheFile": "reader-dn-redstar-a7a028814042-2.html"
+          }
+        ],
+        "publicDisplayEvidence": {
+          "scriptUrl": "https://staticfilecdn.cdsb.com/staticfile/js/base-hongxing.js?v=1.1",
+          "scriptCache": "redstar-base-hongxing.js",
+          "unconditionalDisplayLines": "474-478",
+          "articleScope": "div.wrapper > section.cd-article > article.cd-article_content",
+          "materialScope": "extracted_body",
+          "productionDetails": "redstar-production-check.json"
+        },
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-sciencenet-2dfffbf8b647",
+      "configOverrides": {
+        "itemSelector": ".Black a[href*=\"/htmlnews/\"][href$=\".shtm\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtRegex": "发布时间[：:]\\s*(\\d{4}/\\d{1,2}/\\d{1,2}\\s+\\d{1,2}:\\d{2}:\\d{2})"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://news.sciencenet.cn/",
+        "listingStatus": 200,
+        "candidateCount": 2,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://news.sciencenet.cn/htmlnews/2026/10/572661.shtm",
+            "title": "李庆忠：毕业志愿书是“为祖国找石油”的序曲",
+            "status": 200,
+            "bodyChars": 2373,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T00:36:50.000Z",
+            "cacheFile": "reader-dn-sciencenet-2dfffbf8b647-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://news.sciencenet.cn/htmlnews/2026/10/572659.shtm",
+            "title": "664位诺奖得主，走过了怎样的基础研究之路",
+            "status": 200,
+            "bodyChars": 2415,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T23:36:59.000Z",
+            "cacheFile": "reader-dn-sciencenet-2dfffbf8b647-1.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-sse-d9db55a08730",
+      "configOverrides": {
+        "url": "https://www.sse.com.cn/",
+        "itemSelector": "a[href^=\"/aboutus/mediacenter/hotandd/c/c_\"][href$=\".shtml\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": ".article_opt i",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.sse.com.cn/",
+        "listingStatus": 200,
+        "candidateCount": 6,
+        "readerUrl": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260924_10833301.shtml",
+        "readerStatus": 200,
+        "bodyChars": 489,
+        "publishedAt": "2026-09-24T00:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260924_10833301.shtml",
+            "finalUrl": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260924_10833301.shtml",
+            "status": 200,
+            "error": null,
+            "title": "吸引境外中长期资金入市上交所举办“国际投资者赴境内调研上市公司”活动",
+            "bodyChars": 489,
+            "bodyPreview": "吸引境外中长期资金入市 上交所举办“国际投资者赴境内调研上市公司”活动 2026-09-24 为吸引更多境外中长期资金入市，促进国际投资者对沪市公司投资价值的了解，推动资本市场高水平对外开放，上交所近日再次组织开展“国际投资者赴境内调研上市公司”活动。 本次活动正值沪市公司2026年半年报披露结束之际，聚焦调研公司上半年经营业绩与中长期发展规划，邀请来自英国",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-24T00:00:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260918_10832624.shtml",
+            "finalUrl": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260918_10832624.shtml",
+            "status": 200,
+            "error": null,
+            "title": "第七届国际信息商会议在中国香港成功举办",
+            "bodyChars": 716,
+            "bodyPreview": "第七届国际信息商会议在中国香港成功举办 2026-09-18 近日，第七届国际信息商会议在中国香港成功举办。本次会议由上海证券交易所（以下简称上交所）全资子公司中国投资信息有限公司（以下简称中投信）主办。会议围绕深化跨境金融信息互联互通、促进全球资本市场开放合作展开交流。来自境内外交易所、信息服务商、资产管理公司等逾百家机构的200余名代表齐聚香江之畔，共话",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-18T00:00:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260908_10831625.shtml",
+            "finalUrl": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260908_10831625.shtml",
+            "status": 200,
+            "error": null,
+            "title": "中沙上市公司路演活动圆满举办",
+            "bodyChars": 471,
+            "bodyPreview": "中沙上市公司路演活动圆满举办 2026-09-08 近日，中国-沙特上市公司路演活动顺利落幕。本次活动立足中沙全面战略伙伴关系发展大局，搭建两国资本市场主体双向对接平台，为上市公司、证券公司、资产管理机构等市场参与方创造多元化合作机遇。本次路演采取“1对1”或“1（企业）对多（投资者）”的小范围会面形式，共有来自中沙两国约40家企业、40家投资机构参与，参会",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-08T00:00:00.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-szse-24be40934438",
+      "configOverrides": {
+        "url": "https://www.szse.cn/",
+        "itemSelector": "a[href*=\"/aboutus/trends/news/t20\"][href$=\".html\"]:not(.art-list-link):not(:has(script))",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": ".time",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "titleSelector": ".title"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.szse.cn/",
+        "listingStatus": 200,
+        "candidateCount": 3,
+        "readerUrl": "https://www.szse.cn/aboutus/trends/news/t20260928_623075.html",
+        "readerStatus": 200,
+        "bodyChars": 219,
+        "publishedAt": "2026-09-27T16:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.szse.cn/aboutus/trends/news/t20260930_623151.html",
+            "finalUrl": "https://www.szse.cn/aboutus/trends/news/t20260930_623151.html",
+            "status": 200,
+            "error": null,
+            "title": "力勤资源在深交所上市",
+            "bodyChars": 0,
+            "bodyPreview": null,
+            "bodyVerified": false,
+            "readerPublishedAt": "2026-09-29T16:00:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.szse.cn/aboutus/trends/news/t20260929_623109.html",
+            "finalUrl": "https://www.szse.cn/aboutus/trends/news/t20260929_623109.html",
+            "status": 200,
+            "error": null,
+            "title": "鸿富诚在深交所上市",
+            "bodyChars": 0,
+            "bodyPreview": null,
+            "bodyVerified": false,
+            "readerPublishedAt": "2026-09-28T16:00:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.szse.cn/aboutus/trends/news/t20260928_623075.html",
+            "finalUrl": "https://www.szse.cn/aboutus/trends/news/t20260928_623075.html",
+            "status": 200,
+            "error": null,
+            "title": "关于聘任深圳证券交易所《证券市场导报》学术委员会委员的公告",
+            "bodyChars": 219,
+            "bodyPreview": "根据《深圳证券交易所〈证券市场导报〉管理办法 （ 2026年修订） 》的相关规定，经履行相关程序，决定聘任以下 23 位专家学者为深圳证券交易所《证券市场导报》学术委员会委员（按姓氏笔画排序）： 丁志杰 马永强 王利明 尹中立 孔东民 白重恩 刘 俏 刘元春 刘玉珍 安同良 孙 早 李 扬 李善民 吴卫星 吴冲锋 张学勇 金雪军 周 华 周颖刚 郑永年 郭 ",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-27T16:00:00.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": "原URL首次网络失败，重试同原URL200；两篇上市短讯正文未达200字符，第三篇完整公告正文219字符可读。"
+      }
+    },
+    {
+      "id": "dn-techcrunch-f02b9e03728c",
+      "configOverrides": {
+        "url": "https://techcrunch.com/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": ".loop-card--post-type-post",
+        "linkSelector": "a.loop-card__title-link",
+        "titleSelector": "a.loop-card__title-link",
+        "publishedAtSelector": "time",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://techcrunch.com/",
+        "listingStatus": 200,
+        "candidateCount": 48,
+        "readerUrl": "https://techcrunch.com/2026/10/10/3-days-to-disrupt-2026-meet-the-startups-before-they-hit-mainstream/",
+        "readerStatus": 200,
+        "bodyChars": 2587,
+        "readerPublishedAt": "2026-10-10T15:00:00.000Z",
+        "publishedAt": "2026-10-10T15:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-the-verge-9a677dd9cd97",
+      "configOverrides": {
+        "url": "https://www.theverge.com/tech",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "a._7uluu50[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        },
+        "linkSelector": "a[href]"
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://www.theverge.com/tech",
+        "listingStatus": 200,
+        "candidateCount": 23,
+        "readerUrl": "https://www.theverge.com/tech/1009294/ledger-wallet-tampering-suspected-after-reports-of-crypto-thefts",
+        "readerStatus": 200,
+        "bodyChars": 1860,
+        "readerPublishedAt": "2026-10-10T16:36:44.000Z",
+        "publishedAt": "2026-10-10T16:36:44.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-tmtpost-6573fce41442",
+      "configOverrides": {
+        "itemSelector": "a.item.type-post[href$=\".html\"]",
+        "titleSelector": "p._tit",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".post_author > .time"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.tmtpost.com/",
+        "listingStatus": 200,
+        "candidateCount": 4,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.tmtpost.com/8163363.html",
+            "title": "00后“戒断”AI短剧：一个月卸载了5次",
+            "status": 200,
+            "bodyChars": 3658,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T01:13:00.000Z",
+            "cacheFile": "reader-dn-tmtpost-6573fce41442-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.tmtpost.com/8163466.html",
+            "title": "调休这笔账，为什么怎么算都觉得亏？",
+            "status": 200,
+            "bodyChars": 5585,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T00:59:00.000Z",
+            "cacheFile": "reader-dn-tmtpost-6573fce41442-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.tmtpost.com/8163462.html",
+            "title": "硅谷大模型不装了：Claude卷价格，GPT学豆包",
+            "status": 200,
+            "bodyChars": 4849,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-10T01:10:00.000Z",
+            "cacheFile": "reader-dn-tmtpost-6573fce41442-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-variety-8b0e06e28fd6",
+      "configOverrides": {
+        "url": "https://variety.com/",
+        "parseMode": "html",
+        "publishedAtUtcOffset": "+00:00",
+        "itemSelector": "article.o-story",
+        "linkSelector": "h3.c-title a.c-title__link",
+        "titleSelector": "h3.c-title a.c-title__link",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://variety.com/",
+        "listingStatus": 200,
+        "candidateCount": 6,
+        "readerUrl": "https://variety.com/2026/film/box-office/box-office-other-mommy-verity-social-reckoning-1236907499/",
+        "readerStatus": 200,
+        "bodyChars": 3390,
+        "readerPublishedAt": "2026-10-10T15:45:34.000Z",
+        "publishedAt": "2026-10-10T15:45:34.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-who-8c8f4a455fc1",
+      "configOverrides": {
+        "url": "https://www.who.int/news-room",
+        "parseMode": "html",
+        "itemSelector": ".list-view--item:has(a[href*=\"/news/item/\"])",
+        "linkSelector": "a[href*=\"/news/item/\"]",
+        "titleSelector": ".heading",
+        "publishedAtSelector": ".timestamp",
+        "publishedAtUtcOffset": "+00:00",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:53:07.542Z",
+      "evidence": {
+        "listingUrl": "https://www.who.int/news-room",
+        "listingStatus": 200,
+        "candidateCount": 4,
+        "readerUrl": "https://www.who.int/news/item/09-10-2026-who-youth-council-welcomes-2026-2028-members-in-berlin",
+        "readerStatus": 200,
+        "bodyChars": 3620,
+        "readerPublishedAt": "2026-10-09T12:30:33.000Z",
+        "publishedAt": "2026-10-09T12:30:33.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-world-athletics-26d86174d8ec",
+      "configOverrides": {
+        "url": "https://worldathletics.org/",
+        "itemSelector": "[class*=\"HeroCarousel_title\"] a[href^=\"/news/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": "h2[class*=\"ArticleCarousel_type\"] span:last-child",
+          "publishedAtUtcOffset": "+00:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://worldathletics.org/",
+        "listingStatus": 200,
+        "candidateCount": 3,
+        "readerUrl": "https://worldathletics.org/news/feature/mental-health-athletics-international-voices",
+        "readerStatus": 200,
+        "bodyChars": 10350,
+        "publishedAt": "2026-10-10T00:00:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://worldathletics.org/news/feature/mental-health-athletics-international-voices",
+            "finalUrl": "https://worldathletics.org/news/feature/mental-health-athletics-international-voices",
+            "status": 200,
+            "error": null,
+            "title": "Different voices, shared challenges: mental health in athletics",
+            "bodyChars": 10350,
+            "bodyPreview": "It was a fleeting exchange at a press conference, but it touched on a much wider issue. Speaking at the World Athletics Relays in Gaborone earlier this year, Zaynab Dosso and Elain",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T00:00:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://worldathletics.org/news/preview/chicago-marathon-2026-kiplimo-feysa",
+            "finalUrl": "https://worldathletics.org/news/preview/chicago-marathon-2026-kiplimo-feysa",
+            "status": 200,
+            "error": null,
+            "title": "Kiplimo and Feysa return to defend Chicago titles",
+            "bodyChars": 6534,
+            "bodyPreview": "Jacob Kiplimo and Hawi Feysa will return to the Bank of America Chicago Marathon to defend their titles against deep international fields at the World Athletics Platinum Label road",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-08T00:00:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://worldathletics.org/news/press-releases/ehammer-kalin-combined-events-tour-2026-winners",
+            "finalUrl": "https://worldathletics.org/news/press-releases/ehammer-kalin-combined-events-tour-2026-winners",
+            "status": 200,
+            "error": null,
+            "title": "Ehammer and Kälin complete historic Swiss double in World Athletics Combined Events Tour",
+            "bodyChars": 2631,
+            "bodyPreview": "Switzerland’s Simon Ehammer and Annik Kälin have been confirmed as the winners of the 2026 World Athletics Combined Events Tour , completing a historic Swiss double. Both athletes ",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-09-30T00:00:00.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-wta-6e07cccbd569",
+      "configOverrides": {
+        "url": "https://www.wtatennis.com/news",
+        "itemSelector": "a.hero__content-link[href^=\"/news/\"]",
+        "titleSelector": "h2",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "checkedAt": "2026-10-10T18:46:38.336Z",
+      "evidence": {
+        "listingUrl": "https://www.wtatennis.com/news",
+        "listingStatus": 200,
+        "candidateCount": 4,
+        "readerUrl": "https://www.wtatennis.com/news/4590078/zheng-becomes-first-chinese-finalist-in-beijing-with-straight-sets-win-over-mertens",
+        "readerStatus": 200,
+        "bodyChars": 3690,
+        "publishedAt": "2026-10-10T12:50:00.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged",
+        "readers": [
+          {
+            "url": "https://www.wtatennis.com/news/4590078/zheng-becomes-first-chinese-finalist-in-beijing-with-straight-sets-win-over-mertens",
+            "finalUrl": "https://www.wtatennis.com/news/4590078/zheng-becomes-first-chinese-finalist-in-beijing-with-straight-sets-win-over-mertens",
+            "status": 200,
+            "error": null,
+            "title": "Zheng becomes first Chinese finalist in Beijing with straight-sets win over Mertens",
+            "bodyChars": 3690,
+            "bodyPreview": "Zheng Qinwen made history Saturday night in Beijing, defeating No. 13 seed Elise Mertens 7-5, 6-2 in 1 hour, 32 minutes to become the first Chinese player to reach the China Open f",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T12:50:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.wtatennis.com/news/4589994/wuhan-draw-sabalenka-swiatek-eye-first-2026-meeting-in-quarterfinals",
+            "finalUrl": "https://www.wtatennis.com/news/4589994/wuhan-draw-sabalenka-swiatek-eye-first-2026-meeting-in-quarterfinals",
+            "status": 200,
+            "error": null,
+            "title": "Wuhan draw: Sabalenka, Swiatek eye first 2026 meeting in quarterfinals",
+            "bodyChars": 6418,
+            "bodyPreview": "The rivalry between Aryna Sabalenka and Iga Swiatek could resume at the Dongfeng • Voyah Wuhan Open. The two former World No. 1s were draw together in the first quarter of the last",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T11:30:00.000Z",
+            "boundary": true
+          },
+          {
+            "url": "https://www.wtatennis.com/news/4589992/mirra-andreeva-or-qinwen-zheng-making-the-case-for-the-china-open-finalists",
+            "finalUrl": "https://www.wtatennis.com/news/4589992/mirra-andreeva-or-qinwen-zheng-making-the-case-for-the-china-open-finalists",
+            "status": 200,
+            "error": null,
+            "title": "Andreeva or Zheng? Making the case for the China Open finalists",
+            "bodyChars": 4019,
+            "bodyPreview": "History was made in Beijing on Saturday when Zheng Qinwen defeated Elise Mertens to become the first Chinese finalist in the history of the China Open, which dates back to 2004. Zh",
+            "bodyVerified": true,
+            "readerPublishedAt": "2026-10-10T11:24:00.000Z",
+            "boundary": true
+          }
+        ],
+        "limitation": null
+      }
+    },
+    {
+      "id": "dn-xinhua-0bd773b290aa",
+      "configOverrides": {
+        "itemSelector": "h3 a[href$=\"/c.html\"], .tit a[href$=\"/c.html\"], .bttx a[href$=\"/c.html\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.news.cn/world/",
+        "listingStatus": 200,
+        "candidateCount": 65,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.news.cn/20260919/a639e2b71d60451f8f3b548bcc74ae2f/c.html",
+            "title": "全球连线丨AI真的会让普通人创业更容易吗？",
+            "status": 200,
+            "bodyChars": 531,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-09-19T11:02:18.000Z",
+            "cacheFile": "reader-dn-xinhua-0bd773b290aa-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.news.cn/world/20261009/1281aec37ecb4b6680af7cf89ce875f8/c.html",
+            "title": "国际观察丨冲绳命案凸显日本倚美恶果",
+            "status": 200,
+            "bodyChars": 2037,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T08:44:26.000Z",
+            "cacheFile": "reader-dn-xinhua-0bd773b290aa-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.news.cn/world/20261009/e9e8d6ca26684f78a423aee29a5db686/c.html",
+            "title": "美乌将磋商“新想法” 泽连斯基反驳鲁比奥",
+            "status": 200,
+            "bodyChars": 1309,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T08:35:16.000Z",
+            "cacheFile": "reader-dn-xinhua-0bd773b290aa-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-xinhua-b3451a86d549",
+      "configOverrides": {
+        "itemSelector": "h3 a[href$=\"/c.html\"], .tit a[href$=\"/c.html\"], .bttx a[href$=\"/c.html\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.news.cn/tech/",
+        "listingStatus": 200,
+        "candidateCount": 24,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.news.cn/tech/20261008/0f4fdc197ff2442a88e9db79ad587919/c.html",
+            "title": "国庆假期 科技赋能假日文旅新体验（组图）",
+            "status": 200,
+            "bodyChars": 2101,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-08T00:59:33.000Z",
+            "cacheFile": "reader-dn-xinhua-b3451a86d549-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.news.cn/tech/20260930/872ebd02a54441f1b78b554a8376d45e/c.html",
+            "title": "上新了·好物｜iQOO16与iQOO Pad Ultra电竞性能上手体验",
+            "status": 200,
+            "bodyChars": 2162,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-09-30T09:01:00.000Z",
+            "cacheFile": "reader-dn-xinhua-b3451a86d549-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.news.cn/tech/20260928/e99d4bbeae154266a665c1d632836652/c.html",
+            "title": "白洋淀畔建设创新高地——雄安新区标志性未来产业成长记",
+            "status": 200,
+            "bodyChars": 3382,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-09-28T00:51:02.000Z",
+            "cacheFile": "reader-dn-xinhua-b3451a86d549-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-xinhua-ffb98927d061",
+      "configOverrides": {
+        "itemSelector": "h3 a[href$=\"/c.html\"], .tit a[href$=\"/c.html\"], .bttx a[href$=\"/c.html\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": ".info"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://sports.news.cn/",
+        "listingStatus": 200,
+        "candidateCount": 1,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.news.cn/sports/20261009/3827d75b35ba43c282ec5876c6188fae/c.html",
+            "title": "国家体育总局：圆满完成练兵任务 全面转入奥运备战",
+            "status": 200,
+            "bodyChars": 797,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T12:54:41.000Z",
+            "cacheFile": "reader-dn-xinhua-ffb98927d061-0.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      }
+    },
+    {
+      "id": "dn-yahoo-sports-nba-1dde5c41fd3a",
+      "configOverrides": {
+        "url": "https://sports.yahoo.com/nba/",
+        "parseMode": "html",
+        "itemSelector": "a[data-ylk*=\"ct:story;\"][data-ylk*=\"elm:hdln;\"][href*=\"/nba/article/\"]",
+        "linkSelector": "a[href]",
+        "titleSelector": "a[href]",
+        "detail": {
+          "titleSelector": "h1",
+          "maxFetches": 5,
+          "publishedAtRegex": "\"datePublished\"\\s*:\\s*\"([^\"<>]+)\"",
+          "publishedAtAuthoritative": true,
+          "publishedAtUtcOffset": "+00:00"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:55:46.017Z",
+      "evidence": {
+        "listingUrl": "https://sports.yahoo.com/nba/",
+        "listingStatus": 200,
+        "candidateCount": 6,
+        "readerUrl": "https://sports.yahoo.com/nba/article/76ers-joel-embiid-denies-tardiness-report-questions-why-it-happened-it-feels-like-im-an-easy-target-191017824.html",
+        "readerStatus": 200,
+        "bodyChars": 4041,
+        "readerPublishedAt": "2026-10-09T18:53:50.000Z",
+        "publishedAt": "2026-10-09T18:53:50.000Z",
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
+      },
+      "readers": [
+        {
+          "url": "https://sports.yahoo.com/nba/article/76ers-joel-embiid-denies-tardiness-report-questions-why-it-happened-it-feels-like-im-an-easy-target-191017824.html",
+          "status": 200,
+          "bodyChars": 4041,
+          "bodyVerified": true,
+          "bodyPreview": "Following a preseason loss to the Brooklyn Nets, Philadelphia 76ers center Joel Embiid described the rejected report about LeBron James laying into th",
+          "readerPublishedAt": "2026-10-09T18:53:50.000Z",
+          "rawDate": "2026-10-09T18:53:50Z"
+        },
+        {
+          "url": "https://sports.yahoo.com/nba/article/russell-westbrook-wants-to-be-a-torchbearer-for-the-los-angeles-2028-olympics-215043233.html",
+          "status": 200,
+          "bodyChars": 3326,
+          "bodyVerified": true,
+          "bodyPreview": "Recently retired NBA star Russell Westbrook wants to be a torchbearer for the 2028 Summer Olympics in his native Los Angeles. Westbrook, 37, surprisin",
+          "readerPublishedAt": "2026-10-09T21:50:43.000Z",
+          "rawDate": "2026-10-09T21:50:43Z"
+        },
+        {
+          "url": "https://sports.yahoo.com/nba/article/alperen-sengun-registers-triple-double-as-rockets-best-cooper-flagg-led-mavericks-in-nba-china-game-143317843.html",
+          "status": 200,
+          "bodyChars": 1976,
+          "bodyVerified": true,
+          "bodyPreview": "NBA fans woke up on Friday morning to find a preseason game already underway. The Houston Rockets beat the Dallas Mavericks 135-117 in the first of tw",
+          "readerPublishedAt": "2026-10-09T15:00:57.000Z",
+          "rawDate": "2026-10-09T15:00:57Z"
+        }
+      ]
+    },
+    {
+      "id": "dn-yicai-ab7a5c4ddf07",
+      "configOverrides": {
+        "itemSelector": ".swiper-slide.item a[href^=\"/news/\"]",
+        "titleSelector": "h2",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "maxFetches": 10,
+          "publishedAtSelector": "h1 + p em.f-fl"
+        },
+        "dailyNews": {
+          "adapter": "web_list"
+        }
+      },
+      "checkedAt": "2026-10-10T18:56:18.857Z",
+      "evidence": {
+        "listingUrl": "https://www.yicai.com/",
+        "listingStatus": 200,
+        "candidateCount": 5,
+        "readers": [
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.yicai.com/news/103388325.html",
+            "title": "人民币汇率被低估了吗？央行最新政策立场给出答案",
+            "status": 200,
+            "bodyChars": 3701,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T14:09:33.000Z",
+            "cacheFile": "reader-dn-yicai-ab7a5c4ddf07-0.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.yicai.com/news/103387928.html",
+            "title": "约1.8万字的中国财政政策半年报，有何看点？",
+            "status": 200,
+            "bodyChars": 1664,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T09:43:33.000Z",
+            "cacheFile": "reader-dn-yicai-ab7a5c4ddf07-1.html"
+          },
+          {
+            "summaryChars": 0,
+            "materialScope": "extracted_body",
+            "url": "https://www.yicai.com/news/103387937.html",
+            "title": "A股3800点争夺战，谁的股价创下历史新高",
+            "status": 200,
+            "bodyChars": 1899,
+            "meaningfulBody": true,
+            "readerPublishedAt": "2026-10-09T10:12:27.000Z",
+            "cacheFile": "reader-dn-yicai-ab7a5c4ddf07-2.html"
+          }
+        ],
+        "boundary": "Original allowedHosts and allowedPathPrefixes unchanged"
       }
     }
   ]

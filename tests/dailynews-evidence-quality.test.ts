@@ -1,6 +1,7 @@
 import "./setup.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import { readable, videoTranscript } from "@aihot/backend/content/extract";
 import { trimTrailingChrome } from "@aihot/backend/content/sanitize";
 import { copyEvidenceIssues } from "@aihot/backend/editorial/evidence";
@@ -81,4 +82,63 @@ test('article layout classes mentioning a sidebar retain the main text but remov
     assert.ok(!got?.text.includes('Unrelated recommendations'));
     assert.ok(!got?.text.includes('sidebar junk'));
   }
+});
+
+// Reduced public HTML structures observed on Variety and Yahoo Sports; no browser script runs.
+const restoredFixtures = JSON.parse(readFileSync(new URL('./fixtures/article-body-restoration.json', import.meta.url), 'utf8')) as {yahoo:{url:string;html:string};variety:{url:string;html:string};redstar:{url:string;html:string}};
+test('Variety article-with-sidebar preserves actual article paragraphs and drops the real popular sidebar', () => {
+  const f = restoredFixtures.variety;
+  const got = readable(f.html, f.url);
+  assert.ok(got?.text.includes('generated $12.6 million'));
+  assert.ok(!got?.text.includes('Wrong sidebar story'));
+});
+test('Yahoo restores only its own exact static React body insertion without exposing other hidden streams', () => {
+  const f = restoredFixtures.yahoo;
+  const got = readable(f.html, f.url);
+  assert.ok(got?.text.includes('Following a preseason loss to the Brooklyn Nets'));
+  assert.ok(!got?.text.includes('Unrelated hidden stream'));
+});
+for (const [name, change] of [
+  ['missing insertion', (h:string) => h.replace('$RC("B:2","S:2")', '')],
+  ['duplicate insertion', (h:string) => h.replace('$RC("B:2","S:2")', '$RC("B:2","S:2")</script><script>$RC("B:2","S:2")')],
+  ['ambiguous stream pairing', (h:string) => h.replace('$RC("B:9","S:9")', '$RC("B:9","S:2")')],
+  ['ambiguous boundary pairing', (h:string) => h.replace('$RC("B:9","S:9")', '$RC("B:2","S:9")')],
+  ['duplicate stream body', (h:string) => h.replace('</body>', '<div hidden id="S:3"><div class="content-body"><p>Another article body</p></div></div></body>')],
+  ['duplicate boundary', (h:string) => h.replace('</body>', '<template id="B:2"></template></body>')],
+  ['boundary outside own article', (h:string) => h.replace('<template id="B:2"></template></article>', '</article><template id="B:2"></template>')],
+  ['canonical mismatch', (h:string) => h.replace('rel="canonical" href="https://sports.yahoo.com/', 'rel="canonical" href="https://example.com/')],
+  ['metadata of another article', (h:string) => h.replace('"mainEntityOfPage":"https://sports.yahoo.com/', '"mainEntityOfPage":"https://example.com/')],
+  ['explicit inaccessible article', (h:string) => h.replace('"@type":"NewsArticle"', '"isAccessibleForFree":false,"@type":"NewsArticle"')],
+] as const) test(`Yahoo refuses ${name} instead of promoting its header or another story`, () => {
+  const f = restoredFixtures.yahoo;
+  assert.equal(readable(change(f.html), f.url), null);
+});
+test('Yahoo restoration does not run for a different host or path', () => {
+  const f = restoredFixtures.yahoo;
+  for(const address of ['https://example.com/nba/article/test.html', 'https://sports.yahoo.com/news/test.html']) {
+    assert.ok(!readable(f.html, address)?.text.includes('Following a preseason loss to the Brooklyn Nets'));
+  }
+});
+
+test('Red Star restores its observed article image-loading wrapper, preserving unrelated hidden content', () => {
+  const f = restoredFixtures.redstar;
+  const got = readable(f.html, f.url);
+  assert.ok(got?.text.includes('单天线射电望远镜'));
+  assert.ok(!got?.text.includes('Unrelated hidden content'));
+});
+for(const [name, change] of [
+  ['missing known loading script', (h:string) => h.replace('/staticfile/js/base-hongxing.js', '/unknown.js')],
+  ['another script host', (h:string) => h.replace('staticfilecdn.cdsb.com', 'example.com')],
+  ['duplicate article body', (h:string) => h.replace('</section>', '<article class="cd-article_content"><p>Another body</p></article></section>')],
+  ['missing publication date', (h:string) => h.replace('id="article-time"', 'id="other-time"')],
+  ['mismatched article title', (h:string) => h.replace('<title>', '<title>Other article: ')],
+  ['other hiding styles', (h:string) => h.replace('display: none;', 'display: none; visibility: hidden;')],
+] as const) test(`Red Star refuses ${name}`, () => {
+  const f = restoredFixtures.redstar;
+  assert.equal(readable(change(f.html), f.url), null);
+});
+test('Red Star does not unhide an article for an unobserved host or path', () => {
+  const f = restoredFixtures.redstar;
+  for(const address of ['https://example.com/micropub/Articles/202610/test.html','https://static.cdsb.com/other/test.html'])
+    assert.ok(!readable(f.html,address)?.text.includes('单天线射电望远镜'));
 });

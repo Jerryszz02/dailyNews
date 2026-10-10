@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { fromHtml, allowed, parseLooseDate } from '../packages/backend/src/sources/web-list.ts';
+import http from 'node:http';
+import { config } from '@aihot/backend/config';
+import { fromHtml, allowed, parseLooseDate, fetchWebList } from '../packages/backend/src/sources/web-list.ts';
 import { assertSupportedConfig } from '../packages/backend/src/sources/config-keys.ts';
 import type { SourceRow } from '../packages/backend/src/sources/types.ts';
 const seeds=JSON.parse(readFileSync(new URL('../industry/sources.json',import.meta.url),'utf8')).sources as SourceRow[];
@@ -22,4 +24,28 @@ test('official timestamps use the published field and Chinese source offset',()=
  const cas=source('cas').config.detail;
  const casDate=new RegExp(cas.publishedAtRegex).exec('<meta name="PubDate" content="2026-10-10 21:46">')?.[1];
  assert.equal(parseLooseDate(casDate,cas.publishedAtUtcOffset)?.toISOString(),'2026-10-10T13:46:00.000Z');
+});
+
+test('web page lists negotiate HTML instead of JSON-encoded HTML strings', async () => {
+  const html = '<article><a href="https://example.com/news/one">A public news article</a></article>';
+  const server = http.createServer((req, res) => {
+    const json = req.headers.accept?.includes('application/json');
+    res.writeHead(200, { 'content-type': json ? 'application/json' : 'text/html' });
+    res.end(json ? JSON.stringify(html) : html);
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const previous = config.allowPrivateNetworkFetch;
+  config.allowPrivateNetworkFetch = true;
+  try {
+    const row: SourceRow = { ...source('anthropic'), config: {
+      url: `http://127.0.0.1:${(server.address() as {port:number}).port}`,
+      itemSelector: 'article', linkSelector: 'a[href]', titleSelector: 'a',
+      dailyNews: { allowedHosts: ['example.com'], allowedPathPrefixes: ['example.com/news'] },
+    } };
+    const result = await fetchWebList(row);
+    assert.deepEqual(result.map(item => item.url), ['https://example.com/news/one']);
+  } finally {
+    config.allowPrivateNetworkFetch = previous;
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
 });

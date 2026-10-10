@@ -1,0 +1,1099 @@
+{
+  "checkedAt": "2026-10-10T18:46:38.336Z",
+  "fixtures": [
+    {
+      "id": "dn-bbc-sport-8865a371aa01",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "bbc-sport",
+          "sectionId": "8865a371aa01",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "Sport",
+          "sectionUrl": "https://www.bbc.com/sport",
+          "sourceCredibility": 80,
+          "mediaType": "public",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:bbc",
+          "language": "en-US",
+          "allowedHosts": [
+            "bbc.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "BBC Sport latest",
+            "BBC Sport football basketball"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.bbc.com/sport",
+        "itemSelector": "a[class*=\"PromoLink\"][href^=\"/sport/\"][href*=\"/articles/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "listingHtml": "<a href=\"#main-heading\" class=\"ssrcss-1aklli1-AccessibilityLink e14hijrs0\">Skip to content</a><a href=\"https://www.bbc.co.uk/accessibility/\" class=\"ssrcss-1aklli1-AccessibilityLink e14hijrs0\">Accessibility Help</a><a href=\"https://account.bbc.com/account?lang=en-GB&amp;ptrt=https%3A%2F%2Fwww.bbc.com%2Fsport&amp;userOrigin=SPORT_GNL\" hidden=\"\" aria-hidden=\"true\" class=\"ssrcss-7xnt2x-NavigationLink-AccountLink eki2hvo10\"><div class=\"ssrcss-1e5u46l-AccountWrapper e1jj8uav4\"><span class=\"ssrcss-18rlmxu-IconWrapper-ForYouIconWrapper e1jj8uav2\"><svg viewBox=\"0 0 32 32\" width=\"1em\" height=\"1em\" class=\"ssrcss-xi5oyi-StyledIcon e161cein1\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M16 23c-3.3 0-5.8-2.5-5.8-5.8s2.5-5.8 5.8-5.8c3.2 0 5.8 2.5 5.8 5.8S19.2 23 16 23m15-5.7c0-8.4-6.6-15-15-15-8.5 0-15 6.6-15 15 0 5.2 2.5 9.8 6.4 12.4 1.9-2.8 5-4.6 8.6-4.6s6.7 1.8 8.6 4.6C28.5 27 31 22.5 31 17.3\"></path></svg></span><span class=\"ssrcss-1vpd218-AccountText e1jj8uav1\">Your account</span></div></a><a href=\"/sport/articles/cw3dj5yx4ej2o\" class=\"ssrcss-175x2eb-PromoLink exn3ah94\"><span role=\"text\"><p class=\"ssrcss-6bmydz-PromoHeadline exn3ah99\"><span aria-hidden=\"false\">The rock behind Chelsea's entertainers: Midfield duo key for Blues</span></p></span></a><a href=\"/sport/formula1/articles/cmn4ezn5ep3jo\" class=\"ssrcss-175x2eb-PromoLink exn3ah94\"><span role=\"text\"><p class=\"ssrcss-6bmydz-PromoHeadline exn3ah99\"><span aria-hidden=\"false\">Verstappen building major momentum as 'no-one very happy' at McLaren</span></p></span></a><a href=\"/sport/football/articles/c63r5w20ez3do\" class=\"ssrcss-175x2eb-PromoLink exn3ah94\"><span role=\"text\"><p class=\"ssrcss-6bmydz-PromoHeadline exn3ah99\"><span aria-hidden=\"false\">Hincapie injury adds to Arsenal issues after Guimaraes rescue act</span></p></span></a>",
+      "expected": [
+        {
+          "url": "https://www.bbc.com/sport/articles/cw3dj5yx4ej2o",
+          "title": "The rock behind Chelsea's entertainers: Midfield duo key for Blues"
+        },
+        {
+          "url": "https://www.bbc.com/sport/formula1/articles/cmn4ezn5ep3jo",
+          "title": "Verstappen building major momentum as 'no-one very happy' at McLaren"
+        },
+        {
+          "url": "https://www.bbc.com/sport/football/articles/c63r5w20ez3do",
+          "title": "Hincapie injury adds to Arsenal issues after Guimaraes rescue act"
+        }
+      ],
+      "offHostHtml": "<a href=\"https://outside.example/news/20261010\" class=\"ssrcss-175x2eb-PromoLink exn3ah94\"><span role=\"text\"><p class=\"ssrcss-6bmydz-PromoHeadline exn3ah99\"><span aria-hidden=\"false\">The rock behind Chelsea's entertainers: Midfield duo key for Blues</span></p></span></a>",
+      "dateHtml": "<script data-rh=\"true\" type=\"application/ld+json\">{\"@context\":\"http://schema.org\",\"@type\":\"Article\",\"url\":\"https://www.bbc.com/sport/articles/cw3dj5yx4ej2o\",\"publisher\":{\"@type\":\"Organization\",\"name\":\"BBC Sport\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://static.files.bbci.co.uk/core/website/assets/static/sport/images/metadata/poster-1024x576.146fae5646.png\"}},\"datePublished\":\"2026-10-10T18:09:37.233Z\",\"dateModified\":\"2026-10-10T18:09:37.233Z\",\"description\":\"The performances of Jordan Henderson and Moises Caicedo underpinned Chelsea's 5-1 victory at home to Bournemouth on Saturday afternoon. \",\"headline\":\"The rock behind Chelsea's entertainers: Midfield duo key for Blues\",\"image\":{\"@type\":\"ImageObject\",\"width\":1200,\"height\":675,\"url\":\"https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/9b33/live/81b61030-c4c5-11f1-9ce9-55293bd7f0d9.jpg\"},\"thumbnailUrl\":\"https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/9b33/live/81b61030-c4c5-11f1-9ce9-55293bd7f0d9.jpg\",\"mainEntityOfPage\":\"https://www.bbc.com/sport/articles/cw3dj5yx4ej2o\",\"author\":[{\"@type\":\"Person\",\"name\":\"Nizaar Kinsella\",\"sameAs\":[\"https://www.bbc.co.uk/sport/topics/c999r12k905t\"]}]}</script>",
+      "readerPublishedAt": "2026-10-10T18:09:37.233Z",
+      "readerUrl": "https://www.bbc.com/sport/articles/cw3dj5yx4ej2o",
+      "bodyChars": 4697
+    },
+    {
+      "id": "dn-billboard-6d8b657e4db2",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "billboard",
+          "sectionId": "6d8b657e4db2",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "Music",
+          "sectionUrl": "https://www.billboard.com/",
+          "sourceCredibility": 74,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "entertainment",
+          "publisherKey": "publisher:billboard",
+          "language": "en-US",
+          "allowedHosts": [
+            "billboard.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "Billboard latest music news",
+            "Billboard charts news"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.billboard.com/",
+        "itemSelector": "a.c-title__link[href*=\"billboard.com/music/\"][href*=\"123\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "listingHtml": "<a href=\"#\" class=\"btn-close\">×</a><a href=\"#pagetop\" class=\"a-screen-reader-shortcut\">\n\t\t\tSkip to main content\t\t</a><a class=\"c-link  lrv-a-unstyle-link a-font-basic-fancy lrv-u-font-size-15 lrv-a-unstyle-link lrv-u-whitespace-nowrap lrv-u-color-black \" href=\"/charts/\">\n\tCharts</a><a href=\"https://www.billboard.com/music/music-news/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582/\" class=\"c-title__link lrv-u-color-black u-link-decoration-underline:hover\">\n\t\n\t\t\n\t\t\t\t\tTroye Sivan, Remi Wolf, Slayyyter &amp; Pitbull: New Music Friday Guide\t\t\n\t\t\t\t\t</a><a href=\"https://www.billboard.com/music/music-news/charli-xcx-tinashe-2026-austin-city-limits-festival-1236358595/\" class=\"c-title__link lrv-a-unstyle-link  u-link-decoration-underline:hover\">\n\t\n\t\t\n\t\t\t\t\tCharli XCX Welcomes Tinashe for Surprise Performance at 2026 Austin City Limits&nbsp;Festival\t\t\n\t\t\t\t\t</a><a href=\"https://www.billboard.com/music/features/for-world-mental-health-day-2026-1236358584/\" class=\"c-title__link lrv-a-unstyle-link  u-link-decoration-underline:hover\">\n\t\n\t\t\n\t\t\t\t\tFor World Mental Health Day, a check-up on the music&nbsp;industry\t\t\n\t\t\t\t\t</a>",
+      "expected": [
+        {
+          "url": "https://www.billboard.com/music/music-news/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582/",
+          "title": "Troye Sivan, Remi Wolf, Slayyyter & Pitbull: New Music Friday Guide"
+        },
+        {
+          "url": "https://www.billboard.com/music/music-news/charli-xcx-tinashe-2026-austin-city-limits-festival-1236358595/",
+          "title": "Charli XCX Welcomes Tinashe for Surprise Performance at 2026 Austin City Limits Festival"
+        },
+        {
+          "url": "https://www.billboard.com/music/features/for-world-mental-health-day-2026-1236358584/",
+          "title": "For World Mental Health Day, a check-up on the music industry"
+        }
+      ],
+      "offHostHtml": "<a href=\"https://outside.example/news/20261010\" class=\"c-title__link lrv-u-color-black u-link-decoration-underline:hover\">\n\t\n\t\t\n\t\t\t\t\tTroye Sivan, Remi Wolf, Slayyyter &amp; Pitbull: New Music Friday Guide\t\t\n\t\t\t\t\t</a>",
+      "dateHtml": "<script type=\"application/ld+json\">\n\t\t\t\t{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"Organization\",\n    \"url\": \"https://www.billboard.com\",\n    \"name\": \"Billboard\",\n    \"logo\": \"https://www.billboard.com/wp-content/themes/vip/pmc-billboard-2021/assets/build/svg/billboard.svg\"\n}\n\t\t\t</script><script type=\"application/ld+json\" class=\"wp-parsely-metadata\">{\"@context\":\"https:\\/\\/schema.org\",\"@type\":\"NewsArticle\",\"headline\":\"Troye Sivan, Remi Wolf, Slayyyter &amp; Pitbull: New Music Friday Guide\",\"url\":\"http:\\/\\/www.billboard.com\\/music\\/music-news\\/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582\\/\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"http:\\/\\/www.billboard.com\\/music\\/music-news\\/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582\\/\"},\"thumbnailUrl\":\"https:\\/\\/www.billboard.com\\/wp-content\\/uploads\\/2026\\/08\\/P104S6SS-e1787772544840.jpg?w=150&h=150&crop=1\",\"image\":{\"@type\":\"ImageObject\",\"url\":\"https:\\/\\/www.billboard.com\\/wp-content\\/uploads\\/2026\\/08\\/P104S6SS-e1787772544840.jpg\"},\"articleSection\":\"Music News\",\"author\":[{\"@type\":\"Person\",\"name\":\"Andrew Unterberger\"},{\"@type\":\"Person\",\"name\":\"Kyle Denis\"},{\"@type\":\"Person\",\"name\":\"Jessica Roiz\"},{\"@type\":\"Person\",\"name\":\"Jessica Nicholson\"}],\"creator\":[\"Andrew Unterberger\",\"Kyle Denis\",\"Jessica Roiz\",\"Jessica Nicholson\"],\"publisher\":{\"@type\":\"Organization\",\"name\":\"Billboard\",\"logo\":\"\"},\"keywords\":[\"friday music guide\",\"genre pop\"],\"dateCreated\":\"2026-10-09T05:54:17Z\",\"datePublished\":\"2026-10-09T05:54:17Z\",\"dateModified\":\"2026-10-09T20:33:03Z\"}</script><script type=\"application/ld+json\">\n\t\t\t{\"@context\":\"https:\\/\\/schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"position\":1,\"name\":\"Music\",\"item\":\"https:\\/\\/www.billboard.com\\/c\\/music\\/\"},{\"@type\":\"ListItem\",\"position\":2,\"name\":\"Music News\",\"item\":\"https:\\/\\/www.billboard.com\\/c\\/music\\/music-news\\/\"}]}\t\t</script><script type=\"application/ld+json\">\n{\n    \"@context\": \"http://schema.org\",\n    \"@type\": \"NewsArticle\",\n    \"url\": \"https://www.billboard.com/music/music-news/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582/\",\n    \"name\": \"Billboard\",\n    \"mainEntityOfPage\": {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://www.billboard.com/music/music-news/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582/\"\n    },\n    \"headline\": \"Troye Sivan and Slayyyter Lead Best New Music: Friday Music Guide\",\n    \"datePublished\": \"2026-10-09T05:54:17+00:00\",\n    \"dateModified\": \"2026-10-09T16:33:03+00:00\",\n    \"articleBody\": \"Check out the must-hear releases of the week.\",\n    \"author\": {\n        \"@type\": \"Person\",\n        \"name\": \"Andrew Unterberger\",\n        \"url\": \"https://www.billboard.com/author/andrew-unterberger/\"\n    },\n    \"publisher\": {\n        \"@type\": \"Organization\",\n        \"name\": \"Billboard\",\n        \"url\": \"https://www.billboard.com\"\n    },\n    \"isAccessibleForFree\": \"false\",\n    \"image\": {\n        \"@type\": \"ImageObject\",\n        \"url\": \"https://www.billboard.com/wp-content/uploads/2026/08/P104S6SS-e1787772544840.jpg\"\n    },\n    \"hasPart\": {\n        \"@type\": \"WebPageElement\",\n        \"isAccessibleForFree\": \"false\",\n        \"cssSelector\": \".pmc-paywall\"\n    }\n}</script><meta property=\"article:published_time\" content=\"2026-10-09T05:54:17+00:00\">",
+      "readerPublishedAt": "2026-10-09T05:54:17.000Z",
+      "readerUrl": "https://www.billboard.com/music/music-news/troye-sivan-slayyyter-remi-wolf-new-music-friday-guide-1236353582/",
+      "bodyChars": 9514
+    },
+    {
+      "id": "dn-cbs-sports-nba-b0696340bd6f",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "cbs-sports-nba",
+          "sectionId": "b0696340bd6f",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "NBA",
+          "sectionUrl": "https://www.cbssports.com/nba/",
+          "sourceCredibility": 72,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:cbs-sports-nba",
+          "language": "en-US",
+          "allowedHosts": [
+            "cbssports.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "CBS Sports NBA latest news",
+            "CBS Sports NBA rumors injuries"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.cbssports.com/nba/",
+        "itemSelector": "a.EightPack-link[href^=\"/nba/news/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "listingHtml": "<a href=\"#page-content\" aria-label=\"Skip to main content\" class=\"screen-reader-skip-to-main-content-link\" tabindex=\"1\">Skip to Main Content</a><a class=\"CategoriesList_itemWrap__4xMzO\" data-tracking=\"{&quot;linkName&quot;:&quot;navigation interaction&quot;,&quot;module&quot;:{&quot;clickText&quot;:&quot;nfl&quot;,&quot;moduleAction&quot;:&quot;click&quot;,&quot;moduleLocation&quot;:&quot;list - nfl&quot;,&quot;moduleName&quot;:&quot;global nav&quot;}}\" href=\"https://www.cbssports.com/nfl/\"><figure class=\"SportsLogo SportsLogo_logo__CUT_L SportsLogo_logo__125__ST9RJ\"><img alt=\" logo\" loading=\"lazy\" decoding=\"async\" data-nimg=\"fill\" style=\"position:absolute;height:100%;width:100%;left:0;top:0;right:0;bottom:0;color:transparent\" src=\"https://sports.cbsimg.net/fly/images/league-logos/59.svg\"></figure><div class=\"CategoriesList_title__3b9Iz\">NFL</div></a><a class=\"CategoriesList_itemWrap__4xMzO\" data-tracking=\"{&quot;linkName&quot;:&quot;navigation interaction&quot;,&quot;module&quot;:{&quot;clickText&quot;:&quot;ncaa fb&quot;,&quot;moduleAction&quot;:&quot;click&quot;,&quot;moduleLocation&quot;:&quot;list - ncaa fb&quot;,&quot;moduleName&quot;:&quot;global nav&quot;}}\" href=\"https://www.cbssports.com/college-football/\"><figure class=\"SportsLogo SportsLogo_logo__CUT_L SportsLogo_logo__125__ST9RJ\"><img alt=\" logo\" loading=\"lazy\" decoding=\"async\" data-nimg=\"fill\" style=\"position:absolute;height:100%;width:100%;left:0;top:0;right:0;bottom:0;color:transparent\" src=\"https://sports.cbsimg.net/fly/images/icon-logos/football.svg\"></figure><div class=\"CategoriesList_title__3b9Iz\">NCAA FB</div></a><a href=\"/nba/news/brandin-podziemski-contract-extension-warriors-steph-curry/\" class=\"EightPack-link\"><h3 class=\"EightPack-title\">\n                        Why Brandin Podziemski's extension won't impact Warriors' 2027 plans\n                    </h3></a><a href=\"/nba/news/knicks-pause-contract-extension-talks-karl-anthony-towns-josh-hart-deuce-mcbride/\" class=\"EightPack-link\"><h3 class=\"EightPack-title\">\n                        Three takeaways from Knicks pausing contract extension talks\n                    </h3></a><a href=\"/nba/news/ranking-every-nba-defense-2026-27-season-thunder-spurs/\" class=\"EightPack-link\"><h3 class=\"EightPack-title\">\n                        Ranking every NBA team's defense entering the 2026-27 season\n                    </h3></a>",
+      "expected": [
+        {
+          "url": "https://www.cbssports.com/nba/news/brandin-podziemski-contract-extension-warriors-steph-curry/",
+          "title": "Why Brandin Podziemski's extension won't impact Warriors' 2027 plans"
+        },
+        {
+          "url": "https://www.cbssports.com/nba/news/knicks-pause-contract-extension-talks-karl-anthony-towns-josh-hart-deuce-mcbride/",
+          "title": "Three takeaways from Knicks pausing contract extension talks"
+        },
+        {
+          "url": "https://www.cbssports.com/nba/news/ranking-every-nba-defense-2026-27-season-thunder-spurs/",
+          "title": "Ranking every NBA team's defense entering the 2026-27 season"
+        }
+      ],
+      "offHostHtml": "<a href=\"https://outside.example/news/20261010\" class=\"EightPack-link\"><h3 class=\"EightPack-title\">\n                        Why Brandin Podziemski's extension won't impact Warriors' 2027 plans\n                    </h3></a>",
+      "dateHtml": "<script type=\"application/ld+json\">\n                        \n                        \n                        \n                                    {\"@context\":\"http:\\/\\/schema.org\"}\n        </script><script type=\"application/ld+json\">\n        {\"@context\":\"http://schema.org\",\"@type\":\"NewsArticle\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://www.cbssports.com/nba/news/brandin-podziemski-contract-extension-warriors-steph-curry/\"},\"headline\":\"With Brandin Podziemski's extension, Warriors maintain flexibility for one last title pursuit with Steph Curry\",\"description\":\"Podziemski's new $110 million deal only eats into $2 million of the cap space the Warriors created for next summer\",\"keywords\":[\"NBA\",\"Golden State Warriors\",\"Stephen Curry\",\"Brandin Podziemski\",\"Draymond Green\",\"Jimmy Butler\",\"Kristaps Porzingis\"],\"datePublished\":\"2026-10-10T17:44:05+00:00\",\"dateModified\":\"2026-10-10T17:44:05+00:00\",\"image\":{\"@type\":\"ImageObject\",\"url\":\"https://sportshub.cbsistatic.com/i/2026/10/10/0b9191a8-06da-463a-9174-60dba3b0225b/podz.jpg\"},\"thumbnailUrl\":\"https://sportshub.cbsistatic.com/i/2026/10/10/0b9191a8-06da-463a-9174-60dba3b0225b/podz.jpg\",\"publisher\":{\"@type\":\"Organization\",\"@id\":\"https://www.cbssports.com\",\"@context\":\"http://schema.org\",\"name\":\"CBS Sports\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://www.cbssports.comhttps://sportsfly.cbsistatic.com/fly-824/bundles/sportsmediacss/images/core/cbssports-logo-60x289.png\",\"width\":289,\"height\":60}},\"author\":{\"@type\":\"Person\",\"givenName\":\"Robby\",\"familyName\":\"Kalland\",\"name\":\"Robby Kalland\",\"url\":\"https://www.cbssports.com/writers/robby-kalland/\"}}\n    </script><script type=\"application/ld+json\">\n            {\"@context\":\"http://schema.org\",\"@type\":\"VideoObject\",\"name\":\"NBA Preseason Highlights: Grizzlies at Bulls (10/9)\",\"thumbnailUrl\":\"https://sportshub.cbsistatic.com/i/2026/10/10/0b9191a8-06da-463a-9174-60dba3b0225b/podz.jpg\",\"duration\":\"PT46S\",\"url\":\"https://www.cbssports.com/nba/news/brandin-podziemski-contract-extension-warriors-steph-curry/\",\"description\":\"Highlights from the game between the Grizzlies and Bulls on Friday, October 9th\",\"uploadDate\":\"2026-10-10T05:46:00+00:00\",\"contentUrl\":\"https://sports.play.cbsi.video/h/1.3Pk52nRQyhJwCjArEoW79e8RNLoNyS8I4SfzgcXfx2CyO0VKDsIB4QCwid5Vvfs2LVyJh00FQBTleJTvmAmcmWKZXFQjRzuRPFu6c5pbVXuJtD4N0dKvsKAdjIlJHdMNTRaheo3iaDUBjIlrHKjIeTaLD1Wm8rUCe4Pyza9uMVuLoIA8V5DXC2r31xvsCjXJ1ufTBR1XVEdYpS9J1nPgQvEHh18MMd5bsss0FZJRL3h3WdSXcYGQrFHFNKBwxjc4SWZiiWcsNg9O/master.m3u8\"}\n        </script>",
+      "readerPublishedAt": "2026-10-10T17:44:05.000Z",
+      "readerUrl": "https://www.cbssports.com/nba/news/brandin-podziemski-contract-extension-warriors-steph-curry/",
+      "bodyChars": 3219
+    },
+    {
+      "id": "dn-espn-3794a4d18732",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "espn",
+          "sectionId": "3794a4d18732",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "NBA",
+          "sectionUrl": "https://www.espn.com/nba/",
+          "sourceCredibility": 74,
+          "mediaType": "commercial",
+          "signalRole": "reporting",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:espn",
+          "language": "en-US",
+          "allowedHosts": [
+            "espn.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "ESPN NBA latest news",
+            "ESPN NBA trades injuries"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.espn.com/nba/",
+        "itemSelector": "a[href^=\"/nba/story/_/id/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "listingHtml": "<a id=\"global-nav-mobile-trigger\" href=\"#\" data-route=\"false\"><span>Menu</span></a><a data-track-nav_layer=\"global-nav\" data-track-nav_item=\"espn-logo\" href=\"/\" name=\"&amp;lpos=sitenavdefault&amp;lid=sitenav_main-logo\">ESPN</a><a href=\"/where-to-watch\" id=\"global-wheretowatch-trigger-mobile\" data-track-nav_layer=\"global nav\" data-track-nav_item=\"watch icon\"></a><a name=\"&amp;lpos=nba:feed:xx:story\" data-article-id=\"50111204\" data-id=\"50111204\" href=\"/nba/story/_/id/50111204/nba-preseason-roster-holes-30-teams\" class=\"contentItem__padding watch-link\" data-component=\"default\" data-section=\":feed\"><div class=\"contentItem__contentWrapper contentItem__contentWrapper--videoCaption\"><div class=\"contentItem__teamBorder\" style=\"background-color: #cbccce;\"></div><div class=\"contentItem__content__meta\"></div><div class=\"contentItem__titleWrapper\"><h2 class=\"contentItem__title contentItem__title--hero contentItem__title--story\">What does your NBA team need? The biggest hole on all 30 rosters</h2><p class=\"contentItem__subhead contentItem__subhead--story contentItem__subhead--hero\">Every team is missing something, even the leading title contenders.</p></div><div class=\"contentItem__contentMeta contentItem__contentMeta--bottom\"><span class=\"contentMeta__timestamp\">2d</span><span class=\"contentMeta__author\">Ben Golliver</span></div></div><figure class=\"media-wrapper\"><picture class=\"media-wrapper_image\"><source srcset=\"https://a1.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726994_1296x864_3%2D2.jpg&amp;w=375&amp;h=250&amp;scale=crop&amp;cquality=80&amp;location=center, https://a1.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726994_1296x864_3%2D2.jpg&amp;w=750&amp;h=500&amp;scale=crop&amp;cquality=40&amp;location=center&amp;format=jpg 2x\" media=\"(max-width: 767px)\"><source srcset=\"https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726994_1296x518_5%2D2.jpg&amp;w=660&amp;h=264&amp;scale=crop&amp;cquality=80&amp;location=center&amp;format=jpg, https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726994_1296x518_5%2D2.jpg&amp;w=1320&amp;h=528&amp;scale=crop&amp;cquality=40&amp;location=center&amp;format=jpg 2x\" media=\"(min-width: 768px)\"><img data-default-src=\"https://a.espncdn.com/photo/2026/1006/r1726994_1296x729_16-9.jpg\" class=\"media-wrapper_image\" src=\"https://a.espncdn.com/combiner/i?img=/photo/2026/1006/r1726994_1296x729_16-9.jpg\"></picture><div class=\"photo-citations\"><div class=\"photo-credit icon-font-before icon-photo-credit-outline-before\">Petre Thomas-Imagn Images</div></div></figure></a><a name=\"&amp;lpos=nba:feed:xx:story\" data-article-id=\"50118254\" data-id=\"50118254\" href=\"/nba/story/_/id/50118254/detroit-pistons-jalen-duren-new-contract\" data-mporder=\"{&quot;desktop&quot;:&quot;image-story&quot;,&quot;mobile&quot;:&quot;story-image&quot;}\" class=\"contentItem__padding contentItem__padding--border\"><div class=\"contentItem__contentWrapper\"><div class=\"contentItem__titleWrapper\"><h2 class=\"contentItem__title contentItem__title--story\" data-mptype=\"story\">The Pistons need Jalen Duren, and Duren needs the Pistons. Now? The pressure is on</h2><p class=\"contentItem__subhead contentItem__subhead--story  contentItem__subhead--hero\">After agreeing to a five-year, $200 million deal, how will Duren and Detroit move forward?</p></div><div class=\"contentItem__contentMeta contentItem__contentMeta--bottom\"><span class=\"contentMeta__timestamp\">1d</span><span class=\"contentMeta__author\">Vincent Goodwill</span></div></div><figure class=\"media-wrapper\"><picture class=\"media-wrapper_image\"><source data-srcset=\"https://a.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726894_1296x1296_1%2D1.jpg&amp;w=104&amp;h=104&amp;scale=crop&amp;cquality=80&amp;location=center, https://a.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726894_1296x1296_1%2D1.jpg&amp;w=208&amp;h=208&amp;scale=crop&amp;cquality=40&amp;location=center 2x\" media=\"(max-width: 767px)\"><source data-srcset=\"https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726894_1296x729_16%2D9.jpg&amp;w=238&amp;h=133&amp;scale=crop&amp;cquality=80&amp;location=center, https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726894_1296x729_16%2D9.jpg&amp;w=476&amp;h=266&amp;scale=crop&amp;cquality=40&amp;location=center 2x\" media=\"(min-width: 768px)\"><img data-default-src=\"https://a.espncdn.com/photo/2026/1006/r1726894_1296x729_16-9.jpg\" class=\"media-wrapper_image lazyload\"></picture></figure></a><a name=\"&amp;lpos=nbanba:feed:xx:story:1:related\" data-article-id=\"50028196\" href=\"/nba/story/_/id/50028196/2026-27-nba-buzz-latest-live-updates-news-intel-trades-deals\" class=\"\" data-mptype=\"headline\">🐝 Buzz: All of the latest intel, news and updates</a>",
+      "expected": [
+        {
+          "url": "https://www.espn.com/nba/story/_/id/50111204/nba-preseason-roster-holes-30-teams",
+          "title": "What does your NBA team need? The biggest hole on all 30 rostersEvery team is missing something, even the leading title contenders.2dBen GolliverPetre Thomas-Imagn Images"
+        },
+        {
+          "url": "https://www.espn.com/nba/story/_/id/50118254/detroit-pistons-jalen-duren-new-contract",
+          "title": "The Pistons need Jalen Duren, and Duren needs the Pistons. Now? The pressure is onAfter agreeing to a five-year, $200 million deal, how will Duren and Detroit move forward?1dVincent Goodwill"
+        },
+        {
+          "url": "https://www.espn.com/nba/story/_/id/50028196/2026-27-nba-buzz-latest-live-updates-news-intel-trades-deals",
+          "title": "🐝 Buzz: All of the latest intel, news and updates"
+        }
+      ],
+      "offHostHtml": "<a name=\"&amp;lpos=nba:feed:xx:story\" data-article-id=\"50111204\" data-id=\"50111204\" href=\"https://outside.example/news/20261010\" class=\"contentItem__padding watch-link\" data-component=\"default\" data-section=\":feed\"><div class=\"contentItem__contentWrapper contentItem__contentWrapper--videoCaption\"><div class=\"contentItem__teamBorder\" style=\"background-color: #cbccce;\"></div><div class=\"contentItem__content__meta\"></div><div class=\"contentItem__titleWrapper\"><h2 class=\"contentItem__title contentItem__title--hero contentItem__title--story\">What does your NBA team need? The biggest hole on all 30 rosters</h2><p class=\"contentItem__subhead contentItem__subhead--story contentItem__subhead--hero\">Every team is missing something, even the leading title contenders.</p></div><div class=\"contentItem__contentMeta contentItem__contentMeta--bottom\"><span class=\"contentMeta__timestamp\">2d</span><span class=\"contentMeta__author\">Ben Golliver</span></div></div><figure class=\"media-wrapper\"><picture class=\"media-wrapper_image\"><source srcset=\"https://a1.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726994_1296x864_3%2D2.jpg&amp;w=375&amp;h=250&amp;scale=crop&amp;cquality=80&amp;location=center, https://a1.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726994_1296x864_3%2D2.jpg&amp;w=750&amp;h=500&amp;scale=crop&amp;cquality=40&amp;location=center&amp;format=jpg 2x\" media=\"(max-width: 767px)\"><source srcset=\"https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726994_1296x518_5%2D2.jpg&amp;w=660&amp;h=264&amp;scale=crop&amp;cquality=80&amp;location=center&amp;format=jpg, https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2026%2F1006%2Fr1726994_1296x518_5%2D2.jpg&amp;w=1320&amp;h=528&amp;scale=crop&amp;cquality=40&amp;location=center&amp;format=jpg 2x\" media=\"(min-width: 768px)\"><img data-default-src=\"https://a.espncdn.com/photo/2026/1006/r1726994_1296x729_16-9.jpg\" class=\"media-wrapper_image\" src=\"https://a.espncdn.com/combiner/i?img=/photo/2026/1006/r1726994_1296x729_16-9.jpg\"></picture><div class=\"photo-citations\"><div class=\"photo-credit icon-font-before icon-photo-credit-outline-before\">Petre Thomas-Imagn Images</div></div></figure></a>",
+      "dateHtml": "<script type=\"application/ld+json\">\n\t{\n\t\t\"@context\": \"https://schema.org\",\n\t\t\"@type\":    \"WebSite\",\n\t\t\"name\":     \"ESPN\",\n\t\t\"url\":      \"https://www.espn.com/\"\n\t\t\n\t\t\n\t\t\t,\"publisher\": {\n\t\t\t\t\"@type\": \"Organization\",\n\t\t\t\t\"@id\": \"https://www.espn.com/#organization\",\n\t\t\t\t\"name\": \"ESPN\",\n\t\t\t\t\"url\": \"https://www.espn.com/\",\n\t\t\t\t\"logo\": {\n\t\t\t\t\t\"@type\" : \"ImageObject\",\n\t\t\t\t\t\"url\" : \"https://a.espncdn.com/combiner/i?img=/i/espn/espn_logos/espn_red.png\",\n\t\t\t\t\t\"width\" : \"1296\",\n\t\t\t\t\t\"height\" : \"729\"\n\t\t\t\t}\n\t\t\t}\n\t\t\n\t}\n</script><script type=\"application/ld+json\">{\"@context\":\"http://schema.org\",\"@type\":\"NewsArticle\",\"mainEntityOfPage\":{\"@type\":\"WebPage\",\"@id\":\"https://www.espn.com/nba/story/_/id/50111204/nba-preseason-roster-holes-30-teams\"},\"headline\":\"What does your NBA team need? Biggest hole on all 30 rosters - ESPN\",\"description\":\"Every NBA team is missing something, even the leading title contenders.\",\"datePublished\":\"2026-10-08T11:00:00Z\",\"dateModified\":\"2026-10-08T11:00:00Z\",\"image\":{\"@type\":\"ImageObject\",\"url\":\"https://a.espncdn.com/photo/2026/1006/r1726994_1296x729_16-9.jpg\",\"width\":1296,\"height\":729},\"author\":{\"@type\":\"Person\",\"name\":\"Ben Golliver\"},\"publisher\":{\"@type\":\"organization\",\"name\":\"ESPN\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://a.espncdn.com/combiner/i?img=/i/espn/espn_logos/amp/ESPN_amp.png&w=600&h=60\",\"width\":107,\"height\":60}}}</script><script type=\"application/ld+json\">\n        {\"@context\":\"https://schema.org\",\"@type\":\"VideoObject\",\"description\":\"Why Stephen A. trusts LeBron to be playoff-ready\",\"name\":\"Why Stephen A. trusts LeBron to be playoff-ready\",\"thumbnailURL\":\"https://espnmedia-cdn.akamaized.net/espn/media/common/2026/1006/ss_20261006_114702747_3686864/ss_20261006_114702747_3686864.jpg\",\"uploadDate\":\"2026-10-06T15:46:57Z\",\"contentUrl\":\"https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1006/ss_20261006_114702747_3686864/ss_20261006_114702747_3686864.mp4\",\"duration\":\"PT1M48S\",\"regionsAllowed\":[\"PR\",\"HN\",\"PY\",\"HT\",\"IE\",\"AG\",\"ZA\",\"AI\",\"AM\",\"AO\",\"AR\",\"AS\",\"RE\",\"ZM\",\"AU\",\"AW\",\"ZW\",\"BB\",\"JM\",\"BF\",\"RW\",\"BI\",\"BJ\",\"BM\",\"BO\",\"BQ\",\"BR\",\"SC\",\"BS\",\"BW\",\"BZ\",\"SL\",\"KE\",\"SN\",\"SR\",\"SS\",\"CD\",\"ST\",\"KM\",\"KN\",\"CF\",\"SV\",\"CG\",\"SX\",\"CI\",\"SZ\",\"CL\",\"CM\",\"CO\",\"KY\",\"TC\",\"CR\",\"CU\",\"TG\",\"CV\",\"LC\",\"TT\",\"LR\",\"TZ\",\"LS\",\"DO\",\"UG\",\"UK\",\"UM\",\"MF\",\"MG\",\"US\",\"EC\",\"ML\",\"MP\",\"UY\",\"MQ\",\"MS\",\"MU\",\"MW\",\"MX\",\"VC\",\"ER\",\"MZ\",\"VE\",\"ET\",\"VG\",\"NA\",\"VI\",\"NE\",\"NG\",\"NI\",\"NZ\",\"GA\",\"GB\",\"GD\",\"GF\",\"GH\",\"GM\",\"GN\",\"GP\",\"GQ\",\"GT\",\"GU\",\"GW\",\"PA\",\"GY\",\"PE\",\"PH\"],\"embedUrl\":\"https://www.espn.com/video/clip/_/id/50117250/why-stephen-trusts-lebron-playoff-ready\"}\n   </script>",
+      "readerPublishedAt": "2026-10-08T11:00:00.000Z",
+      "readerUrl": "https://www.espn.com/nba/story/_/id/50111204/nba-preseason-roster-holes-30-teams",
+      "bodyChars": 35117
+    },
+    {
+      "id": "dn-f1-7750ee74725b",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "f1",
+          "sectionId": "7750ee74725b",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "Latest",
+          "sectionUrl": "https://www.formula1.com/en/latest",
+          "sourceCredibility": 84,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:f1",
+          "language": "en-US",
+          "allowedHosts": [
+            "formula1.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "Formula 1 latest news",
+            "F1 racing news"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.formula1.com/en/latest",
+        "itemSelector": "a[class*=\"ArticleListCard-module_title\"][href^=\"/en/latest/article/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "listingHtml": "<a class=\"Button-module_button__j6Qut Button-module_brand__807KY Button-module_small__3QaV7 typography-module_body-xs-bold__TovJz Button-module_showSpacers__iMklt\" href=\"#maincontent\"><span class=\"Button-module_inner__3GJ9Q\"><span>Skip to content</span></span></a><a data-f1rd-a7s-click=\"masthead_navigation_click\" data-f1rd-a7s-context=\"eyJhY3Rpb25UeXBlIjoibWFzdGhlYWRfbmF2aWdhdGlvbiIsImNsaWNrVGV4dCI6IkF1dGhlbnRpY3MiLCJwYXRoIjoiaHR0cHM6Ly93d3cuZjFhdXRoZW50aWNzLmNvbS8/dXRtX3NvdXJjZT1mMSZ1dG1fbWVkaXVtPXdlYnNpdGVfdG9wbmF2JnV0bV9jYW1wYWlnbj0yMDI2X3NlYXNvbiIsInBhdGhUeXBlIjoiZXh0ZXJuYWwifQ==\" href=\"https://www.f1authentics.com/?utm_source=f1&amp;utm_medium=website_topnav&amp;utm_campaign=2026_season\" target=\"_blank\" rel=\"noopener noreferrer\"><span class=\"block p-[6px] text-text-4 border-b-thin border-transparent hover:border-text-4\"><p class=\"typography-module_body-xs-semibold__Fyfwn uppercase\">Authentics</p></span><span class=\"sr-only\">(opens in a new tab)</span></a><a data-f1rd-a7s-click=\"masthead_navigation_click\" data-f1rd-a7s-context=\"eyJhY3Rpb25UeXBlIjoibWFzdGhlYWRfbmF2aWdhdGlvbiIsImNsaWNrVGV4dCI6IlN0b3JlIiwicGF0aCI6Imh0dHBzOi8vZjFzdG9yZS5mb3JtdWxhMS5jb20vZW4vP19zPWJtLWZpLWYxLXBydHNpdGUtdG9wbmF2LTIzMDcyMC1qbSIsInBhdGhUeXBlIjoiZXh0ZXJuYWwifQ==\" href=\"https://f1store.formula1.com/en/?_s=bm-fi-f1-prtsite-topnav-230720-jm\" target=\"_blank\" rel=\"noopener noreferrer\"><span class=\"block p-[6px] text-text-4 border-b-thin border-transparent hover:border-text-4\"><p class=\"typography-module_body-xs-semibold__Fyfwn uppercase\">Store</p></span><span class=\"sr-only\">(opens in a new tab)</span></a><a data-f1rd-a7s-click=\"article_listing_click\" data-f1rd-a7s-context=\"eyJjb250ZW50X3ByaW1hcnlfdGFnIjoiQmV0dGluZyIsImlzX3Byb3RlY3RlZF9zdGF0dXMiOmZhbHNlLCJicmVha2luZyI6ZmFsc2UsInRpdGxlIjoiV2h5IEYxIGZhbnMgc2hvdWxkIGtlZXAgZW1vdGlvbnMgb3V0IG9mIFNpbmdhcG9yZSBHUCIsInBhdGgiOiIvZW4vbGF0ZXN0L2FydGljbGUvd2h5LWYxLWZhbnMtc2hvdWxkLWtlZXAtZW1vdGlvbnMtb3V0LW9mLXRoZWlyLWJldHMtZHVyaW5nLXRoZS1zaW5nYXBvcmUtZ3JhbmQtcHJpeC42QTJ0anVwSEdEMDYzdHR1SGczT0xNIiwiYWN0aW9uVHlwZSI6ImFsbF9jb250ZW50X25hdmlnYXRpb24iLCJjb250ZW50UGFnZVR5cGUiOiJGZWF0dXJlIiwiaXNMaXZlIjpmYWxzZSwiaXNFeGNsdXNpdmUiOmZhbHNlLCJwYXRoVHlwZSI6ImludGVybmFsIiwiY29udGVudFBhZ2VUaXRsZSI6Ik5vdCBBcHBsaWNhYmxlIiwiY29udGVudFB1Ymxpc2hlZERhdGUiOiJOb3QgQXBwbGljYWJsZSIsImNvbnRlbnRfcHVibGlzaGVkX3RpbWUiOiJOb3QgQXBwbGljYWJsZSIsImNvbnRlbnRBZ2UiOiJOb3QgQXBwbGljYWJsZSIsImFydGljbGVJRCI6Ik5vdCBBcHBsaWNhYmxlIn0=\" id=\"title:Rb57rrncv8kq:\" class=\"ArticleListCard-module_title__-4ovb typography-module_body-s-compact-semibold__MeKMi typography-module_lg_body-m-compact-semibold__iUcJa\" href=\"/en/latest/article/why-f1-fans-should-keep-emotions-out-of-their-bets-during-the-singapore-grand-prix.6A2tjupHGD063ttuHg3OLM\">Why F1 fans should keep emotions out of Singapore GP</a><a data-f1rd-a7s-click=\"article_listing_click\" data-f1rd-a7s-context=\"eyJjb250ZW50X3ByaW1hcnlfdGFnIjoiTm90IEFwcGxpY2FibGUiLCJpc19wcm90ZWN0ZWRfc3RhdHVzIjpmYWxzZSwiYnJlYWtpbmciOmZhbHNlLCJ0aXRsZSI6IidJdCBpcyBzZXJpb3VzJyAg4oCTIFN0ZWxsYSBhZGRyZXNzZXMgTm9ycmlzIGFuZCBQaWFzdHJpJ3MgY2xhc2giLCJwYXRoIjoiL2VuL2xhdGVzdC9hcnRpY2xlL2l0LWlzLXNlcmlvdXMtc3RlbGxhLWRpc2FwcG9pbnRlZC1ieS1ub3JyaXMtYW5kLXBpYXN0cmlzLWNsYXNoLWluLXNpbmdhcG9yZS1zcHJpbnQuN2hXMmN4UWdvaEhaZnU0d2d2dGZSUSIsImFjdGlvblR5cGUiOiJhbGxfY29udGVudF9uYXZpZ2F0aW9uIiwiY29udGVudFBhZ2VUeXBlIjoiTmV3cyIsImlzTGl2ZSI6ZmFsc2UsImlzRXhjbHVzaXZlIjpmYWxzZSwicGF0aFR5cGUiOiJpbnRlcm5hbCIsImNvbnRlbnRQYWdlVGl0bGUiOiJOb3QgQXBwbGljYWJsZSIsImNvbnRlbnRQdWJsaXNoZWREYXRlIjoiTm90IEFwcGxpY2FibGUiLCJjb250ZW50X3B1Ymxpc2hlZF90aW1lIjoiTm90IEFwcGxpY2FibGUiLCJjb250ZW50QWdlIjoiTm90IEFwcGxpY2FibGUiLCJhcnRpY2xlSUQiOiJOb3QgQXBwbGljYWJsZSJ9\" id=\"title:Rj57rrncv8kq:\" class=\"ArticleListCard-module_title__-4ovb typography-module_body-s-compact-semibold__MeKMi typography-module_lg_body-m-compact-semibold__iUcJa\" href=\"/en/latest/article/it-is-serious-stella-disappointed-by-norris-and-piastris-clash-in-singapore-sprint.7hW2cxQgohHZfu4wgvtfRQ\">'It is serious'  – Stella addresses Norris and Piastri's clash</a><a data-f1rd-a7s-click=\"article_listing_click\" data-f1rd-a7s-context=\"eyJjb250ZW50X3ByaW1hcnlfdGFnIjoiVW5sb2NrZWQiLCJpc19wcm90ZWN0ZWRfc3RhdHVzIjp0cnVlLCJicmVha2luZyI6ZmFsc2UsInRpdGxlIjoiV2hhdCBUbyBXYXRjaCBGb3IgaW4gdGhlIFNpbmdhcG9yZSBHcmFuZCBQcml4IiwicGF0aCI6Ii9lbi9sYXRlc3QvYXJ0aWNsZS93aGF0LXRvLXdhdGNoLWZvci1pbi10aGUtc2luZ2Fwb3JlLWdyYW5kLXByaXguM3NKWHFweDNOZE9XcnJqblhaN2gwZCIsImFjdGlvblR5cGUiOiJhbGxfY29udGVudF9uYXZpZ2F0aW9uIiwiY29udGVudFBhZ2VUeXBlIjoiRmVhdHVyZSIsImlzTGl2ZSI6ZmFsc2UsImlzRXhjbHVzaXZlIjpmYWxzZSwicGF0aFR5cGUiOiJpbnRlcm5hbCIsImNvbnRlbnRQYWdlVGl0bGUiOiJOb3QgQXBwbGljYWJsZSIsImNvbnRlbnRQdWJsaXNoZWREYXRlIjoiTm90IEFwcGxpY2FibGUiLCJjb250ZW50X3B1Ymxpc2hlZF90aW1lIjoiTm90IEFwcGxpY2FibGUiLCJjb250ZW50QWdlIjoiTm90IEFwcGxpY2FibGUiLCJhcnRpY2xlSUQiOiJOb3QgQXBwbGljYWJsZSJ9\" id=\"title:Rr57rrncv8kq:\" class=\"ArticleListCard-module_title__-4ovb typography-module_body-s-compact-semibold__MeKMi typography-module_lg_body-m-compact-semibold__iUcJa\" href=\"/en/latest/article/what-to-watch-for-in-the-singapore-grand-prix.3sJXqpx3NdOWrrjnXZ7h0d\">What To Watch For in the Singapore Grand Prix</a>",
+      "expected": [
+        {
+          "url": "https://www.formula1.com/en/latest/article/why-f1-fans-should-keep-emotions-out-of-their-bets-during-the-singapore-grand-prix.6A2tjupHGD063ttuHg3OLM",
+          "title": "Why F1 fans should keep emotions out of Singapore GP"
+        },
+        {
+          "url": "https://www.formula1.com/en/latest/article/it-is-serious-stella-disappointed-by-norris-and-piastris-clash-in-singapore-sprint.7hW2cxQgohHZfu4wgvtfRQ",
+          "title": "'It is serious' – Stella addresses Norris and Piastri's clash"
+        },
+        {
+          "url": "https://www.formula1.com/en/latest/article/what-to-watch-for-in-the-singapore-grand-prix.3sJXqpx3NdOWrrjnXZ7h0d",
+          "title": "What To Watch For in the Singapore Grand Prix"
+        }
+      ],
+      "offHostHtml": "<a data-f1rd-a7s-click=\"article_listing_click\" data-f1rd-a7s-context=\"eyJjb250ZW50X3ByaW1hcnlfdGFnIjoiQmV0dGluZyIsImlzX3Byb3RlY3RlZF9zdGF0dXMiOmZhbHNlLCJicmVha2luZyI6ZmFsc2UsInRpdGxlIjoiV2h5IEYxIGZhbnMgc2hvdWxkIGtlZXAgZW1vdGlvbnMgb3V0IG9mIFNpbmdhcG9yZSBHUCIsInBhdGgiOiIvZW4vbGF0ZXN0L2FydGljbGUvd2h5LWYxLWZhbnMtc2hvdWxkLWtlZXAtZW1vdGlvbnMtb3V0LW9mLXRoZWlyLWJldHMtZHVyaW5nLXRoZS1zaW5nYXBvcmUtZ3JhbmQtcHJpeC42QTJ0anVwSEdEMDYzdHR1SGczT0xNIiwiYWN0aW9uVHlwZSI6ImFsbF9jb250ZW50X25hdmlnYXRpb24iLCJjb250ZW50UGFnZVR5cGUiOiJGZWF0dXJlIiwiaXNMaXZlIjpmYWxzZSwiaXNFeGNsdXNpdmUiOmZhbHNlLCJwYXRoVHlwZSI6ImludGVybmFsIiwiY29udGVudFBhZ2VUaXRsZSI6Ik5vdCBBcHBsaWNhYmxlIiwiY29udGVudFB1Ymxpc2hlZERhdGUiOiJOb3QgQXBwbGljYWJsZSIsImNvbnRlbnRfcHVibGlzaGVkX3RpbWUiOiJOb3QgQXBwbGljYWJsZSIsImNvbnRlbnRBZ2UiOiJOb3QgQXBwbGljYWJsZSIsImFydGljbGVJRCI6Ik5vdCBBcHBsaWNhYmxlIn0=\" id=\"title:Rb57rrncv8kq:\" class=\"ArticleListCard-module_title__-4ovb typography-module_body-s-compact-semibold__MeKMi typography-module_lg_body-m-compact-semibold__iUcJa\" href=\"https://outside.example/news/20261010\">Why F1 fans should keep emotions out of Singapore GP</a>",
+      "dateHtml": "<script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"NewsArticle\",\"@id\":\"https://www.formula1.com/en/latest/article/it-is-serious-stella-disappointed-by-norris-and-piastris-clash-in-singapore-sprint.7hW2cxQgohHZfu4wgvtfRQ\",\"url\":\"https://www.formula1.com/en/latest/article/it-is-serious-stella-disappointed-by-norris-and-piastris-clash-in-singapore-sprint.7hW2cxQgohHZfu4wgvtfRQ\",\"mainEntityOfPage\":\"https://www.formula1.com/en/latest/article/it-is-serious-stella-disappointed-by-norris-and-piastris-clash-in-singapore-sprint.7hW2cxQgohHZfu4wgvtfRQ\",\"datePublished\":\"2026-10-10T18:18:01.967Z\",\"dateModified\":\"2026-10-10T18:18:01.967Z\",\"headline\":\"'It is serious'  – Andrea Stella 'disappointed' by Lando Norris and Oscar Piastri's clash in Singapore Sprint\",\"author\":\"F1\",\"description\":\"McLaren Team Principal Andrea Stella has shared his reaction to the collision that occurred between Lando Norris and Oscar Piastri on the final lap of the Singapore Sprint.\",\"image\":{\"@type\":\"ImageObject\",\"url\":\"https://media.formula1.com/image/upload/t_16by9North/f_auto/q_auto/v1777907735/fom-website/2026/Miami/GettyImages-2274040295.jpg\"},\"isAccessibleForFree\":\"true\",\"publisher\":{\"@type\":\"SportsOrganization\",\"@id\":\"https://www.formula1.com#organization\",\"name\":\"Formula 1\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://www.formula1.com/etc/designs/fom-website/social/f1-default-share.jpg\",\"width\":\"480\",\"height\":\"120\"}}}</script>",
+      "readerPublishedAt": "2026-10-10T18:18:01.967Z",
+      "readerUrl": "https://www.formula1.com/en/latest/article/it-is-serious-stella-disappointed-by-norris-and-piastris-clash-in-singapore-sprint.7hW2cxQgohHZfu4wgvtfRQ",
+      "bodyChars": 6182
+    },
+    {
+      "id": "dn-fiba-df168038d131",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "fiba",
+          "sectionId": "df168038d131",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "FIBA News",
+          "sectionUrl": "https://www.fiba.basketball/en/news",
+          "sourceCredibility": 86,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:fiba",
+          "language": "en-US",
+          "allowedHosts": [
+            "fiba.basketball"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "FIBA official basketball news",
+            "FIBA basketball latest news"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-08-03"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.fiba.basketball/en/news",
+        "itemSelector": "a[href*=\"fiba.basketball/en/news/\"]:has(h3)",
+        "titleSelector": "h3",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "listingHtml": "<a data-testid=\"ui-primary-nav-item-link\" data-testid-id=\"HOMEPAGE\" data-radix-collection-item=\"\" class=\"_1strzza9 _1rm9ox05 _19onwec2\" href=\"https://www.fiba.basketball/en/\"><div class=\"_19onwec4\"><svg stroke=\"currentColor\" fill=\"currentColor\" stroke-width=\"0\" viewBox=\"0 0 24 24\" height=\"24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V9.48907C3 9.18048 3.14247 8.88917 3.38606 8.69972L11.3861 2.47749C11.7472 2.19663 12.2528 2.19663 12.6139 2.47749L20.6139 8.69972C20.8575 8.88917 21 9.18048 21 9.48907V20ZM19 19V9.97815L12 4.53371L5 9.97815V19H19ZM7 15H17V17H7V15Z\"></path></svg></div><div class=\"_19onwec3 _1d88n031 japnshh japnsh1f\">Home</div></a><a data-testid=\"ui-primary-nav-item-link\" data-testid-id=\"news\" data-testid-active=\"true\" data-radix-collection-item=\"\" class=\"_1strzza9 _1rm9ox05 _19onwec2 _19onwec1\" href=\"https://www.fiba.basketball/en/news\"><div class=\"_19onwec4\"><svg stroke=\"currentColor\" fill=\"currentColor\" stroke-width=\"0\" viewBox=\"0 0 24 24\" height=\"24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19 22H5C3.34315 22 2 20.6569 2 19V3C2 2.44772 2.44772 2 3 2H17C17.5523 2 18 2.44772 18 3V10H22V19C22 20.6569 20.6569 22 19 22ZM18 12V19C18 19.5523 18.4477 20 19 20C19.5523 20 20 19.5523 20 19V12H18ZM5 6V12H11V6H5ZM5 13V15H15V13H5ZM5 16V18H15V16H5ZM7 8H9V10H7V8Z\"></path></svg></div><div class=\"_19onwec3 _1d88n031 japnshh japnsh1f\">News</div></a><a data-testid=\"ui-primary-nav-item-link\" data-testid-id=\"ranking\" data-radix-collection-item=\"\" class=\"_1strzza9 _1rm9ox05 _19onwec2\" href=\"https://www.fiba.basketball/en/ranking/men\"><div class=\"_19onwec4\"><svg stroke=\"currentColor\" fill=\"currentColor\" stroke-width=\"0\" viewBox=\"0 0 24 24\" height=\"24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M2 13H8V21H2V13ZM16 8H22V21H16V8ZM9 3H15V21H9V3ZM4 15V19H6V15H4ZM11 5V19H13V5H11ZM18 10V19H20V10H18Z\"></path></svg></div><div class=\"_19onwec3 _1d88n031 japnshh japnsh1f\">Rankings</div></a><a class=\"_4779r10 theme--dark _1dz8zx00\" href=\"https://www.fiba.basketball/en/news/fenerbahce-tarfin-seal-a-third-supercup-women-title\"><div class=\"_4779r11\"><figure class=\"_1dz8zx01 _1dz8zx04 _1dz8zx08\"><img width=\"216\" height=\"330\" loading=\"lazy\" decoding=\"async\" srcset=\"https://assets.fiba.basketball/image/upload/w_216,h_330,c_fill,g_auto/q_auto/f_auto/v1791399745/ff1vfzmiusdb9795bzri 1x, https://assets.fiba.basketball/image/upload/w_432,h_660,c_fill,g_auto/q_auto/f_auto/v1791399745/ff1vfzmiusdb9795bzri 2x\" src=\"https://assets.fiba.basketball/image/upload/w_216,h_330,c_fill,g_auto/q_auto/f_auto/v1791399745/ff1vfzmiusdb9795bzri\" alt=\"\" style=\"object-fit:cover\"></figure></div><div class=\"_4779r12\"><h3 class=\"_4779r13 _1d88n031 japnsh7 _1d88n032\" style=\"--_1d88n030:rgb(var(--c1kcb63k))\">Fenerbahce Tarfin seal third SuperCup Women title</h3></div></a><a class=\"_4779r10 theme--dark _1dz8zx00\" href=\"https://www.fiba.basketball/en/news/gabby-beats-wemby-to-french-player-of-the-year-award\"><div class=\"_4779r11\"><figure class=\"_1dz8zx01 _1dz8zx04 _1dz8zx08\"><img width=\"216\" height=\"330\" loading=\"lazy\" decoding=\"async\" srcset=\"https://assets.fiba.basketball/image/upload/w_216,h_330,c_fill,g_auto/q_auto/f_auto/v1789325530/zwxp2owvlksaqcjujmtb 1x, https://assets.fiba.basketball/image/upload/w_432,h_660,c_fill,g_auto/q_auto/f_auto/v1789325530/zwxp2owvlksaqcjujmtb 2x\" src=\"https://assets.fiba.basketball/image/upload/w_216,h_330,c_fill,g_auto/q_auto/f_auto/v1789325530/zwxp2owvlksaqcjujmtb\" alt=\"\" style=\"object-fit:cover\"></figure></div><div class=\"_4779r12\"><h3 class=\"_4779r13 _1d88n031 japnsh7 _1d88n032\" style=\"--_1d88n030:rgb(var(--c1kcb63k))\">Gabby beats Wemby</h3></div></a><a class=\"_4779r10 theme--dark _1dz8zx00\" href=\"https://www.fiba.basketball/en/news/where-to-watch-season-11-of-the-bcl\"><div class=\"_4779r11\"><figure class=\"_1dz8zx01 _1dz8zx04 _1dz8zx08\"><img width=\"216\" height=\"330\" loading=\"lazy\" decoding=\"async\" srcset=\"https://assets.fiba.basketball/image/upload/w_216,h_330,c_fill,g_auto/q_auto/f_auto/v1791234438/ngsxlrrrgnhdhtzvcvrf 1x, https://assets.fiba.basketball/image/upload/w_432,h_660,c_fill,g_auto/q_auto/f_auto/v1791234438/ngsxlrrrgnhdhtzvcvrf 2x\" src=\"https://assets.fiba.basketball/image/upload/w_216,h_330,c_fill,g_auto/q_auto/f_auto/v1791234438/ngsxlrrrgnhdhtzvcvrf\" alt=\"\" style=\"object-fit:cover\"></figure></div><div class=\"_4779r12\"><h3 class=\"_4779r13 _1d88n031 japnsh7 _1d88n032\" style=\"--_1d88n030:rgb(var(--c1kcb63k))\">Where to watch Season 11 of the BCL?</h3></div></a>",
+      "expected": [
+        {
+          "url": "https://www.fiba.basketball/en/news/fenerbahce-tarfin-seal-a-third-supercup-women-title",
+          "title": "Fenerbahce Tarfin seal third SuperCup Women title"
+        },
+        {
+          "url": "https://www.fiba.basketball/en/news/gabby-beats-wemby-to-french-player-of-the-year-award",
+          "title": "Gabby beats Wemby"
+        },
+        {
+          "url": "https://www.fiba.basketball/en/news/where-to-watch-season-11-of-the-bcl",
+          "title": "Where to watch Season 11 of the BCL?"
+        }
+      ],
+      "offHostHtml": "<a class=\"_4779r10 theme--dark _1dz8zx00\" href=\"https://outside.example/news/20261010\"><div class=\"_4779r11\"><figure class=\"_1dz8zx01 _1dz8zx04 _1dz8zx08\"><img width=\"216\" height=\"330\" loading=\"lazy\" decoding=\"async\" srcset=\"https://assets.fiba.basketball/image/upload/w_216,h_330,c_fill,g_auto/q_auto/f_auto/v1791399745/ff1vfzmiusdb9795bzri 1x, https://assets.fiba.basketball/image/upload/w_432,h_660,c_fill,g_auto/q_auto/f_auto/v1791399745/ff1vfzmiusdb9795bzri 2x\" src=\"https://assets.fiba.basketball/image/upload/w_216,h_330,c_fill,g_auto/q_auto/f_auto/v1791399745/ff1vfzmiusdb9795bzri\" alt=\"\" style=\"object-fit:cover\"></figure></div><div class=\"_4779r12\"><h3 class=\"_4779r13 _1d88n031 japnsh7 _1d88n032\" style=\"--_1d88n030:rgb(var(--c1kcb63k))\">Fenerbahce Tarfin seal third SuperCup Women title</h3></div></a>",
+      "dateHtml": "<script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"position\":1,\"item\":{\"@id\":\"https://www.fiba.basketball/en/\",\"name\":\"Home\"}},{\"@type\":\"ListItem\",\"position\":2,\"item\":{\"@id\":\"https://www.fiba.basketball/en/news\",\"name\":\"News\"}},{\"@type\":\"ListItem\",\"position\":3,\"item\":{\"@id\":\"https://www.fiba.basketball/en/news/fenerbahce-tarfin-seal-a-third-supercup-women-title\",\"name\":\"Fenerbahce Tarfin seal a third SuperCup Women title\"}}]}</script><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"articleBody\":\"MERSIN (Türkiye) - Fenerbahce Tarfin landed SuperCup Women silverware for a third time, although they had to survive a late comeback bid from fellow Turkish side CIMSA CBK Mersin. The reigning EuroLeague Women champions moved past the hosts 79-71 as recently appointed head coach Ahmet Caki celebrated the first trophy of his tenure, but it needed big shows from Emma Meesseman and Olcay Cakir Turgut to get over the line. Meesseman was crowned MVP after producing a trademark five star show to take her team to glory. The Belgian star finished the contest with a typically classy haul of 14 points from 5 of 7 shooting, as well as 8 rebounds and 7 assists.  Meanwhile, Turkish guard Cakir Turgut top scored for Fenerbahce after converting 6 of 7  from the field to harvest 16 points. Fenerbahce made their move in the second half as they imposed themselves at both ends of the floor to build up an extensive 21 point lead.  Mersin then rallied in the closing minutes to narrow the deficit to just six points, but their opponents clung on for the win. Carla Leite impressed for Mersin in defeat as she racked up a game-high 17 points to go with 5 assists and 3 boards. Adding to their success in 2023 and 2024, Fenerbahce Tarfin have become only the second club in history to win the prestigious competition three times. They are now chasing UMMC Ekaterinburg who have an all-time high four wins (2013, 2016, 2018, 2019). Meanwhile, ZVVZ USK Praha (2015, 2025) and Sparta&K M.R. Vidnoje (2009, 2010) are both two-time winners, with four other clubs having won SuperCup Women once - Perfumerias Avenida (2011), Dynamo Kursk (2017), Valencia (2021) and Tango Bourges Basket (2022). \",\"about\":\"Fenerbahce Tarfin seal a third SuperCup Women title\",\"abstract\":\"The Istanbul giants make it three SuperCup Women successes in four editions. \",\"author\":[{\"@type\":\"Person\"}],\"contributor\":[{\"@type\":\"Organization\",\"name\":\"SuperCup Women 2026\",\"url\":\"\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://assets.fiba.basketball/image/upload/w_800/.asset_mainlogo--competition_209131\"}}],\"datePublished\":\"2026-10-07T19:24:42.191Z\",\"dateModified\":\"2026-10-08T09:01:00.217Z\",\"headline\":\"The Istanbul giants make it three SuperCup Women successes in four editions. \",\"isAccessibleForFree\":true,\"inLanguage\":\"en\",\"url\":\"https://www.fiba.basketball/en/news/fenerbahce-tarfin-seal-a-third-supercup-women-title\"}</script>",
+      "readerPublishedAt": "2026-10-07T19:24:42.191Z",
+      "readerUrl": "https://www.fiba.basketball/en/news/fenerbahce-tarfin-seal-a-third-supercup-women-title",
+      "bodyChars": 2607
+    },
+    {
+      "id": "dn-miit-e7095178568c",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "miit",
+          "sectionId": "e7095178568c",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "政策发布",
+          "sectionUrl": "https://www.miit.gov.cn/",
+          "sourceCredibility": 88,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "policy",
+          "publisherKey": "publisher:miit",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "miit.gov.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "工业和信息化部 政策",
+            "工信部 发布 产业"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.miit.gov.cn/",
+        "itemSelector": "a[href*=\"/xwfb/\"][href*=\"/art/\"][href$=\".html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
+          "publishedAtAuthoritative": true,
+          "titleSelector": "#con_title"
+        }
+      },
+      "listingHtml": "<a href=\"https://www.miit.gov.cn/ztzl/rdzt/xxgcddesjszqhjs0802/index.html\" target=\"_blank\">\n                 <div class=\"picBox\">\n                     <img src=\"/cms_files/filemanager/1226211233/picture/20259/1ca376a0e1f447698838ee68bbafddd0.jpg\">\n                 </div>\n             </a><a href=\"https://www.miit.gov.cn/ztzl/rdzt/xxgcddesjszqhjs0802/index.html\" target=\"_blank\" title=\"学习贯彻党的二十届四中全会精神\">学习贯彻党的二十届四中全会精神</a><a href=\"/xwfb/szyw/index.html\" class=\"mob-a-remove on\">时政要闻</a><a class=\"\" href=\"https://www.miit.gov.cn/xwfb/szyw/art/2026/art_a580a8e97473409a9cdf779f1aa09c74.html\" target=\"_blank\" title=\"以创新赢未来——习近平经济思想引领中国加快发展新质生产力\">以创新赢未来——习近平经济思想引领中国加快发展新质生产力</a><a href=\"https://www.miit.gov.cn/xwfb/szyw/art/2026/art_e28d611d2ad9441eab88698db2dc89dd.html\" target=\"_blank\" title=\"中共中央、国务院印发《关于发展新质生产力的意见》\">中共中央、国务院印发《关于发展新质生产力的意见》</a><a href=\"https://www.miit.gov.cn/xwfb/szyw/art/2026/art_bb063b402f814c2d829cb53688ee84c0.html\" target=\"_blank\" title=\"文件全文\">文件全文</a>",
+      "expected": [
+        {
+          "url": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_a580a8e97473409a9cdf779f1aa09c74.html",
+          "title": "以创新赢未来——习近平经济思想引领中国加快发展新质生产力"
+        },
+        {
+          "url": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_e28d611d2ad9441eab88698db2dc89dd.html",
+          "title": "中共中央、国务院印发《关于发展新质生产力的意见》"
+        },
+        {
+          "url": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_bb063b402f814c2d829cb53688ee84c0.html",
+          "title": "文件全文"
+        }
+      ],
+      "offHostHtml": "<a class=\"\" href=\"https://outside.example/news/20261010\" target=\"_blank\" title=\"以创新赢未来——习近平经济思想引领中国加快发展新质生产力\">以创新赢未来——习近平经济思想引领中国加快发展新质生产力</a>",
+      "dateHtml": "<meta name=\"PubDate\" content=\"2026-10-10 17:57\">",
+      "readerPublishedAt": "2026-10-10T09:57:00.000Z",
+      "readerUrl": "https://www.miit.gov.cn/xwfb/szyw/art/2026/art_a580a8e97473409a9cdf779f1aa09c74.html",
+      "bodyChars": 6740
+    },
+    {
+      "id": "dn-mof-1730fbf08c22",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "mof",
+          "sectionId": "1730fbf08c22",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "政策发布",
+          "sectionUrl": "https://www.mof.gov.cn/",
+          "sourceCredibility": 90,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "policy",
+          "publisherKey": "publisher:mof",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "mof.gov.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "财政部 政策",
+            "财政部 财政 公告"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.mof.gov.cn/index.htm",
+        "itemSelector": "a[href*=\"/zhengwuxinxi/caizhengxinwen/\"][href*=\"t20\"][href$=\".htm\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "listingHtml": "<a href=\"http://www.mof.gov.cn\"><img src=\"./images/czb_logo_zwnew.png\" alt=\"中华人民共和国财政部\"></a><a href=\"http://www.mof.gov.cn/en/\">EN</a><a href=\"javascript:void(0)\" onclick=\"javascript:checkInput();\"><img src=\"http://www.mof.gov.cn/images/czb_searicon_1.png\" alt=\"\"></a><a href=\"./zhengwuxinxi/caizhengxinwen/202610/t20261010_4002540.htm\" title=\"廖岷会见高盛集团总裁温泽恩（2026-10-10）\" target=\"_blank\">廖岷会见高盛集团总裁温泽恩</a><a href=\"./zhengwuxinxi/caizhengxinwen/202610/t20261009_4002434.htm\" title=\"2026年上半年中国财政政策执行情况报告（2026-10-09）\" target=\"_blank\">2026年上半年中国财政政策执行情况报告</a>",
+      "expected": [
+        {
+          "url": "https://www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/202610/t20261010_4002540.htm",
+          "title": "廖岷会见高盛集团总裁温泽恩"
+        },
+        {
+          "url": "https://www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/202610/t20261009_4002434.htm",
+          "title": "2026年上半年中国财政政策执行情况报告"
+        }
+      ],
+      "offHostHtml": "<a href=\"https://outside.example/news/20261010\" title=\"廖岷会见高盛集团总裁温泽恩（2026-10-10）\" target=\"_blank\">廖岷会见高盛集团总裁温泽恩</a>",
+      "dateHtml": "<meta name=\"PubDate\" content=\"2026-10-09 15:12:00\">",
+      "readerPublishedAt": "2026-10-09T07:12:00.000Z",
+      "readerUrl": "https://www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/202610/t20261009_4002434.htm",
+      "bodyChars": 19430
+    },
+    {
+      "id": "dn-nbs-318ba075a489",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "nbs",
+          "sectionId": "318ba075a489",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "统计数据",
+          "sectionUrl": "https://www.stats.gov.cn/",
+          "sourceCredibility": 90,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "finance",
+          "publisherKey": "publisher:nbs",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "stats.gov.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "国家统计局 数据",
+            "国家统计局 经济 统计"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.stats.gov.cn/",
+        "itemSelector": "a[href*=\"/sj/zxfb/\"][href*=\"t20\"][href$=\".html\"],a[href*=\"/xw/tjxw/tjdt/\"][href*=\"t20\"][href$=\".html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "listingHtml": "<a href=\"https://www.stats.gov.cn/znwd/\" target=\"_black \" style=\"display:block;position:fixed;top:50%;right:-1px;width:87px;margin-top:78px;z-index:11\" title=\"AI问\">\n                        <img src=\"/images/aiwen_logo_20251203.gif\" alt=\"\" style=\"width:100%\">\n                        <img src=\"/images/aiwen_logo2_20251203.png\" alt=\"\" style=\"position:absolute;left:-17px;top:47px;width:39px\">\n                </a><a href=\"/hd/xmt/\" target=\"_blank\" title=\"新媒体\">\n\t\t\t\t\t\t<img src=\"/images/gtj2023_header-icon7.png\" alt=\"\">\n\t\t\t\t\t</a><a href=\"/wzgl/rss/\" target=\"_blank\" title=\"RSS\">\n\t\t\t\t\t\t<img src=\"/images/gtj2023_header-icon2.png\" alt=\"\">\n\t\t\t\t\t</a><a href=\"./xw/tjxw/tjdt/202609/t20260922_1965399.html\" target=\"_blank\" title=\"康义赴黑龙江出席第十七届中国统计开放日活动并调研\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"mhide pc1200\" src=\"./xw/tjxw/tjdt/202609/W020260923392388017063.jpg\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"pchide\" src=\"./xw/tjxw/tjdt/202609/W020260923392388017063.jpg\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"pc_1600\" src=\"./xw/tjxw/tjdt/202609/W020260923392388317505.jpg\" alt=\"\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<span>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t康义赴黑龙江出席第十七届中国统计开放日活动并调研\n\t\t\t\t\t\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t\t\t\t\t\t</a><a href=\"./xw/tjxw/tjdt/202609/t20260910_1965286.html\" target=\"_blank\" title=\"康义会见国际能源署署长并签署谅解备忘录\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"mhide pc1200\" src=\"./xw/tjxw/tjdt/202609/W020260910602235010296_ORIGIN.jpg\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"pchide\" src=\"./xw/tjxw/tjdt/202609/W020260910602235010296_ORIGIN.jpg\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"pc_1600\" src=\"./xw/tjxw/tjdt/202609/W020260910602235238642_ORIGIN.jpg\" alt=\"\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<span>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t康义会见国际能源署署长并签署谅解备忘录\n\t\t\t\t\t\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t\t\t\t\t\t</a><a href=\"./xw/tjxw/tjdt/202609/t20260907_1965231.html\" target=\"_blank\" title=\"康义会见联合国统计司代理司长\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"mhide pc1200\" src=\"./xw/tjxw/tjdt/202609/W020260907581715957534.jpg\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"pchide\" src=\"./xw/tjxw/tjdt/202609/W020260907581715957534.jpg\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"pc_1600\" src=\"./xw/tjxw/tjdt/202609/W020260907581716193551.jpg\" alt=\"\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<span>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t康义会见联合国统计司代理司长\n\t\t\t\t\t\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t\t\t\t\t\t</a>",
+      "expected": [
+        {
+          "url": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260922_1965399.html",
+          "title": "康义赴黑龙江出席第十七届中国统计开放日活动并调研"
+        },
+        {
+          "url": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260910_1965286.html",
+          "title": "康义会见国际能源署署长并签署谅解备忘录"
+        },
+        {
+          "url": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260907_1965231.html",
+          "title": "康义会见联合国统计司代理司长"
+        }
+      ],
+      "offHostHtml": "<a href=\"https://outside.example/news/20261010\" target=\"_blank\" title=\"康义赴黑龙江出席第十七届中国统计开放日活动并调研\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"mhide pc1200\" src=\"./xw/tjxw/tjdt/202609/W020260923392388017063.jpg\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"pchide\" src=\"./xw/tjxw/tjdt/202609/W020260923392388017063.jpg\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<img class=\"pc_1600\" src=\"./xw/tjxw/tjdt/202609/W020260923392388317505.jpg\" alt=\"\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t<span>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t康义赴黑龙江出席第十七届中国统计开放日活动并调研\n\t\t\t\t\t\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t\t\t\t\t\t</a>",
+      "dateHtml": "<meta name=\"PubDate\" content=\"2026/09/23 10:53\">",
+      "readerPublishedAt": "2026-09-23T02:53:00.000Z",
+      "readerUrl": "https://www.stats.gov.cn/xw/tjxw/tjdt/202609/t20260922_1965399.html",
+      "bodyChars": 1881
+    },
+    {
+      "id": "dn-ndrc-ec9c232a74a6",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "ndrc",
+          "sectionId": "ec9c232a74a6",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "政策发布",
+          "sectionUrl": "https://www.ndrc.gov.cn/",
+          "sourceCredibility": 90,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "policy",
+          "publisherKey": "publisher:ndrc",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "ndrc.gov.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "国家发展改革委 政策",
+            "发改委 发布 规划"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.ndrc.gov.cn/",
+        "itemSelector": "a[href*=\"/xwdt/xwfb/\"][href*=\"t20\"][href$=\".html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtRegex": "<meta\\s+name=\"PubDate\"\\s+content=\"([^\"]+)\"",
+          "publishedAtAuthoritative": true,
+          "titleSelector": "h2.article_title"
+        }
+      },
+      "listingHtml": "<a tabindex=\"1\" target=\"_blank\" title=\"署名文章｜郑栅洁：以高质量实施“十五五”规划推进中国式现代化建设\" href=\"https://www.ndrc.gov.cn/fzggw/wld/zsj/zyhd/202605/t20260501_1405047.html\"><img src=\"./dtxw/202605/W020260502379799002116_r75.jpg\" alt=\"微信图片_20260502103235.jpg\"></a><a tabindex=\"1\" target=\"_blank\" title=\"全面深入贯彻国家发展规划法 进一步彰显中国特色社会主义制度重要政治优势\" href=\"https://www.ndrc.gov.cn/fzggw/wld/zsj/zyhd/202603/t20260313_1404131.html\"><img src=\"./dtxw/202603/W020260313651417309779_r75.png\" alt=\"2.png\"></a><a tabindex=\"1\" target=\"_blank\" title=\"中华人民共和国国家发展规划法\" href=\"https://www.peopleapp.com/column/30051622671-500007390047\"><img src=\"./dtxw/202603/W020260313417098002429_r75.jpg\" alt=\"微信图片_20260313112805_981_74.jpg\"></a><a title=\"郑栅洁主任主持召开民营企业座谈会 围绕准确把握三季度经济形势、积极应对国际供需情况变化听取意见建议\" href=\"./xwdt/xwfb/202610/t20261010_1408066.html\">郑栅洁主任主持召开民营企业座谈会 围绕准确把握三季度经济形势、积极应对国际供需情况变化听...</a><a title=\"国家发展改革委有关负责同志就《关于发展新质生产力的意见》答记者问\" href=\"./xwdt/xwfb/202610/t20261009_1408037.html\">国家发展改革委有关负责同志就《关于发展新质生产力的意见》答记者问</a><a title=\"国家发展改革委举行升国旗仪式庆祝中华人民共和国成立77周年\" href=\"./xwdt/xwfb/202609/t20260930_1407977.html\">国家发展改革委举行升国旗仪式庆祝中华人民共和国成立77周年</a>",
+      "expected": [
+        {
+          "url": "https://www.ndrc.gov.cn/xwdt/xwfb/202610/t20261010_1408066.html",
+          "title": "郑栅洁主任主持召开民营企业座谈会 围绕准确把握三季度经济形势、积极应对国际供需情况变化听..."
+        },
+        {
+          "url": "https://www.ndrc.gov.cn/xwdt/xwfb/202610/t20261009_1408037.html",
+          "title": "国家发展改革委有关负责同志就《关于发展新质生产力的意见》答记者问"
+        },
+        {
+          "url": "https://www.ndrc.gov.cn/xwdt/xwfb/202609/t20260930_1407977.html",
+          "title": "国家发展改革委举行升国旗仪式庆祝中华人民共和国成立77周年"
+        }
+      ],
+      "offHostHtml": "<a title=\"郑栅洁主任主持召开民营企业座谈会 围绕准确把握三季度经济形势、积极应对国际供需情况变化听取意见建议\" href=\"https://outside.example/news/20261010\">郑栅洁主任主持召开民营企业座谈会 围绕准确把握三季度经济形势、积极应对国际供需情况变化听...</a>",
+      "dateHtml": "<meta name=\"PubDate\" content=\"2026-10-10 19:09:24\">",
+      "readerPublishedAt": "2026-10-10T11:09:24.000Z",
+      "readerUrl": "https://www.ndrc.gov.cn/xwdt/xwfb/202610/t20261010_1408066.html",
+      "bodyChars": 1040
+    },
+    {
+      "id": "dn-pboc-538caa3a0cd0",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "pboc",
+          "sectionId": "538caa3a0cd0",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "政策公告",
+          "sectionUrl": "https://www.pbc.gov.cn/",
+          "sourceCredibility": 92,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "policy",
+          "publisherKey": "publisher:pboc",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "pbc.gov.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "中国人民银行 政策",
+            "人民银行 公告"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.pbc.gov.cn/",
+        "itemSelector": "a[href^=\"/goutongjiaoliu/113456/113469/20\"][href$=\"/index.html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": "td.hui12[align=\"right\"]",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "listingHtml": "<a href=\"/rmyh/109339/index.html\" class=\"hei12\">术语表</a><a href=\" /rmyh/109342/index.html\" class=\"hei12\">网站地图</a><a href=\"/AiWza/index.html\" style=\"margin-right: 10px;\" class=\"hei12\">无障碍浏览</a><a href=\"/goutongjiaoliu/113456/113469/2026101011293518009/index.html\" onclick=\"void(0)\" target=\"_blank\" title=\"中国人民银行行长潘功胜会见法国总统外事顾问博纳\" istitle=\"true\">中国人民银行行长潘功胜会见法国总统外事顾问博纳</a><a href=\"/goutongjiaoliu/113456/113469/2026100918390137001/index.html\" onclick=\"void(0)\" target=\"_blank\" title=\"中国人民银行行长潘功胜会见高盛集团总裁兼首席运营官温泽恩\" istitle=\"true\">中国人民银行行长潘功胜会见高盛集团总裁兼首席运营官温泽恩</a><a href=\"/goutongjiaoliu/113456/113469/2026100816231113295/index.html\" onclick=\"void(0)\" target=\"_blank\" title=\"中国人民银行关于人民币汇率的政策立场\" istitle=\"true\">中国人民银行关于人民币汇率的政策立场</a>",
+      "expected": [
+        {
+          "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026101011293518009/index.html",
+          "title": "中国人民银行行长潘功胜会见法国总统外事顾问博纳"
+        },
+        {
+          "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100918390137001/index.html",
+          "title": "中国人民银行行长潘功胜会见高盛集团总裁兼首席运营官温泽恩"
+        },
+        {
+          "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+          "title": "中国人民银行关于人民币汇率的政策立场"
+        }
+      ],
+      "offHostHtml": "<a href=\"https://outside.example/news/20261010\" onclick=\"void(0)\" target=\"_blank\" title=\"中国人民银行行长潘功胜会见法国总统外事顾问博纳\" istitle=\"true\">中国人民银行行长潘功胜会见法国总统外事顾问博纳</a>",
+      "dateHtml": "<table><tr><td class=\"hui12\" align=\"right\"> \n             <!--2026年10月08日-->2026-10-08 17:48:39</td></tr></table>",
+      "readerPublishedAt": "2026-10-08T09:48:39.000Z",
+      "readerUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+      "bodyChars": 6078
+    },
+    {
+      "id": "dn-pboc-5e98b22ee40c",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "pboc",
+          "sectionId": "5e98b22ee40c",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "货币政策",
+          "sectionUrl": "https://www.pbc.gov.cn/",
+          "sourceCredibility": 92,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "finance",
+          "publisherKey": "publisher:pboc",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "pbc.gov.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "中国人民银行 货币政策",
+            "央行 金融 公告"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.pbc.gov.cn/",
+        "itemSelector": "a[href^=\"/goutongjiaoliu/113456/113469/20\"][href$=\"/index.html\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": "td.hui12[align=\"right\"]",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "listingHtml": "<a href=\"/rmyh/109339/index.html\" class=\"hei12\">术语表</a><a href=\" /rmyh/109342/index.html\" class=\"hei12\">网站地图</a><a href=\"/AiWza/index.html\" style=\"margin-right: 10px;\" class=\"hei12\">无障碍浏览</a><a href=\"/goutongjiaoliu/113456/113469/2026101011293518009/index.html\" onclick=\"void(0)\" target=\"_blank\" title=\"中国人民银行行长潘功胜会见法国总统外事顾问博纳\" istitle=\"true\">中国人民银行行长潘功胜会见法国总统外事顾问博纳</a><a href=\"/goutongjiaoliu/113456/113469/2026100918390137001/index.html\" onclick=\"void(0)\" target=\"_blank\" title=\"中国人民银行行长潘功胜会见高盛集团总裁兼首席运营官温泽恩\" istitle=\"true\">中国人民银行行长潘功胜会见高盛集团总裁兼首席运营官温泽恩</a><a href=\"/goutongjiaoliu/113456/113469/2026100816231113295/index.html\" onclick=\"void(0)\" target=\"_blank\" title=\"中国人民银行关于人民币汇率的政策立场\" istitle=\"true\">中国人民银行关于人民币汇率的政策立场</a>",
+      "expected": [
+        {
+          "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026101011293518009/index.html",
+          "title": "中国人民银行行长潘功胜会见法国总统外事顾问博纳"
+        },
+        {
+          "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100918390137001/index.html",
+          "title": "中国人民银行行长潘功胜会见高盛集团总裁兼首席运营官温泽恩"
+        },
+        {
+          "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+          "title": "中国人民银行关于人民币汇率的政策立场"
+        }
+      ],
+      "offHostHtml": "<a href=\"https://outside.example/news/20261010\" onclick=\"void(0)\" target=\"_blank\" title=\"中国人民银行行长潘功胜会见法国总统外事顾问博纳\" istitle=\"true\">中国人民银行行长潘功胜会见法国总统外事顾问博纳</a>",
+      "dateHtml": "<table><tr><td class=\"hui12\" align=\"right\"> \n             <!--2026年10月08日-->2026-10-08 17:48:39</td></tr></table>",
+      "readerPublishedAt": "2026-10-08T09:48:39.000Z",
+      "readerUrl": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026100816231113295/index.html",
+      "bodyChars": 6078
+    },
+    {
+      "id": "dn-sse-d9db55a08730",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "sse",
+          "sectionId": "d9db55a08730",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "市场公告",
+          "sectionUrl": "https://www.sse.com.cn/",
+          "sourceCredibility": 88,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "finance",
+          "publisherKey": "publisher:sse",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "sse.com.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "上海证券交易所 公告",
+            "上交所 市场 监管"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.sse.com.cn/",
+        "itemSelector": "a[href^=\"/aboutus/mediacenter/hotandd/c/c_\"][href$=\".shtml\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": ".article_opt i",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "listingHtml": "<a href=\"/home/app/update/\" class=\"bar_word\" target=\"_blank\">APP下载</a><a href=\"/home/weixin/\" class=\"bar_word\" target=\"_blank\">微博微信</a><a class=\"bar_word enLink\" href=\"http://english.sse.com.cn/\">English</a><a class=\"dynaTitle\" target=\"_blank\" href=\"/aboutus/mediacenter/hotandd/c/c_20260924_10833301.shtml\">\n                  吸引境外中长期资金入市上交所举办“国际投资者赴境内调研上市公司”活动\n              </a><a class=\"dynaTitle\" target=\"_blank\" href=\"/aboutus/mediacenter/hotandd/c/c_20260918_10832624.shtml\">\n                  第七届国际信息商会议在中国香港成功举办\n              </a><a class=\"dynaTitle\" target=\"_blank\" href=\"/aboutus/mediacenter/hotandd/c/c_20260908_10831625.shtml\">\n                  中沙上市公司路演活动圆满举办\n              </a>",
+      "expected": [
+        {
+          "url": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260924_10833301.shtml",
+          "title": "吸引境外中长期资金入市上交所举办“国际投资者赴境内调研上市公司”活动"
+        },
+        {
+          "url": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260918_10832624.shtml",
+          "title": "第七届国际信息商会议在中国香港成功举办"
+        },
+        {
+          "url": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260908_10831625.shtml",
+          "title": "中沙上市公司路演活动圆满举办"
+        }
+      ],
+      "offHostHtml": "<a class=\"dynaTitle\" target=\"_blank\" href=\"https://outside.example/news/20261010\">\n                  吸引境外中长期资金入市上交所举办“国际投资者赴境内调研上市公司”活动\n              </a>",
+      "dateHtml": "<div class=\"article_opt\">\n\t\t\t\t\t\t\t\t<span>\n\t\t\t\t\t\t\t\t\t<a href=\"##\" class=\"mobile_hide sseicon-icon_print\"></a>\n\t\t\t\t\t\t\t\t\t<a href=\"##\" class=\"zoom sseicon-icon_fontSizeUp\" data-type=\"zoom_in\"></a>\n\t\t\t\t\t\t\t\t\t<a href=\"##\" class=\"zoom sseicon-icon_fontSizeDown\" data-type=\"zoom_out\"></a>\n\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t\t<i>\n\t\t\t\t\t\t\t\t\t2026-09-24\n\t\t\t\t\t\t\t\t</i>\n\t\t\t\t\t\t\t</div>",
+      "readerPublishedAt": "2026-09-24T00:00:00.000Z",
+      "readerUrl": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260924_10833301.shtml",
+      "bodyChars": 489
+    },
+    {
+      "id": "dn-szse-24be40934438",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "szse",
+          "sectionId": "24be40934438",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "市场公告",
+          "sectionUrl": "https://www.szse.cn/",
+          "sourceCredibility": 88,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "finance",
+          "publisherKey": "publisher:szse",
+          "language": "zh-CN",
+          "allowedHosts": [
+            "szse.cn"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "深圳证券交易所 公告",
+            "深交所 市场 监管"
+          ],
+          "searchSources": [
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.szse.cn/",
+        "itemSelector": "a[href*=\"/aboutus/trends/news/t20\"][href$=\".html\"]:not(.art-list-link):not(:has(script))",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": ".time",
+          "publishedAtUtcOffset": "+08:00",
+          "publishedAtAuthoritative": true,
+          "titleSelector": ".title"
+        }
+      },
+      "listingHtml": "<a href=\"./\" class=\"CurrChnlCls\">首页</a><a class=\"arrow-left\" href=\"#\"></a><a class=\"arrow-right\" href=\"#\"></a><a href=\"../aboutus/trends/news/t20260930_623151.html\" target=\"_blank\">\n                           力勤资源在深交所上市\n                       </a><a href=\"../aboutus/trends/news/t20260929_623109.html\" target=\"_blank\">\n                           鸿富诚在深交所上市\n                       </a><a href=\"../aboutus/trends/news/t20260928_623075.html\" target=\"_blank\">\n                           关于聘任深圳证券交易所《证券市场导报》学术委员会委员的公告\n                       </a>",
+      "expected": [
+        {
+          "url": "https://www.szse.cn/aboutus/trends/news/t20260930_623151.html",
+          "title": "力勤资源在深交所上市"
+        },
+        {
+          "url": "https://www.szse.cn/aboutus/trends/news/t20260929_623109.html",
+          "title": "鸿富诚在深交所上市"
+        },
+        {
+          "url": "https://www.szse.cn/aboutus/trends/news/t20260928_623075.html",
+          "title": "关于聘任深圳证券交易所《证券市场导报》学术委员会委员的公告"
+        }
+      ],
+      "offHostHtml": "<a href=\"https://outside.example/news/20261010\" target=\"_blank\">\n                           力勤资源在深交所上市\n                       </a>",
+      "dateHtml": "<div class=\"des-header\">\n                  <h2 class=\"title\">关于聘任深圳证券交易所《证券市场导报》学术委员会委员的公告</h2>\n                  \t\t<script>\n                  \t\t\tvar curSubTitle ='';\n                  \t\t\tif(curSubTitle != ''){\n                  \t\t\t\tdocument.write('<h4 style=\"text-align: center;\" class=\"sub-title\"><i class=\"\"></i><span class=\"\">'+curSubTitle+'</span></h4>')\n                  \t\t\t}                  \t\t\n                  \t\t</script>\n              <div class=\"time\">时间：<span>2026-09-28</span></div>\n              <div class=\"des-switchsize\">\n                字体：\n                <span class=\"bigger\">大</span>\n                <span class=\"medium\">中</span>\n                <span class=\"smaller\">小</span>\n              </div>\n    \t\t\t\t\t\n        \t</div>",
+      "readerPublishedAt": "2026-09-27T16:00:00.000Z",
+      "readerUrl": "https://www.szse.cn/aboutus/trends/news/t20260928_623075.html",
+      "bodyChars": 219
+    },
+    {
+      "id": "dn-world-athletics-26d86174d8ec",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "world-athletics",
+          "sectionId": "26d86174d8ec",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "News",
+          "sectionUrl": "https://worldathletics.org/",
+          "sourceCredibility": 86,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:world-athletics",
+          "language": "en-US",
+          "allowedHosts": [
+            "worldathletics.org"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "World Athletics latest news",
+            "World Athletics championships"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://worldathletics.org/",
+        "itemSelector": "[class*=\"HeroCarousel_title\"] a[href^=\"/news/\"]",
+        "titleSelector": "a[href]",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtSelector": "h2[class*=\"ArticleCarousel_type\"] span:last-child",
+          "publishedAtUtcOffset": "+00:00",
+          "publishedAtAuthoritative": true
+        }
+      },
+      "listingHtml": "<a href=\"/worldathletics-plus\" class=\"style_link__2RGFF\">World Athletics+</a><a class=\"NavLink_active__2UAk6\" title=\"\" href=\"/\"><img src=\"https://media.aws.iaaf.org/logos/wa-logo.svg\" alt=\"logo\" width=\"180\" height=\"40\"></a><a class=\"MainNav_navLink__1E27R NavLink_active__2UAk6\" title=\"\" href=\"/\">Home<ul class=\"MainNav_content__WZ9Rn\"></ul></a><h1 style=\"font-size:2.625rem\" class=\"HeroCarousel_title__1sziS\"><a href=\"/news/feature/mental-health-athletics-international-voices\">Different voices, shared challenges: mental health in athletics </a></h1><h1 style=\"font-size:2.625rem\" class=\"HeroCarousel_title__1sziS\"><a href=\"/news/preview/chicago-marathon-2026-kiplimo-feysa\">Kiplimo and Feysa return to defend Chicago titles</a></h1><h1 style=\"font-size:2.625rem\" class=\"HeroCarousel_title__1sziS\"><a href=\"/news/press-releases/ehammer-kalin-combined-events-tour-2026-winners\">Ehammer and Kälin complete historic Swiss double in World Athletics Combined Events Tour</a></h1>",
+      "expected": [
+        {
+          "url": "https://worldathletics.org/news/feature/mental-health-athletics-international-voices",
+          "title": "Different voices, shared challenges: mental health in athletics"
+        },
+        {
+          "url": "https://worldathletics.org/news/preview/chicago-marathon-2026-kiplimo-feysa",
+          "title": "Kiplimo and Feysa return to defend Chicago titles"
+        },
+        {
+          "url": "https://worldathletics.org/news/press-releases/ehammer-kalin-combined-events-tour-2026-winners",
+          "title": "Ehammer and Kälin complete historic Swiss double in World Athletics Combined Events Tour"
+        }
+      ],
+      "offHostHtml": "<h1 style=\"font-size:2.625rem\" class=\"HeroCarousel_title__1sziS\"><a href=\"https://outside.example/news/20261010\">Different voices, shared challenges: mental health in athletics </a></h1>",
+      "dateHtml": "<h2 class=\"ArticleCarousel_type__2gXFZ\"><span>Feature</span><span>10 Oct 2026</span></h2>",
+      "readerPublishedAt": "2026-10-10T00:00:00.000Z",
+      "readerUrl": "https://worldathletics.org/news/feature/mental-health-athletics-international-voices",
+      "bodyChars": 10350
+    },
+    {
+      "id": "dn-wta-6e07cccbd569",
+      "config": {
+        "dailyNews": {
+          "legacySourceId": "wta",
+          "sectionId": "6e07cccbd569",
+          "tierReason": "无对应 AIHOT 已确认来源；默认 T2，待逐来源复核",
+          "sectionLabel": "News",
+          "sectionUrl": "https://www.wtatennis.com/news",
+          "sourceCredibility": 86,
+          "mediaType": "official",
+          "signalRole": "first_party",
+          "mayHavePaywall": false,
+          "primaryCategoryHint": "sports",
+          "publisherKey": "publisher:wta",
+          "language": "en-US",
+          "allowedHosts": [
+            "wtatennis.com"
+          ],
+          "allowedPathPrefixes": [],
+          "readerUrlAliases": [],
+          "legacyEnabled": true,
+          "disabledReason": "缺已验证的列表选择器；禁止通用链接扫描",
+          "migrationStatus": "needs_selector",
+          "adapter": "web_list",
+          "searchTerms": [
+            "WTA latest news",
+            "WTA tennis news"
+          ],
+          "searchSources": [
+            "web",
+            "news"
+          ],
+          "reviewedAt": "2026-09-13"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 10,
+          "initialBackfillMonths": 1
+        },
+        "url": "https://www.wtatennis.com/news",
+        "itemSelector": "a.hero__content-link[href^=\"/news/\"]",
+        "titleSelector": "h2",
+        "linkSelector": "a[href]",
+        "detail": {
+          "publishedAtUtcOffset": "+00:00"
+        }
+      },
+      "listingHtml": "<a class=\"skip-to\" href=\"#\" onclick=\"location.hash='main-content'; return false;\">Skip to main content</a><a href=\"https://www.mercedes-benz.com/en/art-and-culture/zeitgeist/sports/tennis/wta/\" target=\"_blank\" rel=\"noopener\" class=\"global-header-sponsor__link\" aria-label=\"WTA Mercedes-Benz Header Dark\" data-tracking=\"true\" data-tracking-component=\"image click\" data-tracking-event=\"click_track\" data-tracking-category=\"sponsor\" data-tracking-type=\"logo\" data-tracking-detail=\"Mercedes-Benz\" data-tracking-widget-type=\"Photo Widget\" data-tracking-widget-name=\"Global Header\" data-tracking-placement=\"header\">\n        <picture class=\" picture \">\n                    <source class=\"\" srcset=\"https://photoresources.wtatennis.com/photo-resources/2025/12/16/1fed3d88-0b63-4e6c-92ec-98051c1e381c/WTAxMB-star_joint-logo_h_MB-version_p_3C_web-1-.png?height=16, https://photoresources.wtatennis.com/photo-resources/2025/12/16/1fed3d88-0b63-4e6c-92ec-98051c1e381c/WTAxMB-star_joint-logo_h_MB-version_p_3C_web-1-.png?height=32 2x\" media=\"(min-width: 0px)\">\n                    <img class=\"js-image  picture__img\" src=\"https://photoresources.wtatennis.com/photo-resources/2025/12/16/1fed3d88-0b63-4e6c-92ec-98051c1e381c/WTAxMB-star_joint-logo_h_MB-version_p_3C_web-1-.png?height=16\" alt=\"WTAxMB-star_joint-logo_h_MB-version_p_3C_web (1)\" loading=\"lazy\">\n        </picture>\n            </a><a href=\"https://www.mercedes-benz.com/en/art-and-culture/zeitgeist/sports/tennis/\" target=\"_blank\" rel=\"noopener\" class=\"global-header-sponsor__link\" aria-label=\"WTA Mercedes-Benz Header Light\" data-tracking=\"true\" data-tracking-component=\"image click\" data-tracking-event=\"click_track\" data-tracking-category=\"sponsor\" data-tracking-type=\"logo\" data-tracking-detail=\"Mercedes-Benz\" data-tracking-widget-type=\"Photo Widget\" data-tracking-widget-name=\"Global Header\" data-tracking-placement=\"header\">\n        <picture class=\" picture \">\n                    <source class=\"\" srcset=\"https://photoresources.wtatennis.com/photo-resources/2025/12/16/da304a4e-6ed8-4f3b-9796-b557c74baef5/WTAxMB-star_joint-logo_h_MB-version_p_3C_web_white-1-.png?height=16, https://photoresources.wtatennis.com/photo-resources/2025/12/16/da304a4e-6ed8-4f3b-9796-b557c74baef5/WTAxMB-star_joint-logo_h_MB-version_p_3C_web_white-1-.png?height=32 2x\" media=\"(min-width: 0px)\">\n                    <img class=\"js-image  picture__img\" src=\"https://photoresources.wtatennis.com/photo-resources/2025/12/16/da304a4e-6ed8-4f3b-9796-b557c74baef5/WTAxMB-star_joint-logo_h_MB-version_p_3C_web_white-1-.png?height=16\" alt=\"WTAxMB-star_joint-logo_h_MB-version_p_3C_web_white (1)\" loading=\"lazy\">\n        </picture>\n            </a><a href=\"/news/4590078/zheng-becomes-first-chinese-finalist-in-beijing-with-straight-sets-win-over-mertens\" class=\"hero__content-link js-content-link\" data-tracking=\"true\" data-tracking-component=\"button click\" data-tracking-event=\"click_track\" data-tracking-category=\"navigation\" data-tracking-detail=\"Read More\" data-tracking-widget-type=\"Content Search Widget\" data-tracking-widget-name=\"Hero: Automated\">\n                            <h2 class=\"hero__title sh-s\">Zheng becomes first Chinese finalist in Beijing with straight-sets win over Mertens</h2>\n                                <span class=\"hero__cta sbtn sbtn--grad sbtn--large sbtn--glass theme-purple\">\n                                        <span class=\"sbtn__label\">Read More</span>\n\t<svg class=\"icon sbtn__arrow\" aria-hidden=\"true\">\n\t\t<use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"/resources/v7.53.4/i/svg-output/icons.svg#icn-arrow-right\"></use>\n\t</svg>\n                                </span>\n                        </a><a href=\"/news/4589994/wuhan-draw-sabalenka-swiatek-eye-first-2026-meeting-in-quarterfinals\" class=\"hero__content-link js-content-link\" data-tracking=\"true\" data-tracking-component=\"button click\" data-tracking-event=\"click_track\" data-tracking-category=\"navigation\" data-tracking-detail=\"Read More\" data-tracking-widget-type=\"Content Search Widget\" data-tracking-widget-name=\"Hero: Automated\">\n                            <h2 class=\"hero__title sh-s\">Wuhan draw: Sabalenka, Swiatek eye first 2026 meeting in quarterfinals</h2>\n                                <span class=\"hero__cta sbtn sbtn--grad sbtn--large sbtn--glass theme-purple\">\n                                        <span class=\"sbtn__label\">Read More</span>\n\t<svg class=\"icon sbtn__arrow\" aria-hidden=\"true\">\n\t\t<use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"/resources/v7.53.4/i/svg-output/icons.svg#icn-arrow-right\"></use>\n\t</svg>\n                                </span>\n                        </a><a href=\"/news/4589992/mirra-andreeva-or-qinwen-zheng-making-the-case-for-the-china-open-finalists\" class=\"hero__content-link js-content-link\" data-tracking=\"true\" data-tracking-component=\"button click\" data-tracking-event=\"click_track\" data-tracking-category=\"navigation\" data-tracking-detail=\"Read More\" data-tracking-widget-type=\"Content Search Widget\" data-tracking-widget-name=\"Hero: Automated\">\n                            <h2 class=\"hero__title sh-s\">Andreeva or Zheng? Making the case for the China Open finalists</h2>\n                                <span class=\"hero__cta sbtn sbtn--grad sbtn--large sbtn--glass theme-purple\">\n                                        <span class=\"sbtn__label\">Read More</span>\n\t<svg class=\"icon sbtn__arrow\" aria-hidden=\"true\">\n\t\t<use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"/resources/v7.53.4/i/svg-output/icons.svg#icn-arrow-right\"></use>\n\t</svg>\n                                </span>\n                        </a>",
+      "expected": [
+        {
+          "url": "https://www.wtatennis.com/news/4590078/zheng-becomes-first-chinese-finalist-in-beijing-with-straight-sets-win-over-mertens",
+          "title": "Zheng becomes first Chinese finalist in Beijing with straight-sets win over Mertens"
+        },
+        {
+          "url": "https://www.wtatennis.com/news/4589994/wuhan-draw-sabalenka-swiatek-eye-first-2026-meeting-in-quarterfinals",
+          "title": "Wuhan draw: Sabalenka, Swiatek eye first 2026 meeting in quarterfinals"
+        },
+        {
+          "url": "https://www.wtatennis.com/news/4589992/mirra-andreeva-or-qinwen-zheng-making-the-case-for-the-china-open-finalists",
+          "title": "Andreeva or Zheng? Making the case for the China Open finalists"
+        }
+      ],
+      "offHostHtml": "<a href=\"https://outside.example/news/20261010\" class=\"hero__content-link js-content-link\" data-tracking=\"true\" data-tracking-component=\"button click\" data-tracking-event=\"click_track\" data-tracking-category=\"navigation\" data-tracking-detail=\"Read More\" data-tracking-widget-type=\"Content Search Widget\" data-tracking-widget-name=\"Hero: Automated\">\n                            <h2 class=\"hero__title sh-s\">Zheng becomes first Chinese finalist in Beijing with straight-sets win over Mertens</h2>\n                                <span class=\"hero__cta sbtn sbtn--grad sbtn--large sbtn--glass theme-purple\">\n                                        <span class=\"sbtn__label\">Read More</span>\n\t<svg class=\"icon sbtn__arrow\" aria-hidden=\"true\">\n\t\t<use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"/resources/v7.53.4/i/svg-output/icons.svg#icn-arrow-right\"></use>\n\t</svg>\n                                </span>\n                        </a>",
+      "dateHtml": "<meta property=\"article:published_time\" content=\"2026-10-10T12:50:00Z\"><script type=\"application/ld+json\">\n    {\n        \"@context\": \"https://schema.org\",\n        \"@type\": \"SportsOrganization\",\n        \"@id\": \"https://www.wtatennis.com#organization\",\n        \"name\": \"Women's Tennis Association\",\n        \"alternateName\": \"WTA\",\n        \"url\": \"https://www.wtatennis.com\",\n        \"logo\": {\n            \"@type\": \"ImageObject\",\n            \"url\": \"https://www.wtatennis.com/resources/v7.53.4/i/elements/wta-publisher-logo.png\",\n            \"width\": 512,\n            \"height\": 512\n        },\n        \"sameAs\": [\n            \"https://www.facebook.com/WTA\",\n            \"https://x.com/WTA\",\n            \"https://www.instagram.com/wta\",\n            \"https://www.youtube.com/user/WTA\",\n            \"https://www.tiktok.com/@wta\"\n        ],\n        \"sport\": \"Tennis\",\n        \"description\": \"The Women's Tennis Association (WTA) is the principal organizing body of women's professional tennis.\",\n        \"foundingDate\": \"1973\",\n        \"memberOf\": {\n            \"@type\": \"SportsOrganization\",\n            \"name\": \"International Tennis Federation\"\n        }\n    }\n</script><script type=\"application/ld+json\">\n{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"SportsEvent\",\n    \"@id\": \"https://www.wtatennis.com/id/season/2026\",\n    \"name\": \"WTA Tour 2026\",\n    \"description\": \"Women's Tennis Association professional tennis tour 2026 season\",\n    \"startDate\": \"2026-01-01\",\n    \"endDate\": \"2026-12-31\",\n    \"eventStatus\": \"http://schema.org/EventScheduled\",\n    \"sport\": \"Tennis\",\n    \"organizer\": {\n        \"@id\": \"https://www.wtatennis.com#organization\"\n    },\n    \"location\": {\n        \"@type\": \"Place\",\n        \"name\": \"Worldwide\"\n    }\n}\n</script><script type=\"application/ld+json\">\n    {\n        \"@context\": \"https://schema.org\",\n        \"@type\": \"NewsArticle\",\n        \"isPartOf\": {\n            \"@type\": \"WebSite\",\n            \"@id\": \"https://www.wtatennis.com#website\",\n            \"name\": \"WTA Tennis\",\n            \"publisher\": {\n                \"@id\": \"https://www.wtatennis.com#organization\"\n            }\n        },\n        \"url\": \"https://www.wtatennis.com/news/4590078/zheng-becomes-first-chinese-finalist-in-beijing-with-straight-sets-win-over-mertens\",\n        \"publisher\": {\n            \"@id\": \"https://www.wtatennis.com#organization\"\n        },\n        \"headline\": \"Zheng becomes first Chinese finalist in Beijing with straight-sets win over Mertens\",\n        \"description\": \"\",\n        \"image\": \"https://photoresources.wtatennis.com/photo-resources/2026/10/10/4492b094-723a-4639-8320-f8afbbd0202d/GettyImages-2299507680.jpg?width=1200\",\n        \"datePublished\": \"2026-10-10T12:50:00Z\",\n        \"dateModified\": \"2026-10-10T14:48:14Z\",\n        \"articleSection\": \"Match Reaction\",\n        \"keywords\": [\"News\", \"singles\"],\n        \"author\": [\n    {\n        \"@type\": \"Person\",\n        \"id\": \"https://www.wtatennis.com/authors/4447275/noah-poser\",\n        \"name\": \"Noah Poser\",\n        \"url\": \"https://www.wtatennis.com/authors/4447275/noah-poser\",\n        \"image\": \"\",\n        \"jobTitle\": \"Freelance Reporter\",\n        \"worksFor\": {\n            \"@type\": \"Organization\",\n            \"@id\": \"https://www.wtatennis.com#organization\",\n            \"name\": \"WTA Tennis\",\n            \"url\": \"https://www.wtatennis.com\"\n        },\n        \"description\": \"Noah is a Chicago-based freelance reporter with eight years of experience covering professional, collegiate and high school sports, with a growing focus on tennis.\",\n        \"sameAs\": [],\n        \"knowsAbout\": \"\",\n        \"subjectOf\": {\n            \"@type\": \"WebPage\",\n            \"url\": \"https://www.wtatennis.com/authors/4447275/noah-poser\",\n            \"name\": \"Noah Poser - WTA Tennis Author Profile\"\n        }\n    }\n                \n        ],\n        \"mainEntityOfPage\": \"https://www.wtatennis.com/news/4590078/zheng-becomes-first-chinese-finalist-in-beijing-with-straight-sets-win-over-mertens\"\n    }\n    </script>",
+      "readerPublishedAt": "2026-10-10T12:50:00.000Z",
+      "readerUrl": "https://www.wtatennis.com/news/4590078/zheng-becomes-first-chinese-finalist-in-beijing-with-straight-sets-win-over-mertens",
+      "bodyChars": 3690
+    }
+  ]
+}

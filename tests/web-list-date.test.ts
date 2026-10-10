@@ -58,7 +58,9 @@ test('authoritative epoch detail dates reach collection without falling back to 
   const previous = config.allowPrivateNetworkFetch;
   config.allowPrivateNetworkFetch = true;
   try {
-    const source = {config:{detail:{publishedAtRegex:'data-article-publish-time="([0-9]+)"',publishedAtUnit:'epoch_s',publishedAtAuthoritative:true}}} as SourceRow;
+    const source: SourceRow = {id:'epoch-fixture',name:'Epoch fixture',kind:'web_list',tier:'T2',participation_mode:'editorial',
+      first_party:false,interval_minutes:60,enabled:false,cursor:null,fail_count:0,
+      config:{detail:{publishedAtRegex:'data-article-publish-time="([0-9]+)"',publishedAtUnit:'epoch_s',publishedAtAuthoritative:true}}};
     const base = `http://127.0.0.1:${(server.address() as {port:number}).port}`;
     const need = {date:true,title:false,summary:false,body:false};
     assert.equal((await fetchDetail(`${base}/dated`,source,need,{strictHttp:true})).publishedAt?.toISOString(),'2026-10-10T14:53:30.000Z');

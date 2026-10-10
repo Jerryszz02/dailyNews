@@ -371,7 +371,23 @@ async function collectSourceRun(sourceId:string,opts:{force?:boolean;trialId?:st
     return { sourceId, status: "ok", found, created, revised,
       ...(trialId ? { trial: { id: trialId, ...trialCounts } } : {}) };
   } catch (error) {
-    if (shutdownSignal.signal.aborted) throw error;
+    if (shutdownSignal.signal.aborted) {
+      // A received listing belongs to durable intake recovery. Before that checkpoint, a
+      // stopped worker has nothing to resume: release its lease without blaming the source.
+      await sql.begin(async (tx) => {
+        await tx`SELECT pg_advisory_xact_lock(hashtext('collection-source'),hashtext(${sourceId}))`;
+        await tx`SELECT id FROM sources WHERE id=${sourceId} FOR UPDATE`;
+        const [interrupted] = await tx`
+          UPDATE fetch_runs SET status='failed', finished_at=now(), error='collection interrupted by shutdown',
+            found_count=${found}, new_count=${created}
+          WHERE id=${run.id} AND status='running' AND NOT EXISTS (
+            SELECT 1 FROM collection_intakes WHERE run_id=${run.id}
+          ) RETURNING id`;
+        if (interrupted) await tx`UPDATE sources SET collection_run_id=NULL
+          WHERE id=${sourceId} AND collection_run_id=${run.id}`;
+      });
+      throw error;
+    }
     const message = String(error instanceof Error ? error.message : error).slice(0, 1000);
     const budget = error instanceof BudgetExceededError;
     await sql`

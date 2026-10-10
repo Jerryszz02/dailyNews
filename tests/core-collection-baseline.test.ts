@@ -75,3 +75,29 @@ for(const deferred of [false,true])test(`${deferred?'持久':'同步'}权威详�
  assert.deepEqual(new Set(rows.map(a=>a.title)),new Set(['初始稿','详情真实新增']));assert.equal(rows.find(a=>a.title==='详情真实新增')!.backfill,false);
  const [run]=await sql`SELECT detail FROM fetch_runs WHERE source_id=${id} ORDER BY id DESC LIMIT 1`;assert.equal(run!.detail.baselineSkipped,2);
 });
+
+// A real aborted network request runs in its own process: shutdownSignal is global and one-way.
+for (const durable of [false,true]) test(`shutdown ${durable?'preserves committed intake for recovery':'records the interrupted fetch and immediately releases its source'}`,async()=>{
+ const {execFile}=await import('node:child_process');
+ const {promisify}=await import('node:util');
+ const child=[
+  "import './tests/setup.ts';",
+  "import assert from 'node:assert/strict';import http from 'node:http';",
+  "import {config} from './packages/backend/src/config.ts';import {sql,closeDb} from './packages/backend/src/db.ts';",
+  "import {collectSource} from './packages/backend/src/sources/collect.ts';import {receiveCollection} from './packages/backend/src/sources/intake.ts';",
+  "import {shutdownSignal,stopBoss} from './packages/backend/src/jobs/queue.ts';",
+  "config.allowPrivateNetworkFetch=true;const durable=process.argv[1]==='true';const id=`shutdown-${process.pid}-${Date.now()}`;let serverError;",
+  "const server=http.createServer(async(req,res)=>{try{const [source]=await sql`SELECT collection_run_id FROM sources WHERE id=${id}`;",
+  "if(durable)await receiveCollection(Number(source.collection_run_id),id,[{candidate:{url:'https://example.com/shutdown-checkpoint',title:'持久化新闻',publishedAt:new Date()},need:null}],{trialId:null,backfill:null,cursor:{initializedAt:'2026-01-01T00:00:00Z'},receiptIds:[],detail:{}});",
+  "shutdownSignal.abort();}catch(error){serverError=error;shutdownSignal.abort();}});",
+  "await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.address().port}/rss`;",
+  "try{await sql`INSERT INTO sources(id,name,kind,config,fail_count,health,next_fetch_at,cursor) VALUES(${id},'shutdown regression','rss',${sql.json({feedUrl:url})},2,'degraded','2100-01-01',${sql.json({initializedAt:'2026-01-01T00:00:00Z'})})`;",
+  "await assert.rejects(collectSource(id,{deferred:true}));if(serverError)throw serverError;",
+  "const [run]=await sql`SELECT * FROM fetch_runs WHERE source_id=${id} ORDER BY id DESC LIMIT 1`;const [source]=await sql`SELECT collection_run_id,fail_count,health,cursor,next_fetch_at FROM sources WHERE id=${id}`;",
+  "assert.equal(source.fail_count,2);assert.equal(source.health,'degraded');assert.deepEqual(source.cursor,{initializedAt:'2026-01-01T00:00:00Z'});assert.equal(source.next_fetch_at.toISOString(),'2100-01-01T00:00:00.000Z');",
+  "if(durable){assert.equal(run.status,'running');assert.equal(run.finished_at,null);assert.equal(Number(source.collection_run_id),Number(run.id));const [intake]=await sql`SELECT finished_at FROM collection_intakes WHERE run_id=${run.id}`;assert.equal(intake.finished_at,null);assert.equal((await sql`SELECT count(*)::int n FROM collection_batches WHERE run_id=${run.id}`)[0].n,1);}",
+  "else{assert.equal(run.status,'failed');assert.ok(run.finished_at);assert.equal(run.error,'collection interrupted by shutdown');assert.equal(source.collection_run_id,null);}",
+  "}finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await sql`DELETE FROM collection_intakes WHERE source_id=${id}`;await sql`DELETE FROM sources WHERE id=${id}`;await stopBoss();await closeDb();}",
+ ].join('\n');
+ await promisify(execFile)(process.execPath,['--input-type=module','--eval',child,String(durable)],{cwd:process.cwd(),timeout:20000});
+});
