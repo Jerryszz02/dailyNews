@@ -4,87 +4,65 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 请求 | 执行已批准的 AIHOT 重构计划 P1–P5，分阶段实现与本地有界验证 |
-| 更新时间 | 2026-10-03（Asia/Shanghai） |
+| 请求 | 对比旧版、新版与固定 AIHOT，先制定新闻更新提速计划 |
+| 核对日期 | 2026-10-10（Europe/London） |
 | 项目根目录 | `/Users/jerryszz/Desktop/Projects/dailyNews` |
-| 工作模式 | 实施模式；独立 worktree，P5 分支 `agent/aihot-p5-bounded-trial` 依赖 P4/P3/P2/P1；规范目录与旧服务保留 |
-| 现行代码基准 | 交接 `ce3f9263c3901839a85794aecea8bc55e67bf0e4`；旧规则固定 `8519831714b0d6c8183336c81e8190dceddf7843` |
-| AIHOT 目标基准 | `3343fe2b20db4be7269113752d82d3992fc52b6b`；固定版本，不自动同步上游 |
-| 新计划状态 | P0 已批准；P1–P5 PR #15–#19 已建立，代码 CI 通过、未合并；P5 本次有界试运行已关闭，质量门槛尚未通过；未生产切换 |
+| 工作模式 | 仅代码调查与规划文档；独立 worktree，分支 `agent/news-refresh-performance-plan`；未实施产品改动 |
+| 当前代码基准 | 刷新远程后 `main=origin/main=7234523ca164b49a0fd3495548adf877ee2b834a`；PR #15–#19 已合并 |
+| 对照基准 | 旧版 `8519831714b0d6c8183336c81e8190dceddf7843`；AIHOT `3343fe2b20db4be7269113752d82d3992fc52b6b`，固定版本、不自动同步 |
+| 当前计划状态 | [新闻更新提速计划](news-refresh-performance-plan.md) **计划中，待确认**；尚无性能实验或优化收益 |
+| 原重构状态 | P1–P5 代码已合并；P5 有界真实试运行属于历史记录，质量门槛仍未通过；本次未验证生产部署 |
 
-本目录保存需求、方案与历史记录；当前已实现行为以对应分支代码以及 [现有架构](../architecture.md)、[运行手册](../runbook.md) 为准。新计划不会因为写入文档或建立 PR 就自动成为已实现事实。
+本目录保存目标、设计与验收基线。当前实现以对应提交的代码为准，不能把计划、历史 CI 或已合并状态当作已部署、已提速的证据。
 
 ## 优先阅读
 
-**[Daily News 基于 AIHOT 的重构计划](aihot-v2-refactor-plan.md)** 是本次实施基线，包含：
+1. **[新闻更新提速计划](news-refresh-performance-plan.md)**：本次审核入口。包含三套入口的差异、阶段耗时与处理数、提前识别无变化内容、持久队列交接、批次精选、回归与前后开销对照、迁移和回滚。
+2. **[基于 AIHOT 的重构计划](aihot-v2-refactor-plan.md)**：已批准的产品/架构基线。保留十个主分类；AI 沿用 AIHOT 评判、其他九类沿用 Daily News 规则；全部动态使用统一公开门槛；新 PostgreSQL 与旧库隔离。
+3. [实施记录](../refactor-runtime.md)、[P5 试运行记录](../p5-bounded-trial.md)：查看 2026-10-03 的历史实现与验证证据。实施记录中 PR 待合并、当时预览端口等文字是历史快照；当前合并状态以本次 Git/GitHub 核对为准，服务存活需重新检查。
 
-- AI 分类沿用 AIHOT 默认评判，其他九类保留 Daily News 现行规则；
-- 先分类、后策略路由，事件级判断与公开读取的适配；
-- 全部新闻采用 AIHOT 公开门槛；
-- 逐类采集迁移、原来源与禁用状态、独立数据库、历史/API 兼容与回滚；
-- DeepSeek 有界试运行、成本与质量记录、阶段任务和验收条件。
+当前规范 checkout 已包含 AIHOT web/api/worker、PostgreSQL、来源适配、十类与双策略、publication 和有界试运行能力。旧 `src/`、`scripts/news*.ts`、`api/` 等保留为兼容/迁移参照，不能继续把规范目录描述为仅运行旧 Vite 系统。实际访问的生产版本、worker、Cron、来源成功水位和健康状态本次未验证。
 
-规范 checkout/旧产品仍是 Vite + React + TypeScript 事件级简报，包含十类导航、事件归并、公共重要性、热点和冻结日报；现有生产形态由代码定义为 Supabase 持久状态与受保护刷新入口。后台的实际部署、Cron、数据量和健康状态本次未验证。
-
-实施分支已导入固定 AIHOT 的 web/api/worker 和 PostgreSQL 底座，离线运行已验证；分类和双策略本地出口通过，来源配置离线验证通过，P4 产品/API/日报公开契约已完成本地验收。P5 在独立库完成 14 个来源、31 条正常新增与 20 条历史资料的有界真实调用，生成真实 08:00 日报后已关闭。100 条新增目标和 200 条人工金标准未达到，提取与文字生成质量仍有未解决问题；不能宣称质量验收通过。详见 [实施记录](../refactor-runtime.md)与 [P5 试运行记录](../p5-bounded-trial.md)。
+P5 历史记录包含 14 个来源、31 条正常新增与 20 条历史资料，以及一次 24 条日报生成；100 条新增目标和 200 条人工金标准未达到，提取与文字生成质量仍有未解决问题。性能计划不扩充来源，也不把这些质量问题计为已解决。
 
 ## 文档集合与权威边界
 
 | 文档 | 定位与本次处理 |
 | --- | --- |
-| [aihot-v2-refactor-plan.md](aihot-v2-refactor-plan.md) | 已批准实施方案，集中描述产品、架构、数据、接口、试运行、实施和验收 |
-| [news-curation-refactor-plan.md](news-curation-refactor-plan.md) | 原管线设计与历史实施记录；新增适用范围说明，避免与未来全部新闻定义冲突 |
-| [source-collection-scaling-plan.md](source-collection-scaling-plan.md) | 原管线信源扩充与有界采集方案；保留作为来源迁移依据，并补入索引 |
-| [prd.md](prd.md) | 原产品需求与行为基线；重构版目标优先读新计划，实施时再同步 |
-| [technical-design.md](technical-design.md) | 原模块与契约设计，不代表未来 AIHOT 实现已存在 |
-| [database-design.md](database-design.md) | 原 Supabase/候选/快照方案；未来新库与迁移边界写在新计划中 |
-| [api-design.md](api-design.md) | 原 HTTP API 契约；新 API 与旧接口过渡在新计划中定义 |
-| [security-privacy.md](security-privacy.md) | 原权限、凭据及网络边界；仍用于来源适配的保留要求 |
-| [test-plan.md](test-plan.md) | 原系统验证方案；新计划单独列出未来需要运行的基准与迁移检查 |
-| [release-plan.md](release-plan.md) | 原部署流程；新系统生产切换与回滚另见新计划，当前没有发布动作 |
-| [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md) | 2026-07 的历史验收记录；不证明当前健康、监控存活或部署版本 |
+| [news-refresh-performance-plan.md](news-refresh-performance-plan.md) | 新增；更新延迟和重复处理开销的补充方案，待确认 |
+| [aihot-v2-refactor-plan.md](aihot-v2-refactor-plan.md) | 已批准基线；本次只同步 P1–P5 合并状态并链接补充方案 |
+| [news-curation-refactor-plan.md](news-curation-refactor-plan.md) | 原管线设计与历史实施记录，保留为非 AI 策略依据 |
+| [source-collection-scaling-plan.md](source-collection-scaling-plan.md) | 原信源扩充与有界采集设计，保留为来源迁移依据；本轮不扩源 |
+| [prd.md](prd.md) | 原产品需求基线；跨行业重构目标以 AIHOT 重构计划为准 |
+| [technical-design.md](technical-design.md) | 原模块与契约设计；本轮技术方案集中在提速计划 |
+| [database-design.md](database-design.md) | 原 Supabase 方案；新版数据库设计/迁移以代码及两份新计划为准 |
+| [api-design.md](api-design.md) | 原 HTTP 契约；新版公开接口见 [版本化契约](../../reference/public-v1.openapi.json) 与 [接口过渡](../legacy-api-transition.md) |
+| [security-privacy.md](security-privacy.md) | 原权限与网络边界；继续保留，不新增遥测服务或凭据流程 |
+| [test-plan.md](test-plan.md) | 原系统验证方案；提速实验、等价性和故障恢复验收集中在补充计划 |
+| [release-plan.md](release-plan.md) | 原发布流程；新版切换与本次增量迁移/回滚分别见两份新计划 |
+| [production-acceptance-2026-07-13.md](production-acceptance-2026-07-13.md) | 2026-07 历史验收，不证明当前健康、监控或部署版本 |
 
-既有 planning 文件中带日期的数量、性能和完成状态仅在原记录范围内解释。此次不把整个旧文档集重写成未来方案；重构实施时按阶段同步对应文档，保留历史与已实现事实的区别。
+根 README 与 [架构](../architecture.md)、[运行手册](../runbook.md) 是仓库说明；读取时须区分旧实现和新增入口。本次范围只含 planning，未全面重写这些文件。相关实现发生时再同 PR 同步，不把未来队列、表或参数先写成当前能力。
 
-## 本次核对的关键证据
+## 本次证据与检查
 
-| 证据 | 用途 |
-| --- | --- |
-| `AGENTS.md`、Git status/worktree、刷新后的 `origin/main` | 文档范围、版本基线、现有工作保护与用户确认边界 |
-| `src/types.ts`、`src/App.tsx`、`src/config/sources.ts`、`expandedSources.ts`、`xAccounts.ts` | 十类、来源栏目、偏好和现有入口 |
-| `src/lib/curation.ts`、`scoring.ts`、`newsOrdering.ts`、`dedupe.ts`、`trust.ts` | 区分当前事件编辑算法与兼容排序；确定非 AI 保留范围 |
-| `scripts/newsService.ts`、`newsRefresh.ts`、`xSource.ts` | 来源适配、处理阶段、状态与增量游标 |
-| `docs/architecture.md`、`docs/runbook.md`、现有 planning | 当前/历史/未来边界；禁止恢复已取消的正式 burn-in/soak |
-| 固定 AIHOT 的 `industry/`、`editorial/`、`publication/`、`events/`、`reports/`、worker 与 CI | 默认评分、分类顺序、公开门槛、队列、预算、迁移与验证命令；不可等同于运行验证 |
+- 已检查：AGENTS、Git status/worktree、刷新后的 origin/main、GitHub PR #15–#19 合并信息、旧/新包清单和入口；固定上游源码重新获取并核对 SHA。
+- 已追踪：旧刷新汇总与整池计算；新版身份/hash/revision、来源内部顺序详情、队列与重试、全局非 AI 重评及数据库锁、调度、公开门槛与缓存；现有回归测试范围。
+- 本地端口抽查：4173、5173、3300、3301、3310、3311 未发现监听；不推断其他进程或线上状态。本次没有启动服务。
+- 文档交付检查：planning 索引/本地链接 audit 和 `git diff --check`；实际结果在本次交付/PR 中报告。
+- 未执行：产品测试、构建、数据库迁移、真实采集/模型、优化前后实验、部署和生产健康检查。后续 PR CI 结果也不等于已完成性能基准。
 
-## 本次检查
+2026-10-03 的本地检查次数、调用费用和生成内容属于原阶段记录，本次没有重新验证；当前不复制为“本次通过”。
 
-P1 的类型、构建、迁移、后端 566 项 + 新增安全测试 2 项、网页 31 项、smoke 30 项及 Chrome 空页面已验证；详见 [实施记录](../refactor-runtime.md)。P2/P3 联合后端 604/604、P4 后端 618/618 与 31 项 smoke 及 Chrome 分类/详情通过；P5 新空库后端 634/634、完整类型检查与真实页面 smoke 通过，试运行结果另列；planning audit 与 whitespace 检查随 PR 执行。
-
-以下是文档 PR #14 的历史检查范围。实施阶段结果逐阶段记录，尚未执行的检查不计为通过。已核验 main 交接 SHA、AIHOT 固定 SHA 和规范目录干净状态；未检查生产健康。
-
-文档交付前执行 planning 索引/本地链接检查，以及 `git diff --check`；检查结果在本次交付记录/PR 中报告。本地未重跑产品单元、集成、数据库、构建或真实采集测试，因为这次只改规划文档；PR 可能触发现有 CI，其结果以对应提交检查为准，不能作为新框架已经运行的证据。
-
-AIHOT 的未来测试、有限真实试运行和质量指标在 [新计划的验证章节](aihot-v2-refactor-plan.md#11-验证与验收) 中，不能把计划命令视为已通过的检查。
-
-## 待确认与后续入口
+## 待确认与维护范围
 
 | 事项 | 状态 |
 | --- | --- |
-| 整份重构计划及其细化建议 | 2026-10-03 用户明确批准；执行 P1–P5 |
-| AI/非 AI 评判分工、全部新闻定义、DeepSeek 优先、固定上游版本 | 用户已确定；不重新当作开放问题 |
-| 统一热点、混合日报编排、本地独立 PostgreSQL、旧日报归档、试运行参数 | 已随计划批准；记录实测差异 |
-| 实际 DeepSeek 模型、凭据可用性、token 单价和费用 | 已用获准的既有凭据完成有界调用并关闭；233 次请求、USD 0.052668186 估算，模型与价格边界见 P5 记录 |
-| 生产服务器、域名、长期预算与生产切换 | 本地结果出来后再确定；批准计划不等于立即生产切换 |
-| 历史数据体量、旧 API 调用者、长期保留策略 | P1 盘点，切换前形成数据清单与兼容/归档方案 |
+| 本次提速方案及验收目标 | 待用户审核，之后才实施 S0–S4 |
+| 十类、固定上游、AI/非 AI 分工、统一公开门槛 | 已确定，继续保留 |
+| 用户访问的实际部署和版本、当前来源/调度/积压 | S0 需读取当前运行证据；本次待确认 |
+| 优化幅度、实际资源与费用 | 尚无基准，不承诺倍数或成本；拟议指标见补充计划 |
+| P5 质量缺口及真实调用边界 | 历史试运行已关闭；不因本计划自动重开或扩大预算 |
+| 生产服务器、域名与生产切换 | 另行确认；不修改 Vercel 自动部署状态 |
 
-修改现行系统仍按原代码契约与仓库规则交付。执行重构则先读新计划，按阶段补测试、同步文档、提交 PR；不得用“采用模板”省略来源映射、规则对照、数据读回或最终页面验证。
-
-## 文档维护范围
-
-- 不拆出第二套 PRD、数据库、API、发布和测试文档：集中维护已批准基线；实现阶段按实际差异更新。
-- 不新增 project brief、user flow、decision log：目标、流程和关键决策已在新计划内。
-- 实施时同步根 README、`docs/architecture.md`、`docs/runbook.md` 及对应设计/测试文档；明确旧系统与特性分支的实际状态。
-- 不追加历史生产验收窗口，不创建监控/heartbeat。正式 24 小时 burn-in 与七天 soak 已取消；未来有限试运行也不复用旧窗口。
-
-线上状态须通过对应部署、真实页面/API 和运行数据验证。`.production-acceptance/current/summary.json` 仅为历史记录；如需判断旧 observer 是否存活，必须运行项目规定的 status 命令并核对部署，但本次没有启动或检查它。
+本次维护索引及两份直接相关计划；不另建重复的 PRD、数据库/API/测试/发布文档，不新增 decision log 或 developer guide。保护既有未完成 worktree、数据和服务；不恢复已取消的 burn-in/soak、旧 observer 或 heartbeat。
