@@ -30,9 +30,10 @@ test('generates a category-stratified batch from current analyzed material, snap
  for(let i=0;i<ids.length;i++){
   const id=ids[i]!; const category=['ai','finance','sports'][i%3]!;
   await sql`INSERT INTO articles(id,source_id,identity_key,url,title,discovered_at,timeline_at,body_text,body_status,published_at,language) VALUES(${id},${source},${id},${`https://example.test/${id}`},${`原文${i}`},now(),now(),'Original evidence','ok',now(),'en')`;
-  const [n]=await sql`INSERT INTO analyses(article_id,input_revision,origin,category,title_zh,summary_zh,selected,score,policy_id,policy_version,input_signature) VALUES(${id},1,'rule',${category},${`标题${i}`},'摘要',false,60,'test','v1','test-signature') RETURNING id`;
-  await sql`INSERT INTO publications(article_id,source_id,title,summary,category,channel,url,discovered_at,timeline_at,sort_at,input_revision,analysis_id,story_id) VALUES(${id},${source},${`标题${i}`},'摘要',${category},'news',${`https://example.test/${id}`},now(),now(),now(),1,${n!.id},${i===0||i===3?story!.id:null})`;
+  const [n]=await sql`INSERT INTO analyses(article_id,input_revision,origin,category,title_zh,summary_zh,selected,score,policy_id,policy_version,input_signature,output) VALUES(${id},1,'rule',${category},${`标题${i}`},'摘要',false,60,'test','v1','test-signature',${sql.json({prefilter:category==='ai'?{label:i===0?'BLOCK':'PASS'}:null})}) RETURNING id`;
+  if(i!==0) await sql`INSERT INTO publications(article_id,source_id,title,summary,category,channel,url,discovered_at,timeline_at,sort_at,input_revision,analysis_id,story_id) VALUES(${id},${source},${`标题${i}`},'摘要',${category},'news',${`https://example.test/${id}`},now(),now(),now(),1,${n!.id},${i===3||i===6?story!.id:null})`;
  }
+ await sql`UPDATE articles SET discovered_at='2199-01-01',timeline_at='2199-01-01' WHERE id IN ${sql(ids)}`;
  // Shared-suite databases contain other categories. A later unrelated item must not make
  // this test mistake global sampling for a filter restricted to its own three categories.
  await sql`INSERT INTO articles(id,source_id,identity_key,url,title,discovered_at,timeline_at,body_text,body_status,published_at,language) VALUES(${foreignId},${source},${foreignId},${`https://example.test/${foreignId}`},'外来分类原文','2200-01-01','2200-01-01','Original evidence','ok',now(),'en')`;
@@ -52,6 +53,8 @@ test('generates a category-stratified batch from current analyzed material, snap
  assert.ok(detail.tasks.some(t=>t.snapshot.relationship==='merged'));
  assert.ok(detail.tasks.some(t=>t.snapshot.relationship==='unmerged'));
  assert.ok(detail.tasks.every(t=>t.mode==='assisted'&&t.version===0&&t.answer===null));
+ assert.ok(articleTasks.filter(t=>t.snapshot.article.category==='ai').every(t=>['BLOCK','PASS'].includes(t.snapshot.article.aiRelevanceDecision!)));
+ assert.ok(articleTasks.some(t=>t.snapshot.article.articleId===ids[0]&&t.snapshot.article.aiRelevanceDecision==='BLOCK'),'an unpublished blocked article remains in the labeling pool');
  assert.deepEqual(await createReviewBatch(b,actor),{batchId,created:false});
  await assert.rejects(createReviewBatch({...b,count:9},actor),/内容不同/);
  await sql`UPDATE articles SET revision=2,title='Changed title',body_text='Changed evidence' WHERE id=${detail.tasks[0]!.snapshot.article.articleId}`;
@@ -63,7 +66,7 @@ test('saves each judgment, retries once without duplicate revisions, detects sta
  const detail=(await reviewBatch(batchId))!;const task=detail.tasks.find(t=>t.kind==='article'&&t.snapshot.article.category==='ai')!;
  const before=await sql`SELECT * FROM publications WHERE article_id=${task.snapshot.article.articleId}`;
  const [{n:receipts}]=await sql<{n:number}[]>`SELECT count(*)::int AS n FROM receipts`;
- const answer={classification:'ok',quality:'ok',selection:'reject',note:'我的判断'} as const;
+ const answer={classification:'ok',quality:'ok',selection:'reject',aiRelevance:'relevant',note:'我的判断'} as const;
  const b={requestId:`answer-${T}`,version:0,status:'completed' as const,answer};
  const saved=await saveReviewAnswer(task.id,b,actor);assert.equal(saved!.task.version,1);
  assert.deepEqual(saved!.task.answer,answer);
@@ -115,7 +118,7 @@ test('admin review read/generate/save/export require login and writes require CS
 test('simultaneous editors cannot overwrite answers; concurrent retry creates only one revision',async()=>{
  const detail=(await reviewBatch(batchId))!;
  const task=detail.tasks.find(t=>t.status==='pending'&&t.kind==='article')!;
- const payload={version:0,status:'completed' as const,answer:{classification:'uncertain' as const,quality:'uncertain' as const,selection:'uncertain' as const}};
+ const payload={version:0,status:'completed' as const,answer:{classification:'uncertain' as const,quality:'uncertain' as const,selection:'uncertain' as const,aiRelevance:'uncertain' as const}};
  const writes=await Promise.allSettled([
   saveReviewAnswer(task.id,{...payload,requestId:`concurrent-a-${T}`},actor),
   saveReviewAnswer(task.id,{...payload,requestId:`concurrent-b-${T}`},actor),
@@ -151,6 +154,31 @@ test('normalizes obsolete dependent choices and rejects mixed task dimensions; u
  assert.equal(selectionGold([{...t,status:'completed',answer:{classification:'uncertain',quality:'ok',selection:'select'}}]).length,0);
  assert.equal(selectionGold([{...t,status:'completed',answer:{classification:'ok',quality:'ok',selection:'uncertain'}}])[0]!.gold.decision,'either');
  const current=(await reviewBatch(batchId))!.tasks.find(r=>r.id===t.id)!;
- const saved=await saveReviewAnswer(t.id,{requestId:`normalize-${T}`,version:current.version,status:'completed',answer:{classification:'ok',category:'finance',quality:'ok',qualityReasons:['contamination'],selection:'select'}},actor);
+ const saved=await saveReviewAnswer(t.id,{requestId:`normalize-${T}`,version:current.version,status:'completed',answer:{classification:'ok',category:'finance',quality:'ok',qualityReasons:['contamination'],selection:'select',aiRelevance:'relevant'}},actor);
  assert.equal(saved!.task.answer!.category,undefined);assert.equal(saved!.task.answer!.qualityReasons,undefined);
+});
+
+
+test('AI relevance is independent of selection, required on new tasks, and preserved in exports',async()=>{
+ const detail=(await reviewBatch(batchId))!;
+ const task=detail.tasks.find(t=>t.kind==='article')!;
+ assert.equal(task.snapshot.annotationVersion,2);
+ const answer={classification:'ok',quality:'ok',selection:'reject'} as const;
+ await assert.rejects(saveReviewAnswer(task.id,{requestId:`no-ai-relevance-${T}`,version:task.version,status:'completed',answer},actor),/单独判断/);
+ const saved=await saveReviewAnswer(task.id,{requestId:`ai-relevance-${T}`,version:task.version,status:'completed',answer:{...answer,aiRelevance:'relevant'}},actor);
+ assert.equal(saved!.task.answer!.selection,'reject');
+ assert.equal(saved!.task.answer!.aiRelevance,'relevant','a relevant article can correctly be unselected');
+ const exported=JSON.parse((await exportReview('json',batchId)).content);
+ assert.equal(exported.tasks.find((t:{id:string})=>t.id===task.id).answer.aiRelevance,'relevant');
+ assert.ok(exported.progress.dimensions.aiRelevance.relevant>=1);
+ assert.ok((await exportReview('csv',batchId)).content.includes('"aiRelevance","aiRelevanceDecision"'));
+ assert.doesNotThrow(()=>validateAnswer('article','completed',answer,1),'old tasks remain compatible without fabricated relevance labels');
+ assert.throws(()=>validateAnswer('relation','completed',{relation:'same_event',aiRelevance:'relevant'},2),/只填写关系/);
+});
+
+test('assisted progress and exports never provide formal accuracy or false-block acceptance',async()=>{
+ const expected={status:'not_ready',reason:'blind_holdout_required',classificationAccuracy:null,aiFalseBlockRate:null,minimumBlindArticles:200,minimumAiRelevant:50};
+ assert.deepEqual((await reviewOverview()).progress.acceptance,expected);
+ assert.deepEqual((await reviewBatch(batchId))!.progress.acceptance,expected);
+ assert.deepEqual(JSON.parse((await exportReview('json',batchId)).content).progress.acceptance,expected);
 });

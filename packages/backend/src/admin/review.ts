@@ -12,6 +12,7 @@ const answerSchema = z.object({
   classification: z.enum(['ok','change','uncertain']).optional(), category: z.string().max(40).optional(),
   quality: z.enum(['ok','problem','uncertain']).optional(),
   qualityReasons: z.array(z.enum(['fact_translation','number_unit','qualification','attribution','contamination','other'])).max(6).optional(),
+  aiRelevance: z.enum(['relevant','irrelevant','uncertain']).optional(),
   selection: z.enum(['select','reject','uncertain']).optional(), relation: z.enum(['same_event','development','unrelated','uncertain']).optional(), note: z.string().max(4000).optional(),
 }).strict();
 const saveSchema = z.object({ requestId, version: z.number().int().nonnegative(), status: z.enum(['completed','skipped','later']), answer: answerSchema }).strict();
@@ -37,12 +38,14 @@ async function taskById(id: string, db: Db = sql): Promise<ReviewTask | null> {
   return row ?? null;
 }
 function progress(tasks: ReviewTask[]): ReviewProgress {
-  const p: ReviewProgress = {total:tasks.length,completed:0,pending:0,skipped:0,later:0,byCategory:[],dimensions:{}};
+  // All supported tasks are assisted. Completion counts cannot satisfy independent acceptance.
+  const p: ReviewProgress = {total:tasks.length,completed:0,pending:0,skipped:0,later:0,byCategory:[],dimensions:{},
+    acceptance:{status:'not_ready',reason:'blind_holdout_required',classificationAccuracy:null,aiFalseBlockRate:null,minimumBlindArticles:200,minimumAiRelevant:50}};
   const cats = new Map<string,{category:string;total:number;completed:number}>();
   for (const t of tasks) {
     p[t.status]++;
     const c = cats.get(t.stratum) ?? {category:t.stratum,total:0,completed:0}; c.total++; if (t.status === 'completed') c.completed++; cats.set(t.stratum,c);
-    if (t.status === 'completed' && t.answer) for (const k of ['classification','quality','selection','relation'] as const) {
+    if (t.status === 'completed' && t.answer) for (const k of ['classification','quality','aiRelevance','selection','relation'] as const) {
       const value = t.answer[k]; if (value) { const d = p.dimensions[k] ?? {}; d[value] = (d[value] ?? 0)+1; p.dimensions[k] = d; }
     }
   }
@@ -71,7 +74,7 @@ export async function createReviewBatch(input: ReviewCreate, actor: string) {
        coalesce(p.title,n.title_zh,a.title) AS title,a.title AS "originalTitle",coalesce(p.summary,n.summary_zh) AS summary,
        coalesce(a.body_text,a.excerpt) AS "bodyOriginal",tr.body_text AS "bodyZh",a.url,s.name AS "sourceName",s.kind AS "sourceKind",s.tier AS "sourceTier",s.first_party AS "firstParty",a.language,
        a.published_at AS "publishedAt",coalesce(p.category,n.category) AS category,coalesce(p.selected,n.selected) AS selected,coalesce(p.score,n.score) AS score,
-       n.model,n.policy_id AS "policyId",n.policy_version AS "policyVersion",a.backfill,a.body_status AS "bodyStatus",st.title AS "storyTitle",p.fact_id AS "factId",p.story_id AS "storyId"
+       n.output->'prefilter'->>'label' AS "aiRelevanceDecision",n.model,n.policy_id AS "policyId",n.policy_version AS "policyVersion",a.backfill,a.body_status AS "bodyStatus",st.title AS "storyTitle",p.fact_id AS "factId",p.story_id AS "storyId"
       FROM articles a JOIN sources s ON s.id=a.source_id
       JOIN LATERAL (SELECT * FROM analyses x WHERE x.article_id=a.id AND x.input_revision=a.revision ORDER BY x.id DESC LIMIT 1) n ON true
       LEFT JOIN publications p ON p.article_id=a.id AND p.input_revision=a.revision AND p.analysis_id=n.id
@@ -101,8 +104,8 @@ export async function createReviewBatch(input: ReviewCreate, actor: string) {
     const id = `review-${randomUUID()}`;
     await tx`INSERT INTO review_batches(id,request_id,request_hash,label,mode,created_by) VALUES(${id},${b.requestId},${hash},${b.label},'assisted',${actor})`;
     let position=0;
-    for (const a of articles) await tx`INSERT INTO review_tasks(id,batch_id,position,kind,mode,stratum,snapshot_key,snapshot) VALUES(${randomUUID()},${id},${position++},'article','assisted',${a.category ?? 'unclassified'},${keyFor(a)},${tx.json({article:a} as never)})`;
-    for (const pair of pairs.slice(0,Math.min(relationSlots,b.count-articles.length))) await tx`INSERT INTO review_tasks(id,batch_id,position,kind,mode,stratum,snapshot_key,snapshot) VALUES(${randomUUID()},${id},${position++},'relation','assisted',${`relation-${pair.relationship}`},${keyFor(pair.a,pair.b)},${tx.json({article:pair.a,related:pair.b,relationship:pair.relationship} as never)})`;
+    for (const a of articles) await tx`INSERT INTO review_tasks(id,batch_id,position,kind,mode,stratum,snapshot_key,snapshot) VALUES(${randomUUID()},${id},${position++},'article','assisted',${a.category ?? 'unclassified'},${keyFor(a)},${tx.json({article:a,annotationVersion:2} as never)})`;
+    for (const pair of pairs.slice(0,Math.min(relationSlots,b.count-articles.length))) await tx`INSERT INTO review_tasks(id,batch_id,position,kind,mode,stratum,snapshot_key,snapshot) VALUES(${randomUUID()},${id},${position++},'relation','assisted',${`relation-${pair.relationship}`},${keyFor(pair.a,pair.b)},${tx.json({article:pair.a,related:pair.b,relationship:pair.relationship,annotationVersion:2} as never)})`;
     await audit(actor,'review.generate',`review:${id}`,null,null,{count:position,mode:'assisted'},{db:tx,requestId:b.requestId});
     return {batchId:id,created:true};
   });
@@ -116,7 +119,7 @@ export async function saveReviewAnswer(id: string, input: ReviewSave, actor: str
     await tx`SELECT id FROM review_tasks WHERE id=${id} FOR UPDATE`;
     const t=await taskById(id,tx); if (!t) return null;
     if(t.version!==b.version) throw new Conflict('标注已被修改，请刷新后再保存；当前选择尚未写入');
-    validateAnswer(t.kind,b.status,b.answer);
+    validateAnswer(t.kind,b.status,b.answer,t.snapshot.annotationVersion ?? 1);
     await tx`INSERT INTO review_revisions(task_id,version,request_id,request_hash,status,answer,actor) VALUES(${id},${t.version+1},${b.requestId},${hash},${b.status},${tx.json(b.answer as never)},${actor})`;
     await tx`UPDATE review_tasks SET version=version+1,status=${b.status},answer=${tx.json(b.answer as never)},updated_at=now() WHERE id=${id}`;
     await audit(actor,'review.answer',`review-task:${id}`,null,{version:t.version,status:t.status},{version:t.version+1,status:b.status},{db:tx,requestId:b.requestId});
@@ -130,18 +133,19 @@ export function normalizeReviewAnswer(input: ReviewAnswer): ReviewAnswer {
   if (answer.quality !== 'problem') delete answer.qualityReasons;
   return answer;
 }
-export function validateAnswer(kind: string,status: string,a: ReviewAnswer) {
+export function validateAnswer(kind: string,status: string,a: ReviewAnswer,annotationVersion=1) {
   if (a.category && ![...CATEGORIES.map(c=>c.key),'unrelated','insufficient'].includes(a.category)) bad('请选择有效分类');
   if (status !== 'completed') return;
   if (kind==='relation') {
     if(!a.relation) bad('请选择新闻关系');
-    if(a.classification || a.quality || a.selection) bad('关系任务只填写关系判断');
+    if(a.classification || a.quality || a.selection || a.aiRelevance) bad('关系任务只填写关系判断');
     return;
   }
   if(a.relation) bad('文章任务不填写关系判断');
   if (!a.classification || !a.quality || !a.selection) bad('请分别判断分类、标题摘要和精选');
   if(a.classification==='change'&&!a.category) bad('请选择修改后的分类');
   if(a.quality==='problem'&&!a.qualityReasons?.length) bad('请选择至少一种问题');
+  if(annotationVersion>=2&&!a.aiRelevance) bad('请单独判断是否与人工智能相关；这不同于是否值得精选');
 }
 export function selectionGold(tasks: ReviewTask[]) {
   return tasks.filter(t=>t.kind==='article'&&t.status==='completed'&&t.answer?.classification!=='uncertain'&&(t.answer?.classification==='change'?t.answer.category:t.snapshot.article.category)==='ai'&&t.answer?.selection).map(t=>{
@@ -151,7 +155,7 @@ export function selectionGold(tasks: ReviewTask[]) {
 }
 export function reviewCsv(tasks: ReviewTask[], revisions: Array<Record<string, unknown>> = []) {
   const cell=(v:unknown)=>{let s=typeof v==='object'&&v!==null?JSON.stringify(v):String(v??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
-  const rows=[['taskId','kind','mode','status','version','articleId','inputRevision','title','category','classification','correctedCategory','quality','qualityReasons','selection','relation','note','snapshot','answer','createdAt','updatedAt','revisionHistory'],...tasks.map(t=>[t.id,t.kind,t.mode,t.status,t.version,t.snapshot.article.articleId,t.snapshot.article.inputRevision,t.snapshot.article.title,t.snapshot.article.category,t.answer?.classification,t.answer?.category,t.answer?.quality,t.answer?.qualityReasons,t.answer?.selection,t.answer?.relation,t.answer?.note,t.snapshot,t.answer,t.createdAt,t.updatedAt,revisions.filter(r=>r.task_id===t.id)])];
+  const rows=[['taskId','kind','mode','status','version','articleId','inputRevision','title','category','classification','correctedCategory','quality','qualityReasons','aiRelevance','aiRelevanceDecision','selection','relation','note','snapshot','answer','createdAt','updatedAt','revisionHistory'],...tasks.map(t=>[t.id,t.kind,t.mode,t.status,t.version,t.snapshot.article.articleId,t.snapshot.article.inputRevision,t.snapshot.article.title,t.snapshot.article.category,t.answer?.classification,t.answer?.category,t.answer?.quality,t.answer?.qualityReasons,t.answer?.aiRelevance,t.snapshot.article.aiRelevanceDecision,t.answer?.selection,t.answer?.relation,t.answer?.note,t.snapshot,t.answer,t.createdAt,t.updatedAt,revisions.filter(r=>r.task_id===t.id)])];
   return '\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n');
 }
 export async function exportReview(format: string,batchId?:string) {
@@ -160,5 +164,5 @@ export async function exportReview(format: string,batchId?:string) {
   if(format==='gold')return {content:selectionGold(tasks).map(r=>JSON.stringify(r)).join('\n'),type:'application/x-ndjson; charset=utf-8',extension:'jsonl'};
   const revisions=await sql`SELECT r.* FROM review_revisions r JOIN review_tasks t ON t.id=r.task_id WHERE (${batchId ?? null}::text IS NULL OR t.batch_id=${batchId ?? null}) ORDER BY r.task_id,r.version`;
   if(format==='csv')return {content:reviewCsv(tasks,revisions),type:'text/csv; charset=utf-8',extension:'csv'};
-  return {content:JSON.stringify({schemaVersion:1,exportedAt:new Date().toISOString(),mode:'assisted',progress:progress(tasks),tasks,revisions},null,2),type:'application/json; charset=utf-8',extension:'json'};
+  return {content:JSON.stringify({schemaVersion:2,exportedAt:new Date().toISOString(),mode:'assisted',progress:progress(tasks),tasks,revisions},null,2),type:'application/json; charset=utf-8',extension:'json'};
 }

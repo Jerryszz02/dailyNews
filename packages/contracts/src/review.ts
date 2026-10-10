@@ -2,6 +2,7 @@
 export type ReviewStatus = 'pending' | 'completed' | 'skipped' | 'later';
 export type ReviewQualityReason = 'fact_translation' | 'number_unit' | 'qualification' | 'attribution' | 'contamination' | 'other';
 export interface ReviewAnswer {
+  aiRelevance?: 'relevant' | 'irrelevant' | 'uncertain';
   classification?: 'ok' | 'change' | 'uncertain';
   category?: string;
   quality?: 'ok' | 'problem' | 'uncertain';
@@ -16,11 +17,12 @@ export interface ReviewMaterial {
   url: string; sourceName: string; sourceKind: string; sourceTier: string; firstParty: boolean; language: string | null;
   publishedAt: string | null; category: string | null; selected: boolean | null; score: number | null;
   model: string | null; policyId: string | null; policyVersion: string | null;
+  aiRelevanceDecision?: string | null;
   backfill: boolean; bodyStatus: string; storyTitle: string | null; factId: number | null; storyId: number | null;
 }
 export interface ReviewTask {
   id: string; batchId: string; position: number; kind: 'article' | 'relation'; mode: 'assisted'; stratum: string;
-  snapshot: { article: ReviewMaterial; related?: ReviewMaterial; relationship?: 'merged' | 'unmerged' };
+  snapshot: { article: ReviewMaterial; related?: ReviewMaterial; relationship?: 'merged' | 'unmerged'; annotationVersion?: number };
   version: number; status: ReviewStatus; answer: ReviewAnswer | null; updatedAt: string; createdAt: string;
 }
 export interface ReviewProgress {
@@ -28,6 +30,12 @@ export interface ReviewProgress {
   byCategory: Array<{ category: string; total: number; completed: number }>;
   /** Explicit judgments only; uncertain, skipped and later are separate. */
   dimensions: Record<string, Record<string, number>>;
+  /** Assisted labels cannot satisfy formal acceptance without an independent blind holdout. */
+  acceptance: {
+    status: 'not_ready'; reason: 'blind_holdout_required';
+    classificationAccuracy: null; aiFalseBlockRate: null;
+    minimumBlindArticles: 200; minimumAiRelevant: 50;
+  };
 }
 export interface ReviewBatch { id: string; label: string; mode: 'assisted'; createdAt: string; count: number }
 export interface ReviewOverview { batches: ReviewBatch[]; progress: ReviewProgress }

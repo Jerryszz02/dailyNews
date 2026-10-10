@@ -62,7 +62,7 @@ function ReviewEditor({ task, onSaved, onPrevious, hasPrevious, onReload }: { ta
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
   async function save(status: Exclude<ReviewStatus, "pending">) {
-    if (status === "completed") { const invalid = reviewValidation(draft, task.kind); if (invalid) { setMessage(invalid); return; } }
+    if (status === "completed") { const invalid = reviewValidation(draft, task.kind, task.snapshot.annotationVersion); if (invalid) { setMessage(invalid); return; } }
     const answer = { ...draft };
     if (answer.classification !== "change") delete answer.category;
     if (answer.quality !== "problem") delete answer.qualityReasons;
@@ -75,6 +75,8 @@ function ReviewEditor({ task, onSaved, onPrevious, hasPrevious, onReload }: { ta
   return <Card title={task.kind === "relation" ? "判断两篇新闻的关系" : "你的判断"} right={<Badge tone={task.status === "completed" ? "ok" : "muted"}>{statuses[task.status]}</Badge>}><fieldset disabled={pending !== null} aria-label="标注判断" className="space-y-6">
     <p className="text-[12px] leading-6 text-ink-3">没有预选答案。拿不准不算 OK；判断只保存到标注记录。当前为辅助标注，已展示系统答案。</p>
     {task.kind === "relation" ? <><p className="text-[13px] text-ink-3">系统当前：{task.snapshot.relationship === "merged" ? "已合并到同一事件" : "尚未合并到同一事件"}。</p><Choices label="两篇新闻的关系" value={draft.relation} options={[["same_event", "同一次事件"], ["development", "同一事件的新进展"], ["unrelated", "无关"], ["uncertain", "拿不准"]]} onChange={(relation) => set({ relation })} /></> : <>
+      <Choices label="这篇新闻是否与 AI 相关？" value={draft.aiRelevance} options={[["relevant", "与 AI 相关"], ["irrelevant", "与 AI 无关"], ["uncertain", "拿不准"]]} onChange={(aiRelevance) => set({ aiRelevance })} />
+      <p className="text-[12px] leading-6 text-ink-3">根据原文判断是否实质涉及 AI，与重要性/是否精选分开。{(task.snapshot.annotationVersion ?? 1) >= 2 ? "这项需要独立选择。" : "这是旧版任务，这项可选补填；原答案不会自动补全。"}</p>
       <Choices label="分类对不对？" value={draft.classification} options={[["ok", "分类 OK"], ["change", "修改分类"], ["uncertain", "拿不准"]]} onChange={(classification) => set({ classification, category: undefined })} />
       {draft.classification === "change" ? <Choices label="应该归到哪个分类？" value={draft.category} options={[...CATEGORIES.map((c): [string, string] => [c.key, c.label]), ["unrelated", "与本站无关"], ["insufficient", "材料不足"]]} onChange={(category) => set({ category })} /> : null}
       <Choices label="标题和摘要忠于原文吗？" value={draft.quality} options={[["ok", "OK"], ["problem", "有问题"], ["uncertain", "无法判断"]]} onChange={(quality) => set({ quality, qualityReasons: [] })} />
@@ -105,9 +107,10 @@ export default function Review({ loaderData }: Route.ComponentProps) {
     prepareId.current = null;
     setPrepareMessage(""); navigate(`?${new URLSearchParams({ batch: result.batchId })}`);
   }
-  return <AdminPage title="新闻标注" subtitle="对照原文，点选分类、摘要和精选判断。保存后继续，已保存的内容可随时回看修改。" actions={<Button busy={pending !== null} onClick={prepare}>准备 20 条</Button>}>
+  return <AdminPage title="新闻标注" subtitle="对照原文，分别判断 AI 相关性、分类、摘要和精选。保存后继续，已保存的内容可随时回看修改。" actions={<Button busy={pending !== null} onClick={prepare}>准备 20 条</Button>}>
     {prepareMessage ? <p role="status" className="mb-4 rounded-control bg-bg-sunk p-3 text-[13px] text-ink-2">{prepareMessage}</p> : null}
     <div className="mb-5 flex flex-wrap items-center gap-3 text-[13px] text-ink-3"><span className="num">已完成 {progress.completed} / {progress.total}</span><span>待标注 {progress.pending}</span><span>跳过 {progress.skipped}</span><span>稍后 {progress.later}</span><Badge>辅助标注</Badge></div>
+    <p className="mb-5 rounded-control bg-bg-sunk p-3 text-[13px] leading-6 text-ink-2">正式验收尚未就绪：当前辅助标注不能计算正式分类准确率或 AI 误拦截率。独立盲标尚未实施；验收需要至少 {progress.acceptance?.minimumBlindArticles ?? 200} 篇独立盲标文章，其中至少 {progress.acceptance?.minimumAiRelevant ?? 50} 篇与 AI 相关。</p>
     {progress.total > 0 && progress.completed === progress.total ? <p role="status" className="mb-4 text-[13px] text-ok">本批已全部保存。可以回看修改，或准备下一批。</p> : null}
     {overview.batches.length ? <div className="mb-5 flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-[13px] text-ink-2">本批<Select aria-label="选择标注批次" value={detail?.batch.id ?? ""} onChange={(e) => navigate(`?${new URLSearchParams({ batch: e.target.value })}`)}>{overview.batches.map((b) => <option key={b.id} value={b.id}>{b.label} · {b.count} 条</option>)}</Select></label>{["json", "csv", "gold"].map((format) => <a key={format} className="text-[13px] text-accent" href={`/api/admin/review/export?${new URLSearchParams({ format, ...(detail ? { batchId: detail.batch.id } : {}) })}`} download>导出 {format === "gold" ? "AI 精选标注" : format.toUpperCase()}</a>)}<Link to="/admin/selectbench" className="text-[13px] text-accent">查看模型评测</Link></div> : null}
     {task ? <><div className="mb-4"><label className="flex items-center gap-2 text-[13px] text-ink-2">回看或继续<Select aria-label="选择标注新闻" value={task.id} onChange={(e) => toTask(e.target.value)}>{tasks.map((t, i) => <option key={t.id} value={t.id}>{i + 1}. {statuses[t.status]} · {t.kind === "relation" ? "关系：" : ""}{t.snapshot.article.title.slice(0, 45)}</option>)}</Select></label></div>

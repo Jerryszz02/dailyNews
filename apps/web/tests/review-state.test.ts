@@ -15,9 +15,34 @@ test("classification changes and quality problems require their own detail", () 
   assert.ok(reviewValidation({ ...answer, category: "science" }, "article"));
   assert.equal(reviewValidation({ ...answer, category: "science", qualityReasons: ["number_unit"] }, "article"), null);
 });
+test("version 2 requires explicit AI relevance independently of category and selection", () => {
+  const answer = { classification: "ok", quality: "ok", selection: "select" } as const;
+  assert.ok(reviewValidation(answer, "article", 2));
+  assert.ok(reviewValidation({ ...answer, category: "ai" }, "article", 2));
+  for (const aiRelevance of ["relevant", "irrelevant", "uncertain"] as const) {
+    assert.equal(reviewValidation({ ...answer, aiRelevance }, "article", 2), null);
+    assert.equal(reviewValidation({ ...answer, selection: "reject", aiRelevance }, "article", 2), null);
+  }
+  assert.ok(reviewValidation({ aiRelevance: "relevant" }, "article", 2), "other dimensions remain required");
+});
+test("legacy answers remain valid without relevance and drafts never infer it from selection", () => {
+  const answer = { classification: "ok", quality: "ok", selection: "reject" } as const;
+  assert.equal(reviewValidation(answer, "article"), null);
+  assert.equal(reviewValidation(answer, "article", 1), null);
+  assert.equal(reviewDraft(answer).aiRelevance, undefined);
+  assert.equal(reviewDraft({ ...answer, selection: "select" }).aiRelevance, undefined);
+  assert.equal(reviewDraft({ ...answer, aiRelevance: "relevant" }).aiRelevance, "relevant");
+  assert.equal(reviewValidation({ ...answer, aiRelevance: "irrelevant" }, "article", 1), null);
+  assert.deepEqual(answer, { classification: "ok", quality: "ok", selection: "reject" });
+});
 test("relation tasks require only relationship and saved arrays are not mutated", () => {
   assert.ok(reviewValidation({}, "relation"));
   assert.equal(reviewValidation({ relation: "uncertain" }, "relation"), null);
+  assert.equal(reviewValidation({ relation: "same_event" }, "relation", 2), null);
+  for (const aiRelevance of ["relevant", "irrelevant", "uncertain"] as const) {
+    assert.ok(reviewValidation({ relation: "same_event", aiRelevance }, "relation", 2));
+    assert.ok(reviewValidation({ relation: "same_event", aiRelevance }, "relation", 1));
+  }
   const original = { qualityReasons: ["other" as const] };
   const draft = reviewDraft(original);
   draft.qualityReasons!.push("number_unit");
