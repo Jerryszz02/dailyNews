@@ -32,7 +32,8 @@ interface Route {
   url: string;
   /** Not an editorial source: no analysis; the post goes straight to event grouping as discussion evidence. */
   signal: boolean;
-  historical: boolean;
+  /** Scheduling lane: every explicit/stale backfill waits behind genuine incremental news. */
+  backfill: boolean;
 }
 
 /**
@@ -53,7 +54,7 @@ async function route(articleId: string, db: Db): Promise<Route | null> {
   const wantsBody = row.config.fetchPublicContent === true || !!row.config.detail || row.kind === "web_list";
   const needsPage = !signal && (wantsBody || (row.bare && pageFetchable(row.url, row.kind)));
   const needsXArticle = row.kind === "x_search" && (!signal || (row.participation_mode === "hot_signal" && !historical));
-  return { step: pending && (needsPage || needsXArticle) ? "extract" : "analyze", url: row.url, signal, historical };
+  return { step: pending && (needsPage || needsXArticle) ? "extract" : "analyze", url: row.url, signal, backfill: row.backfill };
 }
 
 /**
@@ -82,14 +83,14 @@ export async function queueProcessing(articleId: string, opts: { step?: Step; at
   const attemptTag = queued.processing_attempt_tag ?? undefined;
   if (step === "extract") return enqueue(QUEUES.extractBody, { articleId }, {
     singletonKey: articleId, group: { id: collectionDomain(r.url) },
-    priority: r.historical ? PRIORITY.history : PRIORITY.live,
+    priority: r.backfill ? PRIORITY.history : PRIORITY.live,
   }, opts.db);
   if (r.signal && !attemptTag) {
-    return enqueue(QUEUES.group, { articleId, signalOnly: true }, { singletonKey: articleId, priority: r.historical ? PRIORITY.history : PRIORITY.liveSignal }, opts.db);
+    return enqueue(QUEUES.group, { articleId, signalOnly: true }, { singletonKey: articleId, priority: r.backfill ? PRIORITY.history : PRIORITY.liveSignal }, opts.db);
   }
   const tagged = !!attemptTag;
   return enqueue(QUEUES.analyze, tagged ? { articleId, attemptTag } : { articleId },
-    { singletonKey: tagged ? `manual:analyze:${articleId}:${attemptTag}` : articleId, priority: r.historical ? PRIORITY.history : PRIORITY.live }, opts.db);
+    { singletonKey: tagged ? `manual:analyze:${articleId}:${attemptTag}` : articleId, priority: r.backfill ? PRIORITY.history : PRIORITY.live }, opts.db);
 }
 
 /** 信源转为编辑来源时补齐未分析的资料；其余新任务由安全网继续接手。 */
@@ -142,7 +143,7 @@ async function processRevision(articleId: string, row: NonNullable<Awaited<Retur
   if (row.participation_mode !== "editorial") {
     // Normally queued straight for grouping (queueProcessing); an explicit re-evaluation lands here.
     const { group } = await settleNonEditorial(articleId, opts.batchEditorial);
-    if (group) await enqueue(QUEUES.group, { articleId, signalOnly: true }, { singletonKey: articleId, priority: PRIORITY.liveSignal });
+    if (group) await enqueue(QUEUES.group, { articleId, signalOnly: true }, { singletonKey: articleId, priority: row.backfill ? PRIORITY.history : PRIORITY.liveSignal });
     return { state: "skipped" };
   }
   try {
@@ -162,7 +163,7 @@ async function processRevision(articleId: string, row: NonNullable<Awaited<Retur
     }
     await publishArticle(articleId, { batchEditorial: opts.batchEditorial });
     // History is archived but founds no event (isHistorical).
-    if (result.output.relevance === "pass" && !row.historical) await enqueue(QUEUES.group, { articleId }, { singletonKey: articleId, priority: PRIORITY.live });
+    if (result.output.relevance === "pass" && !row.historical) await enqueue(QUEUES.group, { articleId }, { singletonKey: articleId, priority: row.backfill ? PRIORITY.history : PRIORITY.live });
     await sql`UPDATE articles SET processing_attempts = 0, processing_retry_at = NULL, processing_queued_at = NULL
               WHERE id = ${articleId} AND revision = ${row.revision}`;
     return { state: result.output.relevance };
