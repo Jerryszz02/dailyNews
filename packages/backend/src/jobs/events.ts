@@ -3,7 +3,7 @@ import type { PgBoss } from "pg-boss";
 import { groupArticle } from "../events/group.ts";
 import { composeStoryDigest } from "../events/digest.ts";
 import { settleNonEditorial } from "./content.ts";
-import { trialArticleAllowed, trialStoryAllowed } from "../dailynews/trial.ts";
+import { boundedTrialEnabled, trialArticleAllowed, trialStoryAllowed } from "../dailynews/trial.ts";
 import { enqueue, QUEUES, work } from "./queue.ts";
 
 export async function registerEventJobs(boss: PgBoss) {
@@ -11,8 +11,9 @@ export async function registerEventJobs(boss: PgBoss) {
   await work(boss, QUEUES.group, { localConcurrency: 1, pollingIntervalSeconds: 0.5 }, async ({ articleId, signalOnly, force }) => {
     if (!await trialArticleAllowed(articleId)) return { verdict: "outside-trial" };
     // A discussion post comes here straight from collection: record it first (settleNonEditorial).
-    if (signalOnly && !force && !(await settleNonEditorial(articleId)).group) return { verdict: "skipped" };
-    const result = await groupArticle(articleId, { signalOnly, force });
+    const batchEditorial = !boundedTrialEnabled() && !force;
+    if (signalOnly && !force && !(await settleNonEditorial(articleId, batchEditorial)).group) return { verdict: "skipped" };
+    const result = await groupArticle(articleId, { signalOnly, force, batchEditorial });
     if (result.storyId && !result.verdict.startsWith("signal")) {
       await enqueue(QUEUES.digest, { storyId: result.storyId }, { singletonKey: `story:${result.storyId}`, startAfter: 60 });
     }

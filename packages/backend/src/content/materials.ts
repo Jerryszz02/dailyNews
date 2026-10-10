@@ -51,6 +51,9 @@ export interface MaterialInput {
   backfill?: string | null;
   /** Keep an existing id when importing history. */
   id?: string;
+  /** Collector-only checkpoint of a successful authoritative detail read. */
+  detailCheckedAt?: Date;
+  listingSignature?: string;
 }
 
 export interface MaterialResult {
@@ -128,7 +131,22 @@ export function identityKeyFor(m: MaterialInput): string {
  * so every change gets its own revision number. Returns whether processing is needed.
  */
 export async function upsertMaterial(m: MaterialInput, db: Db = sql): Promise<MaterialResult> {
-  const run = (tx: Db) => upsertIn(tx, m);
+  const run = async (tx: Db) => {
+    const checkpoint = !!(m.detailCheckedAt && Number.isFinite(m.detailCheckedAt.getTime()) && m.listingSignature);
+    // Successful detail checkpoints write the article even without a content revision. Acquire
+    // publication before that row write, so intake's final source update cannot invert admin locks.
+    if (checkpoint) await lockEditorialProjection(tx as Tx);
+    const result = await upsertIn(tx, m);
+    // A successful recheck with identical content still records the listing/update watermark.
+    // Mirrors cannot change the authoritative owner's checkpoint or create fake revisions.
+    if (!result.created && m.detailCheckedAt && Number.isFinite(m.detailCheckedAt.getTime()) && m.listingSignature) {
+      await tx`UPDATE articles SET source_detail_checked_at = ${m.detailCheckedAt},
+        source_listing_signature = ${m.listingSignature},
+        source_updated_at = coalesce(${m.sourceUpdatedAt && Number.isFinite(m.sourceUpdatedAt.getTime()) ? m.sourceUpdatedAt : null}, source_updated_at)
+        WHERE id = ${result.articleId} AND source_id = ${m.sourceId}`;
+    }
+    return result;
+  };
   return "begin" in db ? (db as typeof sql).begin(run) : run(db);
 }
 
@@ -144,17 +162,34 @@ async function upsertIn(db: Db, m: MaterialInput): Promise<MaterialResult> {
   const t = decideTimeline(m.publishedAt, discoveredAt, m.backfill);
   const newId = m.id ?? newArticleId();
   const hash = contentHash({ title, bodyText: m.bodyText, excerpt: m.excerpt });
-  const [inserted] = await db<{ id: string }[]>`
+  type StoredMaterial = { id: string; source_id: string; revision: number; content_hash: string | null; backfill: boolean; title: string; body_text: string | null; excerpt: string | null };
+  // Read existing identities before attempting an insert. In one statement this also keeps the
+  // new-material path at one round trip. The snapshot is a valid observation for a no-op; a
+  // potential change is re-read under the established publication -> article lock order below.
+  const [observed] = await db<(StoredMaterial & { created: boolean; has_discovery: boolean })[]>`
+    WITH existing AS MATERIALIZED (
+      SELECT a.id, a.source_id, a.revision, a.content_hash, a.backfill, a.title, a.body_text, a.excerpt,
+        EXISTS (SELECT 1 FROM article_discoveries d WHERE d.article_id = a.id
+          AND d.source_id = ${m.sourceId} AND d.via = ${m.via}) AS has_discovery
+      FROM articles a WHERE a.identity_key = ${identityKey}
+    ), inserted AS (
     INSERT INTO articles (id, source_id, identity_key, url, title, author, language, published_at, published_at_claim,
       discovered_at, source_updated_at, timeline_at, backfill, backfill_reason, revision, content_hash, excerpt,
-      body_text, body_html, body_status, media, x_post, raw)
-    VALUES (${newId}, ${m.sourceId}, ${identityKey}, ${m.url}, ${title}, ${m.author ?? null}, ${m.language ?? null},
+      body_text, body_html, body_status, media, x_post, raw, source_listing_signature, source_detail_checked_at)
+    SELECT ${newId}, ${m.sourceId}, ${identityKey}, ${m.url}, ${title}, ${m.author ?? null}, ${m.language ?? null},
       ${t.publishedAt}, ${m.publishedAt ?? null}, ${discoveredAt}, ${m.sourceUpdatedAt ?? null}, ${t.timelineAt},
       ${t.backfill}, ${t.backfillReason}, 1, ${hash}, ${m.excerpt ?? null}, ${m.bodyText ?? null}, ${m.bodyHtml ?? null},
       ${m.bodyStatus ?? (m.bodyText ? "ok" : "pending")}, ${db.json((m.media ?? []) as never)},
-      ${m.xPost ? db.json(m.xPost as never) : null}, ${m.raw === undefined ? null : db.json(m.raw as never)})
-    ON CONFLICT (identity_key) DO NOTHING RETURNING id`;
-  if (inserted) {
+      ${m.xPost ? db.json(m.xPost as never) : null}, ${m.raw === undefined ? null : db.json(m.raw as never)},
+      ${m.listingSignature ?? null}, ${m.detailCheckedAt && Number.isFinite(m.detailCheckedAt.getTime()) ? m.detailCheckedAt : null}
+    WHERE NOT EXISTS (SELECT 1 FROM existing)
+    ON CONFLICT (identity_key) DO NOTHING
+    RETURNING id, source_id, revision, content_hash, backfill, title, body_text, excerpt
+    )
+    SELECT existing.*, false AS created FROM existing
+    UNION ALL
+    SELECT inserted.*, false AS has_discovery, true AS created FROM inserted`;
+  if (observed?.created) {
     await db`INSERT INTO article_revisions (article_id, revision, content_hash, title, body_text)
              VALUES (${newId}, 1, ${hash}, ${title}, ${m.bodyText ?? null})`;
     await db`INSERT INTO article_discoveries (article_id, source_id, via, discovered_at)
@@ -162,10 +197,22 @@ async function upsertIn(db: Db, m: MaterialInput): Promise<MaterialResult> {
     return { articleId: newId, created: true, revised: false, backfill: t.backfill };
   }
 
+  if (observed && (observed.source_id !== m.sourceId || observed.content_hash === contentHash({
+    title, bodyText: m.bodyText ?? observed.body_text, excerpt: m.excerpt ?? observed.excerpt,
+  }))) {
+    if (!observed.has_discovery) {
+      await db`INSERT INTO article_discoveries (article_id, source_id, via, discovered_at)
+               VALUES (${observed.id}, ${m.sourceId}, ${m.via}, ${discoveredAt}) ON CONFLICT DO NOTHING`;
+    }
+    return { articleId: observed.id, created: false, revised: false, backfill: observed.backfill };
+  }
+
+  // A concurrent first insert can win after the CTE snapshot, making both CTE branches empty.
+  // It, imported baselines and all possible revisions use the locked re-read and original rules.
   // A real revision must remove the old selected projection in the same transaction. Take the
   // publication lock before the article row lock, matching publishing and admin mutations.
   await lockEditorialProjection(db as Tx);
-  const [existing] = await db<{ id: string; source_id: string; revision: number; content_hash: string | null; backfill: boolean; title: string; body_text: string | null; excerpt: string | null }[]>`
+  const [existing] = await db<StoredMaterial[]>`
     SELECT id, source_id, revision, content_hash, backfill, title, body_text, excerpt FROM articles WHERE identity_key = ${identityKey} FOR UPDATE`;
   await db`INSERT INTO article_discoveries (article_id, source_id, via, discovered_at)
            VALUES (${existing!.id}, ${m.sourceId}, ${m.via}, ${discoveredAt}) ON CONFLICT DO NOTHING`;

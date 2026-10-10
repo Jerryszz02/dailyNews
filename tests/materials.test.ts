@@ -9,6 +9,7 @@ import { after, before, test } from "node:test";
 import { closeDb, sql } from "@aihot/backend/db";
 import { upsertMaterial } from "@aihot/backend/content/materials";
 import { identityKeyForUrl } from "@aihot/backend/lib/url";
+import { lockEditorialProjection } from "@aihot/backend/publication/reprocess";
 
 const SOURCE = `test-materials-${tag()}`;
 const OTHER = `test-materials-other-${tag()}`;
@@ -166,4 +167,40 @@ test("characters lost in transit are no revision, lost or restored", async () =>
   assert.equal((await upsertMaterial(edited(garbled[1]!))).revised, true, "a real change is one, lost characters or not");
   for (const report of [edited(clean), edited(garbled[2]!)]) assert.equal((await upsertMaterial(report)).revised, false);
   assert.equal((await state(first.articleId)).revision, 2);
+});
+
+
+test("unchanged reports and mirror discoveries proceed while editorial publication holds its lock", async () => {
+  const url = `https://example.com/independent-discovery-${tag()}`;
+  const own = { sourceId: SOURCE, url, title: "Stored title", bodyText: "Extracted body", excerpt: "Summary", via: "fetch" as const };
+  const first = await upsertMaterial(own);
+  await sql.begin(async (held) => {
+    await lockEditorialProjection(held);
+    // A short DB lock deadline makes this a deterministic regression for the old global lock path.
+    await sql.begin(async (tx) => {
+      await tx`SET LOCAL lock_timeout = '150ms'`;
+      const unchanged = await upsertMaterial({ ...own, bodyText: undefined }, tx);
+      assert.deepEqual(unchanged, { articleId: first.articleId, created: false, revised: false, backfill: false });
+      const mirror = await upsertMaterial({ ...own, sourceId: OTHER, title: "Mirror rendering", via: "ingest" }, tx);
+      assert.equal(mirror.revised, false);
+    });
+    await assert.rejects(sql.begin(async (tx) => {
+      await tx`SET LOCAL lock_timeout = '150ms'`;
+      return upsertMaterial({ ...own, title: "Actual edit" }, tx);
+    }), (error: unknown) => (error as { code?: string }).code === "55P03", "real changes still wait for the projection lock");
+  });
+  const discoveries = await sql`SELECT source_id, via FROM article_discoveries WHERE article_id = ${first.articleId}`;
+  assert.ok(discoveries.some((d) => d.source_id === OTHER && d.via === "ingest"));
+  assert.equal((await upsertMaterial({ ...own, title: "Actual edit" })).revised, true);
+});
+
+test("a fast discovery remains part of the caller's transaction and rolls back with it", async () => {
+  const url = `https://example.com/discovery-rollback-${tag()}`;
+  const first = await upsertMaterial({ sourceId: SOURCE, url, title: "Stored", via: "fetch" });
+  await assert.rejects(sql.begin(async (tx) => {
+    await upsertMaterial({ sourceId: OTHER, url, title: "Mirror", via: "ingest" }, tx);
+    throw new Error("caller rollback");
+  }), /caller rollback/);
+  const discoveries = await sql`SELECT source_id FROM article_discoveries WHERE article_id = ${first.articleId}`;
+  assert.ok(!discoveries.some((d) => d.source_id === OTHER));
 });

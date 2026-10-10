@@ -324,13 +324,25 @@ export async function trialEmbeddingItemAllowed(kind: "article" | "fact" | "stor
 export async function trialQueueAllowed(name: string, data: unknown, db: Db = sql): Promise<boolean> {
   const trial = await assertTrialRuntime(db);
   if (!trial) return true;
-  const value = data as { articleId?: unknown; storyId?: unknown; sourceId?: unknown };
+  const value = data as { articleId?: unknown; storyId?: unknown; sourceId?: unknown; batchId?: unknown; itemId?: unknown };
   if (["content.analyze", "content.extract-body", "events.group"].includes(name)) {
     return typeof value?.articleId === "string" && await trialArticleAllowed(value.articleId, db);
   }
   if (name === "events.digest") return typeof value?.storyId === "number" && await trialStoryAllowed(value.storyId, db);
   if (name === "sources.fetch") return trial.status === "open" && typeof value?.sourceId === "string" &&
     await trialSourceAllowed(value.sourceId, db);
+  if (name === "collection.store" || name === "collection.detail") {
+    if (trial.status !== "open") return false;
+    const id = name === "collection.store" ? value?.batchId : value?.itemId;
+    if (typeof id !== "number" || !Number.isSafeInteger(id) || id < 1) return false;
+    const [row] = name === "collection.store"
+      ? await db<{ source_id: string }[]>`SELECT i.source_id FROM collection_intakes i
+          JOIN collection_batches b ON b.run_id=i.run_id WHERE b.id=${id} AND i.trial_id=${trial.id}`
+      : await db<{ source_id: string }[]>`SELECT i.source_id FROM collection_intakes i
+          JOIN collection_batches b ON b.run_id=i.run_id JOIN collection_items c ON c.batch_id=b.id
+          WHERE c.id=${id} AND i.trial_id=${trial.id}`;
+    return !!row && await trialSourceAllowed(row.source_id, db);
+  }
   // No automatic X shards, MP account polling, translation, media, notification or republishing.
   return false;
 }

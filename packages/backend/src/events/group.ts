@@ -222,6 +222,8 @@ export interface GroupResult {
 }
 
 export interface GroupOptions {
+  /** Normal worker flow may batch global selection; direct/admin callers remain synchronous. */
+  batchEditorial?: boolean;
   /** Discussion evidence only (hot_signal sources): attach to a story, never create one. */
   signalOnly?: boolean;
   /** An explicit regroup: drop the automatic membership and decide again (manual decisions still win). A report waiting in regroup_pending is regrouped the same way. */
@@ -250,7 +252,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
   const manual = await manualDecision(sql, articleId);
   if (manual) {
     await markGrouped(articleId);
-    await publishArticle(articleId);
+    await publishArticle(articleId, { batchEditorial: opts.batchEditorial });
     return { verdict: "manual", factId: manual.factId };
   }
   const left = opts.force || a.regroup_pending ? await resetAutomatic(articleId) : [];
@@ -258,7 +260,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
   // History founds no event and adds no heat (isHistorical); a regroup takes it out of any it joined.
   if (isHistorical(a)) {
     await markGrouped(articleId);
-    await publishArticle(articleId);
+    await publishArticle(articleId, { batchEditorial: opts.batchEditorial });
     return { verdict: "historical" };
   }
 
@@ -271,7 +273,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
   const kept = await currentMembership(articleId);
   if (kept) {
     await markGrouped(articleId);
-    await publishArticle(articleId);
+    await publishArticle(articleId, { batchEditorial: opts.batchEditorial });
     return { verdict: "kept", factId: kept.factId, storyId: kept.storyId };
   }
 
@@ -282,7 +284,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
   const frame = (corrected ? null : an?.output?.fact ?? null) as Record<string, any> | null;
   if (!an || an.relevance !== "pass") {
     await markGrouped(articleId);
-    await publishArticle(articleId);
+    await publishArticle(articleId, { batchEditorial: opts.batchEditorial });
     return { verdict: "standalone" };
   }
   const title = publication?.title || an.title_zh || a.title;
@@ -347,7 +349,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
     } catch (error) {
       // A failed identity call must not block publication: the report stays standalone for now.
       await markGrouped(articleId);
-      await publishArticle(articleId);
+      await publishArticle(articleId, { batchEditorial: opts.batchEditorial });
       throw error;
     }
   }
@@ -392,7 +394,7 @@ async function decide(articleId: string, opts: GroupOptions): Promise<GroupResul
     return { manual: null, factId: fact, storyId: story };
   });
   for (const id of receipts) await completeReceipt(sql, id);
-  await publishArticle(articleId);
+  await publishArticle(articleId, { batchEditorial: opts.batchEditorial });
   if (written.manual) return { verdict: "manual", factId: written.manual.factId };
   if (!written.storyId || !written.factId) return { verdict: "standalone" };
   const result: GroupResult = { verdict, factId: written.factId!, storyId: written.storyId! };

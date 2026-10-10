@@ -1,7 +1,7 @@
 // Job queue on PostgreSQL (pg-boss). Every queue is declared here with the data its jobs carry and its
 // retry policy: business code enqueues by name, the worker registers one handler per queue (jobs/*.ts),
 // and both sides are checked against JobData, so a payload cannot drift between producer and consumer.
-import { PgBoss, type SendOptions, type WorkOptions } from "pg-boss";
+import { PgBoss, type JobWithMetadata, type SendOptions, type WorkOptions } from "pg-boss";
 import { config } from "../config.ts";
 import { sql, type Db } from "../db.ts";
 import { trialQueueAllowed } from "../dailynews/trial.ts";
@@ -17,6 +17,9 @@ export interface JobData {
   "events.group": { articleId: string; signalOnly?: boolean; force?: boolean };
   "events.digest": { storyId: number; afterCorrection?: boolean };
   "sources.fetch": { sourceId: string; force?: boolean };
+  "collection.store": { batchId: number };
+  "collection.detail": { itemId: number };
+  "publication.editorial-batch": Record<string, never>;
   "sources.fetch-x": { key: string; sourceIds: string[] };
   "sources.mp": { sourceId: string; reason?: "schedule" | "manual" };
   "notify.selected": { articleId: string; attempt?: number };
@@ -31,6 +34,9 @@ export const QUEUES = {
   group: "events.group",
   digest: "events.digest",
   fetchSource: "sources.fetch",
+  storeCollection: "collection.store",
+  detailCollection: "collection.detail",
+  editorialBatch: "publication.editorial-batch",
   fetchXShard: "sources.fetch-x",
   mpCheck: "sources.mp",
   notifySelected: "notify.selected",
@@ -47,6 +53,9 @@ const QUEUE_OPTIONS: Record<QueueName, QueueOptions> = {
   [QUEUES.group]: { policy: "short", retryLimit: 4, retryDelay: 20, retryBackoff: true, expireInSeconds: 600 },
   [QUEUES.digest]: { policy: "short", retryLimit: 3, retryDelay: 60, retryBackoff: true, expireInSeconds: 900 },
   [QUEUES.fetchSource]: { policy: "short", retryLimit: 0, expireInSeconds: 600 },
+  [QUEUES.storeCollection]: { policy: "short", retryLimit: 4, retryDelay: 30, retryBackoff: true, expireInSeconds: 600 },
+  [QUEUES.detailCollection]: { policy: "short", retryLimit: 2, retryDelay: 30, retryBackoff: true, expireInSeconds: 120 },
+  [QUEUES.editorialBatch]: { policy: "short", retryLimit: 3, retryDelay: 2, expireInSeconds: 600 },
   [QUEUES.fetchXShard]: { policy: "short", retryLimit: 0, expireInSeconds: 900 },
   [QUEUES.mpCheck]: { policy: "short", retryLimit: 3, retryDelay: 60, retryBackoff: true, expireInSeconds: 600 },
   [QUEUES.notifySelected]: { policy: "short", retryLimit: 0, expireInSeconds: 300 },
@@ -128,16 +137,41 @@ export async function retryReleasedReceiptJobs(): Promise<number> {
 /** The worker's handler for one queue (jobs/*.ts), called with each job's data. */
 export async function work<Q extends QueueName>(boss: PgBoss, name: Q, options: WorkOptions, handler: (data: JobData[Q]) => Promise<unknown>): Promise<void> {
   await ensureQueue(name);
-  await boss.work<JobData[Q]>(name, options, async ([job]) => (job ? handler(job.data) : undefined));
+  await boss.work<JobData[Q]>(name, { ...options, includeMetadata: true }, async ([job]) => {
+    if (!job) return;
+    const metadata = job as JobWithMetadata<JobData[Q]>;
+    const started = performance.now();
+    try {
+      const result = await handler(job.data);
+      const metrics = queueMetrics(metadata, performance.now() - started);
+      // pg-boss already persists output; adding counters here costs no extra per-article SQL writes.
+      return { ...(result && typeof result === "object" ? result : { result }), metrics };
+    } catch (error) {
+      // Preserve the original error/receiptId used by recovery. Logs contain only timings and IDs.
+      console.error(JSON.stringify({ level: "error", msg: "queue attempt failed", queue: name,
+        metrics: queueMetrics(metadata, performance.now() - started) }));
+      throw error;
+    }
+  });
+}
+
+export function queueMetrics(job: Pick<JobWithMetadata, "id" | "createdOn" | "startAfter" | "startedOn" | "retryCount">, elapsedMs: number) {
+  const eligibleAt = Math.max(new Date(job.createdOn).getTime(), new Date(job.startAfter).getTime());
+  const startedAt = new Date(job.startedOn).getTime();
+  return { jobId: job.id, attempt: job.retryCount + 1,
+    elapsedMs: Math.max(0, Math.round(elapsedMs)),
+    queueWaitMs: Math.max(0, startedAt - eligibleAt),
+    ageMs: Math.max(0, startedAt - new Date(job.createdOn).getTime()) };
 }
 
 // Scheduled task bookkeeping: every run leaves a row, so operators see the latest result.
 
 export async function recordRun<T>(job: string, fn: () => Promise<T>): Promise<T> {
   const [row] = await sql<{ id: number }[]>`INSERT INTO job_runs (job) VALUES (${job}) RETURNING id`;
+  const started = performance.now();
   try {
     const result = await fn();
-    const detail = result && typeof result === "object" ? result : { result };
+    const detail = { ...(result && typeof result === "object" ? result : { result }), elapsedMs: Math.round(performance.now() - started) };
     await sql`UPDATE job_runs SET status = 'ok', finished_at = now(), detail = ${sql.json(detail as never)} WHERE id = ${row!.id}`;
     return result;
   } catch (error) {

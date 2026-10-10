@@ -1,4 +1,5 @@
 // Outbound HTTP for collectors, the image proxy and the paid APIs: SSRF guard, routing, limits.
+import { currentRequestSignal } from "./request-scope.ts";
 import net from "node:net";
 import { addAbortListener } from "node:events";
 import { Agent, ProxyAgent, fetch as undiciFetch, type Dispatcher } from "undici";
@@ -37,6 +38,7 @@ function dispatcherFor(viaProxy: boolean): Dispatcher | undefined {
 }
 
 export interface GuardedFetchOptions {
+  signal?: AbortSignal;
   method?: string;
   headers?: Record<string, string>;
   body?: string;
@@ -64,7 +66,7 @@ export const DEFAULT_UA = `Mozilla/5.0 (compatible; ${SITE.crawlerName}/1.0; +${
 export async function guardedFetch(input: string, opts: GuardedFetchOptions = {}): Promise<GuardedResponse> {
   // One budget includes DNS, every redirect and the body. Restarting it at each hop allowed a
   // nominal 20 s image request to occupy the API for minutes.
-  const signal = AbortSignal.timeout(opts.timeoutMs ?? 20_000);
+  const signal = AbortSignal.any([AbortSignal.timeout(opts.timeoutMs ?? 20_000), ...[opts.signal,currentRequestSignal()].filter((s): s is AbortSignal=>!!s)]);
   const route = opts.route ?? "egress";
   const check = (target: string) => withinDeadline(
     assertPublicUrl(target, config.allowPrivateNetworkFetch, proxied(new URL(target), route)), signal,

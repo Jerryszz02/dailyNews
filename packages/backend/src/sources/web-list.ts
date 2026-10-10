@@ -380,7 +380,7 @@ export interface DetailNeed {
  * text ("Published Time: …", "# Heading"), so that paid rendering is bought only when such a rule is
  * needed; selectors and page metadata read the page's own HTML.
  */
-export async function fetchDetail(url: string, source: SourceRow, need: DetailNeed): Promise<{ publishedAt: Date | null; title: string | null; summary: string | null; body: ExtractedBody | null }> {
+export async function fetchDetail(url: string, source: SourceRow, need: DetailNeed, opts: { strictHttp?: boolean } = {}): Promise<{ publishedAt: Date | null; title: string | null; summary: string | null; body: ExtractedBody | null }> {
   const d = source.config.detail ?? {};
   const jinaListing = String(source.config.url ?? "").startsWith(JINA_PREFIX);
   const dateInJina = need.date && jinaListing && !!d.publishedAtRegex;
@@ -388,8 +388,14 @@ export async function fetchDetail(url: string, source: SourceRow, need: DetailNe
   const jina = dateInJina || titleInJina ? (await jinaRead(url, { purpose: "source_detail", subject: `source:${source.id}` })).raw : null;
   let html: string | null = null;
   let body: ExtractedBody | null = null;
-  if ((need.date && !dateInJina) || (need.title && !titleInJina) || need.summary) {
+  if ((need.date && !dateInJina) || (need.title && !titleInJina) || need.summary || need.body) {
     const res = await guardedFetch(url, { timeoutMs: 20_000 });
+    if(opts.strictHttp && res.status!==200) {
+      const error=new FetchError(`detail HTTP ${res.status}`,res.status);
+      const retry=res.headers.get("retry-after");
+      if(retry)(error as FetchError & {retryAfterSeconds?:number}).retryAfterSeconds=/^\d+$/.test(retry)?Number(retry):Math.max(0,(Date.parse(retry)-Date.now())/1000);
+      throw error;
+    }
     if (res.status === 200) {
       html = res.text();
       if (need.body && /html/.test(res.headers.get("content-type") ?? "")) {

@@ -149,7 +149,19 @@ test("a failed search fails every account of the shard and moves no watermark", 
 
 test("due accounts are scheduled by shard, not one by one", async () => {
   await sql`UPDATE sources SET next_fetch_at = now() - interval '1 minute' WHERE id = ${IDS[1]!}`;
-  await scheduleDueSources(1000);
+  // This fixture checks shard membership, independently of earlier suites' queued workload.
+  const previousHigh = process.env.COLLECTION_BACKLOG_HIGH;
+  const previousLow = process.env.COLLECTION_BACKLOG_LOW;
+  process.env.COLLECTION_BACKLOG_HIGH = "1000000000";
+  process.env.COLLECTION_BACKLOG_LOW = "999999999";
+  try {
+    await scheduleDueSources(1000);
+  } finally {
+    if (previousHigh === undefined) delete process.env.COLLECTION_BACKLOG_HIGH;
+    else process.env.COLLECTION_BACKLOG_HIGH = previousHigh;
+    if (previousLow === undefined) delete process.env.COLLECTION_BACKLOG_LOW;
+    else process.env.COLLECTION_BACKLOG_LOW = previousLow;
+  }
   const jobs = await sql<{ name: string; data: { sourceId?: string; sourceIds?: string[] } }[]>`
     SELECT name, data FROM pgboss.job WHERE created_on > now() - interval '1 minute' AND (data->>'sourceId' IN ${sql(IDS)} OR data->'sourceIds' ?| ${IDS})`;
   assert.equal(jobs.filter((j) => j.name === "sources.fetch").length, 0, "no account of a shard is fetched on its own");

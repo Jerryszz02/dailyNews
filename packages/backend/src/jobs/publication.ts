@@ -4,6 +4,7 @@ import { sql } from "../db.ts";
 import { republishSource } from "../publication/publish.ts";
 import { computeHotRanking } from "../events/hot.ts";
 import { QUEUES, work } from "./queue.ts";
+import { reconcileEditorialBatch } from "../publication/batching.ts";
 
 export const republishKey = (sourceId: string) => `republish.source:${sourceId}`;
 
@@ -13,6 +14,7 @@ async function progress(sourceId: string, value: Record<string, unknown>) {
 }
 
 export async function registerPublicationJobs(boss: PgBoss) {
+  await work(boss, QUEUES.editorialBatch, { localConcurrency: 1, pollingIntervalSeconds: 0.5 }, async () => reconcileEditorialBatch());
   await work(boss, QUEUES.republishSource, { localConcurrency: 1, pollingIntervalSeconds: 2 }, async ({ sourceId }) => {
     const startedAt = new Date().toISOString();
     await progress(sourceId, { status: "running", done: 0, total: null, startedAt });

@@ -12,7 +12,8 @@ import { isHistorical } from "../content/materials.ts";
 import { publishArticle } from "../publication/publish.ts";
 import { BudgetExceededError, ProviderRejectedError, ReceiptBusyError, ReceiptUnknownError } from "../providers/receipts.ts";
 import { ModelOutputError } from "../providers/llm.ts";
-import { assertTrialRuntime, trialArticleAllowed } from "../dailynews/trial.ts";
+import { assertTrialRuntime, boundedTrialEnabled, trialArticleAllowed } from "../dailynews/trial.ts";
+import { collectionDomain } from "../lib/collection-domain.ts";
 import { enqueue, QUEUES, shutdownSignal, work } from "./queue.ts";
 
 /** Minutes to wait after the n-th failed attempt; one more failure after the last ends in "failed". */
@@ -28,6 +29,7 @@ type Step = "extract" | "analyze";
 
 interface Route {
   step: Step;
+  url: string;
   /** Not an editorial source: no analysis; the post goes straight to event grouping as discussion evidence. */
   signal: boolean;
   historical: boolean;
@@ -51,7 +53,7 @@ async function route(articleId: string, db: Db): Promise<Route | null> {
   const wantsBody = row.config.fetchPublicContent === true || !!row.config.detail || row.kind === "web_list";
   const needsPage = !signal && (wantsBody || (row.bare && pageFetchable(row.url, row.kind)));
   const needsXArticle = row.kind === "x_search" && (!signal || (row.participation_mode === "hot_signal" && !historical));
-  return { step: pending && (needsPage || needsXArticle) ? "extract" : "analyze", signal, historical };
+  return { step: pending && (needsPage || needsXArticle) ? "extract" : "analyze", url: row.url, signal, historical };
 }
 
 /**
@@ -78,7 +80,10 @@ export async function queueProcessing(articleId: string, opts: { step?: Step; at
   if (!queued) return null;
   // Extraction and the sweep only carry articleId; retain the current evaluation's paid identity.
   const attemptTag = queued.processing_attempt_tag ?? undefined;
-  if (step === "extract") return enqueue(QUEUES.extractBody, { articleId }, { singletonKey: articleId, priority: r.historical ? PRIORITY.history : PRIORITY.live }, opts.db);
+  if (step === "extract") return enqueue(QUEUES.extractBody, { articleId }, {
+    singletonKey: articleId, group: { id: collectionDomain(r.url) },
+    priority: r.historical ? PRIORITY.history : PRIORITY.live,
+  }, opts.db);
   if (r.signal && !attemptTag) {
     return enqueue(QUEUES.group, { articleId, signalOnly: true }, { singletonKey: articleId, priority: r.historical ? PRIORITY.history : PRIORITY.liveSignal }, opts.db);
   }
@@ -104,7 +109,7 @@ export async function resumeSourceArticles(sourceId: string, db: Db): Promise<vo
  * A post of a non-editorial source: recorded (hot_signal material only feeds heat; isolated material
  * never reaches public surfaces). Returns whether it is discussion evidence to group.
  */
-export async function settleNonEditorial(articleId: string): Promise<{ group: boolean }> {
+export async function settleNonEditorial(articleId: string, batchEditorial = false): Promise<{ group: boolean }> {
   const row = await sql.begin(async (tx) => {
     // 与信源更新保持先信源、后文章的锁顺序；等待晋升提交后重新读取参与方式。
     await tx`SELECT s.id FROM sources s JOIN articles a ON a.source_id = s.id WHERE a.id = ${articleId} FOR SHARE OF s`;
@@ -115,7 +120,7 @@ export async function settleNonEditorial(articleId: string): Promise<{ group: bo
     return settled;
   });
   if (!row) return { group: false };
-  await publishArticle(articleId);
+  await publishArticle(articleId, { batchEditorial });
   return { group: row.participation_mode === "hot_signal" && !isHistorical(row) };
 }
 
@@ -132,11 +137,11 @@ export async function processArticle(articleId: string, opts: { attemptTag?: str
   return row ? processRevision(articleId, row, opts) : { state: "missing" };
 }
 
-async function processRevision(articleId: string, row: NonNullable<Awaited<ReturnType<typeof processingInput>>>, opts: { attemptTag?: string }): Promise<{ state: string }> {
+async function processRevision(articleId: string, row: NonNullable<Awaited<ReturnType<typeof processingInput>>>, opts: { attemptTag?: string; batchEditorial?: boolean }): Promise<{ state: string }> {
   if (!await trialArticleAllowed(articleId)) return { state: "outside-trial" };
   if (row.participation_mode !== "editorial") {
     // Normally queued straight for grouping (queueProcessing); an explicit re-evaluation lands here.
-    const { group } = await settleNonEditorial(articleId);
+    const { group } = await settleNonEditorial(articleId, opts.batchEditorial);
     if (group) await enqueue(QUEUES.group, { articleId, signalOnly: true }, { singletonKey: articleId, priority: PRIORITY.liveSignal });
     return { state: "skipped" };
   }
@@ -155,7 +160,7 @@ async function processRevision(articleId: string, row: NonNullable<Awaited<Retur
       await queueProcessing(articleId, { step: "extract" });
       return { state: "fetching-body" };
     }
-    await publishArticle(articleId);
+    await publishArticle(articleId, { batchEditorial: opts.batchEditorial });
     // History is archived but founds no event (isHistorical).
     if (result.output.relevance === "pass" && !row.historical) await enqueue(QUEUES.group, { articleId }, { singletonKey: articleId, priority: PRIORITY.live });
     await sql`UPDATE articles SET processing_attempts = 0, processing_retry_at = NULL, processing_queued_at = NULL
@@ -208,7 +213,7 @@ export async function registerContentJobs(boss: PgBoss, concurrency = Number(pro
     const row = await processingInput(articleId);
     if (!row) return { state: "missing" };
     try {
-      return await processRevision(articleId, row, { attemptTag });
+      return await processRevision(articleId, row, { attemptTag, batchEditorial: !boundedTrialEnabled() });
     } catch (error) {
       return afterFailure(articleId, row.revision, error);
     }
@@ -220,7 +225,7 @@ export async function registerContentJobs(boss: PgBoss, concurrency = Number(pro
  * on the excerpt it has ("unconfirmed" body, never a wrong one).
  */
 export async function registerExtractionJobs(boss: PgBoss) {
-  await work(boss, QUEUES.extractBody, { localConcurrency: 4, pollingIntervalSeconds: 2 }, async ({ articleId }) => {
+  await work(boss, QUEUES.extractBody, { localConcurrency: 4, groupConcurrency: 2, pollingIntervalSeconds: 2 }, async ({ articleId }) => {
     if (!await trialArticleAllowed(articleId)) return { state: "outside-trial" };
     const [input] = await sql<{ revision: number }[]>`SELECT revision FROM articles WHERE id = ${articleId}`;
     if (!input) return { state: "missing" };

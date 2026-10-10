@@ -1,4 +1,4 @@
-> 适用范围：下文描述保留的旧 Daily News 实现。重构分支当前入口、阶段和验证见 [重构运行说明](refactor-runtime.md)。旧生产状态须独立核实。
+> 适用范围：下文描述保留的旧 Daily News 实现。重构分支当前入口、阶段和验证见 [重构运行说明](refactor-runtime.md)。新版的分阶段采集、批次发布与指标命令见 [更新提速运行记录](news-refresh-performance.md)。旧生产状态须独立核实。
 
 # Daily News Architecture
 

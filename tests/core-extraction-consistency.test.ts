@@ -103,6 +103,7 @@ test("an obsolete extraction failure cannot penalize a newer complete report", a
     xPost: { tweetId: `${Date.now()}9`, authorName: "Author", handle: "author", text: "https://x.com/i/article/123" } };
   const { articleId } = await upsertMaterial(material);
   const job = await queueProcessing(articleId);
+  assert.equal((await sql`SELECT group_id FROM pgboss.job WHERE id=${job!}`)[0]?.group_id, "x.com");
   await registerExtractionJobs(await getBoss());
   await hold.entered.promise;
   try { await upsertMaterial({ ...material, title: "Corrected", bodyText: "Complete corrected body" }); }

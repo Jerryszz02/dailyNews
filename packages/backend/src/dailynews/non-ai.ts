@@ -77,7 +77,7 @@ export function chooseFactCategory(evidence: Pick<NonAiEvidenceInput, "title" | 
   });
 }
 
-export function evaluateNonAiFacts(inputs: NonAiFactInput[], now: Date): NonAiEvaluation {
+export function evaluateNonAiFacts(inputs: NonAiFactInput[], now: Date, prepared: ReadonlyMap<string, LegacyStory> = new Map()): NonAiEvaluation {
   if (!Number.isFinite(now.getTime())) throw new Error("now must be a valid Date");
   const seen = new Set<string>();
   const stories = inputs.map((input) => {
@@ -85,7 +85,7 @@ export function evaluateNonAiFacts(inputs: NonAiFactInput[], now: Date): NonAiEv
     seen.add(input.factId);
     if ((input.primaryCategory as Category) === "ai") throw new Error("AI facts require the AI policy");
     if (!input.evidence.length) throw new Error(`Fact ${input.factId} has no evidence`);
-    return toLegacyStory(input, now);
+    return prepared.get(input.factId) ?? prepareNonAiFactFeatures(input, now);
   });
   const core = selectCore(stories, now);
   const topIds = core.top.map((story) => story.id);
@@ -110,7 +110,8 @@ export function evaluateNonAiFacts(inputs: NonAiFactInput[], now: Date): NonAiEv
   return { facts, topIds, importantIds, watchlistIds, nextReevaluationAt: next };
 }
 
-function toLegacyStory(input: NonAiFactInput, now: Date): LegacyStory {
+/** Pure material features; global selection still sees every story at the current time. */
+export function prepareNonAiFactFeatures(input: NonAiFactInput, now: Date): LegacyStory {
   const first = input.evidence[0]!;
   const sourceIds = [...new Set(input.evidence.map((item) => item.legacySourceId))];
   const sourceInfo = sourceIds.map((id) => input.evidence.find((item) => item.legacySourceId === id)!);
@@ -154,7 +155,7 @@ function representativeOrder(items: NonAiEvidenceInput[]): string[] {
   }).map((item) => item.articleId);
 }
 
-function nextReevaluationAt(input: NonAiFactInput, now: Date): string | null {
+export function nextReevaluationAt(input: NonAiFactInput, now: Date): string | null {
   const boundaries: number[] = [];
   const publication = input.publishedAt ?? earliestDate(input.evidence.map((item) => item.publishedAt));
   if (publication) {
