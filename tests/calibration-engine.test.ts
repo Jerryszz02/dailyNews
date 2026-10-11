@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { CalibrationExample, CalibrationPolicy } from '@aihot/contracts/calibration';
-import { calibrationTokens, evaluateCalibration, loadActiveCalibration, predictCalibration, sameCalibrationFamily, trainCalibration } from '@aihot/backend/editorial/calibration';
+import { calibrationEligible, calibrationTokens, evaluateCalibration, loadActiveCalibration, predictCalibration, sameCalibrationFamily, trainCalibration } from '@aihot/backend/editorial/calibration';
 import type { Db } from '@aihot/backend/db';
 
-const example = (id: string, overrides: Partial<CalibrationExample> = {}): CalibrationExample => ({ id, title: 'football', body: '', category: 'ai', selected: true, goldCategory: 'sports', goldSelected: false, ...overrides });
+const example = (id: string, overrides: Partial<CalibrationExample> = {}): CalibrationExample => ({ id, title: 'football', body: 'the '.repeat(20), category: 'ai', selected: true, goldCategory: 'sports', goldSelected: false, ...overrides });
 const train = Array.from({ length: 160 }, (_, i) => example(`train-${i}`, i < 3 ? { goldSelected: true } : i < 6 ? { title: 'rejectmarker', goldCategory: 'ai' } : { title: '', goldCategory: 'ai', goldSelected: true }));
 const holdout = Array.from({ length: 40 }, (_, i) => example(`holdout-${i}`, i < 2 ? { goldSelected: true } : i < 4 ? { title: 'rejectmarker', goldCategory: 'ai' } : { title: '', goldCategory: 'ai', goldSelected: true }));
 
@@ -109,4 +109,20 @@ test('active loader requires explicit state and a passed candidate', async () =>
   assert.equal(await loadActiveCalibration(db([])), null);
   assert.equal(await loadActiveCalibration(db([{ policy, report: { passed: false } }])), null);
   assert.deepEqual(await loadActiveCalibration(db([{ policy, report: { passed: true } }])), policy);
+});
+
+test('runtime corrections leave short and X material outside the calibration sample scope', () => {
+  const policy = trainCalibration(Array.from({ length: 3 }, (_, i) => example(String(i), { category: 'finance' })), 'scope');
+  const baseline = { title: 'football', body: 'football', category: 'finance', selected: true };
+  for (const input of [baseline, { ...baseline, body: 'the '.repeat(20), xPost: { text: 'football' } }, { ...baseline, body: 'the '.repeat(20), sourceKind: 'x_search' }]) {
+    assert.deepEqual(predictCalibration(policy, input), { category: 'finance', selected: true, ruleIds: [] });
+  }
+  const eligible = predictCalibration(policy, { ...baseline, body: 'the '.repeat(20), xPost: null, sourceKind: 'rss' });
+  assert.equal(eligible.category, 'sports');
+  assert.equal(eligible.selected, false);
+  assert.equal(calibrationEligible({ body: ' '.repeat(79) }), false);
+  assert.equal(calibrationEligible({ body: ' '.repeat(80) }), true, 'scope uses original length without trimming, as sampling SQL does');
+  assert.equal(calibrationEligible({ body: '😀'.repeat(40) }), false);
+  assert.equal(calibrationEligible({ body: '😀'.repeat(79) }), false);
+  assert.equal(calibrationEligible({ body: '😀'.repeat(80) }), true);
 });

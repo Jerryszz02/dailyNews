@@ -2,6 +2,16 @@ import type { CalibrationExample, CalibrationMetric, CalibrationPolicy, Calibrat
 import { isCategoryKey } from '@aihot/contracts/taxonomy';
 import { sql, type Db } from '../db.ts';
 
+export const CALIBRATION_MIN_BODY_CHARS = 80;
+/** Same original-material scope as the one-off blind sample; preserve SQL coalesce semantics. */
+export function calibrationEligible(input: { body: string | null; xPost?: unknown; sourceKind?: string }): boolean {
+  if (input.xPost != null || input.sourceKind === 'x_search') return false;
+  // PostgreSQL length(text) counts Unicode characters rather than UTF-16 code units.
+  let length = 0;
+  for (const _character of input.body ?? '') if (++length >= CALIBRATION_MIN_BODY_CHARS) return true;
+  return false;
+}
+
 const STOP = new Set('the and for with from that this have has are was were will would into about after before your their new news today said says more some than then also only not our you all can its how who what when where why 新闻 报道 表示 记者 目前 相关 进行 一个 我们 已经 可以 以及 这个 中国 今天 最新 通过 其中 他们 这些'.split(' '));
 /** Identical bounded original-text features for training, holdout and runtime. */
 export function calibrationTokens(title: string, body: string): Set<string> {
@@ -38,8 +48,8 @@ export function trainCalibration(examples: CalibrationExample[], id: string): Ca
   return { id, algorithm: 'token-corrections-v1', rules: candidates.slice(0, 48).map((rule, i) => ({ id: `${id}:${i + 1}`, ...rule })) };
 }
 
-export function predictCalibration(policy: CalibrationPolicy | null, input: { title: string; body: string; category: string | null; selected: boolean | null }) {
-  if (!policy?.rules.length) return { category: input.category, selected: input.selected, ruleIds: [] as string[] };
+export function predictCalibration(policy: CalibrationPolicy | null, input: { title: string; body: string; category: string | null; selected: boolean | null; xPost?: unknown; sourceKind?: string }) {
+  if (!policy?.rules.length || !calibrationEligible(input)) return { category: input.category, selected: input.selected, ruleIds: [] as string[] };
   const tokens = calibrationTokens(input.title, input.body);
   const matches = (policy?.rules ?? []).filter(rule => rule.fromCategory === input.category && tokens.has(rule.token));
   let category = input.category;

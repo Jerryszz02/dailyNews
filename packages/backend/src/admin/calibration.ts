@@ -6,7 +6,7 @@ import type { ReviewMaterial, ReviewTask } from '@aihot/contracts/review';
 import { sql, type Db } from '../db.ts';
 import { audit, Conflict } from '../audit.ts';
 import { sha256, stableJson } from '../lib/ids.ts';
-import { trainCalibration, evaluateCalibration } from '../editorial/calibration.ts';
+import { trainCalibration, evaluateCalibration, CALIBRATION_MIN_BODY_CHARS } from '../editorial/calibration.ts';
 import { rawReviewTasks, stratifiedMaterials } from './review.ts';
 
 const TARGET = 200;
@@ -79,7 +79,7 @@ export async function createCalibration(input:unknown,actor:string) {
       LEFT JOIN translations tr ON tr.article_id=a.id AND tr.revision=a.revision
       LEFT JOIN LATERAL(SELECT f.id AS fact_id,f.story_id FROM fact_articles x JOIN facts f ON f.id=x.fact_id WHERE x.article_id=a.id AND x.role IN ('primary','report') ORDER BY (x.role='primary') DESC,x.created_at LIMIT 1)fa ON true
       LEFT JOIN stories st ON st.id=coalesce(fa.story_id,p.story_id)
-      WHERE a.x_post IS NULL AND length(coalesce(a.body_text,a.excerpt,''))>=80
+      WHERE a.x_post IS NULL AND s.kind<>'x_search' AND length(coalesce(a.body_text,a.excerpt,''))>=${CALIBRATION_MIN_BODY_CHARS}
       ORDER BY row_number() OVER(PARTITION BY coalesce(p.category,n.category) ORDER BY a.discovered_at DESC,a.id),a.discovered_at DESC,a.id LIMIT 5000`;
     const chosen=calibrationSample(JSON.parse(JSON.stringify(rows)),seen,b.requestId);
     if(chosen.length<TARGET)bad(`去除已标注及重复事件后只有 ${chosen.length} 条可用材料，需要 200 条；未建立不完整批次，请等待新闻更新后重试`);

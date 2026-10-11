@@ -398,7 +398,7 @@ export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts & { sta
   const override = isCategoryKey(a.manualCategory) ? "manual" : isCategoryKey(a.editorialCategory) ? "fact" : null;
   let category = override === "fact" ? a.editorialCategory! : override === "manual" ? a.manualCategory! : structure.category;
   if (!override) category = predictCalibration(a.calibrationPolicy ?? null, {
-    title: a.title, body: String(a.xPost?.text ?? a.bodyText ?? a.excerpt ?? ""), category, selected: null,
+    title: a.title, body: a.bodyText ?? a.excerpt ?? "", xPost: a.xPost, sourceKind: a.source.kind, category, selected: null,
   }).category;
   const fallback: AnalysisRun["classification"]["fallback"] = { attempted: false, category: null, reason: null, receiptId: null };
   if (!category) {
@@ -538,7 +538,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
   const out = normalizeAnalysis(run);
   const baselineSelected = out.selected;
   const calibration = predictCalibration(input.calibrationPolicy ?? null, {
-    title: input.title, body: String(input.xPost?.text ?? input.bodyText ?? input.excerpt ?? ""),
+    title: input.title, body: input.bodyText ?? input.excerpt ?? "", xPost: input.xPost, sourceKind: input.source.kind,
     category: run.classification.originalCategory, selected: out.selected,
   });
   const categoryRuleIds = !run.classification.override && calibration.category === out.category

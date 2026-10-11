@@ -13,7 +13,7 @@ import {passwordLogin,SESSION_COOKIE,sessionPrincipal} from '@aihot/backend/admi
 import type {ReviewMaterial} from '@aihot/contracts/review';
 import {CATEGORY_KEYS} from '@aihot/contracts/taxonomy';
 
-const T=tag();const source=`calibration-src-${T}`;const actor=`calibration-actor-${T}`;
+const T=tag();const source=`calibration-src-${T}`;const xSource=`calibration-x-src-${T}`;const actor=`calibration-actor-${T}`;
 const old={dev:config.devAdmin,password:config.adminPassword};
 const app=Fastify({logger:false});registerAdminAuth(app);registerAdmin(app);
 let batchId='';let candidateId='';
@@ -22,7 +22,7 @@ after(async()=>{
  if(batchId){await sql`DELETE FROM review_calibration_state WHERE batch_id=${batchId}`;await sql`DELETE FROM review_calibration_members WHERE batch_id=${batchId}`;await sql`DELETE FROM review_calibration_candidates WHERE batch_id=${batchId}`;await sql`DELETE FROM review_batches WHERE id=${batchId}`;}
  await sql`DELETE FROM review_calibration_actions WHERE request_id LIKE ${`%${T}%`}`;
  await sql`DELETE FROM audit_log WHERE actor=${actor}`;
- await sql`DELETE FROM articles WHERE source_id=${source}`;await sql`DELETE FROM sources WHERE id=${source}`;await closeDb();
+ await sql`DELETE FROM articles WHERE source_id IN (${source},${xSource})`;await sql`DELETE FROM sources WHERE id IN (${source},${xSource})`;await closeDb();
 });
 const material=(i:number):ReviewMaterial=>({articleId:`m-${i}`,inputRevision:1,analysisId:i,inputSignature:null,title:`unique title number ${i}`,originalTitle:`unique title number ${i}`,summary:null,bodyOriginal:`Evidence for item ${i}.`,bodyZh:null,url:`https://example.test/news/${i}`,sourceName:'test',sourceKind:'rss',sourceTier:'T1',firstParty:false,language:'en',publishedAt:null,category:CATEGORY_KEYS[i%10]!,selected:i%2===0,score:80,model:null,policyId:null,policyVersion:null,backfill:false,bodyStatus:'ok',storyTitle:null,factId:null,storyId:null});
 
@@ -42,16 +42,30 @@ test('stratifies train and holdout across ten categories, joins event aliases an
 test('prepares exactly 200 article-only blind tasks once and never exposes baseline in reads or exports',async()=>{
  assert.equal((await calibrationOverview()).batchId,null);
  await sql`INSERT INTO sources(id,name,kind,tier) VALUES(${source},'校准来源','rss','T1')`;
+ await sql`INSERT INTO sources(id,name,kind,tier) VALUES(${xSource},'X 校准范围回归','x_search','T1')`;
  for(let i=0;i<200;i++){
   const id=`${source}-${i}`;const category=i%2===0?'ai':'finance';
   await sql`INSERT INTO articles(id,source_id,identity_key,url,title,body_text,body_status,discovered_at,timeline_at,published_at) VALUES(${id},${source},${id},${`https://example.test/${id}`},${`football detailed report ${i}`},${`football international match unique item ${i}. `.repeat(5)},'ok',now(),now(),now())`;
   const [n]=await sql`INSERT INTO analyses(article_id,input_revision,origin,category,title_zh,summary_zh,selected,score) VALUES(${id},1,'rule',${category},${`赛事消息${i}`},'双方公布比赛结果',true,90) RETURNING id`;
   await sql`INSERT INTO publications(article_id,source_id,title,summary,category,channel,url,discovered_at,timeline_at,sort_at,input_revision,analysis_id,selected) VALUES(${id},${source},${`赛事消息${i}`},'双方公布比赛结果',${category},'news',${`https://example.test/${id}`},now(),now(),now(),1,${n!.id},true)`;
  }
+ // A distinct stratum would be sampled ahead of the remaining AI/finance rows without
+ // the eligibility filter, so each excluded input is observable in this regression.
+ const outsideScope=[
+  {key:'short',source,body:'x'.repeat(79),xPost:null},
+  {key:'x-payload',source,body:'x'.repeat(80),xPost:{text:'an X post'}},
+  {key:'x-source',source:xSource,body:'x'.repeat(80),xPost:null},
+ ];
+ for(const item of outsideScope){
+  const id=`${source}-scope-${item.key}`;
+  await sql`INSERT INTO articles(id,source_id,identity_key,url,title,body_text,x_post,body_status,discovered_at,timeline_at,published_at) VALUES(${id},${item.source},${id},${`https://example.test/${id}`},${`Excluded calibration material ${item.key}`},${item.body},${item.xPost===null?null:sql.json(item.xPost)},'ok',now(),now(),now())`;
+  await sql`INSERT INTO analyses(article_id,input_revision,origin,category,title_zh,summary_zh,selected,score) VALUES(${id},1,'rule','sports','范围外材料','校准范围回归',true,90)`;
+ }
  const created=await createCalibration({requestId:`prepare-${T}`},actor);batchId=created.batchId;
  assert.equal(created.created,true);
  assert.deepEqual(await createCalibration({requestId:`prepare-again-${T}`},actor),{batchId,created:false});
  const detail=(await reviewBatch(batchId))!;assert.equal(detail.tasks.length,200);
+ assert(detail.tasks.every(t=>!t.snapshot.article.articleId.includes('-scope-')),'short and X materials stay outside the calibration sample');
  assert(detail.tasks.every(t=>t.mode==='blind'&&t.kind==='article'&&t.status==='pending'&&t.answer===null));
  assert(detail.tasks.every(t=>t.snapshot.article.category===null&&t.snapshot.article.selected===null&&t.stratum==='blind'));
  assert.equal(detail.progress.byCategory.length,1);

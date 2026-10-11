@@ -5,7 +5,7 @@ import { collapseWhitespace, truncate } from "../lib/text.ts";
 import { produceImage } from "../media/images.ts";
 import type { ContentPart } from "../providers/llm.ts";
 import type { CalibrationPolicy } from "@aihot/contracts/calibration";
-import { loadActiveCalibration } from "./calibration.ts";
+import { calibrationEligible, loadActiveCalibration } from "./calibration.ts";
 
 export interface AnalyzeInputArticle {
   id: string;
@@ -78,7 +78,8 @@ export async function loadAnalyzeInput(articleId: string, db: Db = sql): Promise
   const [prior] = await db<{ output: { calibration?: { policy?: CalibrationPolicy | null } } }[]>`
     SELECT output FROM analyses WHERE article_id = ${articleId} AND input_revision = ${row.revision}
     ORDER BY id ASC LIMIT 1`;
-  const calibrationPolicy = prior ? prior.output?.calibration?.policy ?? null : await loadActiveCalibration(db);
+  const calibrationPolicy = prior ? prior.output?.calibration?.policy ?? null
+    : calibrationEligible({ body: row.body_text ?? row.excerpt, xPost: row.x_post, sourceKind: row.source_kind }) ? await loadActiveCalibration(db) : null;
   return {
     id: row.id, revision: row.revision, title: row.title, url: row.url, author: row.author, publishedAt: row.published_at, discoveredAt: row.discovered_at,
     bodyText: row.body_text, excerpt: row.excerpt, bodyStatus: row.body_status, xPost: withXArticle(row.x_post, row.x_article), media: row.media,
