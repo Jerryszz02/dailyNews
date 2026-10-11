@@ -12,6 +12,7 @@ import { CLASSIFICATION_CONFIG_VERSION, NON_AI_POLICY_VERSION, currentAnalysisSi
 import { enqueue, QUEUES } from "../jobs/queue.ts";
 import { sha256, stableJson } from "../lib/ids.ts";
 import { applyFactSelectionTx, invalidatePolicyProjectionTx } from "./publish.ts";
+import { calibrationEligible, predictCalibration, sameCalibrationFamily } from "../editorial/calibration.ts";
 
 const MAX_REANALYSIS_ENQUEUES = 100;
 const FEATURE_POLICY_VERSION = `${nonAiPolicyVersion}:${CLASSIFICATION_CONFIG_VERSION}`;
@@ -38,11 +39,15 @@ interface FactMemberRow {
   article_category: string | null;
   article_url: string | null;
   article_title: string | null;
+  article_body: string | null;
+  article_excerpt: string | null;
+  article_x_post: Record<string, any> | null;
   published_at: Date | null;
   source_updated_at: Date | null;
   discovered_at: Date | null;
   source_id: string | null;
   source_name: string | null;
+  source_kind: string | null;
   source_config: Record<string, unknown> | null;
   source_first_party: boolean | null;
   source_tier: string | null;
@@ -66,6 +71,9 @@ interface ExistingState { fact_id: number; decision_id: number | null; evidence_
 
 function modelCategory(row: FactMemberRow): string | null {
   if (row.analysis_origin !== "model") return row.analysis_category;
+  if (calibrationEligible({ body: row.article_body ?? row.article_excerpt, xPost: row.article_x_post, sourceKind: row.source_kind ?? undefined }) && row.analysis_output?.calibration?.categoryRuleIds?.length && isCategoryKey(row.analysis_output?.classification?.effectiveCategory)) {
+    return row.analysis_output.classification.effectiveCategory;
+  }
   const fallback = row.analysis_output?.classification?.fallback?.category;
   if (isCategoryKey(fallback)) return fallback;
   const original = row.analysis_output?.classification?.originalCategory;
@@ -103,8 +111,9 @@ export async function reconcileEditorialPoliciesTx(tx: Tx, now: Date): Promise<{
     SELECT f.id AS fact_id, f.title AS fact_title, f.version AS fact_version, fa.article_id, fa.role,
       fa.created_at AS association_created_at,
       a.revision AS article_revision, a.backfill AS article_backfill, a.editorial_category AS article_category, a.url AS article_url,
-      a.title AS article_title, a.published_at, a.source_updated_at, a.discovered_at,
-      s.id AS source_id, s.name AS source_name, s.config AS source_config, s.first_party AS source_first_party, s.tier AS source_tier,
+      a.title AS article_title, a.body_text AS article_body, a.excerpt AS article_excerpt,
+      a.x_post AS article_x_post, a.published_at, a.source_updated_at, a.discovered_at,
+      s.id AS source_id, s.name AS source_name, s.kind AS source_kind, s.config AS source_config, s.first_party AS source_first_party, s.tier AS source_tier,
       p.revision AS publication_revision, p.eligible AS publication_eligible, p.selected AS publication_selected, p.visibility AS publication_visibility,
       p.title AS publication_title, p.summary AS publication_summary, p.policy_id AS publication_policy,
       an.id AS analysis_id, an.input_revision AS analysis_revision, an.origin AS analysis_origin,
@@ -154,7 +163,11 @@ export async function reconcileEditorialPoliciesTx(tx: Tx, now: Date): Promise<{
       const category = modelCategory(row);
       return isCategoryKey(category) || isCategoryKey(row.override_category);
     });
-    const category = manual?.override_category ?? (voteRows.length ? chooseFactCategory(voteRows.map((row) => ({
+    // Consistent calibrated reports take precedence over their uncorrected peers. Otherwise
+    // those peers can immediately vote a calibrated article back into its previous route.
+    const correctedCategories = [...new Set(voteRows.filter(row => calibrationEligible({ body: row.article_body ?? row.article_excerpt, xPost: row.article_x_post, sourceKind: row.source_kind ?? undefined }) && row.analysis_output?.calibration?.categoryRuleIds?.length)
+      .map(modelCategory).filter(isCategoryKey))];
+    const category = manual?.override_category ?? (correctedCategories.length === 1 ? correctedCategories[0]! : null) ?? (voteRows.length ? chooseFactCategory(voteRows.map((row) => ({
       title: row.publication_title ?? row.article_title ?? "", summary: row.publication_summary ?? "",
       primaryCategory: (isCategoryKey(modelCategory(row)) ? modelCategory(row) : row.override_category) as NonAiEvidenceInput["primaryCategory"],
       categories: [(isCategoryKey(modelCategory(row)) ? modelCategory(row) : row.override_category) as NonAiEvidenceInput["primaryCategory"]],
@@ -167,7 +180,7 @@ export async function reconcileEditorialPoliciesTx(tx: Tx, now: Date): Promise<{
     }
     const version = sha256(stableJson(members.map((row) => [row.fact_version, row.article_id, row.role,
       row.association_created_at?.toISOString(), row.article_revision, row.article_category,
-      row.analysis_id, row.analysis_signature, row.analysis_output?.scope, row.override_category,
+      row.analysis_id, row.analysis_signature, row.analysis_output?.scope, row.analysis_output?.calibration?.policy?.id, row.override_category,
       row.override_updated_at?.toISOString(), row.publication_visibility, row.publication_eligible,
       row.source_tier, row.source_config, row.source_updated_at?.toISOString()])));
     versionByFact.set(factId, version);
@@ -234,6 +247,23 @@ export async function reconcileEditorialPoliciesTx(tx: Tx, now: Date): Promise<{
   const obsoleteFeatures = [...cache.keys()].filter((id) => !prepared.has(id)).map(Number);
   if (obsoleteFeatures.length) await tx`DELETE FROM fact_feature_cache WHERE fact_id=ANY(${obsoleteFeatures}::bigint[])`;
   const result = evaluateNonAiFacts(candidates, now, prepared);
+  const calibrationByFact = new Map<string, { policyId: string; ruleIds: string[] }>();
+  for (const decision of result.facts) {
+    if (!decision.selected || !decision.representativeArticleId) continue;
+    const row = byFact.get(Number(decision.factId))?.find(member => member.article_id === decision.representativeArticleId);
+    const policy = row?.analysis_output?.calibration?.policy;
+    if (!row || !policy || !calibrationEligible({ body: row.article_body ?? row.article_excerpt, xPost: row.article_x_post, sourceKind: row.source_kind ?? undefined })) continue;
+    const originalCategory = row.analysis_output?.classification?.originalCategory ?? row.analysis_category;
+    if (!sameCalibrationFamily(originalCategory, decision.primaryCategory)) continue;
+    const prediction = predictCalibration(policy, {
+      title: row.article_title ?? "", body: row.article_body ?? row.article_excerpt ?? "", xPost: row.article_x_post, sourceKind: row.source_kind ?? undefined,
+      category: originalCategory, selected: true,
+    });
+    calibrationByFact.set(decision.factId, { policyId: policy.id,
+      ruleIds: prediction.ruleIds.filter(id => policy.rules.find((rule: { id: string; dimension: string }) => rule.id === id)?.dimension === "selection") });
+    // Apply the veto after the full global quotas pass, without increasing scores or filling slots.
+    if (prediction.selected === false) decision.selected = false;
+  }
   const decisions = new Map(result.facts.map((decision) => [Number(decision.factId), decision]));
   const selectedByArticle = new Map<string, { factId: number; decisionId: number; score: number; reason: string; category: string; tier: string; status: string; signature: string }>();
   const touchedNonAi = new Set<string>();
@@ -241,8 +271,10 @@ export async function reconcileEditorialPoliciesTx(tx: Tx, now: Date): Promise<{
     const decision = decisions.get(factId);
     const category = categoryByFact.get(factId) ?? null;
     const version = versionByFact.get(factId)!;
-    const inputSignature = sha256(stableJson({ version, category, decision: decision ? {
+    const calibration = calibrationByFact.get(String(factId)) ?? null;
+    const inputSignature = sha256(stableJson({ version, category, calibration, decision: decision ? {
       importance: decision.importance, tier: decision.tier, status: decision.status, collection: decision.collection,
+      selected: decision.selected,
       representativeArticleId: decision.representativeArticleId, nextReevaluationAt: decision.nextReevaluationAt,
     } : null }));
     const prior = existing.get(factId);
@@ -256,7 +288,7 @@ export async function reconcileEditorialPoliciesTx(tx: Tx, now: Date): Promise<{
           ${category === "ai" ? "aihot-3343fe2b20db-v1" : NON_AI_POLICY_VERSION}, ${CLASSIFICATION_CONFIG_VERSION},
           ${inputSignature}, ${version}, ${category}, ${decision ? "legacy_curation_total" : null},
           ${decision?.score ?? null}, ${decision?.tier ?? null}, ${decision?.status ?? null}, ${decision?.selected ?? false},
-          ${decision?.representativeArticleId ?? null}, ${tx.json((decision ?? {}) as never)}, ${now},
+          ${decision?.representativeArticleId ?? null}, ${tx.json(({ ...(decision ?? {}), calibration }) as never)}, ${now},
           ${decision?.nextReevaluationAt ? new Date(decision.nextReevaluationAt) : null}) RETURNING id`;
       decisionId = inserted!.id;
     }

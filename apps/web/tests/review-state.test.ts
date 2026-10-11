@@ -56,3 +56,15 @@ test("continue resumes pending tasks then revisits later and skipped without tre
   assert.equal(nextReviewIndex(saved, "c"), 1);
   assert.equal(nextReviewIndex([]), 0);
 });
+
+test("blind version 3 requires a direct category or uncertainty and preserves independent dimensions", () => {
+  const answer = { classification: "ok", quality: "ok", selection: "select", aiRelevance: "relevant" } as const;
+  assert.ok(reviewValidation(answer, "article", 3));
+  assert.ok(reviewValidation({ ...answer, classification: "change" }, "article", 3));
+  for (const category of ["ai", "science", "unrelated", "insufficient"]) {
+    assert.equal(reviewValidation({ ...answer, classification: "change", category }, "article", 3), null);
+  }
+  assert.equal(reviewValidation({ ...answer, classification: "uncertain" }, "article", 3), null);
+  assert.ok(reviewValidation({ classification: "change", category: "ai", quality: "ok", selection: "select" }, "article", 3));
+  assert.ok(reviewValidation({ classification: "change", category: "ai", quality: "ok", aiRelevance: "relevant" }, "article", 3));
+});

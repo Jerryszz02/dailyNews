@@ -6,6 +6,7 @@ import { actorOf } from "@aihot/backend/admin/auth";
 
 import { importSelectBenchRun, listSelectBenchRuns, selectBenchRun } from "@aihot/backend/admin/selectbench";
 import { createReviewBatch, exportReview, reviewBatch, reviewOverview, saveReviewAnswer } from "@aihot/backend/admin/review";
+import { calibrationOverview, createCalibration, evaluateReviewCalibration, activateCalibration, rollbackCalibration } from "@aihot/backend/admin/calibration";
 import { modelsOverview, switchModel } from "@aihot/backend/admin/models";
 
 import { contentChain, overrideFields, rerun, searchContent, setSeoIndexed, setVisibility } from "@aihot/backend/admin/content";
@@ -127,6 +128,11 @@ export function registerAdmin(app: FastifyInstance) {
 
   // Local human review: reads/export require admin; writes additionally require CSRF.
   app.get("/api/admin/review", adminHandler(async () => reviewOverview()));
+  app.get("/api/admin/review/calibration", adminHandler(async () => calibrationOverview()));
+  app.post("/api/admin/review/calibration", adminHandler(async (req, _reply, admin) => createCalibration(body(req), actorOf(admin))));
+  app.post("/api/admin/review/calibration/evaluate", adminHandler(async (req, _reply, admin) => evaluateReviewCalibration(body(req), actorOf(admin))));
+  app.post("/api/admin/review/calibration/activate", adminHandler(async (req, _reply, admin) => activateCalibration(body(req), actorOf(admin))));
+  app.post("/api/admin/review/calibration/rollback", adminHandler(async (req, _reply, admin) => rollbackCalibration(body(req), actorOf(admin))));
   app.post("/api/admin/review/batches", adminHandler(async (req, _reply, admin) => createReviewBatch(body(req) as never, actorOf(admin))));
   app.get("/api/admin/review/batches/:id", adminHandler(async (req, reply) => orNotFound(req, reply, await reviewBatch(param(req, "id")))));
   app.post("/api/admin/review/tasks/:id/answer", adminHandler(async (req, reply, admin) => orNotFound(req, reply, await saveReviewAnswer(param(req, "id"), body(req) as never, actorOf(admin)))));
