@@ -122,12 +122,22 @@ test("同来源快详情先入库，未保存尾部阻止游标推进与重复�
     (await collectSource(id, { deferred: true })).error,
     "collection pending",
   );
+  const [fastPayload] = await sql`SELECT candidate,need,result FROM collection_items WHERE id=${items[1]!.id}`;
+  assert.deepEqual(fastPayload!.candidate, {});
+  assert.equal(fastPayload!.need, null);
+  assert.equal(fastPayload!.result.created, true);
+  const [slowPayload] = await sql`SELECT candidate,need FROM collection_items WHERE id=${items[0]!.id}`;
+  assert.equal(slowPayload!.candidate.title, "阅读全文");
+  assert.ok(slowPayload!.need);
+  assert.ok((await recoverCollections()).enqueued >= 1);
   releaseSlow();
   await slow;
   const [run] =
     await sql`SELECT f.status,f.detail FROM fetch_runs f JOIN collection_intakes r ON r.run_id=f.id WHERE r.source_id=${id}`;
   assert.equal(run!.status, "ok");
   assert.equal(run!.detail.stages.saved, 2);
+  const [summary] = await sql`SELECT new_count FROM fetch_runs f JOIN collection_intakes r ON r.run_id=f.id WHERE r.source_id=${id}`;
+  assert.equal(summary!.new_count, 2);
   const priorJobs = (
     await sql`SELECT count(*)::int n FROM pgboss.job WHERE name='content.extract-body'`
   )[0]!.n;
@@ -366,4 +376,44 @@ test("管理员全局锁与来源修订并发遵守锁顺序", async () => {
       .revision,
     2,
   );
+});
+
+test("候选收缩与文章落地原子提交，存储失败恢复后仍有正文且重复批次不重复统计", async () => {
+  const id = await source("compact-recovery");
+  const before = (await sql`SELECT cursor FROM sources WHERE id=${id}`)[0]!.cursor;
+  const [run] = await sql`INSERT INTO fetch_runs(source_id) VALUES(${id}) RETURNING id`;
+  await sql`UPDATE sources SET collection_run_id=${run!.id} WHERE id=${id}`;
+  const title = `原子恢复 ${T}`;
+  const body = "完整正文 ".repeat(500);
+  await receiveCollection(Number(run!.id), id, [{ candidate: {
+    url: `${base}/atomic/${id}`, identityKey: `atomic:${id}`, title, bodyText: body,
+    bodyStatus: "ok", publishedAt: new Date(), raw: { repeated: body },
+  }, need: null }], { trialId: null, backfill: null, cursor: { initializedAt: new Date().toISOString(), committed: true }, receiptIds: [], detail: {} });
+  const [item] = await sql`SELECT i.id,i.batch_id FROM collection_items i JOIN collection_batches b ON b.id=i.batch_id WHERE b.run_id=${run!.id}`;
+  const constraint = `intake_failure_${T}`;
+  const literal = sql.unsafe("'" + title.replaceAll("'", "''") + "'");
+  await sql`ALTER TABLE articles ADD CONSTRAINT ${sql(constraint)} CHECK (title <> ${literal}) NOT VALID`;
+  try {
+    await assert.rejects(storeCollectionBatch(Number(item!.batch_id)), new RegExp(constraint));
+    const [pending] = await sql`SELECT candidate,completed_at FROM collection_items WHERE id=${item!.id}`;
+    assert.equal(pending!.completed_at, null);
+    assert.equal(pending!.candidate.bodyText, body);
+    assert.deepEqual((await sql`SELECT cursor FROM sources WHERE id=${id}`)[0]!.cursor, before);
+    assert.ok((await recoverCollections()).enqueued >= 1);
+  } finally {
+    await sql`ALTER TABLE articles DROP CONSTRAINT ${sql(constraint)}`;
+  }
+  assert.equal((await storeCollectionBatch(Number(item!.batch_id))).items, 1);
+  const [saved] = await sql`SELECT candidate,need,result FROM collection_items WHERE id=${item!.id}`;
+  assert.deepEqual(saved!.candidate, {});
+  assert.equal(saved!.need, null);
+  assert.equal(saved!.result.created, true);
+  assert.equal((await sql`SELECT body_text FROM articles WHERE source_id=${id}`)[0]!.body_text, body);
+  const [finished] = await sql`SELECT status,new_count,detail FROM fetch_runs WHERE id=${run!.id}`;
+  assert.equal(finished!.status, "ok");
+  assert.equal(finished!.new_count, 1);
+  assert.equal(finished!.detail.stages.saved, 1);
+  assert.equal((await storeCollectionBatch(Number(item!.batch_id))).items, 0);
+  assert.equal((await enrichCollectionItem(Number(item!.id))).state, "complete");
+  assert.deepEqual((await sql`SELECT detail FROM fetch_runs WHERE id=${run!.id}`)[0]!.detail, finished!.detail);
 });

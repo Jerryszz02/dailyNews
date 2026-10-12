@@ -155,7 +155,7 @@ async function saveInput(
   if (input.intake_detail?.baselineGate === true && await skipBeforeInitialization(tx, c, input.source_id, input.cursor, input.backfill)) {
     const result = { created: false, revised: false, unchanged: true, baselineSkipped: true,
       skipReason: c.publishedAt ? "pre-initialization" : "date-unconfirmed", detailMs, storeMs: Math.round(performance.now() - started) };
-    await tx`UPDATE collection_items SET completed_at=now(),result=${tx.json(result)} WHERE id=${input.id}`;
+    await tx`UPDATE collection_items SET completed_at=now(),result=${tx.json(result)},candidate='{}'::jsonb,need=NULL,detail_retry_at=NULL,detail_error=NULL WHERE id=${input.id}`;
     return { state: "saved", ...result };
   }
   const res = await upsertMaterial(
@@ -192,7 +192,7 @@ async function saveInput(
   }
   if (process) await queueProcessing(res.articleId, { db: tx });
   result.storeMs = Math.round(performance.now() - started);
-  await tx`UPDATE collection_items SET completed_at=now(),result=${tx.json(result)} WHERE id=${input.id}`;
+  await tx`UPDATE collection_items SET completed_at=now(),result=${tx.json(result)},candidate='{}'::jsonb,need=NULL,detail_retry_at=NULL,detail_error=NULL WHERE id=${input.id}`;
   return { state: "saved", ...result };
 }
 

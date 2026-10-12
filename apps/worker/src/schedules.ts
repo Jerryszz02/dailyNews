@@ -16,7 +16,7 @@ import { catchUpReports, composeDaily, composeMonthly, composeWeekly, dueDaily, 
 import { runLeaderboardRound } from "@aihot/backend/leaderboard/method/run";
 import { refreshLeaderboard } from "@aihot/backend/leaderboard/fetch/refresh";
 import { monitorTick } from "@aihot/backend/monitor/scan";
-import { dailyRetention } from "@aihot/backend/operations/retention";
+import { dailyRetention, hourlyRetention } from "@aihot/backend/operations/retention";
 import { submitIndexNow } from "@aihot/backend/operations/indexnow";
 import { checkAlerts, sendDigest } from "@aihot/backend/operations/alerts";
 import { recoverStaleWork } from "@aihot/backend/operations/recover";
@@ -56,6 +56,7 @@ export const SCHEDULES: Scheduled[] = [
     run: () => composeMonthly(dueMonthly()),
   },
   { name: "reports.catch-up", cron: "15 * * * *", run: () => catchUpReports() },
+  { name: "ops.retention-hourly", cron: "30 * * * *", missed: "once", run: () => hourlyRetention() },
   { name: "ops.retention", cron: "30 3 * * *", missed: "once", run: () => dailyRetention() },
   ...(collecting ? [{ name: "sources.icons", cron: "40 4 * * *", missed: "once" as const, run: () => refreshSourceIcons() }] : []),
   // IndexNow for new indexable pages (off unless INDEXNOW_SUBMIT_ENABLED).

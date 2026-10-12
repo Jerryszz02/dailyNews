@@ -15,12 +15,13 @@ async function completeSaved(file: string) {
   const { sql, closeDb } = await import("@aihot/backend/db");
   const { completeReceipt } = await import("@aihot/backend/providers/receipts");
   const { stableJson } = await import("@aihot/backend/lib/ids");
+  const { decodeReceiptResponse } = await import("@aihot/backend/providers/receipt-storage");
   let completed = 0;
   try {
     await sql.begin(async tx => {
-      const rows = await tx`SELECT id,response FROM receipts WHERE id=ANY(${expected.map((row: any) => row.id)}::bigint[]) AND status='received' FOR UPDATE`;
+      const rows = await tx`SELECT id,response,response_compressed FROM receipts WHERE id=ANY(${expected.map((row: any) => row.id)}::bigint[]) AND status='received' FOR UPDATE`;
       for (const row of rows) {
-        if (!expected.some((saved: any) => saved.id === Number(row.id) && stableJson(saved.response) === stableJson(row.response))) throw new Error(`Saved response mismatch for receipt ${row.id}`);
+        if (!expected.some((saved: any) => saved.id === Number(row.id) && stableJson(saved.response) === stableJson(decodeReceiptResponse({ response: row.response, response_compressed: row.response_compressed })))) throw new Error(`Saved response mismatch for receipt ${row.id}`);
         await completeReceipt(tx, Number(row.id)); completed++;
       }
     });
@@ -48,6 +49,7 @@ const { runAnalysis, normalizeAnalysis } = await import("@aihot/backend/editoria
 const { sql, closeDb } = await import("@aihot/backend/db");
 const { stopBoss } = await import("@aihot/backend/jobs/queue");
 const { ModelOutputError } = await import("@aihot/backend/providers/llm");
+const { decodeReceiptResponse } = await import("@aihot/backend/providers/receipt-storage");
 const runId = new Date().toISOString();
 const results: unknown[] = [];
 const output = resolve(values.output);
@@ -78,7 +80,9 @@ try {
       result = { status: error instanceof ModelOutputError ? "rejected-by-automatic-guards" : "failed", reason: (error as Error).message };
     }
     // Raw provider responses and request/response model fields remain locally reviewable in receipts.
-    const receipts = await sql`SELECT id,service,purpose,model,status,request,response,error,usage,cost,currency FROM receipts WHERE id = ANY(${[...receiptIds]}::bigint[]) OR subject LIKE ${`article:${articleId}%`} ORDER BY id`;
+    const storedReceipts = await sql`SELECT id,service,purpose,model,status,request,response,response_compressed,error,usage,cost,currency FROM receipts WHERE id = ANY(${[...receiptIds]}::bigint[]) OR subject LIKE ${`article:${articleId}%`} ORDER BY id`;
+    const receipts = storedReceipts.map(({ response_compressed, ...row }) => ({ ...row,
+      response: decodeReceiptResponse({ response: row.response, response_compressed }) }));
     results.push({ input: row, result, receipts });
     save(); // fsync before consuming any received response; a failed save must leave recovery possible.
     const { completeReceipt } = await import("@aihot/backend/providers/receipts");

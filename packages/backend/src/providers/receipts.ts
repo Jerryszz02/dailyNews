@@ -12,6 +12,7 @@ import { shutdownSignal } from "../lib/shutdown.ts";
 import { setTimeout as wait } from "node:timers/promises";
 import { observedTokens } from "./pricing.ts";
 import { assertTrialPaidSubject, boundedTrialEnabled } from "../dailynews/trial.ts";
+import { compressReceiptJson, decodeReceiptResponse, encodeReceiptResponse, receiptCompressionEnabled } from "./receipt-storage.ts";
 
 export class BudgetExceededError extends Error {
   readonly service: string;
@@ -89,6 +90,7 @@ interface ReceiptRow {
   id: number;
   status: string;
   response: unknown;
+  response_compressed: Buffer | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -173,7 +175,7 @@ export async function paidRequest(req: ReceiptRequest, call: () => Promise<CallO
     await wait(250, undefined, { signal: shutdownSignal.signal });
   }
 
-  if (claimed.kind === "reuse") return { receiptId: claimed.row.id, response: claimed.row.response, reused: true };
+  if (claimed.kind === "reuse") return { receiptId: claimed.row.id, response: decodeReceiptResponse(claimed.row), reused: true };
   if (claimed.kind === "busy") throw new ReceiptBusyError(`Receipt ${claimed.row.id} is in flight`);
   if (claimed.kind === "unknown") {
     throw new ReceiptUnknownError(claimed.row.id, `Receipt ${claimed.row.id} has an unknown outcome; it is released once automatically, then from the admin`);
@@ -196,11 +198,14 @@ export async function paidRequest(req: ReceiptRequest, call: () => Promise<CallO
   }
 
   const observed = observedTokens(outcome.usage);
+  const compressionEnabled = receiptCompressionEnabled();
+  const stored = compressionEnabled ? encodeReceiptResponse(outcome.response) : { response: outcome.response ?? null, compressed: null };
   await sql.begin(async (tx) => {
     await tx`
       UPDATE receipts SET
         status = 'received',
-        response = ${tx.json((outcome.response ?? null) as never)},
+        response = ${stored.compressed ? null : tx.json(stored.response as never)},
+        response_compressed = ${stored.compressed}, response_storage_checked = ${compressionEnabled},
         request_id = ${outcome.requestId ?? null},
         response_model = ${outcome.responseModel ?? null},
         usage = ${outcome.usage ? tx.json(outcome.usage as never) : null},
@@ -242,7 +247,7 @@ async function claimPaidRequest(req: ReceiptRequest, logicalKey: string) {
       await assertTrialPaidSubject(req.purpose, req.subject ?? "", tx, req);
     }
     const [existing] = await tx<ReceiptRow[]>`
-      SELECT id, status, response, created_at, updated_at FROM receipts WHERE logical_key = ${logicalKey} FOR UPDATE`;
+      SELECT id, status, response, response_compressed, created_at, updated_at FROM receipts WHERE logical_key = ${logicalKey} FOR UPDATE`;
     if (existing?.status === "received" || existing?.status === "completed") return { kind: "reuse" as const, row: existing };
     // Finish business writes from saved answers during shutdown, but never reserve or send the
     // next paid page/batch. An answer already in flight still saves below, without this check.
@@ -327,4 +332,34 @@ export async function completeReceipt(db: Db, receiptId: number): Promise<void> 
 /** Marks a received response that could not be used (e.g. unparsable) so a fresh attempt can be made. */
 export async function rejectReceivedResponse(receiptId: number, reason: string): Promise<void> {
   await sql`UPDATE receipts SET status = 'failed', error = ${reason.slice(0, 2000)}, updated_at = now() WHERE id = ${receiptId}`;
+}
+
+/** One bounded batch, safe alongside completion and recovery. Never changes billing or status. */
+export async function compactCompletedReceiptResponses() {
+  if (!receiptCompressionEnabled()) return { checkedReceipts: 0, compressedReceipts: 0, receiptBytesBefore: 0, receiptBytesAfter: 0 };
+  return sql.begin(async (tx) => {
+    const rows = await tx<{ id: number; json: string | null; bytes: number }[]>`
+      SELECT id, response::text AS json, coalesce(pg_column_size(response), 0)::int AS bytes
+      FROM receipts
+      WHERE status = 'completed' AND NOT response_storage_checked
+      ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED`;
+    let compressedReceipts = 0;
+    let receiptBytesBefore = 0;
+    for (const row of rows) {
+      // Compress database JSON text directly: parsing through JS would round large integers.
+      const packed = row.json === null ? null : compressReceiptJson(row.json);
+      // JSONB already uses PostgreSQL TOAST compression. Compare against its stored size,
+      // not just uncompressed JSON, so the backfill never replaces a smaller representation.
+      const compressed = packed && packed.length + Math.max(64, row.bytes * 0.1) < row.bytes ? packed : null;
+      if (compressed) await tx`UPDATE receipts SET response_storage_checked = true,
+        response = NULL, response_compressed = ${compressed} WHERE id = ${row.id}`;
+      else await tx`UPDATE receipts SET response_storage_checked = true WHERE id = ${row.id}`;
+      compressedReceipts += Number(compressed !== null);
+      receiptBytesBefore += row.bytes;
+    }
+    const [after] = rows.length ? await tx<{ bytes: number }[]>`
+      SELECT coalesce(sum(coalesce(pg_column_size(response_compressed), pg_column_size(response), 0)), 0)::int AS bytes
+      FROM receipts WHERE id IN ${tx(rows.map(row => row.id))}` : [];
+    return { checkedReceipts: rows.length, compressedReceipts, receiptBytesBefore, receiptBytesAfter: after?.bytes ?? 0 };
+  });
 }

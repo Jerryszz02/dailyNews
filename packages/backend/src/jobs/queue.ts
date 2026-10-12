@@ -99,7 +99,12 @@ export async function ensureQueue(name: string, options: QueueOptions = QUEUE_OP
   if (ensured.has(name)) return;
   const b = await getBoss();
   const existing = await b.getQueue(name);
-  if (!existing) await b.createQueue(name, options);
+  // pg-boss applies this window to both completed and failed jobs. Successful history
+  // is pruned after one day by hourlyRetention; keep failed attempts seven days.
+  const retained = { ...options, deleteAfterSeconds: 7 * 86400 };
+  if (!existing) await b.createQueue(name, retained);
+  else if (existing.deleteAfterSeconds !== retained.deleteAfterSeconds)
+    await b.updateQueue(name, { deleteAfterSeconds: retained.deleteAfterSeconds });
   ensured.add(name);
 }
 
