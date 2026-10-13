@@ -99,12 +99,17 @@ S1–S3 代码与隔离验证完成；S4 通过独立 PR 交付，不自动合�
 
 ## 云端执行记录与恢复阻塞
 
-- 第一份迁移通过 `apply_migration` 成功登记为 `20261012223745`；本地文件与远端版本对齐。迁移后的 security advisors 无 lint。
+- 第一份迁移通过 `apply_migration` 成功登记为 `20261012223745`，当时函数/Cron 上限为 250；迁移后的 security advisors 无 lint。PR 审查后将该文件中新安装路径的函数/Cron 上限一并降到 25，避免下一份迁移失败时留下大批次窗口。已执行版本的历史内容与现文件存在这处差异；不重放已登记版本，现有云库仅通过后续 `20261012224258` 收敛到 25。
 - 先执行 25 条，再执行两批 250 条，合计确认删除 525 份快照、525 条候选、451 条刷新记录。后续调用连接意外中断，停止清理。
 - 最后成功读回：报告从 2,563 份变为 2,038 份；latest 和 rollback 的 ID/content_hash 保持。物理库从 1,109,044,371 增至 1,397,951,635 bytes，`default_transaction_read_only=on`。逻辑删除没有完成物理回收，不能声称云库已减容。
 - 仅在一个维护事务中切到 READ WRITE，成功暂停 `daily-news-retention`（job 7）并读回 `active=false`；既有刷新 job 4 未修改。
 - 后续迁移 `20261012224258` 在初始化 history schema 时被只读限制拒绝，尚未应用。该迁移避免不可变触发器整行 `to_jsonb` 展开，最终所有批次限制为 25。真实报告载荷的隔离试验支持降低 TOAST/CPU 成本，但不能据此断言云端连接故障是 OOM。
 - 随后普通 `VACUUM (ANALYZE) daily_news.report_snapshot` 返回 `PANIC 53100: No space left on device`，无法写入 WAL 临时文件；后续只读探测返回 `ECONNREFUSED`。不继续尝试 DELETE、VACUUM FULL、关闭全局只读或重放迁移。
 - 需要 Supabase 平台侧恢复磁盘余量/数据库可连接状态，再应用后续迁移、继续 25 条小批清理并回收物理文件。备选是在新项目恢复已筛选且离线验证的最小数据集，但新建项目、可能的付费扩容和连接切换需要另行确认。本轮没有创建、删除或切换云项目。
+
+## PR 审查补充验证
+
+- 增加首份迁移提交后、下一份迁移执行前的断言：26/250 条调用必须被拒绝，已有 active/paused Cron 均使用 25 条且维持原启停状态，其他任务不变。原提交在该检查上复现失败。
+- 修复后，独立 PostgreSQL 17 的新安装和已有六参数 RPC/Cron 升级路径均通过全部 11 份迁移、中间态/最终态/ACL/批次回归；本次运行的 PostgreSQL 未安装 pgTAP，因此未重复 pgTAP 套件。TypeScript 检查通过。没有连接或修改云数据库。
 
 依据：[Supabase 数据库大小与只读模式](https://supabase.com/docs/guides/platform/database-size)、[PostgreSQL 磁盘耗尽](https://www.postgresql.org/docs/17/disk-full.html)。正常超额只读的会话覆盖方法不能保证解决已经无法写 WAL 的磁盘耗尽。清理前必须为更新、WAL 和文件回收保留额外磁盘余量。

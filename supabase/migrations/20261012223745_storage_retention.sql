@@ -1,3 +1,6 @@
+-- New installations are capped at 25 even if the next migration cannot complete.
+-- The incident deployment of this version used 250; do not replay it there.
+-- Already-applied installations receive the same cap through 20261012224258.
 -- Replace the deployed six-argument API so default calls cannot become ambiguous.
 -- No CASCADE: unexpected dependencies stop deployment for inspection.
 drop function if exists public.daily_news_prune_retention(boolean, integer, integer, integer, integer, integer);
@@ -94,8 +97,8 @@ declare
   run_ids uuid[] := '{}';
   lease_row daily_news.refresh_lease%rowtype;
 begin
-  if dry_run is null or batch_limit is null or batch_limit not between 1 and 250 then
-    raise exception using errcode = '22023', message = 'dry_run and batch_limit (1..250) are required';
+  if dry_run is null or batch_limit is null or batch_limit not between 1 and 25 then
+    raise exception using errcode = '22023', message = 'dry_run and batch_limit (1..25) are required';
   end if;
   -- Same ordering as publication/rollback: global writer lock, then lease, then runtime.
   perform pg_advisory_xact_lock(78511490732164);
@@ -192,6 +195,6 @@ begin
     'select jobid from cron.job where jobname = $1' using 'daily-news-retention'
   loop
     execute 'select cron.alter_job($1, $2, $3)' using existing_job_id,
-      '*/15 * * * *', 'select * from public.daily_news_prune_retention(false, 250)';
+      '*/15 * * * *', 'select * from public.daily_news_prune_retention(false, 25)';
   end loop;
 end $$;

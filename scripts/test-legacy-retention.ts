@@ -36,6 +36,17 @@ try {
     }
     await db.begin(async (tx) => { await tx.unsafe(readFileSync(new URL(file, migrationDir), "utf8")).simple(); });
     console.log(`legacy migration passed: ${file}`);
+    if (file === "20261012223745_storage_retention.sql") {
+      // Files commit independently: a failed follow-up must not leave a 250-row Cron running.
+      for (const limit of [26, 250]) {
+        await assert.rejects(db`SELECT * FROM public.daily_news_prune_retention(true, ${limit})`,
+          (error: unknown) => (error as { code?: string }).code === "22023");
+      }
+      if (process.argv.includes("--upgrade-fixture")) {
+        await db.unsafe(readFileSync(new URL("../supabase/tests/retention_upgrade_regression.sql", import.meta.url), "utf8")).simple();
+      }
+      console.log("initial migration is capped before the follow-up (including existing Cron state)");
+    }
   }
   if (process.argv.includes("--upgrade-fixture")) {
     await db.unsafe(readFileSync(new URL("../supabase/tests/retention_upgrade_regression.sql", import.meta.url), "utf8")).simple();
