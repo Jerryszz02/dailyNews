@@ -79,9 +79,10 @@ select is(
     select count(*)::integer
     from pg_policies
     where schemaname = 'daily_news'
+      and roles <> array['daily_news_retention_executor']::name[]
   ),
   0,
-  'private tables intentionally expose no RLS policies'
+  'private tables expose policies only to the dedicated retention executor'
 );
 select ok(
   not has_table_privilege('anon', 'daily_news.source_state', 'select'),
