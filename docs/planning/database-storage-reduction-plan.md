@@ -1,6 +1,6 @@
 # 数据库存储减量计划
 
-日期：2026-10-12（Europe/London）。状态：**代码与隔离验证完成；云库清理因磁盘耗尽中断**。
+日期：2026-10-12；状态同步：2026-10-18（Europe/London）。状态：**PR #24 已合并，本地迁移有历史验收；本机服务已暂停，云库恢复仍待确认**。
 
 ## 用户要求与范围
 
@@ -10,11 +10,11 @@
 
 完整持久化清单见 [数据库存储清单](../database-storage-inventory.md)。
 
-独立工作分支：`agent/database-storage-reduction`，从本次 fetch 后的 `origin/main=fda2400a7340423e26c8d59e0ab30c41373fd814` 开始。旧 `agent/supabase-retention-cleanup` 中的未提交工作只读参考，不覆盖、不清理。
+历史实施分支：`agent/database-storage-reduction`，从本次 fetch 后的 `origin/main=fda2400a7340423e26c8d59e0ab30c41373fd814` 开始。旧 `agent/supabase-retention-cleanup` 中的未提交工作只读参考，不覆盖、不清理。
 
-## 当前证据
+## 实施前证据（2026-10-12 历史快照）
 
-- 旧库 `daily_news` 六张业务表；主干没有 retention，报告有不可变触发器和交叉外键。候选读取窗口 72 小时不是保留期限；快照已做 compact/gzip，且已有内容 hash 去重。
+- 旧库 `daily_news` 六张业务表；当时主干没有本轮新增 retention，报告有不可变触发器和交叉外键。候选读取窗口 72 小时不是保留期限；快照已做 compact/gzip，且已有内容 hash 去重。
 - 2026-10-12 09:50 UTC 本地独立 `dailynews_local` 约 210.1 MiB。较大的对象是 collection_items 45.6 MiB、pg-boss job_common 28.5 MiB、receipts 26.2 MiB、articles 20.3 MiB。
 - 已完成原始采集保留 24 小时，每日清理一次；每日任务已成功运行。队列默认完成历史 7 天、排队有效期 14 天。不存在“所有清理均未运行”的证据。
 - 2026-10-12 22:29 UTC 恢复 Supabase 连接后确认：旧云库 1,109,044,371 bytes，2,563 份报告占 1,065,238,528 bytes；20260821070000 清理迁移已在线，但每日 Cron 最近五次均在删除快照时超过 120 秒、事务回滚。旧云库最后报告为 2026-08-09，最新指针及真实祖先均在三天窗口外。Snowflake 不在当前架构中，本轮不增加该服务。
@@ -56,7 +56,9 @@
 
 ## 当前状态
 
-S1–S3 代码与隔离验证完成；S4 通过独立 PR 交付，不自动合并。Supabase 已连接并应用第一份迁移、完成部分清理，随后发生磁盘耗尽；所有后续写入停止，清理 Cron 已暂停。新版日常运行库尚未迁移或切换；本地 API 读回 `ok=true, db=ok, release=fda2400`。
+S1–S3 代码与隔离验证完成；[PR #24](https://github.com/Jerryszz02/dailyNews/pull/24) 于 2026-10-13 合并为 `bb8e722`。当天交付回执记录新版本地库已备份并应用迁移 0053，健康响应版本为合并提交，smoke 通过，响应压缩开关仍关闭。随后用户要求暂停本机服务；2026-10-18 只读状态确认 web/API/worker/PostgreSQL 均未运行。证据位置与恢复边界见[本地运行记录](../local-news-quality-runtime.md)。
+
+旧 Supabase 最后可定位记录仍为 2026-10-12 的部分清理后磁盘耗尽、清理 Cron 暂停和后续迁移未应用。用户要求等支持工单回复再继续；本次只同步文档，没有连接云库或核对工单，不推断云端已恢复或减容。
 
 
 ## 2026-10-12 隔离验证结果

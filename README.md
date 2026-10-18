@@ -2,7 +2,11 @@
 
 Daily News 按十个领域整理公开新闻，提供中文标题、摘要、来源与原文链接。
 
-本分支正在实施已批准的重构计划：采用固定版本 AIHOT 的网页、API、worker 与 PostgreSQL 底座。AI 分类保留原版 AI 评判，其他九类迁入 Daily News 确定性编辑规则。阶段状态和实际检查见 [实施记录](docs/refactor-runtime.md)，完整需求见 [已批准计划](docs/planning/aihot-v2-refactor-plan.md)。当前不是生产切换。更新提速的实现、测量与运行限制见 [性能记录](docs/news-refresh-performance.md)；新平台选择见 [部署方案](docs/planning/news-deployment-plan.md)。
+主干已合入已批准重构计划的代码：采用固定版本 AIHOT 的网页、API、worker 与 PostgreSQL 底座。AI 分类保留原版 AI 评判，其他九类迁入 Daily News 确定性编辑规则。阶段状态和实际检查见 [实施记录](docs/refactor-runtime.md)，完整需求见 [已批准计划](docs/planning/aihot-v2-refactor-plan.md)。当前不是生产切换。
+
+本机服务按用户 2026-10-13 的要求暂停；2026-10-18 只读复查仍为停止，恢复前需用户确认。当前状态与操作入口见 [本地运行记录](docs/local-news-quality-runtime.md)，下方启动步骤不代表现有服务正在运行。
+
+更新提速的实现、测量与运行限制见 [性能记录](docs/news-refresh-performance.md)；新平台选择见 [部署方案](docs/planning/news-deployment-plan.md)。
 
 ## 本地离线启动
 

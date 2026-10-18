@@ -1,6 +1,19 @@
-# 本地新闻与标注首版交付记录
+# 本地新闻与标注运行记录
 
-日期：2026-10-10，以下为18:02 UTC首次交付的历史快照，时间口径除另注均为UTC。当前84个启用栏目、更新结果、剩余来源依赖和标注进度见[信源恢复状态](source-restoration-status.md)。依据 [已批准计划](planning/local-news-quality-plan.md) 实施；PR #22，产品提交 `4979314`。这是本地运行记录，不是云部署或人工质量验收结论。
+## 当前状态（2026-10-18 只读核对）
+
+- **已暂停**：用户于 2026-10-13 要求暂时停止使用。2026-10-18 执行规范 checkout 中的 `python3 .data/local-service/manage.py status`，PostgreSQL、web、API 和 worker 均为未运行；3300、3301、55432 端口未开放。此次核对没有启动服务、连接数据库或调用模型。
+- **代码已合并，本地迁移有历史验收**：[PR #24](https://github.com/Jerryszz02/dailyNews/pull/24) 于 2026-10-13 squash 为 `bb8e722`，当前 `main` 与远端一致。交付回执记录本地已备份、应用 `0053_receipt_storage.sql`，当时健康响应版本为该提交且 smoke 通过；响应压缩开关当时仍关闭。这不是本次重新执行数据库或产品测试。
+- **运行目录已迁回规范 checkout**：`.data/local-service/checkout.txt` 指向 `/Users/jerryszz/Desktop/Projects/dailyNews`，不再依赖早期实施 worktree。数据库与原有人工标注保留；本轮没有读取或代填标注，也没有生成或启用校准结果。
+- **云端待确认**：新版云部署继续暂停。旧 Supabase 的磁盘恢复和后续清理等待支持工单后再处理；本轮没有连接云库，不能确认工单结果或云端容量。详见[存储减量计划](planning/database-storage-reduction-plan.md)。
+
+本机交付回执为 `../dailyNews-backups/pr24-delivery-20261013/delivery.json`（相对规范 checkout，不随 Git 分发），保存合并提交、CI、备份摘要、迁移及健康检查结果。只读状态入口为 `python3 .data/local-service/manage.py status`；以后明确恢复时，先核对数据备份、迁移、实际代码与 `AIHOT_RELEASE`、采集和模型开关，再执行原有启动流程。暂停不会替用户清空已保存的开关配置，直接启动可能恢复后台模型调用。
+
+## 历史记录：2026-10-10 首版交付
+
+以下使用入口、数量、分支、未完成项及操作示例均属于当次交付，不表示今天的运行状态，也不是恢复任务的授权。
+
+日期：2026-10-10，以下为18:02 UTC首次交付的历史快照，时间口径除另注均为UTC。当日后续84个启用栏目、更新结果、剩余来源依赖和标注进度见[信源恢复状态](source-restoration-status.md)。依据 [已批准计划](planning/local-news-quality-plan.md) 实施；PR #22，产品提交 `4979314`。这是本地运行记录，不是云部署或人工质量验收结论。
 
 ## 使用入口
 
@@ -10,7 +23,7 @@
 - 每条分别判断分类、标题/摘要、是否值得精选；关系任务提供两篇对照。没有预选答案，可以跳过、稍后、回看修改；点击“保存并下一条”，保存成功后进入下一条。完整结果可导出 JSON/CSV，AI 精选判断另有 JSONL。
 - 当前为已展示系统答案的辅助标注，不能把确认结果算作独立盲测。判断不会直接更改公开新闻，也不会启动模型调用。
 
-本地服务来自 `/Users/jerryszz/.codex/worktrees/local-news-quality-plan/dailyNews`，数据仍在规范 checkout 的 `.data/local-service`。web/API/PostgreSQL 分别监听 `127.0.0.1:3300/3301/55432`；worker 负责持续抓取、分析和发布。没有租服务器，也没有改云部署。
+当时本地服务来自 `/Users/jerryszz/.codex/worktrees/local-news-quality-plan/dailyNews`，数据仍在规范 checkout 的 `.data/local-service`。web/API/PostgreSQL 分别监听 `127.0.0.1:3300/3301/55432`；worker 负责持续抓取、分析和发布。没有租服务器，也没有改云部署。
 
 在规范 checkout 执行：
 
@@ -20,7 +33,7 @@ python3 .data/local-service/manage.py start
 python3 .data/local-service/manage.py stop
 ```
 
-停止会保留数据库；再次启动从原数据继续。电脑睡眠、关机或停止服务期间不会持续采集，不应宣称全天覆盖。当前 worktree 承载服务，合并和清理前必须先迁移服务指向；本轮尚未授权合并。
+停止会保留数据库；再次启动从原数据继续。电脑睡眠、关机或停止服务期间不会持续采集，不应宣称全天覆盖。当时 worktree 承载服务，合并和清理前必须先迁移服务指向；该历史交付尚未授权合并。后续迁移与暂停状态以本文开头为准。
 
 ## 保留内容与恢复覆盖
 

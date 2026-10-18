@@ -4,6 +4,8 @@
 
 ## 新运行入口
 
+- 本机服务已按用户 2026-10-13 的要求暂停；2026-10-18 只读复查仍停止。文档维护不启动 web/API/worker/数据库或模型调用。当前运行目录、证据与恢复边界见 `docs/local-news-quality-runtime.md`。
+
 - Node >=24.11；npm workspaces：`apps/*`、`packages/*`、`industry`。
 - `apps/web` 只通过 HTTP 访问 API；公开出口只读 `packages/backend/src/publication/`。
 - 采集和模型默认关闭，模型及付费采集必须经过预算与回执；不自动启用上游示范来源。
