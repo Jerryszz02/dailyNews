@@ -7,7 +7,7 @@
 - **运行目录已迁回规范 checkout**：`.data/local-service/checkout.txt` 指向 `/Users/jerryszz/Desktop/Projects/dailyNews`，不再依赖早期实施 worktree。数据库与原有人工标注保留；本轮没有读取或代填标注，也没有生成或启用校准结果。
 - **云端待确认**：新版云部署继续暂停。旧 Supabase 的磁盘恢复和后续清理等待支持工单后再处理；本轮没有连接云库，不能确认工单结果或云端容量。详见[存储减量计划](planning/database-storage-reduction-plan.md)。
 
-本机交付回执为 `../dailyNews-backups/pr24-delivery-20261013/delivery.json`（相对规范 checkout，不随 Git 分发），保存合并提交、CI、备份摘要、迁移及健康检查结果。只读状态入口为 `python3 .data/local-service/manage.py status`；以后明确恢复时，先核对数据备份、迁移、实际代码与 `AIHOT_RELEASE`、采集和模型开关，再执行原有启动流程。暂停不会替用户清空已保存的开关配置，直接启动可能恢复后台模型调用。
+2026-10-26，用户批准清理旧新闻快照压缩包与 PR #24 交付归档；原 `../dailyNews-backups/pr24-delivery-20261013/delivery.json` 已随归档删除，不能再作为现存回执入口。清理记录在规范 checkout 的 `.data/deliveries/retention-cleanup-20261026T221942Z/manifest.json`（本机资料，不随 Git 分发），记录旧工作树和过时的七个未提交草稿已移除，并核对本地服务数据备份保持不变。`../dailyNews-backups/storage-reduction-20261012/` 中的云库恢复资料继续保留；此前迁移和健康检查仍仅是历史验收。只读状态入口为 `python3 .data/local-service/manage.py status`；以后明确恢复时，先核对数据备份、迁移、实际代码与 `AIHOT_RELEASE`、采集和模型开关，再执行原有启动流程。暂停不会替用户清空已保存的开关配置，直接启动可能恢复后台模型调用。
 
 ## 历史记录：2026-10-10 首版交付
 
